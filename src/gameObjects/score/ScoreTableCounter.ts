@@ -1,0 +1,126 @@
+import { GameObject, Sound, Timer } from '../../core';
+import { GameUpdateArgs } from '../../game';
+import * as config from '../../config';
+
+import { SpriteText } from '../text';
+
+enum State {
+  Idle,
+  Progress,
+  Done,
+}
+const INCREMENT_DELAY = 0.135;
+
+export class ScoreTableCounter extends GameObject {
+  private showAtRight: boolean;
+  private pointsLabel = new SpriteText('PTS', { color: config.COLOR_WHITE });
+  private pointsText = new SpriteText('', { color: config.COLOR_WHITE });
+  private killsText = new SpriteText('', { color: config.COLOR_WHITE });
+  private timer = new Timer();
+  private incrementSound: Sound;
+
+  private state = State.Idle;
+  private currentKills = 0;
+  private targetKills = 0;
+  private killCost = 0;
+
+  constructor(targetKills: number, killCost: number, showAtRight = false) {
+    super(344, 28);
+
+    this.targetKills = targetKills;
+    this.killCost = killCost;
+    this.showAtRight = showAtRight;
+  }
+
+  protected setup({ audioLoader }: GameUpdateArgs): void {
+    this.incrementSound = audioLoader.load('score');
+
+    this.pointsLabel.position.setX(160);
+    if (this.showAtRight) {
+      this.pointsLabel.position.setX(252);
+    }
+    this.add(this.pointsLabel);
+
+    this.pointsText.origin.setX(1);
+    this.pointsText.position.setX(124);
+    if (this.showAtRight) {
+      this.pointsText.position.setX(216);
+    }
+    this.add(this.pointsText);
+
+    this.killsText.position.setX(this.size.width);
+    if (this.showAtRight) {
+      this.killsText.position.setX(54);
+    }
+    this.killsText.origin.setX(1);
+    this.add(this.killsText);
+  }
+
+  protected update(updateArgs: GameUpdateArgs): void {
+    if (this.state !== State.Progress) {
+      return;
+    }
+
+    if (this.timer.isDone()) {
+      this.updateText();
+      this.incrementSound.play();
+
+      this.currentKills += 1;
+
+      this.setNeedsPaint();
+
+      if (this.currentKills > this.targetKills) {
+        this.state = State.Done;
+        return;
+      }
+
+      this.timer.reset(INCREMENT_DELAY);
+    }
+
+    this.timer.update(updateArgs.deltaTime);
+  }
+
+  public start(): void {
+    if (this.state !== State.Idle) {
+      return;
+    }
+
+    if (this.currentKills === this.targetKills) {
+      this.updateText();
+      this.state = State.Done;
+      return;
+    }
+
+    this.state = State.Progress;
+    this.timer.reset(INCREMENT_DELAY);
+  }
+
+  public skip(): void {
+    if (this.state === State.Done) {
+      return;
+    }
+
+    this.currentKills = this.targetKills;
+    this.updateText();
+    this.state = State.Done;
+  }
+
+  private updateText(): void {
+    const points = this.currentKills * this.killCost;
+
+    this.pointsText.setText(points.toString());
+    this.killsText.setText(this.currentKills.toString());
+  }
+
+  public isIdle(): boolean {
+    return this.state === State.Idle;
+  }
+
+  public isProgress(): boolean {
+    return this.state === State.Progress;
+  }
+
+  public isDone(): boolean {
+    return this.state === State.Done;
+  }
+}
