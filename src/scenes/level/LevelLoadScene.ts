@@ -1,6 +1,6 @@
 import { Logger } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
-import { AlertModal, Curtain, LevelTitle } from '../../gameObjects';
+import { AlertModal } from '../../gameObjects';
 import { InputHintSettings } from '../../input';
 import { MapConfig, MapLoader } from '../../map';
 
@@ -15,8 +15,6 @@ enum State {
 }
 
 export class LevelLoadScene extends GameScene {
-  private curtain: Curtain;
-  private title: LevelTitle;
   private alertModal: AlertModal;
   private mapLoader: MapLoader;
   private session: Session;
@@ -33,18 +31,6 @@ export class LevelLoadScene extends GameScene {
     this.session = session;
 
     const levelNumber = this.session.getLevelNumber();
-
-    this.curtain = new Curtain(
-      this.root.size.width,
-      this.root.size.height,
-      false,
-    );
-    this.root.add(this.curtain);
-
-    this.title = new LevelTitle(levelNumber, this.session.isPlaytest());
-    this.title.setCenter(this.root.getSelfCenter());
-    this.title.origin.set(0.5, 0.5);
-    this.root.add(this.title);
 
     this.alertModal = new AlertModal({
       containerWidth: 768,

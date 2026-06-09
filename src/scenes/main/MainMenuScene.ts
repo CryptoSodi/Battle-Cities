@@ -2,6 +2,7 @@ import { GameObject } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
 import { MainHeading, Menu, SpriteText, TextMenuItem } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
+import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
 import * as config from '../../config';
 
@@ -30,6 +31,7 @@ export class MainMenuScene extends GameScene {
   private aboutItem: TextMenuItem;
   private state: State = State.Ready;
   private session: Session;
+  private mapLoader: MapLoader;
   private pointsHighscoreManager: PointsHighscoreManager;
 
   protected setup({
@@ -38,6 +40,7 @@ export class MainMenuScene extends GameScene {
     session,
   }: GameUpdateArgs): void {
     this.session = session;
+    this.mapLoader = mapLoader;
     this.pointsHighscoreManager = pointsHighscoreManager;
 
     // Restore source for maps to default
@@ -180,12 +183,14 @@ export class MainMenuScene extends GameScene {
   }
 
   private handleSinglePlayerSelected = (): void => {
-    this.navigator.replace(GameSceneType.LevelSelection);
+    this.session.start(1, this.mapLoader.getItemsCount());
+    this.navigator.replace(GameSceneType.LevelLoad);
   };
 
   private handleMultiPlayerSelected = (): void => {
     this.session.setMultiplayer();
-    this.navigator.replace(GameSceneType.LevelSelection);
+    this.session.start(1, this.mapLoader.getItemsCount());
+    this.navigator.replace(GameSceneType.LevelLoad);
   };
 
   private handleModesSelected = (): void => {
