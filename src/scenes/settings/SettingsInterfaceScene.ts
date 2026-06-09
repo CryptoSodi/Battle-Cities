@@ -1,4 +1,4 @@
-import { AudioManager, GameUpdateArgs } from '../../game';
+import { GameUpdateArgs } from '../../game';
 import { SceneMenu, SceneMenuTitle, TextMenuItem } from '../../gameObjects';
 import { InputHintSettings } from '../../input';
 
@@ -10,11 +10,9 @@ export class SettingsInterfaceScene extends GameScene {
   private editorControlsHintItem: TextMenuItem;
   private backItem: TextMenuItem;
   private menu: SceneMenu;
-  private audioManager: AudioManager;
   private inputHintSettings: InputHintSettings;
 
-  protected setup({ audioManager, inputHintSettings }: GameUpdateArgs): void {
-    this.audioManager = audioManager;
+  protected setup({ inputHintSettings }: GameUpdateArgs): void {
     this.inputHintSettings = inputHintSettings;
 
     this.title = new SceneMenuTitle('SETTINGS → INTERFACE');

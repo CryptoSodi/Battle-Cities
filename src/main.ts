@@ -49,6 +49,12 @@ const gameRenderer = new GameRenderer({
 const gameStorage = new GameStorage(config.STORAGE_NAMESPACE);
 gameStorage.load();
 
+const showScanlines = gameStorage.getBoolean(
+  config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
+  true,
+);
+document.body.classList.toggle('scanlines-disabled', !showScanlines);
+
 const inputManager = new InputManager(gameStorage);
 inputManager.listen();
 

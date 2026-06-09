@@ -106,6 +106,7 @@ export const STORAGE_KEY_SETTINGS_SEEN_EDITOR_HINT =
 export const STORAGE_KEY_SETTINGS_SHOW_LEVEL_HINT = 'settings.show-level-hint';
 export const STORAGE_KEY_SETTINGS_SHOW_EDITOR_HINT =
   'settings.show-editor-hint';
+export const STORAGE_KEY_SETTINGS_SHOW_SCANLINES = 'settings.show-scanlines';
 
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [
   { x: 256, y: 768 },

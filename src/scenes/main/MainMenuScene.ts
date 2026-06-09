@@ -72,7 +72,7 @@ export class MainMenuScene extends GameScene {
     this.heading.position.setY(160);
     this.group.add(this.heading);
 
-    this.singlePlayerItem = new TextMenuItem('1 PLAYER');
+    this.singlePlayerItem = new TextMenuItem('START');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
 
     this.multiPlayerItem = new TextMenuItem('2 PLAYERS');
@@ -90,14 +90,13 @@ export class MainMenuScene extends GameScene {
     this.aboutItem = new TextMenuItem('ABOUT');
     this.aboutItem.selected.addListener(this.handleAboutSelected);
 
-    const menuItems = [
-      this.singlePlayerItem,
-      this.multiPlayerItem,
-      this.modesItem,
-      this.editorItem,
-      this.settingsItem,
-      this.aboutItem,
-    ];
+    const menuItems = [this.singlePlayerItem];
+
+    if (config.IS_DEV) {
+      menuItems.push(this.multiPlayerItem, this.modesItem, this.editorItem);
+    }
+
+    menuItems.push(this.settingsItem, this.aboutItem);
 
     this.menu = new Menu();
     this.menu.setItems(menuItems);

@@ -10,6 +10,42 @@ body {
   flex: 1;
   justify-content: center;
   margin: 0;
+  position: relative;
+}
+
+body::before {
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(0, 0, 0, 0) 48%,
+      rgba(0, 0, 0, 0.18) 68%,
+      rgba(0, 0, 0, 0.45) 84%,
+      rgba(0, 0, 0, 0.72) 100%
+    );
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+body::after {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.12) 0,
+      rgba(255, 255, 255, 0.12) 1px,
+      rgba(0, 0, 0, 0.32) 1px,
+      rgba(0, 0, 0, 0.32) 4px
+    );
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+body.scanlines-disabled::before,
+body.scanlines-disabled::after {
+  display: none;
 }
 
 .loading {
