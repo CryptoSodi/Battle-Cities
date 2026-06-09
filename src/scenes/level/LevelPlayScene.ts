@@ -76,12 +76,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.world = new LevelWorld(this.root);
 
-    this.root.add(new Border());
-
     this.world.field.position.set(
       config.BORDER_LEFT_WIDTH,
       config.BORDER_TOP_BOTTOM_HEIGHT,
     );
+    this.world.field.add(new Border());
     this.root.add(this.world.field);
 
     this.eventBus = new LevelEventBus();
@@ -207,6 +206,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     });
 
+    this.updateCamera();
+
     this.root.updateWorldMatrix(false, true);
 
     collisionSystem.update();
@@ -216,6 +217,38 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     }
 
     collisionSystem.collide();
+  }
+
+  private updateCamera(): void {
+    const targetTank = this.world.getPlayerTanks()[0];
+
+    let nextX = config.BORDER_LEFT_WIDTH;
+    let nextY = config.BORDER_TOP_BOTTOM_HEIGHT;
+
+    if (targetTank !== null && targetTank !== undefined) {
+      const targetCenter = targetTank.getCenter();
+      nextX += config.VIEWPORT_FIELD_SIZE / 2 - targetCenter.x;
+      nextY += config.VIEWPORT_FIELD_SIZE / 2 - targetCenter.y;
+
+      const minX =
+        config.BORDER_LEFT_WIDTH + config.VIEWPORT_FIELD_SIZE - config.FIELD_SIZE;
+      const minY =
+        config.BORDER_TOP_BOTTOM_HEIGHT +
+        config.VIEWPORT_FIELD_SIZE -
+        config.FIELD_SIZE;
+
+      nextX = Math.max(minX, Math.min(config.BORDER_LEFT_WIDTH, nextX));
+      nextY = Math.max(minY, Math.min(config.BORDER_TOP_BOTTOM_HEIGHT, nextY));
+    }
+
+    if (
+      this.world.field.position.x !== nextX ||
+      this.world.field.position.y !== nextY
+    ) {
+      this.root.setNeedsPaint();
+      this.world.field.position.set(nextX, nextY);
+      this.world.field.updateMatrix(true);
+    }
   }
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {

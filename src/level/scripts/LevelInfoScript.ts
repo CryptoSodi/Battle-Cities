@@ -15,7 +15,7 @@ export class LevelInfoScript extends LevelScript {
 
     this.info = new LevelInfo();
     this.info.position.set(
-      config.BORDER_LEFT_WIDTH + config.FIELD_SIZE + 32,
+      config.BORDER_LEFT_WIDTH + config.VIEWPORT_FIELD_SIZE + 32,
       config.BORDER_TOP_BOTTOM_HEIGHT + 32,
     );
     this.world.sceneRoot.add(this.info);

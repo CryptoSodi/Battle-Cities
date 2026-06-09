@@ -73,41 +73,43 @@ export class MapConfig {
   }
 
   public getTerrainRegions(): TerrainRegionConfig[] {
-    return this.dto.terrain.regions;
+    if (!this.shouldOffsetLegacyContent()) {
+      return this.dto.terrain.regions;
+    }
+
+    return this.dto.terrain.regions.map((region) => {
+      return {
+        ...region,
+        x: region.x + config.FIELD_CONTENT_OFFSET_X,
+        y: region.y + config.FIELD_CONTENT_OFFSET_Y,
+      };
+    });
   }
 
   public getPlayerSpawnPositions(): Vector[] {
     const dtoLocations = this.dto.spawn.player.locations;
-
-    let locations = config.PLAYER_DEFAULT_SPAWN_POSITIONS;
-
-    // Allow overriding spawn location in map config
     if (dtoLocations.length > 0) {
-      locations = dtoLocations;
+      return dtoLocations.map((location) => {
+        return this.createWorldPosition(location.x, location.y);
+      });
     }
 
-    const positions = locations.map((location) => {
+    return config.PLAYER_DEFAULT_SPAWN_POSITIONS.map((location) => {
       return new Vector(location.x, location.y);
     });
-
-    return positions;
   }
 
   public getEnemySpawnPositions(): Vector[] {
     const dtoLocations = this.dto.spawn.enemy.locations;
-
-    let locations = config.ENEMY_DEFAULT_SPAWN_POSITIONS;
-
-    // Allow overriding spawn location in map config
     if (dtoLocations.length > 0) {
-      locations = dtoLocations;
+      return dtoLocations.map((location) => {
+        return this.createWorldPosition(location.x, location.y);
+      });
     }
 
-    const positions = locations.map((location) => {
+    return config.ENEMY_DEFAULT_SPAWN_POSITIONS.map((location) => {
       return new Vector(location.x, location.y);
     });
-
-    return positions;
   }
 
   public getEnemySpawnList(): TankType[] {
@@ -154,5 +156,20 @@ export class MapConfig {
     const dto = JSON.parse(json);
 
     this.dto = this.fillAndValidate(dto);
+  }
+
+  private createWorldPosition(x: number, y: number): Vector {
+    if (!this.shouldOffsetLegacyContent()) {
+      return new Vector(x, y);
+    }
+
+    return new Vector(
+      x + config.FIELD_CONTENT_OFFSET_X,
+      y + config.FIELD_CONTENT_OFFSET_Y,
+    );
+  }
+
+  private shouldOffsetLegacyContent(): boolean {
+    return this.dto.version <= 1 && config.FIELD_SIZE > config.LEGACY_FIELD_SIZE;
   }
 }
