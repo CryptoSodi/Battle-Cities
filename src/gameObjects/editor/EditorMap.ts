@@ -65,11 +65,13 @@ export class EditorMap extends GameObject {
     const localPosition = position.clone().sub(this.getWorldBoundingBox().min);
     const maxX = this.size.width - this.tool.size.width;
     const maxY = this.size.height - this.tool.size.height;
+    const snapStepX = this.tool.getSnapStepX();
+    const snapStepY = this.tool.getSnapStepY();
 
     localPosition.x = Math.max(0, Math.min(localPosition.x, maxX));
     localPosition.y = Math.max(0, Math.min(localPosition.y, maxY));
-    localPosition.snapX(this.tool.size.width);
-    localPosition.snapY(this.tool.size.height);
+    localPosition.snapX(snapStepX);
+    localPosition.snapY(snapStepY);
 
     this.tool.position.copyFrom(localPosition);
     this.tool.updateMatrix(true);

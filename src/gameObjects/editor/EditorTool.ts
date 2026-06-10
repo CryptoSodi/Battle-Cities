@@ -15,6 +15,8 @@ import {
 } from '../../input';
 import * as config from '../../config';
 
+import { EditorBaseBrush } from './EditorBaseBrush';
+
 const BLINK_DELAY = 0.2;
 
 const HOLD_THROTTLE_OPTIONS: InputHoldThrottleOptions = {
@@ -159,19 +161,19 @@ export class EditorTool extends GameObject {
   }
 
   private moveUp = (): void => {
-    this.velocity.set(0, -this.size.height);
+    this.velocity.set(0, -this.getSnapStepY());
   };
 
   private moveDown = (): void => {
-    this.velocity.set(0, this.size.height);
+    this.velocity.set(0, this.getSnapStepY());
   };
 
   private moveLeft = (): void => {
-    this.velocity.set(-this.size.width, 0);
+    this.velocity.set(-this.getSnapStepX(), 0);
   };
 
   private moveRight = (): void => {
-    this.velocity.set(this.size.width, 0);
+    this.velocity.set(this.getSnapStepX(), 0);
   };
 
   private updateBlinking({ deltaTime }: GameUpdateArgs): void {
@@ -232,8 +234,11 @@ export class EditorTool extends GameObject {
     this.size.copyFrom(this.selectedBrush.size);
     this.painter = new RectPainter(null, config.COLOR_RED);
 
-    this.position.x -= this.position.x % this.size.width;
-    this.position.y -= this.position.y % this.size.height;
+    const snapStepX = this.getSnapStepX();
+    const snapStepY = this.getSnapStepY();
+
+    this.position.x -= this.position.x % snapStepX;
+    this.position.y -= this.position.y % snapStepY;
 
     this.add(this.selectedBrush);
 
@@ -244,5 +249,21 @@ export class EditorTool extends GameObject {
 
     this.updateMatrix(true);
     this.brushChanged.notify(this.selectedBrush);
+  }
+
+  public getSnapStepX(): number {
+    if (this.selectedBrush instanceof EditorBaseBrush) {
+      return config.TILE_SIZE_MEDIUM;
+    }
+
+    return this.size.width;
+  }
+
+  public getSnapStepY(): number {
+    if (this.selectedBrush instanceof EditorBaseBrush) {
+      return config.TILE_SIZE_MEDIUM;
+    }
+
+    return this.size.height;
   }
 }

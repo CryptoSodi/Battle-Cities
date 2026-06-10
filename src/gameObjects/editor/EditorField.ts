@@ -22,7 +22,6 @@ export class EditorField extends GameObject {
   protected setup({ collisionSystem }: GameUpdateArgs): void {
     this.base = new Base();
     this.base.collider = new BoxCollider(this.base, false);
-    this.base.tags = [Tag.EditorBlockMove];
     this.base.position.copyFrom(this.mapConfig.getBasePosition());
     collisionSystem.register(this.base.collider);
     this.add(this.base);

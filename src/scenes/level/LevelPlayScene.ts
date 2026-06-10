@@ -1,6 +1,6 @@
 import { DebugCollisionMenu } from '../../debug';
 import { GameUpdateArgs, GameState, Session } from '../../game';
-import { Border } from '../../gameObjects';
+import { Border, Tank } from '../../gameObjects';
 import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
@@ -229,6 +229,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     }
 
     collisionSystem.collide();
+    this.clampTanksToFieldBounds();
   }
 
   private updateCamera(): void {
@@ -276,6 +277,29 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.world.field.position.set(nextX, nextY);
       this.world.field.updateMatrix(true);
     }
+  }
+
+  private clampTanksToFieldBounds(): void {
+    const maxX = this.world.field.size.width - config.TILE_SIZE_LARGE;
+    const maxY = this.world.field.size.height - config.TILE_SIZE_LARGE;
+
+    this.world.field.traverseDescedants((node) => {
+      if (!(node instanceof Tank)) {
+        return;
+      }
+
+      const nextX = Math.max(0, Math.min(node.position.x, maxX));
+      const nextY = Math.max(0, Math.min(node.position.y, maxY));
+
+      if (node.position.x === nextX && node.position.y === nextY) {
+        return;
+      }
+
+      this.root.setNeedsPaint();
+      node.position.set(nextX, nextY);
+      node.updateMatrix(true);
+      node.collider.update();
+    });
   }
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {
