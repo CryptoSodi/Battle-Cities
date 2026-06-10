@@ -6,10 +6,10 @@ export class LevelWorld {
   public field: Field;
   private playerTanks: PlayerTank[] = [];
 
-  constructor(sceneRoot: GameObject) {
+  constructor(sceneRoot: GameObject, fieldWidth: number, fieldHeight: number) {
     this.sceneRoot = sceneRoot;
 
-    this.field = new Field();
+    this.field = new Field(fieldWidth, fieldHeight);
   }
 
   public addPlayerTank(playerIndex: number, playerTank: PlayerTank): void {

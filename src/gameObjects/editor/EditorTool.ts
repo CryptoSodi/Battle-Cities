@@ -15,8 +15,6 @@ import {
 } from '../../input';
 import * as config from '../../config';
 
-import { EditorBrush } from './EditorBrush';
-
 const BLINK_DELAY = 0.2;
 
 const HOLD_THROTTLE_OPTIONS: InputHoldThrottleOptions = {
@@ -30,8 +28,10 @@ export class EditorTool extends GameObject {
   public zIndex = config.EDITOR_TOOL_Z_INDEX;
   public draw = new Subject();
   public erase = new Subject();
-  private brushes: EditorBrush[] = [];
-  private selectedBrush: EditorBrush = null;
+  public brushChanged = new Subject<GameObject>();
+  private cursorOverlay: GameObject;
+  private brushes: GameObject[] = [];
+  private selectedBrush: GameObject = null;
   private velocity = new Vector(0, 0);
   private holdThrottles: InputHoldThrottle[] = [];
   private blinkTimer = new Timer();
@@ -64,17 +64,34 @@ export class EditorTool extends GameObject {
     ];
   }
 
-  public setBrushes(brushes: EditorBrush[]): void {
+  public setBrushes(brushes: GameObject[]): void {
     this.brushes = brushes;
     this.selectBrush(0);
   }
 
-  public getSelectedBrush(): EditorBrush {
+  public selectBrushIndex(index: number): void {
+    this.selectBrush(index);
+  }
+
+  public getSelectedBrush(): GameObject {
     return this.selectedBrush;
+  }
+
+  public getSelectedBrushIndex(): number {
+    return this.brushes.indexOf(this.selectedBrush);
   }
 
   protected setup({ collisionSystem }: GameUpdateArgs): void {
     collisionSystem.register(this.collider);
+
+    this.cursorOverlay = new GameObject(this.size.width, this.size.height);
+    this.cursorOverlay.painter = new RectPainter(
+      'rgba(255, 255, 255, 0.12)',
+      config.COLOR_YELLOW,
+    );
+    (this.cursorOverlay.painter as RectPainter).lineWidth = 2;
+    this.cursorOverlay.setZIndex(config.EDITOR_BRUSH_Z_INDEX + 10);
+    this.add(this.cursorOverlay);
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
@@ -165,8 +182,12 @@ export class EditorTool extends GameObject {
       this.blinkTimer.update(deltaTime);
     }
 
-    if (this.selectBrush !== null) {
+    if (this.selectedBrush !== null) {
       this.selectedBrush.setVisible(this.isBlinkVisible);
+    }
+
+    if (this.cursorOverlay !== undefined) {
+      this.cursorOverlay.setVisible(this.isBlinkVisible);
     }
   }
 
@@ -209,12 +230,19 @@ export class EditorTool extends GameObject {
     this.selectedBrush.setVisible(this.isBlinkVisible);
 
     this.size.copyFrom(this.selectedBrush.size);
+    this.painter = new RectPainter(null, config.COLOR_RED);
 
     this.position.x -= this.position.x % this.size.width;
     this.position.y -= this.position.y % this.size.height;
 
     this.add(this.selectedBrush);
 
+    if (this.cursorOverlay !== undefined) {
+      this.cursorOverlay.size.copyFrom(this.size);
+      this.cursorOverlay.updateMatrix(true);
+    }
+
     this.updateMatrix(true);
+    this.brushChanged.notify(this.selectedBrush);
   }
 }

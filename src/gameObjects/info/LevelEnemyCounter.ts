@@ -5,11 +5,12 @@ import { LevelEnemyCounterItem } from './LevelEnemyCounterItem';
 export class LevelEnemyCounter extends GameObject {
   // TODO: can only display 20 items as in original game there can only be
   // max 20 enemy tanks
+  private static readonly COLUMN_COUNT = 10;
 
   private count = 0;
 
   constructor(count = 0) {
-    super(64, 320);
+    super(320, 64);
 
     this.count = count;
   }
@@ -30,7 +31,7 @@ export class LevelEnemyCounter extends GameObject {
     for (let i = 0; i < count; i += 1) {
       const item = new LevelEnemyCounterItem();
 
-      const x = item.size.width * (i % 2);
+      const x = item.size.width * (i % LevelEnemyCounter.COLUMN_COUNT);
       const y = item.size.height * Math.floor(i / 2);
 
       item.position.set(x, y);

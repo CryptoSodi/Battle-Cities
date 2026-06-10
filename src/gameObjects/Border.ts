@@ -4,31 +4,38 @@ import * as config from '../config';
 import { BorderWall } from './BorderWall';
 
 export class Border extends GameObject {
+  constructor(
+    private readonly fieldWidth: number,
+    private readonly fieldHeight: number,
+  ) {
+    super();
+  }
+
   protected setup(): void {
     const rects = [
       {
         x: 0,
         y: -config.BORDER_TOP_BOTTOM_HEIGHT,
-        width: config.FIELD_SIZE,
+        width: this.fieldWidth,
         height: config.BORDER_TOP_BOTTOM_HEIGHT,
       },
       {
         x: 0,
-        y: config.FIELD_SIZE,
-        width: config.FIELD_SIZE,
+        y: this.fieldHeight,
+        width: this.fieldWidth,
         height: config.BORDER_TOP_BOTTOM_HEIGHT,
       },
       {
         x: -config.BORDER_LEFT_WIDTH,
         y: 0,
         width: config.BORDER_LEFT_WIDTH,
-        height: config.FIELD_SIZE,
+        height: this.fieldHeight,
       },
       {
-        x: config.FIELD_SIZE,
+        x: this.fieldWidth,
         y: 0,
         width: config.BORDER_RIGHT_WIDTH,
-        height: config.FIELD_SIZE,
+        height: this.fieldHeight,
       },
     ];
 

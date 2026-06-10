@@ -11,6 +11,16 @@ export interface MapDtoSpawnLocation {
   y: number;
 }
 
+export interface MapDtoBase {
+  x: number;
+  y: number;
+}
+
+export interface MapDtoField {
+  widthTiles?: number;
+  heightTiles?: number;
+}
+
 export interface MapDtoSpawnEnemy {
   list?: MapDtoSpawnEnemyListItem[];
   locations?: MapDtoSpawnLocation[];
@@ -38,6 +48,8 @@ export interface MapDtoTerrain {
 }
 
 export interface MapDto {
+  base?: MapDtoBase;
+  field?: MapDtoField;
   version?: number;
   spawn?: MapDtoSpawn;
   terrain?: MapDtoTerrain;

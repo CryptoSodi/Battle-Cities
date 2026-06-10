@@ -30,15 +30,15 @@ export class PowerupGrid {
   private grid: boolean[][] = [];
   private backupGrid: boolean[][] = null;
 
-  constructor() {
+  constructor(fieldWidth: number, fieldHeight: number) {
     this.tileSize = config.TILE_SIZE_MEDIUM;
-    this.rowCount = config.FIELD_SIZE / this.tileSize;
-    this.colCount = config.FIELD_SIZE / this.tileSize;
+    this.rowCount = fieldHeight / this.tileSize;
+    this.colCount = fieldWidth / this.tileSize;
 
-    for (let rowIndex = 0; rowIndex < this.colCount; rowIndex += 1) {
+    for (let rowIndex = 0; rowIndex < this.rowCount; rowIndex += 1) {
       this.grid[rowIndex] = [];
 
-      for (let colIndex = 0; colIndex < this.rowCount; colIndex += 1) {
+      for (let colIndex = 0; colIndex < this.colCount; colIndex += 1) {
         this.grid[rowIndex][colIndex] = true;
       }
     }

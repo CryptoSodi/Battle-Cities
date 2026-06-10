@@ -7,13 +7,15 @@ export const TILE_SIZE_LARGE = 64;
 
 export const LEGACY_FIELD_TILE_COUNT = 13;
 export const FIELD_TILE_COUNT = 20;
+export const FIELD_TILE_COUNT_WIDTH = FIELD_TILE_COUNT;
+export const FIELD_TILE_COUNT_HEIGHT = FIELD_TILE_COUNT;
 export const VIEWPORT_FIELD_TILE_COUNT = 16;
 export const LEGACY_FIELD_SIZE = LEGACY_FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const VIEWPORT_FIELD_SIZE =
   VIEWPORT_FIELD_TILE_COUNT * TILE_SIZE_LARGE;
-export const FIELD_CONTENT_OFFSET_X = (FIELD_SIZE - LEGACY_FIELD_SIZE) / 2;
-export const FIELD_CONTENT_OFFSET_Y = (FIELD_SIZE - LEGACY_FIELD_SIZE) / 2;
+export const FIELD_CONTENT_OFFSET_X = 0;
+export const FIELD_CONTENT_OFFSET_Y = FIELD_SIZE - LEGACY_FIELD_SIZE;
 
 export const BORDER_LEFT_WIDTH = 64;
 export const BORDER_RIGHT_WIDTH = 128;
@@ -49,10 +51,68 @@ export const BORDER_RECTS = [
   },
 ];
 
-export const CANVAS_WIDTH =
+export function getFieldPixelSize(tileCount: number): number {
+  return tileCount * TILE_SIZE_LARGE;
+}
+
+export function getBorderRects(fieldWidth: number, fieldHeight: number) {
+  return [
+    {
+      x: 0,
+      y: 0,
+      width: BORDER_LEFT_WIDTH + fieldWidth + BORDER_RIGHT_WIDTH,
+      height: BORDER_TOP_BOTTOM_HEIGHT,
+    },
+    {
+      x: 0,
+      y: fieldHeight + BORDER_TOP_BOTTOM_HEIGHT,
+      width: BORDER_LEFT_WIDTH + fieldWidth + BORDER_RIGHT_WIDTH,
+      height: BORDER_TOP_BOTTOM_HEIGHT,
+    },
+    {
+      x: 0,
+      y: BORDER_TOP_BOTTOM_HEIGHT,
+      width: BORDER_LEFT_WIDTH,
+      height: fieldHeight,
+    },
+    {
+      x: BORDER_LEFT_WIDTH + fieldWidth,
+      y: BORDER_TOP_BOTTOM_HEIGHT,
+      width: BORDER_RIGHT_WIDTH,
+      height: fieldHeight,
+    },
+  ];
+}
+
+const BASE_CANVAS_WIDTH =
   VIEWPORT_FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
-export const CANVAS_HEIGHT =
+const BASE_CANVAS_HEIGHT =
   VIEWPORT_FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+
+function getViewportAspectRatio(): number {
+  if (typeof window === 'undefined') {
+    return BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT;
+  }
+
+  const width = Math.max(window.innerWidth, 1);
+  const height = Math.max(window.innerHeight, 1);
+
+  return width / height;
+}
+
+function snapCanvasWidth(width: number): number {
+  return Math.ceil(width / TILE_SIZE_MEDIUM) * TILE_SIZE_MEDIUM;
+}
+
+export const CANVAS_HEIGHT = BASE_CANVAS_HEIGHT;
+export function getResponsiveCanvasWidth(): number {
+  return Math.max(
+    BASE_CANVAS_WIDTH,
+    snapCanvasWidth(CANVAS_HEIGHT * getViewportAspectRatio()),
+  );
+}
+
+export const CANVAS_WIDTH = getResponsiveCanvasWidth();
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;

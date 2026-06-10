@@ -5,17 +5,26 @@ import { TankColor, TankType, TankSpriteId } from '../../tank';
 export class EditorTankDummy extends GameObject {
   public collider = new BoxCollider(this);
   public painter = new SpritePainter();
-  public tags = [Tag.EditorBlockMove];
+  public tags: string[] = [];
   private type: TankType;
   private color: TankColor;
 
-  constructor(type: TankType, color: TankColor, rotation = Rotation.Up) {
+  constructor(
+    type: TankType,
+    color: TankColor,
+    rotation = Rotation.Up,
+    blockMove = false,
+  ) {
     super(64, 64);
 
     this.type = type;
     this.color = color;
     this.pivot.set(0.5, 0.5);
     this.rotation = rotation;
+
+    if (blockMove) {
+      this.tags = [Tag.EditorBlockMove];
+    }
   }
 
   protected setup({ collisionSystem, spriteLoader }: GameUpdateArgs): void {

@@ -3,6 +3,7 @@ import { GameUpdateArgs, Rotation } from '../../game';
 import { EnemyTank } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
+import { AiTankBehavior } from '../../tank/behaviors';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
@@ -71,6 +72,9 @@ export class LevelEnemyScript extends LevelScript {
     }
 
     const tank = TankFactory.createEnemy(event.partyIndex, type);
+    if (tank.behavior instanceof AiTankBehavior) {
+      tank.behavior.setBasePosition(this.mapConfig.getBasePosition());
+    }
     tank.updateMatrix(); // Origin should be in before setting center
     tank.rotate(Rotation.Down);
     tank.setCenter(event.centerPosition);

@@ -4,6 +4,8 @@ import {
   AlertModal,
   ConfirmModal,
   DividerMenuItem,
+  SelectorMenuItem,
+  SelectorMenuItemChoice,
   SceneMenu,
   SceneMenuTitle,
   TextMenuItem,
@@ -28,11 +30,17 @@ enum MenuState {
 }
 
 export class EditorMenuScene extends GameScene<EditorLocationParams> {
+  private static readonly FIELD_TILE_CHOICES = Array.from(
+    { length: 33 },
+    (_, index) => 8 + index,
+  );
   private title: SceneMenuTitle;
   private menu: SceneMenu;
   private newItem: TextMenuItem;
   private loadItem: TextMenuItem;
   private saveItem: TextMenuItem;
+  private fieldWidthItem: SelectorMenuItem<number>;
+  private fieldHeightItem: SelectorMenuItem<number>;
   private playtestItem: TextMenuItem;
   private mapItem: TextMenuItem;
   private enemyItem: TextMenuItem;
@@ -82,6 +90,26 @@ export class EditorMenuScene extends GameScene<EditorLocationParams> {
     this.saveItem.selected.addListener(this.handleSaveSelected);
     this.saveItem.setFocusable(false);
 
+    this.fieldWidthItem = new SelectorMenuItem(
+      this.createFieldTileChoices('FIELD WIDTH'),
+      {
+        containerWidth: 320,
+        itemOriginX: 0,
+      },
+    );
+    this.fieldWidthItem.changed.addListener(this.handleFieldWidthChanged);
+    this.fieldWidthItem.setFocusable(false);
+
+    this.fieldHeightItem = new SelectorMenuItem(
+      this.createFieldTileChoices('FIELD HEIGHT'),
+      {
+        containerWidth: 320,
+        itemOriginX: 0,
+      },
+    );
+    this.fieldHeightItem.changed.addListener(this.handleFieldHeightChanged);
+    this.fieldHeightItem.setFocusable(false);
+
     this.playtestItem = new TextMenuItem('PLAYTEST');
     this.playtestItem.selected.addListener(this.handlePlaytestSelected);
     this.playtestItem.setFocusable(false);
@@ -101,6 +129,9 @@ export class EditorMenuScene extends GameScene<EditorLocationParams> {
       this.newItem,
       this.loadItem,
       this.saveItem,
+      new DividerMenuItem(),
+      this.fieldWidthItem,
+      this.fieldHeightItem,
       new DividerMenuItem(),
       this.mapItem,
       this.enemyItem,
@@ -168,9 +199,18 @@ export class EditorMenuScene extends GameScene<EditorLocationParams> {
     this.title.setText(this.getTitleText());
 
     this.saveItem.setFocusable(this.isLoaded());
+    this.fieldWidthItem.setFocusable(this.isLoaded());
+    this.fieldHeightItem.setFocusable(this.isLoaded());
     this.mapItem.setFocusable(this.isLoaded());
     this.enemyItem.setFocusable(this.isLoaded());
     this.playtestItem.setFocusable(this.isLoaded());
+
+    if (!this.isLoaded()) {
+      return;
+    }
+
+    this.fieldWidthItem.setValue(this.mapConfig.getFieldTileWidth());
+    this.fieldHeightItem.setValue(this.mapConfig.getFieldTileHeight());
   }
 
   private createLocationParams(): EditorLocationParams {
@@ -266,6 +306,26 @@ export class EditorMenuScene extends GameScene<EditorLocationParams> {
     this.navigator.push(GameSceneType.EditorEnemy, this.createLocationParams());
   };
 
+  private handleFieldWidthChanged = (
+    choice: SelectorMenuItemChoice<number>,
+  ): void => {
+    this.mapConfig.setFieldTileCount(
+      choice.value,
+      this.mapConfig.getFieldTileHeight(),
+    );
+    this.updateMenu();
+  };
+
+  private handleFieldHeightChanged = (
+    choice: SelectorMenuItemChoice<number>,
+  ): void => {
+    this.mapConfig.setFieldTileCount(
+      this.mapConfig.getFieldTileWidth(),
+      choice.value,
+    );
+    this.updateMenu();
+  };
+
   private handleExitSelected = (): void => {
     this.navigator.clearAndPush(GameSceneType.MainMenu);
   };
@@ -325,4 +385,15 @@ export class EditorMenuScene extends GameScene<EditorLocationParams> {
   private handleAlertAccepted = (): void => {
     this.hideAlert();
   };
+
+  private createFieldTileChoices(
+    prefix: string,
+  ): SelectorMenuItemChoice<number>[] {
+    return EditorMenuScene.FIELD_TILE_CHOICES.map((value) => {
+      return {
+        value,
+        text: `${prefix} ${value}`,
+      };
+    });
+  }
 }

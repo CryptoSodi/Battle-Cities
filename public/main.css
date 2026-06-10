@@ -10,6 +10,8 @@ body {
   flex: 1;
   justify-content: center;
   margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
   position: relative;
 }
 
@@ -54,4 +56,14 @@ body.scanlines-disabled::after {
   color: #fff;
   font-family: Lucida Console, Courier, monospace;
   font-size: 32px;
+}
+
+canvas {
+  aspect-ratio: var(--game-width) / var(--game-height);
+  display: block;
+  height: min(100vh, calc(100vw * var(--game-height) / var(--game-width)));
+  image-rendering: pixelated;
+  max-height: 100vh;
+  max-width: 100vw;
+  width: min(100vw, calc(100vh * var(--game-width) / var(--game-height)));
 }

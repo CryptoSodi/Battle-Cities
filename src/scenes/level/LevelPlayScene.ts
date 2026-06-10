@@ -5,6 +5,7 @@ import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory } from '../../terrain';
+import { Vector } from '../../core';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
@@ -41,6 +42,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private session: Session;
   private inputManager: InputManager;
   private debugCollisionMenu: DebugCollisionMenu;
+  private initialCameraTarget: Vector;
 
   private allScripts: LevelScript[] = [];
   private alwaysUpdateScripts: LevelScript[] = [];
@@ -63,6 +65,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, inputManager, session } = updateArgs;
+    const { mapConfig } = this.params;
+    const fieldWidth = mapConfig.getFieldWidth();
+    const fieldHeight = mapConfig.getFieldHeight();
 
     this.debugCollisionMenu = new DebugCollisionMenu(
       collisionSystem,
@@ -74,13 +79,13 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.debugCollisionMenu.show();
     }
 
-    this.world = new LevelWorld(this.root);
+    this.world = new LevelWorld(this.root, fieldWidth, fieldHeight);
 
     this.world.field.position.set(
       config.BORDER_LEFT_WIDTH,
       config.BORDER_TOP_BOTTOM_HEIGHT,
     );
-    this.world.field.add(new Border());
+    this.world.field.add(new Border(fieldWidth, fieldHeight));
     this.root.add(this.world.field);
 
     this.eventBus = new LevelEventBus();
@@ -88,10 +93,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.inputManager = inputManager;
     this.session = session;
 
-    const { mapConfig } = this.params;
+    const playerSpawnPositions = mapConfig.getPlayerSpawnPositions();
+    this.initialCameraTarget =
+      playerSpawnPositions[0]?.clone() ?? new Vector(0, 0);
+    this.initialCameraTarget.addScalar(config.TILE_SIZE_LARGE / 2);
 
     const terrainRegions = mapConfig.getTerrainRegions();
-    const tiles = TerrainFactory.createMapFromRegionConfigs(terrainRegions);
+    const tiles = TerrainFactory.createMapFromRegionConfigs(
+      terrainRegions,
+      fieldWidth,
+      fieldHeight,
+    );
 
     for (const tile of tiles) {
       tile.destroyed.addListener(() => {
@@ -221,24 +233,39 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   private updateCamera(): void {
     const targetTank = this.world.getPlayerTanks()[0];
+    const fieldWidth = this.world.field.size.width;
+    const fieldHeight = this.world.field.size.height;
+    const viewportSize = config.VIEWPORT_FIELD_SIZE;
 
     let nextX = config.BORDER_LEFT_WIDTH;
     let nextY = config.BORDER_TOP_BOTTOM_HEIGHT;
 
-    if (targetTank !== null && targetTank !== undefined) {
-      const targetCenter = targetTank.getCenter();
-      nextX += config.VIEWPORT_FIELD_SIZE / 2 - targetCenter.x;
-      nextY += config.VIEWPORT_FIELD_SIZE / 2 - targetCenter.y;
+    const targetCenter =
+      targetTank !== null && targetTank !== undefined
+        ? targetTank.getCenter()
+        : this.initialCameraTarget;
 
-      const minX =
-        config.BORDER_LEFT_WIDTH + config.VIEWPORT_FIELD_SIZE - config.FIELD_SIZE;
-      const minY =
-        config.BORDER_TOP_BOTTOM_HEIGHT +
-        config.VIEWPORT_FIELD_SIZE -
-        config.FIELD_SIZE;
+    if (targetCenter !== null && targetCenter !== undefined) {
+      nextX += viewportSize / 2 - targetCenter.x;
+      nextY += viewportSize / 2 - targetCenter.y;
 
-      nextX = Math.max(minX, Math.min(config.BORDER_LEFT_WIDTH, nextX));
-      nextY = Math.max(minY, Math.min(config.BORDER_TOP_BOTTOM_HEIGHT, nextY));
+      if (fieldWidth <= viewportSize) {
+        nextX =
+          config.BORDER_LEFT_WIDTH + (viewportSize - fieldWidth) / 2;
+      } else {
+        const minX =
+          config.BORDER_LEFT_WIDTH + viewportSize - fieldWidth;
+        nextX = Math.max(minX, Math.min(config.BORDER_LEFT_WIDTH, nextX));
+      }
+
+      if (fieldHeight <= viewportSize) {
+        nextY =
+          config.BORDER_TOP_BOTTOM_HEIGHT + (viewportSize - fieldHeight) / 2;
+      } else {
+        const minY =
+          config.BORDER_TOP_BOTTOM_HEIGHT + viewportSize - fieldHeight;
+        nextY = Math.max(minY, Math.min(config.BORDER_TOP_BOTTOM_HEIGHT, nextY));
+      }
     }
 
     if (

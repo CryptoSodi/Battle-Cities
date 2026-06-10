@@ -46,6 +46,34 @@ const gameRenderer = new GameRenderer({
   width: config.CANVAS_WIDTH,
 });
 
+function syncCanvasCssSize(width: number, height: number): void {
+  document.documentElement.style.setProperty('--game-width', width.toString());
+  document.documentElement.style.setProperty('--game-height', height.toString());
+}
+
+syncCanvasCssSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+let resizeTimeoutId: number = null;
+window.addEventListener('resize', () => {
+  const nextCanvasWidth = config.getResponsiveCanvasWidth();
+
+  if (nextCanvasWidth === config.CANVAS_WIDTH) {
+    return;
+  }
+
+  syncCanvasCssSize(nextCanvasWidth, config.CANVAS_HEIGHT);
+
+  if (resizeTimeoutId !== null) {
+    window.clearTimeout(resizeTimeoutId);
+  }
+
+  // Rebuild scenes against the new internal width so the menu layout stays
+  // correct without stretching or cropping the pixel art.
+  resizeTimeoutId = window.setTimeout(() => {
+    window.location.reload();
+  }, 150);
+});
+
 const gameStorage = new GameStorage(config.STORAGE_NAMESPACE);
 gameStorage.load();
 

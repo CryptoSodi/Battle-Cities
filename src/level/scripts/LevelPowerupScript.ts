@@ -28,7 +28,10 @@ export class LevelPowerupScript extends LevelScript {
     this.timer = new Timer();
     this.timer.done.addListener(this.handleTimer);
 
-    this.grid = new PowerupGrid();
+    this.grid = new PowerupGrid(
+      this.mapConfig.getFieldWidth(),
+      this.mapConfig.getFieldHeight(),
+    );
     this.blockGridDefaults();
     this.blockGridInitialMap();
 
@@ -177,9 +180,11 @@ export class LevelPowerupScript extends LevelScript {
   }
 
   private createBaseRect(): Rect {
+    const basePosition = this.mapConfig.getBasePosition();
+
     return new Rect(
-      config.BASE_DEFAULT_POSITION.x,
-      config.BASE_DEFAULT_POSITION.y,
+      basePosition.x,
+      basePosition.y,
       config.BASE_DEFAULT_SIZE.width,
       config.BASE_DEFAULT_SIZE.height,
     );

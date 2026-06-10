@@ -23,8 +23,8 @@ export class DebugLevelPowerupMenu extends DebugMenu {
     this.powerupGrid = powerupGrid;
 
     this.debugGrid = new DebugGrid(
-      config.FIELD_SIZE,
-      config.FIELD_SIZE,
+      this.levelWorld.field.size.width,
+      this.levelWorld.field.size.height,
       config.TILE_SIZE_MEDIUM,
     );
 

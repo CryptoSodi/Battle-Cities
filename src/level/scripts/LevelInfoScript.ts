@@ -13,11 +13,11 @@ export class LevelInfoScript extends LevelScript {
       this.handleEnemySpawnRequested,
     );
 
-    this.info = new LevelInfo();
-    this.info.position.set(
-      config.BORDER_LEFT_WIDTH + config.VIEWPORT_FIELD_SIZE + 32,
-      config.BORDER_TOP_BOTTOM_HEIGHT + 32,
+    this.info = new LevelInfo(
+      this.world.sceneRoot.size.width,
+      this.session.isMultiplayer(),
     );
+    this.info.position.set(0, 0);
     this.world.sceneRoot.add(this.info);
 
     this.info.setLevelNumber(this.session.getLevelNumber());

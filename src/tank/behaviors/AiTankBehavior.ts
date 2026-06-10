@@ -28,6 +28,15 @@ export class AiTankBehavior extends TankBehavior {
   private thinkTimer = new Timer();
   private fireTimer = new Timer();
   private log = new Logger(AiTankBehavior.name, Logger.Level.Info);
+  private basePosition = new Vector(
+    config.BASE_DEFAULT_POSITION.x,
+    config.BASE_DEFAULT_POSITION.y,
+  );
+
+  public setBasePosition(basePosition: Vector): this {
+    this.basePosition = basePosition.clone();
+    return this;
+  }
 
   public update(tank: Tank, updateArgs: GameUpdateArgs): void {
     if (this.fireTimer.isDone()) {
@@ -180,13 +189,9 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   private getRotationTowardsBase(tank: Tank): Rotation {
-    const basePosition = new Vector(
-      config.BASE_DEFAULT_POSITION.x,
-      config.BASE_DEFAULT_POSITION.y,
-    );
     const tankPosition = tank.position;
 
-    const direction = basePosition
+    const direction = this.basePosition
       .clone()
       .sub(tankPosition)
       .normalize();

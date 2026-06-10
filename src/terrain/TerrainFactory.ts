@@ -21,13 +21,20 @@ export class TerrainFactory {
   // calculated correctly.
   public static createMapFromRegionConfigs(
     regionConfigs: TerrainRegionConfig[],
+    fieldWidth?: number,
+    fieldHeight?: number,
   ): TerrainTile[] {
     const rectsByType = this.mapRegionConfigsByType(regionConfigs);
 
     const tiles = [];
 
     rectsByType.forEach((regionRects, type) => {
-      const regionTiles = this.createMapFromRegions(type, regionRects);
+      const regionTiles = this.createMapFromRegions(
+        type,
+        regionRects,
+        fieldWidth,
+        fieldHeight,
+      );
       tiles.push(...regionTiles);
     });
 
@@ -39,9 +46,11 @@ export class TerrainFactory {
   public static createMapFromRegions(
     type: TerrainType,
     regionRects: Rect[],
+    fieldWidth?: number,
+    fieldHeight?: number,
   ): TerrainTile[] {
     if (type === TerrainType.Brick) {
-      return this.createMapFromBrickRegions(regionRects);
+      return this.createMapFromBrickRegions(regionRects, fieldWidth, fieldHeight);
     }
 
     const tiles = [];
@@ -154,21 +163,28 @@ export class TerrainFactory {
     return tiles;
   }
 
-  private static createMapFromBrickRegions(regionRects: Rect[]): TerrainTile[] {
+  private static createMapFromBrickRegions(
+    regionRects: Rect[],
+    fieldWidth?: number,
+    fieldHeight?: number,
+  ): TerrainTile[] {
     const superTileSize = config.BRICK_SUPER_TILE_SIZE;
-    const superTileCount = config.FIELD_SIZE / superTileSize;
+    const fieldBounds = this.getFieldBounds(regionRects, fieldWidth, fieldHeight);
+    const superTileCols = Math.ceil(fieldBounds.width / superTileSize);
+    const superTileRows = Math.ceil(fieldBounds.height / superTileSize);
 
     const superGrid = [];
 
-    for (let rowIndex = 0; rowIndex < superTileCount; rowIndex += 1) {
+    for (let rowIndex = 0; rowIndex < superTileRows; rowIndex += 1) {
       superGrid[rowIndex] = [];
-      for (let colIndex = 0; colIndex < superTileCount; colIndex += 1) {
+      for (let colIndex = 0; colIndex < superTileCols; colIndex += 1) {
         superGrid[rowIndex][colIndex] = [];
       }
     }
 
     const subTileSize = config.BRICK_TILE_SIZE;
-    const subTileCount = config.FIELD_SIZE / subTileSize;
+    const subTileCols = Math.ceil(fieldBounds.width / subTileSize);
+    const subTileRows = Math.ceil(fieldBounds.height / subTileSize);
 
     const ratio = superTileSize / subTileSize;
 
@@ -181,11 +197,11 @@ export class TerrainFactory {
       );
       const maxIndex = new Vector(
         Math.min(
-          subTileCount,
+          subTileCols,
           Math.ceil((regionRect.x + regionRect.width) / subTileSize),
         ),
         Math.min(
-          subTileCount,
+          subTileRows,
           Math.ceil((regionRect.y + regionRect.height) / subTileSize),
         ),
       );
@@ -219,8 +235,8 @@ export class TerrainFactory {
     const superTiles = [];
 
     // Go over super-grid to create super-tiles
-    for (let rowIndex = 0; rowIndex < superTileCount; rowIndex += 1) {
-      for (let colIndex = 0; colIndex < superTileCount; colIndex += 1) {
+    for (let rowIndex = 0; rowIndex < superTileRows; rowIndex += 1) {
+      for (let colIndex = 0; colIndex < superTileCols; colIndex += 1) {
         const subTiles = superGrid[rowIndex][colIndex];
         if (subTiles.length === 0) {
           continue;
@@ -236,6 +252,30 @@ export class TerrainFactory {
     }
 
     return superTiles;
+  }
+
+  private static getFieldBounds(
+    regionRects: Rect[],
+    fieldWidth?: number,
+    fieldHeight?: number,
+  ): Rect {
+    if (fieldWidth !== undefined && fieldHeight !== undefined) {
+      return new Rect(0, 0, fieldWidth, fieldHeight);
+    }
+
+    if (regionRects.length === 0) {
+      return new Rect(0, 0, 0, 0);
+    }
+
+    let maxWidth = 0;
+    let maxHeight = 0;
+
+    regionRects.forEach((regionRect) => {
+      maxWidth = Math.max(maxWidth, regionRect.x + regionRect.width);
+      maxHeight = Math.max(maxHeight, regionRect.y + regionRect.height);
+    });
+
+    return new Rect(0, 0, maxWidth, maxHeight);
   }
 
   private static mapRegionConfigsByType(
