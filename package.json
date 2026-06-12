@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "build": "npm run build:prod",
     "build:prod": "webpack --config webpack/prod.config.js",
     "build:dev": "webpack --config webpack/dev.config.js",
     "lint": "eslint 'src/**' --max-warnings=0 --ext .js,.ts",
