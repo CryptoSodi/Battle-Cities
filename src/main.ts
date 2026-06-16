@@ -55,13 +55,16 @@ syncCanvasCssSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
 
 let resizeTimeoutId: number = null;
 window.addEventListener('resize', () => {
-  const nextCanvasWidth = config.getResponsiveCanvasWidth();
+  const nextCanvasSize = config.getResponsiveCanvasSize();
 
-  if (nextCanvasWidth === config.CANVAS_WIDTH) {
+  if (
+    nextCanvasSize.width === config.CANVAS_WIDTH &&
+    nextCanvasSize.height === config.CANVAS_HEIGHT
+  ) {
     return;
   }
 
-  syncCanvasCssSize(nextCanvasWidth, config.CANVAS_HEIGHT);
+  syncCanvasCssSize(nextCanvasSize.width, nextCanvasSize.height);
 
   if (resizeTimeoutId !== null) {
     window.clearTimeout(resizeTimeoutId);

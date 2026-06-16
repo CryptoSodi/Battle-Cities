@@ -17,9 +17,11 @@ export const VIEWPORT_FIELD_SIZE =
 export const FIELD_CONTENT_OFFSET_X = 0;
 export const FIELD_CONTENT_OFFSET_Y = FIELD_SIZE - LEGACY_FIELD_SIZE;
 
-export const BORDER_LEFT_WIDTH = 64;
-export const BORDER_RIGHT_WIDTH = 128;
+export const BORDER_LEFT_WIDTH = 32;
+export const BORDER_RIGHT_WIDTH = 32;
 export const BORDER_TOP_BOTTOM_HEIGHT = 32;
+export const LEVEL_INFO_HEIGHT = 64;
+export const LEVEL_PLAY_TOP_OFFSET = LEVEL_INFO_HEIGHT;
 export const BORDER_RECTS = [
   // Top
   {
@@ -38,16 +40,16 @@ export const BORDER_RECTS = [
   // Left
   {
     x: 0,
-    y: BORDER_TOP_BOTTOM_HEIGHT,
+    y: 0,
     width: BORDER_LEFT_WIDTH,
-    height: FIELD_SIZE,
+    height: FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2,
   },
   // Right
   {
     x: BORDER_LEFT_WIDTH + FIELD_SIZE,
-    y: BORDER_TOP_BOTTOM_HEIGHT,
+    y: 0,
     width: BORDER_RIGHT_WIDTH,
-    height: FIELD_SIZE,
+    height: FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2,
   },
 ];
 
@@ -71,15 +73,15 @@ export function getBorderRects(fieldWidth: number, fieldHeight: number) {
     },
     {
       x: 0,
-      y: BORDER_TOP_BOTTOM_HEIGHT,
+      y: 0,
       width: BORDER_LEFT_WIDTH,
-      height: fieldHeight,
+      height: fieldHeight + BORDER_TOP_BOTTOM_HEIGHT * 2,
     },
     {
       x: BORDER_LEFT_WIDTH + fieldWidth,
-      y: BORDER_TOP_BOTTOM_HEIGHT,
+      y: 0,
       width: BORDER_RIGHT_WIDTH,
-      height: fieldHeight,
+      height: fieldHeight + BORDER_TOP_BOTTOM_HEIGHT * 2,
     },
   ];
 }
@@ -87,32 +89,44 @@ export function getBorderRects(fieldWidth: number, fieldHeight: number) {
 const BASE_CANVAS_WIDTH =
   VIEWPORT_FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
 const BASE_CANVAS_HEIGHT =
-  VIEWPORT_FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+  LEVEL_PLAY_TOP_OFFSET + VIEWPORT_FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
 
-function getViewportAspectRatio(): number {
+function getViewportSize(): { width: number; height: number } {
   if (typeof window === 'undefined') {
-    return BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT;
+    return {
+      width: BASE_CANVAS_WIDTH,
+      height: BASE_CANVAS_HEIGHT,
+    };
   }
 
-  const width = Math.max(window.innerWidth, 1);
-  const height = Math.max(window.innerHeight, 1);
-
-  return width / height;
+  return {
+    width: Math.max(window.innerWidth, 1),
+    height: Math.max(window.innerHeight, 1),
+  };
 }
 
-function snapCanvasWidth(width: number): number {
-  return Math.ceil(width / TILE_SIZE_MEDIUM) * TILE_SIZE_MEDIUM;
+export function getResponsiveCanvasSize(): { width: number; height: number } {
+  const viewportSize = getViewportSize();
+  const viewportAspectRatio = viewportSize.width / viewportSize.height;
+  const baseAspectRatio = BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT;
+
+  if (viewportAspectRatio >= baseAspectRatio) {
+    return {
+      width: Math.ceil(BASE_CANVAS_HEIGHT * viewportAspectRatio),
+      height: BASE_CANVAS_HEIGHT,
+    };
+  }
+
+  return {
+    width: BASE_CANVAS_WIDTH,
+    height: Math.ceil(BASE_CANVAS_WIDTH / viewportAspectRatio),
+  };
 }
 
-export const CANVAS_HEIGHT = BASE_CANVAS_HEIGHT;
-export function getResponsiveCanvasWidth(): number {
-  return Math.max(
-    BASE_CANVAS_WIDTH,
-    snapCanvasWidth(CANVAS_HEIGHT * getViewportAspectRatio()),
-  );
-}
+const RESPONSIVE_CANVAS_SIZE = getResponsiveCanvasSize();
 
-export const CANVAS_WIDTH = getResponsiveCanvasWidth();
+export const CANVAS_WIDTH = RESPONSIVE_CANVAS_SIZE.width;
+export const CANVAS_HEIGHT = RESPONSIVE_CANVAS_SIZE.height;
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;

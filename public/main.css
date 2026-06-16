@@ -59,11 +59,8 @@ body.scanlines-disabled::after {
 }
 
 canvas {
-  aspect-ratio: var(--game-width) / var(--game-height);
   display: block;
-  height: min(100vh, calc(100vw * var(--game-height) / var(--game-width)));
+  height: 100vh;
   image-rendering: pixelated;
-  max-height: 100vh;
-  max-width: 100vw;
-  width: min(100vw, calc(100vh * var(--game-width) / var(--game-height)));
+  width: 100vw;
 }

@@ -27,15 +27,15 @@ export class Border extends GameObject {
       },
       {
         x: -config.BORDER_LEFT_WIDTH,
-        y: 0,
+        y: -config.BORDER_TOP_BOTTOM_HEIGHT,
         width: config.BORDER_LEFT_WIDTH,
-        height: this.fieldHeight,
+        height: this.fieldHeight + config.BORDER_TOP_BOTTOM_HEIGHT * 2,
       },
       {
         x: this.fieldWidth,
-        y: 0,
+        y: -config.BORDER_TOP_BOTTOM_HEIGHT,
         width: config.BORDER_RIGHT_WIDTH,
-        height: this.fieldHeight,
+        height: this.fieldHeight + config.BORDER_TOP_BOTTOM_HEIGHT * 2,
       },
     ];
 

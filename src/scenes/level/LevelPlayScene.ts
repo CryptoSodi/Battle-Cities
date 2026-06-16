@@ -83,7 +83,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.world.field.position.set(
       config.BORDER_LEFT_WIDTH,
-      config.BORDER_TOP_BOTTOM_HEIGHT,
+      config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT,
     );
     this.world.field.add(new Border(fieldWidth, fieldHeight));
     this.root.add(this.world.field);
@@ -236,10 +236,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const targetTank = this.world.getPlayerTanks()[0];
     const fieldWidth = this.world.field.size.width;
     const fieldHeight = this.world.field.size.height;
-    const viewportSize = config.VIEWPORT_FIELD_SIZE;
+    const viewportWidth = config.CANVAS_WIDTH - config.BORDER_LEFT_WIDTH - config.BORDER_RIGHT_WIDTH;
+    const viewportHeight =
+      config.CANVAS_HEIGHT -
+      config.LEVEL_PLAY_TOP_OFFSET -
+      config.BORDER_TOP_BOTTOM_HEIGHT * 2;
 
     let nextX = config.BORDER_LEFT_WIDTH;
-    let nextY = config.BORDER_TOP_BOTTOM_HEIGHT;
+    let nextY = config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT;
 
     const targetCenter =
       targetTank !== null && targetTank !== undefined
@@ -247,25 +251,36 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         : this.initialCameraTarget;
 
     if (targetCenter !== null && targetCenter !== undefined) {
-      nextX += viewportSize / 2 - targetCenter.x;
-      nextY += viewportSize / 2 - targetCenter.y;
+      nextX += viewportWidth / 2 - targetCenter.x;
+      nextY += viewportHeight / 2 - targetCenter.y;
 
-      if (fieldWidth <= viewportSize) {
+      if (fieldWidth <= viewportWidth) {
         nextX =
-          config.BORDER_LEFT_WIDTH + (viewportSize - fieldWidth) / 2;
+          config.BORDER_LEFT_WIDTH + (viewportWidth - fieldWidth) / 2;
       } else {
         const minX =
-          config.BORDER_LEFT_WIDTH + viewportSize - fieldWidth;
+          config.BORDER_LEFT_WIDTH + viewportWidth - fieldWidth;
         nextX = Math.max(minX, Math.min(config.BORDER_LEFT_WIDTH, nextX));
       }
 
-      if (fieldHeight <= viewportSize) {
+      if (fieldHeight <= viewportHeight) {
         nextY =
-          config.BORDER_TOP_BOTTOM_HEIGHT + (viewportSize - fieldHeight) / 2;
+          config.LEVEL_PLAY_TOP_OFFSET +
+          config.BORDER_TOP_BOTTOM_HEIGHT +
+          (viewportHeight - fieldHeight) / 2;
       } else {
         const minY =
-          config.BORDER_TOP_BOTTOM_HEIGHT + viewportSize - fieldHeight;
-        nextY = Math.max(minY, Math.min(config.BORDER_TOP_BOTTOM_HEIGHT, nextY));
+          config.LEVEL_PLAY_TOP_OFFSET +
+          config.BORDER_TOP_BOTTOM_HEIGHT +
+          viewportHeight -
+          fieldHeight;
+        nextY = Math.max(
+          minY,
+          Math.min(
+            config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT,
+            nextY,
+          ),
+        );
       }
     }
 

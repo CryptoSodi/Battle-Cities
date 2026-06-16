@@ -30,10 +30,10 @@ export class Curtain extends GameObject {
 
     const initialHeight = this.state === State.Open ? 0 : this.targetHeight;
 
-    this.topPart = new GameObject(this.size.width, initialHeight);
+    this.topPart = new GameObject(this.size.width, initialHeight + 1);
     this.topPart.painter = new RectPainter(config.COLOR_GRAY);
 
-    this.bottomPart = new GameObject(this.size.width, initialHeight);
+    this.bottomPart = new GameObject(this.size.width, initialHeight + 1);
     this.bottomPart.painter = new RectPainter(config.COLOR_GRAY);
     this.bottomPart.origin.set(0, 1);
     this.bottomPart.position.setY(this.size.height);
@@ -66,10 +66,10 @@ export class Curtain extends GameObject {
       }
     }
 
-    this.topPart.size.setHeight(nextHeight);
+    this.topPart.size.setHeight(nextHeight + 1);
     this.topPart.updateMatrix();
 
-    this.bottomPart.size.setHeight(nextHeight);
+    this.bottomPart.size.setHeight(nextHeight + 1);
     this.bottomPart.updateMatrix();
 
     this.dirtyPaintBox();

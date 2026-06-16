@@ -15,6 +15,8 @@ import { GameSceneType } from '../GameSceneType';
 
 const BONUS_DELAY = 0.5;
 const POST_DELAY = 3;
+const HIGHSCORE_GAP = 256;
+const SINGLE_PLAYER_SCORE_TABLE_OFFSET_X = 146;
 
 enum State {
   Idle,
@@ -65,14 +67,20 @@ export class LevelScoreScene extends GameScene {
     this.highscoreTitle = new SpriteText('HI-SCORE', {
       color: config.COLOR_RED,
     });
-    this.highscoreTitle.position.set(256, 64);
+    this.highscoreTitle.origin.setX(1);
+    this.highscoreTitle.position.set(
+      this.root.getSelfCenter().x - HIGHSCORE_GAP / 2,
+      64,
+    );
     this.root.add(this.highscoreTitle);
 
     this.highscorePoints = new SpriteText(this.getCommonHighscoreText(), {
       color: config.COLOR_YELLOW,
     });
-    this.highscorePoints.origin.setX(1);
-    this.highscorePoints.position.set(768, 64);
+    this.highscorePoints.position.set(
+      this.root.getSelfCenter().x + HIGHSCORE_GAP / 2,
+      64,
+    );
     this.root.add(this.highscorePoints);
 
     this.levelTitle = new LevelTitle(
@@ -87,9 +95,14 @@ export class LevelScoreScene extends GameScene {
     this.levelTitle.position.setY(128);
     this.root.add(this.levelTitle);
 
-    this.scoreTable = new ScoreTable();
+    this.scoreTable = new ScoreTable(this.session.isMultiplayer());
     this.scoreTable.updateMatrix();
     this.scoreTable.setCenter(this.root.getSelfCenter());
+    if (!this.session.isMultiplayer()) {
+      this.scoreTable.position.setX(
+        this.scoreTable.position.x + SINGLE_PLAYER_SCORE_TABLE_OFFSET_X,
+      );
+    }
     this.scoreTable.done.addListener(this.handleScoreTableDone);
     this.root.add(this.scoreTable);
 

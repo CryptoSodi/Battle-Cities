@@ -19,6 +19,18 @@ enum State {
 
 const TIERS = [TankTier.A, TankTier.B, TankTier.C, TankTier.D];
 const TRANSITION_DELAY = 0.4;
+const MULTIPLAYER_WIDTH = 836;
+const SINGLE_PLAYER_LABEL_X = 256;
+const SINGLE_PLAYER_COUNTER_X = 4;
+const SINGLE_PLAYER_TOTAL_X = 256;
+const SINGLE_PLAYER_TOTAL_KILLS_X = 348;
+const MULTIPLAYER_PRIMARY_LABEL_X = 256;
+const MULTIPLAYER_SECONDARY_LABEL_X = 836;
+const MULTIPLAYER_PRIMARY_COUNTER_X = 4;
+const MULTIPLAYER_SECONDARY_COUNTER_X = 492;
+const MULTIPLAYER_TOTAL_X = 256;
+const MULTIPLAYER_PRIMARY_TOTAL_KILLS_X = 348;
+const MULTIPLAYER_SECONDARY_TOTAL_KILLS_X = 546;
 
 export class ScoreTable extends GameObject {
   public done = new Subject();
@@ -46,19 +58,33 @@ export class ScoreTable extends GameObject {
   private state = State.Idle;
   private transitionTimer = new Timer();
 
-  constructor() {
-    super(836, 544);
+  constructor(isMultiplayer = false) {
+    super(MULTIPLAYER_WIDTH, 544);
   }
 
   protected setup({ session }: GameUpdateArgs): void {
     this.session = session;
 
-    this.primaryPlayerLabel.position.set(256, 0);
+    const isMultiplayer = this.session.isMultiplayer();
+    const primaryLabelX = isMultiplayer
+      ? MULTIPLAYER_PRIMARY_LABEL_X
+      : SINGLE_PLAYER_LABEL_X;
+    const primaryCounterX = isMultiplayer
+      ? MULTIPLAYER_PRIMARY_COUNTER_X
+      : SINGLE_PLAYER_COUNTER_X;
+    const totalX = isMultiplayer
+      ? MULTIPLAYER_TOTAL_X
+      : SINGLE_PLAYER_TOTAL_X;
+    const primaryTotalKillsX = isMultiplayer
+      ? MULTIPLAYER_PRIMARY_TOTAL_KILLS_X
+      : SINGLE_PLAYER_TOTAL_KILLS_X;
+
+    this.primaryPlayerLabel.position.set(primaryLabelX, 0);
     this.primaryPlayerLabel.origin.setX(1);
     this.add(this.primaryPlayerLabel);
 
-    if (this.session.isMultiplayer()) {
-      this.secondaryPlayerLabel.position.set(836, 0);
+    if (isMultiplayer) {
+      this.secondaryPlayerLabel.position.set(MULTIPLAYER_SECONDARY_LABEL_X, 0);
       this.secondaryPlayerLabel.origin.setX(1);
       this.add(this.secondaryPlayerLabel);
     }
@@ -67,21 +93,21 @@ export class ScoreTable extends GameObject {
     this.primaryGamePoints.setText(
       this.session.primaryPlayer.getGamePoints().toString(),
     );
-    this.primaryGamePoints.position.set(256, 64);
+    this.primaryGamePoints.position.set(primaryLabelX, 64);
     this.primaryGamePoints.origin.set(1, 0);
     this.add(this.primaryGamePoints);
 
-    if (this.session.isMultiplayer()) {
+    if (isMultiplayer) {
       this.secondaryGamePoints.setText(
         this.session.secondaryPlayer.getGamePoints().toString(),
       );
-      this.secondaryGamePoints.position.set(836, 64);
+      this.secondaryGamePoints.position.set(MULTIPLAYER_SECONDARY_LABEL_X, 64);
       this.secondaryGamePoints.origin.set(1, 0);
       this.add(this.secondaryGamePoints);
     }
 
     TIERS.forEach((tier, tierIndex) => {
-      const icon = new ScoreTableTierIcon(tier, this.session.isMultiplayer());
+      const icon = new ScoreTableTierIcon(tier, isMultiplayer);
       icon.updateMatrix();
       icon.setCenter(this.getSelfCenter());
       icon.position.setY(136 + 100 * tierIndex);
@@ -91,12 +117,12 @@ export class ScoreTable extends GameObject {
       const primaryCost = primaryRecord.getTierKillCost(tier);
       const primaryKills = primaryRecord.getTierKillCount(tier);
       const primaryCounter = new ScoreTableCounter(primaryKills, primaryCost);
-      primaryCounter.position.set(4, 152 + 100 * tierIndex);
+      primaryCounter.position.set(primaryCounterX, 152 + 100 * tierIndex);
       this.counters[tierIndex] = this.counters[tierIndex] || [];
       this.counters[tierIndex].push(primaryCounter);
       this.add(primaryCounter);
 
-      if (this.session.isMultiplayer()) {
+      if (isMultiplayer) {
         const secondaryRecord = this.getSecondaryRecord();
         const secondaryCost = secondaryRecord.getTierKillCost(tier);
         const secondaryKills = secondaryRecord.getTierKillCount(tier);
@@ -105,7 +131,10 @@ export class ScoreTable extends GameObject {
           secondaryCost,
           true,
         );
-        secondaryCounter.position.set(492, 152 + 100 * tierIndex);
+        secondaryCounter.position.set(
+          MULTIPLAYER_SECONDARY_COUNTER_X,
+          152 + 100 * tierIndex,
+        );
         this.counters[tierIndex] = this.counters[tierIndex] || [];
         this.counters[tierIndex].push(secondaryCounter);
         this.add(secondaryCounter);
@@ -117,16 +146,19 @@ export class ScoreTable extends GameObject {
     this.underline.position.setY(504);
     this.add(this.underline);
 
-    this.totalLabel.position.set(256, 516);
+    this.totalLabel.position.set(totalX, 516);
     this.totalLabel.origin.set(1, 0);
     this.add(this.totalLabel);
 
-    this.primaryTotalKills.position.set(348, 516);
+    this.primaryTotalKills.position.set(primaryTotalKillsX, 516);
     this.primaryTotalKills.origin.set(1, 0);
     this.add(this.primaryTotalKills);
 
-    if (this.session.isMultiplayer()) {
-      this.secondaryTotalKills.position.set(546, 516);
+    if (isMultiplayer) {
+      this.secondaryTotalKills.position.set(
+        MULTIPLAYER_SECONDARY_TOTAL_KILLS_X,
+        516,
+      );
       this.secondaryTotalKills.origin.set(1, 0);
       this.add(this.secondaryTotalKills);
     }

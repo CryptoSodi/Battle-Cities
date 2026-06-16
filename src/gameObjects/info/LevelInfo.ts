@@ -3,8 +3,7 @@ import * as config from '../../config';
 
 import { SpriteText } from '../text';
 
-const BAR_HEIGHT = 40;
-const BLOCK_TOP = 10;
+const BLOCK_TOP = 20;
 const BLOCK_GAP = 16;
 const EDGE_PADDING_LEFT = 56;
 const EDGE_PADDING_RIGHT = 32;
@@ -23,13 +22,13 @@ export class LevelInfo extends GameObject {
   private readonly isMultiplayer: boolean;
 
   constructor(width: number, isMultiplayer: boolean) {
-    super(width, BAR_HEIGHT);
+    super(width, config.LEVEL_INFO_HEIGHT);
 
     this.isMultiplayer = isMultiplayer;
   }
 
   protected setup(): void {
-    this.painter = new RectPainter('rgba(6, 6, 6, 0.92)', '#3f3f3f');
+    this.painter = new RectPainter('rgba(6, 6, 6, 0.94)', '#4f4f4f');
 
     this.add(this.enemyTitle);
     this.add(this.enemyValue);
