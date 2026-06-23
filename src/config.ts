@@ -235,6 +235,13 @@ export const WALL_SHADOW_COLOR = '#000000';
 // Per-step alpha; near-edge darkness ≈ 1 - (1 - alpha)^STEPS.
 export const WALL_SHADOW_ALPHA = 0.1;
 
+// Drop shadow for brick text (e.g. the menu title). Tighter than the wall
+// shadow since the letter tiles are small.
+export const TEXT_SHADOW_OFFSET_X = 6;
+export const TEXT_SHADOW_OFFSET_Y = 6;
+export const TEXT_SHADOW_STEPS = 5;
+export const TEXT_SHADOW_ALPHA = 0.1;
+
 export const BRICK_TILE_Z_INDEX = 0;
 export const STEEL_TILE_Z_INDEX = 0;
 export const WATER_TILE_Z_INDEX = 0;

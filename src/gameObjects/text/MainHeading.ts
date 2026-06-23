@@ -5,9 +5,14 @@ import { TerrainText } from './TerrainText';
 
 export class MainHeading extends TerrainText {
   constructor() {
-    super('BATTLE\nCITIES', TerrainType.MenuBrick, {
-      alignment: TextAlignment.Center,
-      lineSpacing: 3,
-    });
+    super(
+      'BATTLE\nCITIES',
+      TerrainType.MenuBrick,
+      {
+        alignment: TextAlignment.Center,
+        lineSpacing: 3,
+      },
+      true,
+    );
   }
 }
