@@ -3,7 +3,7 @@ import { GameUpdateArgs } from '../../game';
 import { TerrainFactory, TerrainType } from '../../terrain';
 import * as config from '../../config';
 
-import { DropShadowPainter } from '../DropShadowPainter';
+import { BrickTextShadow } from './BrickTextShadow';
 
 export class TerrainText extends GameObject {
   private terrainType: TerrainType;
@@ -38,14 +38,11 @@ export class TerrainText extends GameObject {
     // Add the shadow layer first so it renders beneath the opaque letter tiles
     // (equal z-index, drawn in insertion order). Only the offset skirt shows.
     if (this.castShadow) {
-      const shadow = new GameObject();
-      const painter = new DropShadowPainter();
-      painter.casters = tiles;
-      painter.offsetX = config.TEXT_SHADOW_OFFSET_X;
-      painter.offsetY = config.TEXT_SHADOW_OFFSET_Y;
-      painter.steps = config.TEXT_SHADOW_STEPS;
-      painter.alpha = config.TEXT_SHADOW_ALPHA;
-      shadow.painter = painter;
+      const shadow = new BrickTextShadow(
+        tiles,
+        this.size.width,
+        this.size.height,
+      );
       this.add(shadow);
     }
 
