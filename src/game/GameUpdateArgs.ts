@@ -3,6 +3,7 @@ import {
   CollisionSystem,
   ColorSpriteFontGenerator,
   ImageLoader,
+  Prng,
   RectFontLoader,
   SpriteFontLoader,
   SpriteLoader,
@@ -30,6 +31,7 @@ export interface GameUpdateArgs {
   gameStorage: GameStorage;
   mapLoader: MapLoader;
   pointsHighscoreManager: PointsHighscoreManager;
+  rng: Prng;
   rectFontLoader: RectFontLoader;
   session: Session;
   spriteFontLoader: SpriteFontLoader;

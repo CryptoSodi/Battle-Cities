@@ -1,4 +1,4 @@
-import { RandomUtils, Rect, Vector } from '../core';
+import { Prng, Rect, Vector } from '../core';
 import * as config from '../config';
 
 // Grid for calculating zones where powerup can spawn. It should not spawn
@@ -125,7 +125,7 @@ export class PowerupGrid {
     return freeLargeCells;
   }
 
-  public getRandomPosition(): Vector {
+  public getRandomPosition(rng: Prng): Vector {
     const freeLargeCells = this.getFreeLargeCellIndexes();
 
     // In case all cells are blocked you need to decide what to do with powerup
@@ -133,7 +133,7 @@ export class PowerupGrid {
       return null;
     }
 
-    const index = RandomUtils.arrayElement(freeLargeCells);
+    const index = rng.arrayElement(freeLargeCells);
 
     const position = index.multScalar(this.tileSize);
 

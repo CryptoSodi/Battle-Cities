@@ -7,6 +7,10 @@ import { ImageLoader } from './ImageLoader';
 interface SpriteManifestItem {
   file: string;
   rect: number[];
+  // How many times larger the source art is than its logical (gameplay) size.
+  // e.g. a tank authored at 4x for HD detail uses scale: 4 and still draws at
+  // its ~52px footprint. Defaults to 1 (source size == draw size).
+  scale?: number;
 }
 
 interface SpriteManifest {
@@ -42,15 +46,18 @@ export class SpriteLoader {
       throw new Error(`Invalid sprite id = "${id}"`);
     }
 
-    const { file: filePath, rect: sourceRectValues } = item;
+    const { file: filePath, rect: sourceRectValues, scale: itemScale = 1 } = item;
     const image = this.imageLoader.load(filePath);
     const sourceRect = new Rect(...sourceRectValues);
 
+    // Source art may be authored larger than its logical size (HD detail);
+    // itemScale divides it back down so the drawn footprint is unchanged.
+    const drawScale = this.options.scale / itemScale;
     const defaultDestinationRect = new Rect(
       0,
       0,
-      sourceRect.width * this.options.scale,
-      sourceRect.height * this.options.scale,
+      sourceRect.width * drawScale,
+      sourceRect.height * drawScale,
     );
 
     const destinationRect = argDestinationRect ?? defaultDestinationRect;
@@ -82,6 +89,24 @@ export class SpriteLoader {
 
       return sprite;
     });
+
+    return sprites;
+  }
+
+  // Loads a numbered animation sequence "<prefix>.1", "<prefix>.2", ... up to
+  // however many consecutive frames exist in the manifest. This makes frame
+  // count data-driven by the art: dropping in "<prefix>.3" extends the
+  // animation with no code change. Returns frames in order.
+  public loadSequence(prefix: string): Sprite[] {
+    const sprites: Sprite[] = [];
+
+    for (let index = 1; ; index += 1) {
+      const id = `${prefix}.${index}`;
+      if (this.manifest[id] === undefined) {
+        break;
+      }
+      sprites.push(this.load(id));
+    }
 
     return sprites;
   }

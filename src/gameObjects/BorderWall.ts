@@ -19,10 +19,11 @@ export class BorderWall extends GameObject {
   protected setup({ collisionSystem, spriteLoader }: GameUpdateArgs): void {
     collisionSystem.register(this.collider);
 
-    this.animation = new Animation(
-      spriteLoader.loadList(['terrain.water.1', 'terrain.water.2']),
-      { delay: 0.5, loop: true },
-    );
+    // Data-driven frame count: animates terrain.water.1..N (8 today).
+    this.animation = new Animation(spriteLoader.loadSequence('terrain.water'), {
+      delay: 0.333,
+      loop: true,
+    });
 
     const tileSize = config.WATER_TILE_SIZE;
     const columns = Math.ceil(this.size.width / tileSize);

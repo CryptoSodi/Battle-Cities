@@ -1,4 +1,4 @@
-import { Rect, Timer } from '../../core';
+import { Prng, Rect, Timer } from '../../core';
 import { DebugLevelPowerupMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
 import { Powerup } from '../../gameObjects';
@@ -17,8 +17,11 @@ export class LevelPowerupScript extends LevelScript {
   private timer: Timer;
   private activePowerup: Powerup = null;
   private grid: PowerupGrid;
+  private rng: Prng;
 
-  protected setup(): void {
+  protected setup(updateArgs: GameUpdateArgs): void {
+    this.rng = updateArgs.rng;
+
     this.eventBus.enemyHit.addListener(this.handleEnemyHit);
     this.eventBus.enemySpawnCompleted.addListener(
       this.handleEnemySpawnCompleted,
@@ -102,7 +105,7 @@ export class LevelPowerupScript extends LevelScript {
     const powerup =
       type !== null
         ? PowerupFactory.create(type)
-        : PowerupFactory.createRandom();
+        : PowerupFactory.createRandom(this.rng);
 
     // Block area around player tank at the moment of powerup spawn
     // so player won't accidently pick up a powerup. After spawning free it back
@@ -118,7 +121,7 @@ export class LevelPowerupScript extends LevelScript {
       });
     }
 
-    const position = this.grid.getRandomPosition();
+    const position = this.grid.getRandomPosition(this.rng);
 
     if (playerTankRects.length > 0) {
       this.grid.restore();

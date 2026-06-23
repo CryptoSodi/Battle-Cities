@@ -1,4 +1,4 @@
-import { RandomUtils } from '../core';
+import { Prng } from '../core';
 import { Powerup } from '../gameObjects';
 
 import { PowerupType } from './PowerupType';
@@ -19,8 +19,8 @@ export class PowerupFactory {
     return powerup;
   }
 
-  public static createRandom(): Powerup {
-    const type = RandomUtils.arrayElement(AVAILABLE_TYPES);
+  public static createRandom(rng: Prng): Powerup {
+    const type = rng.arrayElement(AVAILABLE_TYPES);
     const powerup = new Powerup(type);
     return powerup;
   }

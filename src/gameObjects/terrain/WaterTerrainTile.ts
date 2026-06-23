@@ -25,10 +25,12 @@ export class WaterTerrainTile extends TerrainTile {
   protected setup({ collisionSystem, spriteLoader }: GameUpdateArgs): void {
     collisionSystem.register(this.collider);
 
-    this.animation = new Animation(
-      spriteLoader.loadList(['terrain.water.1', 'terrain.water.2']),
-      { delay: 0.5, loop: true },
-    );
+    // Frame count is driven by the art: animates terrain.water.1..N for
+    // however many frames exist in the manifest (2 today, more when added).
+    this.animation = new Animation(spriteLoader.loadSequence('terrain.water'), {
+      delay: 0.333,
+      loop: true,
+    });
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

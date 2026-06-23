@@ -1,6 +1,6 @@
 import { DebugCollisionMenu } from '../../debug';
 import { GameUpdateArgs, GameState, Session } from '../../game';
-import { Border, Tank } from '../../gameObjects';
+import { Border, GroundField, Tank, WallShadowField } from '../../gameObjects';
 import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
@@ -22,6 +22,7 @@ import {
   LevelGameOverScript,
   LevelInfoScript,
   LevelIntroScript,
+  LevelMinimapScript,
   LevelPauseScript,
   LevelPlayerOverScript,
   LevelPlayerScript,
@@ -49,6 +50,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private playingUpdateScripts: LevelScript[] = [];
 
   private audioScript: LevelAudioScript;
+  private minimapScript: LevelMinimapScript;
   private baseScript: LevelBaseScript;
   private enemyScript: LevelEnemyScript;
   private explosionScript: LevelExplosionScript;
@@ -85,6 +87,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       config.BORDER_LEFT_WIDTH,
       config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT,
     );
+    // Grass ground beneath everything (tiles across the whole field).
+    this.world.field.add(new GroundField(fieldWidth, fieldHeight));
+    // Soft drop shadow cast by walls onto the ground (above grass, below tiles).
+    this.world.field.add(new WallShadowField(fieldWidth, fieldHeight));
     this.world.field.add(new Border(fieldWidth, fieldHeight));
     this.root.add(this.world.field);
 
@@ -118,6 +124,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.world.field.add(...tiles);
 
     this.audioScript = new LevelAudioScript();
+    this.minimapScript = new LevelMinimapScript();
     this.baseScript = new LevelBaseScript();
     this.enemyScript = new LevelEnemyScript();
     this.explosionScript = new LevelExplosionScript();
@@ -134,6 +141,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.allScripts = [
       this.audioScript,
+      this.minimapScript,
       this.baseScript,
       this.enemyScript,
       this.explosionScript,
@@ -165,6 +173,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       );
 
       this.playingUpdateScripts.push(
+        this.minimapScript,
         this.baseScript,
         this.explosionScript,
         this.infoScript,
@@ -284,12 +293,28 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     }
 
+    const currentX = this.world.field.position.x;
+    const currentY = this.world.field.position.y;
+    const deltaX = nextX - currentX;
+    const deltaY = nextY - currentY;
+
+    // Normal following snaps (locked, no lag). A large jump — e.g. recentering
+    // on the spawn when the player dies — eases in instead, so the whole field
+    // (enemies included) pans smoothly rather than teleporting.
+    const SNAP_THRESHOLD = 8;
+    let newX = nextX;
+    let newY = nextY;
+    if (Math.hypot(deltaX, deltaY) > SNAP_THRESHOLD) {
+      newX = currentX + deltaX * 0.2;
+      newY = currentY + deltaY * 0.2;
+    }
+
     if (
-      this.world.field.position.x !== nextX ||
-      this.world.field.position.y !== nextY
+      this.world.field.position.x !== newX ||
+      this.world.field.position.y !== newY
     ) {
       this.root.setNeedsPaint();
-      this.world.field.position.set(nextX, nextY);
+      this.world.field.position.set(newX, newY);
       this.world.field.updateMatrix(true);
     }
   }

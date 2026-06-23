@@ -1,4 +1,4 @@
-import { Logger, RandomUtils, Timer, Vector } from '../../core';
+import { Logger, Prng, Timer, Vector } from '../../core';
 import { GameUpdateArgs, Rotation } from '../../game';
 import { Tank } from '../../gameObjects';
 import * as config from '../../config';
@@ -32,6 +32,7 @@ export class AiTankBehavior extends TankBehavior {
     config.BASE_DEFAULT_POSITION.x,
     config.BASE_DEFAULT_POSITION.y,
   );
+  private rng: Prng;
 
   public setBasePosition(basePosition: Vector): this {
     this.basePosition = basePosition.clone();
@@ -39,6 +40,8 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   public update(tank: Tank, updateArgs: GameUpdateArgs): void {
+    this.rng = updateArgs.rng;
+
     if (this.fireTimer.isDone()) {
       const hasFired = tank.fire();
       if (hasFired) {
@@ -121,14 +124,14 @@ export class AiTankBehavior extends TankBehavior {
     const min = FIRE_MIN_DELAY * 1000;
     const max = FIRE_MAX_DELAY * 1000;
 
-    const delay = RandomUtils.number(min, max) / 1000;
+    const delay = this.rng.number(min, max) / 1000;
 
     this.log.debug('I will try to fire in %f seconds', delay);
     this.fireTimer.reset(delay);
   }
 
   private shouldThinkWhenUnstuck(tank: Tank): boolean {
-    const num = RandomUtils.number(1, 100);
+    const num = this.rng.number(1, 100);
     const hasChance = num <= UNSTUCK_THINK_CHANCE;
 
     const { rotation, position } = tank;
@@ -149,13 +152,13 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   private shouldFireWhenStuck(): boolean {
-    const shouldFire = RandomUtils.probability(STUCK_FIRE_CHANCE);
+    const shouldFire = this.rng.probability(STUCK_FIRE_CHANCE);
 
     return shouldFire;
   }
 
   private getNextRotation(tank: Tank): Rotation {
-    const shouldRotateTowardsBase = RandomUtils.probability(
+    const shouldRotateTowardsBase = this.rng.probability(
       ROTATE_TOWARDS_BASE_CHANCE,
     );
 
@@ -165,7 +168,7 @@ export class AiTankBehavior extends TankBehavior {
     }
 
     // Enemy should rotate up less, because base it at the bottom
-    const shouldRotateUp = RandomUtils.probability(ROTATE_UP_CHANCE);
+    const shouldRotateUp = this.rng.probability(ROTATE_UP_CHANCE);
     if (shouldRotateUp) {
       this.log.debug('I want to go up');
       return Rotation.Up;
@@ -175,7 +178,7 @@ export class AiTankBehavior extends TankBehavior {
   }
 
   private getRandomRotation(): Rotation {
-    return RandomUtils.arrayElement(ROTATIONS);
+    return this.rng.arrayElement(ROTATIONS);
   }
 
   private getRandomRotationExcept(prevRotation: Rotation): Rotation {
@@ -185,7 +188,7 @@ export class AiTankBehavior extends TankBehavior {
     const prevIndex = rotations.indexOf(prevRotation);
     rotations.splice(prevIndex, 1);
 
-    return RandomUtils.arrayElement(rotations);
+    return this.rng.arrayElement(rotations);
   }
 
   private getRotationTowardsBase(tank: Tank): Rotation {

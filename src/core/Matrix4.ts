@@ -41,6 +41,12 @@ export class Matrix4 {
     return this;
   }
 
+  public clone(): Matrix4 {
+    const m = new Matrix4();
+    m.elements = this.elements.slice();
+    return m;
+  }
+
   public premultiply(m: Matrix4): this {
     return this.multiplyMatrices(m, this);
   }

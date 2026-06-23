@@ -26,6 +26,13 @@ export class TerrainFactory {
   ): TerrainTile[] {
     const rectsByType = this.mapRegionConfigsByType(regionConfigs);
 
+    // Water cells (in brick sub-tile coordinates) let bricks adjacent to water
+    // pick a mossy base course instead of the grassy one.
+    const waterCells = this.computeOccupiedCells(
+      rectsByType.get(TerrainType.Water) || [],
+      config.BRICK_TILE_SIZE,
+    );
+
     const tiles = [];
 
     rectsByType.forEach((regionRects, type) => {
@@ -34,6 +41,7 @@ export class TerrainFactory {
         regionRects,
         fieldWidth,
         fieldHeight,
+        waterCells,
       );
       tiles.push(...regionTiles);
     });
@@ -48,9 +56,15 @@ export class TerrainFactory {
     regionRects: Rect[],
     fieldWidth?: number,
     fieldHeight?: number,
+    waterCells?: Set<string>,
   ): TerrainTile[] {
     if (type === TerrainType.Brick) {
-      return this.createMapFromBrickRegions(regionRects, fieldWidth, fieldHeight);
+      return this.createMapFromBrickRegions(
+        regionRects,
+        fieldWidth,
+        fieldHeight,
+        waterCells,
+      );
     }
 
     const tiles = [];
@@ -167,9 +181,14 @@ export class TerrainFactory {
     regionRects: Rect[],
     fieldWidth?: number,
     fieldHeight?: number,
+    waterCells: Set<string> = new Set<string>(),
   ): TerrainTile[] {
     const superTileSize = config.BRICK_SUPER_TILE_SIZE;
-    const fieldBounds = this.getFieldBounds(regionRects, fieldWidth, fieldHeight);
+    const fieldBounds = this.getFieldBounds(
+      regionRects,
+      fieldWidth,
+      fieldHeight,
+    );
     const superTileCols = Math.ceil(fieldBounds.width / superTileSize);
     const superTileRows = Math.ceil(fieldBounds.height / superTileSize);
 
@@ -187,6 +206,28 @@ export class TerrainFactory {
     const subTileRows = Math.ceil(fieldBounds.height / subTileSize);
 
     const ratio = superTileSize / subTileSize;
+
+    // Pre-pass: occupancy of every brick sub-cell across all regions, so a tile
+    // can tell whether it sits at the bottom edge of a wall (nothing below it).
+    const occupied = new Set<string>();
+    const cellKey = (col: number, row: number): string => `${col},${row}`;
+    for (const regionRect of regionRects) {
+      const minCol = Math.max(0, Math.floor(regionRect.x / subTileSize));
+      const minRow = Math.max(0, Math.floor(regionRect.y / subTileSize));
+      const maxCol = Math.min(
+        subTileCols,
+        Math.ceil((regionRect.x + regionRect.width) / subTileSize),
+      );
+      const maxRow = Math.min(
+        subTileRows,
+        Math.ceil((regionRect.y + regionRect.height) / subTileSize),
+      );
+      for (let row = minRow; row < maxRow; row += 1) {
+        for (let col = minCol; col < maxCol; col += 1) {
+          occupied.add(cellKey(col, row));
+        }
+      }
+    }
 
     for (const regionRect of regionRects) {
       // Find indexes of small cells coverd by current region
@@ -224,8 +265,21 @@ export class TerrainFactory {
           const x = localColIndex * subTileSize;
           const y = localRowIndex * subTileSize;
 
-          const subTile = this.createTile(TerrainType.Brick);
+          const subTile = this.createTile(
+            TerrainType.Brick,
+          ) as BrickTerrainTile;
           subTile.position.set(x, y);
+          // Bottom-edge brick (no brick in the cell directly below) renders a
+          // base course. Mossy where it touches water, grass-tufted otherwise.
+          subTile.isBase = !occupied.has(cellKey(colIndex, rowIndex + 1));
+          if (subTile.isBase) {
+            const touchesWater =
+              waterCells.has(cellKey(colIndex, rowIndex + 1)) ||
+              waterCells.has(cellKey(colIndex - 1, rowIndex)) ||
+              waterCells.has(cellKey(colIndex + 1, rowIndex)) ||
+              waterCells.has(cellKey(colIndex, rowIndex - 1));
+            subTile.baseVariant = touchesWater ? 'moss' : 'grass';
+          }
 
           superGrid[superRowIndex][superColIndex].push(subTile);
         }
@@ -252,6 +306,29 @@ export class TerrainFactory {
     }
 
     return superTiles;
+  }
+
+  // Maps a set of region rects onto a cell grid of the given size, returning
+  // the occupied cells keyed as "col,row" (used for water adjacency lookups).
+  private static computeOccupiedCells(
+    regionRects: Rect[],
+    cellSize: number,
+  ): Set<string> {
+    const cells = new Set<string>();
+
+    for (const regionRect of regionRects) {
+      const minCol = Math.floor(regionRect.x / cellSize);
+      const minRow = Math.floor(regionRect.y / cellSize);
+      const maxCol = Math.ceil((regionRect.x + regionRect.width) / cellSize);
+      const maxRow = Math.ceil((regionRect.y + regionRect.height) / cellSize);
+      for (let row = minRow; row < maxRow; row += 1) {
+        for (let col = minCol; col < maxCol; col += 1) {
+          cells.add(`${col},${row}`);
+        }
+      }
+    }
+
+    return cells;
   }
 
   private static getFieldBounds(

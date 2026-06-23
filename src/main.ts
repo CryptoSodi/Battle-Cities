@@ -9,6 +9,7 @@ import {
   GameRenderer,
   ImageLoader,
   Logger,
+  Prng,
   RectFontLoader,
   SpriteFontLoader,
   SpriteLoader,
@@ -40,10 +41,18 @@ const loadingElement = document.querySelector('[data-loading]');
 
 const log = new Logger('main', Logger.Level.Debug);
 
+const rendererOverride = new URLSearchParams(window.location.search).get(
+  'renderer',
+);
 const gameRenderer = new GameRenderer({
   // debug: true,
   height: config.CANVAS_HEIGHT,
   width: config.CANVAS_WIDTH,
+  renderer:
+    rendererOverride === 'canvas' || rendererOverride === 'webgl'
+      ? rendererOverride
+      : 'auto',
+  renderScale: config.RENDER_SCALE,
 });
 
 function syncCanvasCssSize(width: number, height: number): void {
@@ -144,6 +153,10 @@ debugInspector.click.addListener((position: Vector) => {
 
 const gameState = new State<GameState>(GameState.Playing);
 
+// Seeded RNG for all simulation randomness. Seeded from the clock for variety;
+// record getSeed() to reproduce a run deterministically.
+const rng = new Prng((Date.now() >>> 0) || 1);
+
 const updateArgs: GameUpdateArgs = {
   audioManager,
   audioLoader,
@@ -157,6 +170,7 @@ const updateArgs: GameUpdateArgs = {
   gameState,
   mapLoader,
   pointsHighscoreManager,
+  rng,
   rectFontLoader,
   session,
   spriteFontLoader,
@@ -173,17 +187,30 @@ if (config.IS_DEV) {
   debugGameLoopMenu.attach();
 }
 
-gameLoop.tick.addListener((event) => {
-  stats.begin();
-
+// Simulation: runs at a fixed timestep, possibly several times per animation
+// frame. Input is polled per sim step so edge detection stays correct when a
+// frame advances more than one step.
+gameLoop.update.addListener((event) => {
   inputManager.update();
 
   updateArgs.deltaTime = event.deltaTime;
 
   const scene = sceneRouter.getCurrentScene();
   scene.invokeUpdate(updateArgs);
+});
 
-  gameRenderer.render(scene.getRoot());
+// Presentation: runs exactly once per animation frame.
+gameLoop.render.addListener(() => {
+  stats.begin();
+
+  const scene = sceneRouter.getCurrentScene();
+  const root = scene.getRoot();
+  // The scene root is built on the scene's first update. Skip rendering until
+  // it exists — e.g. a frame between scene transitions where no sim step has
+  // run for the newly-current scene yet.
+  if (root != null) {
+    gameRenderer.render(root);
+  }
 
   gameState.update();
 

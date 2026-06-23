@@ -128,6 +128,12 @@ const RESPONSIVE_CANVAS_SIZE = getResponsiveCanvasSize();
 export const CANVAS_WIDTH = RESPONSIVE_CANVAS_SIZE.width;
 export const CANVAS_HEIGHT = RESPONSIVE_CANVAS_SIZE.height;
 
+// Supersampling factor: the canvas backing store renders at this multiple of
+// the logical size, so HD art (authored at 4x) resolves to full detail on
+// screen instead of being sampled down to the gameplay tile size. Gameplay and
+// world coordinates are unaffected. Lower to 2 for weaker GPUs.
+export const RENDER_SCALE = 4;
+
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const STEEL_TILE_SIZE = TILE_SIZE_MEDIUM;
@@ -172,6 +178,7 @@ export const COLOR_BLACK = '#000';
 export const COLOR_WHITE = '#fff';
 export const COLOR_RED = '#d74000';
 export const COLOR_YELLOW = '#ffae0a';
+export const COLOR_STAGE_BACKGROUND = '#102816';
 
 export const PRIMARY_SPRITE_FONT_ID = 'primary';
 export const PRIMARY_RECT_FONT_ID = 'primary';
@@ -214,6 +221,19 @@ export const MENU_DEFAULT_POSITION = {
   x: 16,
   y: 192,
 };
+
+export const GROUND_FIELD_Z_INDEX = -1000;
+export const WALL_SHADOW_Z_INDEX = -900;
+// Shadow is cast down-and-to-the-side, fading out toward its far edge. It is
+// faked as several silhouettes stepped outward to the max offset: near the wall
+// many steps overlap (dark), at the far edge only the last step reaches (faint).
+// A larger X than Y reads as a wall with a visible side face (more depth).
+export const WALL_SHADOW_OFFSET_X = 14;
+export const WALL_SHADOW_OFFSET_Y = 9;
+export const WALL_SHADOW_STEPS = 6;
+export const WALL_SHADOW_COLOR = '#000000';
+// Per-step alpha; near-edge darkness ≈ 1 - (1 - alpha)^STEPS.
+export const WALL_SHADOW_ALPHA = 0.1;
 
 export const BRICK_TILE_Z_INDEX = 0;
 export const STEEL_TILE_Z_INDEX = 0;
