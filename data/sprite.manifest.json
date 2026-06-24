@@ -1,4 +1,8 @@
 {
+  "menu.background": {
+    "file": "assets/main-screen-background.png",
+    "rect": [0, 0, 1672, 941]
+  },
   "bullet.down": {
     "file": "data/graphics/bullets.png",
     "rect": [72, 0, 48, 64],

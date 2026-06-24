@@ -1,6 +1,6 @@
-import { GameObject } from '../../core';
+import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
-import { MainHeading, Menu, SpriteText, TextMenuItem } from '../../gameObjects';
+import { Menu, SpriteText, TextMenuItem } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
@@ -18,7 +18,7 @@ enum State {
 
 export class MainMenuScene extends GameScene {
   private group: GameObject;
-  private heading: MainHeading;
+  private background: GameObject;
   private primaryPoints: SpriteText;
   private secondaryPoints: SpriteText;
   private commonHighscore: SpriteText;
@@ -38,6 +38,7 @@ export class MainMenuScene extends GameScene {
     mapLoader,
     pointsHighscoreManager,
     session,
+    spriteLoader,
   }: GameUpdateArgs): void {
     this.session = session;
     this.mapLoader = mapLoader;
@@ -48,6 +49,17 @@ export class MainMenuScene extends GameScene {
 
     this.group = new GameObject();
     this.group.size.copyFrom(this.root.size);
+
+    // Full-screen title-screen artwork (includes the "BATTLE CITIES" title),
+    // stretched to the menu area and sitting behind all other menu content.
+    this.background = new GameObject();
+    this.background.size.copyFrom(this.root.size);
+    this.background.painter = new SpritePainter(
+      spriteLoader.load('menu.background'),
+      SpriteAlignment.Stretch,
+    );
+    this.background.setZIndex(-100);
+    this.group.add(this.background);
 
     this.primaryPoints = new SpriteText(this.getPrimaryPointsText(), {
       color: config.COLOR_WHITE,
@@ -68,12 +80,6 @@ export class MainMenuScene extends GameScene {
     });
     this.commonHighscore.position.set(380, 64);
     this.group.add(this.commonHighscore);
-
-    this.heading = new MainHeading();
-    this.heading.origin.setX(0.5);
-    this.heading.setCenter(this.root.getSelfCenter());
-    this.heading.position.setY(160);
-    this.group.add(this.heading);
 
     this.singlePlayerItem = new TextMenuItem('START');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
