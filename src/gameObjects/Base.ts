@@ -89,7 +89,21 @@ export class Base extends GameObject {
       oldTile.destroy();
     }
 
-    const tiles = TerrainFactory.createMapFromRegions(type, WALL_REGIONS);
+    // Treat the whole base as solid so its frame bricks don't pick the grass
+    // base course (meant for walls meeting open ground) — e.g. the top bar
+    // sits above the eagle, not on grass.
+    const solidCells = TerrainFactory.computeOccupiedCells(
+      [new Rect(0, 0, this.size.width, this.size.height)],
+      config.TILE_SIZE_SMALL,
+    );
+    const tiles = TerrainFactory.createMapFromRegions(
+      type,
+      WALL_REGIONS,
+      undefined,
+      undefined,
+      undefined,
+      solidCells,
+    );
     tiles.forEach((tile) => {
       this.container.add(tile);
     });

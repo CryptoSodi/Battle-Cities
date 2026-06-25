@@ -6,6 +6,14 @@ export class RenderObject extends Transform {
   // TODO: circular reference
   public painter: Painter = null;
 
+  // Render-time camera zoom for this object's subtree (does NOT touch the
+  // transform tree or collision). 1 = no zoom. Set on the world/field root; the
+  // renderer scales that subtree around (cameraPivotX, cameraPivotY) in screen
+  // space, so gameplay zooms while the HUD/menus stay at their normal size.
+  public cameraZoom = 1;
+  public cameraPivotX = 0;
+  public cameraPivotY = 0;
+
   // 0 by default
   // If null - will inherit from parent
   protected zIndex: number = null;

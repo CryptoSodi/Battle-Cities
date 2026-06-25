@@ -1,4 +1,4 @@
-import { DebugCollisionMenu } from '../../debug';
+import { DebugCameraMenu, DebugCollisionMenu } from '../../debug';
 import { GameUpdateArgs, GameState, Session } from '../../game';
 import { Border, GroundField, Tank, WallShadowField } from '../../gameObjects';
 import { InputManager } from '../../input';
@@ -43,6 +43,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private session: Session;
   private inputManager: InputManager;
   private debugCollisionMenu: DebugCollisionMenu;
+  private debugCameraMenu: DebugCameraMenu;
+  // Live gameplay zoom (adjustable via the debug panel); defaults to config.
+  private cameraZoom = config.GAMEPLAY_ZOOM;
   private initialCameraTarget: Vector;
 
   private allScripts: LevelScript[] = [];
@@ -76,9 +79,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.root,
       { top: 470 },
     );
+    this.debugCameraMenu = new DebugCameraMenu(
+      () => this.cameraZoom,
+      (zoom) => {
+        this.cameraZoom = zoom;
+      },
+      { left: undefined, top: 580 },
+    );
     if (config.IS_DEV) {
       this.debugCollisionMenu.attach();
       this.debugCollisionMenu.show();
+      this.debugCameraMenu.attach();
     }
 
     this.world = new LevelWorld(this.root, fieldWidth, fieldHeight);
@@ -261,47 +272,54 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       config.LEVEL_PLAY_TOP_OFFSET -
       config.BORDER_TOP_BOTTOM_HEIGHT * 2;
 
-    let nextX = config.BORDER_LEFT_WIDTH;
-    let nextY = config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT;
+    // Gameplay zoom is render-only: the field is drawn scaled around the play
+    // area's screen center (the pivot), so the camera centers on the same world
+    // point regardless of zoom — only the visible world window shrinks.
+    const zoom = this.cameraZoom;
+    const playLeft = config.BORDER_LEFT_WIDTH;
+    const playTop =
+      config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT;
+    const pivotX = playLeft + viewportWidth / 2;
+    const pivotY = playTop + viewportHeight / 2;
+
+    // World units visible after zoom (zoomed in => fewer tiles on screen).
+    const windowWidth = viewportWidth / zoom;
+    const windowHeight = viewportHeight / zoom;
+
+    this.world.field.cameraZoom = zoom;
+    this.world.field.cameraPivotX = pivotX;
+    this.world.field.cameraPivotY = pivotY;
 
     const targetCenter =
       targetTank !== null && targetTank !== undefined
         ? targetTank.getCenter()
         : this.initialCameraTarget;
 
+    // World point to keep centered, clamped so the visible window never leaves
+    // the field (or centered when the field is smaller than the window).
+    let centerX = fieldWidth / 2;
+    let centerY = fieldHeight / 2;
     if (targetCenter !== null && targetCenter !== undefined) {
-      nextX += viewportWidth / 2 - targetCenter.x;
-      nextY += viewportHeight / 2 - targetCenter.y;
-
-      if (fieldWidth <= viewportWidth) {
-        nextX =
-          config.BORDER_LEFT_WIDTH + (viewportWidth - fieldWidth) / 2;
-      } else {
-        const minX =
-          config.BORDER_LEFT_WIDTH + viewportWidth - fieldWidth;
-        nextX = Math.max(minX, Math.min(config.BORDER_LEFT_WIDTH, nextX));
-      }
-
-      if (fieldHeight <= viewportHeight) {
-        nextY =
-          config.LEVEL_PLAY_TOP_OFFSET +
-          config.BORDER_TOP_BOTTOM_HEIGHT +
-          (viewportHeight - fieldHeight) / 2;
-      } else {
-        const minY =
-          config.LEVEL_PLAY_TOP_OFFSET +
-          config.BORDER_TOP_BOTTOM_HEIGHT +
-          viewportHeight -
-          fieldHeight;
-        nextY = Math.max(
-          minY,
-          Math.min(
-            config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT,
-            nextY,
-          ),
-        );
-      }
+      centerX =
+        fieldWidth <= windowWidth
+          ? fieldWidth / 2
+          : Math.max(
+              windowWidth / 2,
+              Math.min(fieldWidth - windowWidth / 2, targetCenter.x),
+            );
+      centerY =
+        fieldHeight <= windowHeight
+          ? fieldHeight / 2
+          : Math.max(
+              windowHeight / 2,
+              Math.min(fieldHeight - windowHeight / 2, targetCenter.y),
+            );
     }
+
+    // field.position is a plain translation (collision-safe); the renderer adds
+    // the zoom around the pivot. Centering: screen(centerX) == pivotX.
+    const nextX = pivotX - centerX;
+    const nextY = pivotY - centerY;
 
     const currentX = this.world.field.position.x;
     const currentY = this.world.field.position.y;

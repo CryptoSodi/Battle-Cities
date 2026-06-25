@@ -60,6 +60,9 @@ export class WebglRenderContext extends RenderContext {
   private lineBuffer: WebGLBuffer;
   private projection: Matrix4;
   private globalAlpha = 1;
+  private viewScale = 1;
+  private viewOffsetX = 0;
+  private viewOffsetY = 0;
   private textureMap = new Map<TexImageSource, WebGLTexture>();
   private colorCache = new Map<string, [number, number, number, number]>();
   private renderScale: number;
@@ -158,10 +161,17 @@ export class WebglRenderContext extends RenderContext {
     const ih = (element as HTMLImageElement).naturalHeight || (element as HTMLCanvasElement).height;
 
     // Row-vector convention (v' = v·M): build S·T·P via premultiplying
-    // translate() then scale() onto the projection.
+    // translate() then scale() onto the projection. The view transform
+    // (camera zoom) is folded into the dest coords here — pure numbers, so the
+    // matrix convention is unchanged.
+    const s = this.viewScale;
     const matrix = this.projection.clone();
-    matrix.translate(destinationRect.x, destinationRect.y, 0);
-    matrix.scale(destinationRect.width, destinationRect.height, 1);
+    matrix.translate(
+      destinationRect.x * s + this.viewOffsetX,
+      destinationRect.y * s + this.viewOffsetY,
+      0,
+    );
+    matrix.scale(destinationRect.width * s, destinationRect.height * s, 1);
 
     const textureMatrix = Matrix4.createTranslation(sourceRect.x / iw, sourceRect.y / ih, 0);
     textureMatrix.scale(sourceRect.width / iw, sourceRect.height / ih, 1);
@@ -184,9 +194,10 @@ export class WebglRenderContext extends RenderContext {
     color = '#000',
   ): void {
     const gl = this.gl;
+    const s = this.viewScale;
     const matrix = this.projection.clone();
-    matrix.translate(x, y, 0);
-    matrix.scale(width, height, 1);
+    matrix.translate(x * s + this.viewOffsetX, y * s + this.viewOffsetY, 0);
+    matrix.scale(width * s, height * s, 1);
 
     this.bindQuad();
     gl.uniform1i(this.uUseTexture, 0);
@@ -203,6 +214,12 @@ export class WebglRenderContext extends RenderContext {
 
   public setGlobalAlpha(alpha: number): void {
     this.globalAlpha = alpha;
+  }
+
+  public setView(scale: number, offsetX: number, offsetY: number): void {
+    this.viewScale = scale;
+    this.viewOffsetX = offsetX;
+    this.viewOffsetY = offsetY;
   }
 
   public resetAlpha(): void {
@@ -237,10 +254,11 @@ export class WebglRenderContext extends RenderContext {
 
   private drawLines(positions: Vector[], color: string, mode: number): void {
     const gl = this.gl;
+    const s = this.viewScale;
     const data = new Float32Array(positions.length * 2);
     positions.forEach((p, i) => {
-      data[i * 2] = p.x;
-      data[i * 2 + 1] = p.y;
+      data[i * 2] = p.x * s + this.viewOffsetX;
+      data[i * 2 + 1] = p.y * s + this.viewOffsetY;
     });
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);

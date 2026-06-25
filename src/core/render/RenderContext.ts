@@ -29,6 +29,9 @@ export abstract class RenderContext {
   );
   abstract getGlobalAlpha(): number;
   abstract setGlobalAlpha(alpha: number);
+  // View transform applied to subsequent draws: screen = world * scale + offset.
+  // Used for the gameplay camera zoom. Default scale 1, offset 0 (identity).
+  abstract setView(scale: number, offsetX: number, offsetY: number);
   abstract strokePath(positions: Vector[], color: string);
   abstract strokeRect(
     x: number,

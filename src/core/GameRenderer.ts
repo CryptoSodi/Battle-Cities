@@ -82,12 +82,33 @@ export class GameRenderer {
     this.context.clear();
 
     const objects: RenderObject[] = [];
+    // Objects within a camera-zoomed subtree (the field). Tracked during the
+    // pre-order traversal: a node is "world" if it is the zoom root or its
+    // parent already is. They get the view transform; everything else (HUD,
+    // menus) renders at scale 1.
+    const worldObjects = new Set<RenderObject>();
+    let viewScale = 1;
+    let viewOffsetX = 0;
+    let viewOffsetY = 0;
 
     root.traverse((object) => {
       // The root is the scene container itself; it has nothing to paint.
       if (object === root) {
         return;
       }
+
+      const parentIsWorld =
+        object.parent !== null && worldObjects.has(object.parent);
+      if (object.cameraZoom !== 1 || parentIsWorld) {
+        worldObjects.add(object);
+        if (object.cameraZoom !== 1) {
+          viewScale = object.cameraZoom;
+          // screen = world * scale + offset, pivoting around the play center.
+          viewOffsetX = object.cameraPivotX * (1 - object.cameraZoom);
+          viewOffsetY = object.cameraPivotY * (1 - object.cameraZoom);
+        }
+      }
+
       if (object.isRemoved) {
         return;
       }
@@ -104,8 +125,15 @@ export class GameRenderer {
     });
 
     objects.forEach((object) => {
+      if (worldObjects.has(object)) {
+        this.context.setView(viewScale, viewOffsetX, viewOffsetY);
+      } else {
+        this.context.setView(1, 0, 0);
+      }
       this.renderObject(object);
     });
+
+    this.context.setView(1, 0, 0);
   }
 
   private renderObject(renderObject: RenderObject): void {

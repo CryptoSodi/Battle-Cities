@@ -10,6 +10,10 @@ export const FIELD_TILE_COUNT = 20;
 export const FIELD_TILE_COUNT_WIDTH = FIELD_TILE_COUNT;
 export const FIELD_TILE_COUNT_HEIGHT = FIELD_TILE_COUNT;
 export const VIEWPORT_FIELD_TILE_COUNT = 16;
+// Gameplay-only camera zoom. Applied at render time to the field subtree, so
+// the play area shows fewer/larger tiles WITHOUT resizing the canvas, HUD, or
+// menus. 1 = no zoom; 2 = show half as many tiles (e.g. 40 -> 20).
+export const GAMEPLAY_ZOOM = 2;
 export const LEGACY_FIELD_SIZE = LEGACY_FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const VIEWPORT_FIELD_SIZE =

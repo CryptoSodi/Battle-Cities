@@ -386,7 +386,7 @@ export class TerrainFactory {
     return false;
   }
 
-  private static computeOccupiedCells(
+  public static computeOccupiedCells(
     regionRects: Rect[],
     cellSize: number,
   ): Set<string> {
