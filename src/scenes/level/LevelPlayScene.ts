@@ -5,7 +5,7 @@ import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory } from '../../terrain';
-import { Vector } from '../../core';
+import { Rect, Vector } from '../../core';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
@@ -105,10 +105,20 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.initialCameraTarget.addScalar(config.TILE_SIZE_LARGE / 2);
 
     const terrainRegions = mapConfig.getTerrainRegions();
+    // The eagle base isn't a terrain region, but bricks resting on it should
+    // treat it as solid (top brick, not the grass base course).
+    const basePosition = mapConfig.getBasePosition();
+    const baseRect = new Rect(
+      basePosition.x,
+      basePosition.y,
+      config.BASE_DEFAULT_SIZE.width,
+      config.BASE_DEFAULT_SIZE.height,
+    );
     const tiles = TerrainFactory.createMapFromRegionConfigs(
       terrainRegions,
       fieldWidth,
       fieldHeight,
+      [baseRect],
     );
 
     for (const tile of tiles) {

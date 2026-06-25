@@ -181,9 +181,34 @@
     "rect": [0, 0, 128, 128],
     "scale": 4
   },
-  "terrain.jungle": {
+  "terrain.jungle.1": {
     "file": "data/graphics/jungle.png",
     "rect": [0, 0, 128, 128],
+    "scale": 4
+  },
+  "terrain.jungle.2": {
+    "file": "data/graphics/jungle.png",
+    "rect": [128, 0, 128, 128],
+    "scale": 4
+  },
+  "terrain.jungle.3": {
+    "file": "data/graphics/jungle.png",
+    "rect": [256, 0, 128, 128],
+    "scale": 4
+  },
+  "terrain.jungle.4": {
+    "file": "data/graphics/jungle.png",
+    "rect": [384, 0, 128, 128],
+    "scale": 4
+  },
+  "terrain.jungle.5": {
+    "file": "data/graphics/jungle.png",
+    "rect": [512, 0, 128, 128],
+    "scale": 4
+  },
+  "terrain.jungle.6": {
+    "file": "data/graphics/jungle.png",
+    "rect": [640, 0, 128, 128],
     "scale": 4
   },
   "terrain.water.1": {

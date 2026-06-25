@@ -189,13 +189,13 @@ export class MainMenuScene extends GameScene {
   }
 
   private handleSinglePlayerSelected = (): void => {
-    this.session.start(1, this.mapLoader.getItemsCount());
+    this.session.start(4, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
 
   private handleMultiPlayerSelected = (): void => {
     this.session.setMultiplayer();
-    this.session.start(1, this.mapLoader.getItemsCount());
+    this.session.start(4, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
 

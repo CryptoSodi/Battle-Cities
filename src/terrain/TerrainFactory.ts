@@ -23,6 +23,9 @@ export class TerrainFactory {
     regionConfigs: TerrainRegionConfig[],
     fieldWidth?: number,
     fieldHeight?: number,
+    // Extra solid footprints that aren't terrain regions but still count as
+    // "something below" for bottom/base detection (e.g. the eagle base).
+    occupiedRects: Rect[] = [],
   ): TerrainTile[] {
     const rectsByType = this.mapRegionConfigsByType(regionConfigs);
 
@@ -31,6 +34,17 @@ export class TerrainFactory {
     const waterCells = this.computeOccupiedCells(
       rectsByType.get(TerrainType.Water) || [],
       config.BRICK_TILE_SIZE,
+    );
+
+    // Occupancy of every terrain element (all types) at the finest tile grid.
+    // A tile uses its bottom/base variant only when nothing sits directly
+    // below it; if any element (steel, another wall, etc.) is below, it uses
+    // the top variant instead.
+    const allRects: Rect[] = [...occupiedRects];
+    rectsByType.forEach((regionRects) => allRects.push(...regionRects));
+    const solidCells = this.computeOccupiedCells(
+      allRects,
+      config.TILE_SIZE_SMALL,
     );
 
     const tiles = [];
@@ -42,6 +56,7 @@ export class TerrainFactory {
         fieldWidth,
         fieldHeight,
         waterCells,
+        solidCells,
       );
       tiles.push(...regionTiles);
     });
@@ -57,6 +72,7 @@ export class TerrainFactory {
     fieldWidth?: number,
     fieldHeight?: number,
     waterCells?: Set<string>,
+    solidCells?: Set<string>,
   ): TerrainTile[] {
     if (type === TerrainType.Brick) {
       return this.createMapFromBrickRegions(
@@ -64,7 +80,12 @@ export class TerrainFactory {
         fieldWidth,
         fieldHeight,
         waterCells,
+        solidCells,
       );
+    }
+
+    if (type === TerrainType.Jungle) {
+      return this.createMapFromJungleRegions(regionRects, solidCells);
     }
 
     const tiles = [];
@@ -182,6 +203,7 @@ export class TerrainFactory {
     fieldWidth?: number,
     fieldHeight?: number,
     waterCells: Set<string> = new Set<string>(),
+    solidCells?: Set<string>,
   ): TerrainTile[] {
     const superTileSize = config.BRICK_SUPER_TILE_SIZE;
     const fieldBounds = this.getFieldBounds(
@@ -269,9 +291,14 @@ export class TerrainFactory {
             TerrainType.Brick,
           ) as BrickTerrainTile;
           subTile.position.set(x, y);
-          // Bottom-edge brick (no brick in the cell directly below) renders a
-          // base course. Mossy where it touches water, grass-tufted otherwise.
-          subTile.isBase = !occupied.has(cellKey(colIndex, rowIndex + 1));
+          // Bottom-edge brick renders a base course only when nothing sits in
+          // the cell directly below (i.e. it meets the ground). If any element
+          // is below — steel, another wall, etc. — it uses the normal top
+          // brick. solidCells covers all terrain types; fall back to brick-only
+          // occupancy when it isn't provided (e.g. the base fortification).
+          const belowCells = solidCells ?? occupied;
+          subTile.isBase = !belowCells.has(cellKey(colIndex, rowIndex + 1));
+          // Mossy where it touches water, grass-tufted otherwise.
           if (subTile.isBase) {
             const touchesWater =
               waterCells.has(cellKey(colIndex, rowIndex + 1)) ||
@@ -308,8 +335,57 @@ export class TerrainFactory {
     return superTiles;
   }
 
-  // Maps a set of region rects onto a cell grid of the given size, returning
-  // the occupied cells keyed as "col,row" (used for water adjacency lookups).
+  // Builds jungle tiles, flagging each tile that has nothing directly below it
+  // as a bottom-edge tile (so it renders the bottom foliage variant). If any
+  // element sits below — another jungle tile, a wall, etc. — it uses the top
+  // variant. solidCells covers all terrain at the finest grid; falls back to
+  // jungle-only occupancy when not provided (e.g. an editor preview).
+  private static createMapFromJungleRegions(
+    regionRects: Rect[],
+    solidCells?: Set<string>,
+  ): TerrainTile[] {
+    const tileSize = config.JUNGLE_TILE_SIZE;
+    const belowCells =
+      solidCells ??
+      this.computeOccupiedCells(regionRects, config.TILE_SIZE_SMALL);
+
+    const tiles: TerrainTile[] = [];
+
+    for (const regionRect of regionRects) {
+      const { x, y, width, height } = regionRect;
+      for (let i = x; i < x + width; i += tileSize) {
+        for (let j = y; j < y + height; j += tileSize) {
+          const tile = this.createTile(TerrainType.Jungle) as JungleTerrainTile;
+          tile.position.set(i, j);
+          tile.isBottom = !this.hasSolidBelow(i, j, tileSize, belowCells);
+          tiles.push(tile);
+        }
+      }
+    }
+
+    return tiles;
+  }
+
+  // True if any cell in the finest-grid row directly below a tile of the given
+  // size (spanning its full width) is occupied.
+  private static hasSolidBelow(
+    x: number,
+    y: number,
+    size: number,
+    cells: Set<string>,
+  ): boolean {
+    const small = config.TILE_SIZE_SMALL;
+    const belowRow = Math.floor((y + size) / small);
+    const startCol = Math.floor(x / small);
+    const endCol = Math.floor((x + size - 1) / small);
+    for (let col = startCol; col <= endCol; col += 1) {
+      if (cells.has(`${col},${belowRow}`)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static computeOccupiedCells(
     regionRects: Rect[],
     cellSize: number,
