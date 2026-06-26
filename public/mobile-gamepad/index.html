@@ -346,9 +346,8 @@
       fitController();
     }());
   </script>
-  <script type="module">
-    import { Peer } from './peer.js';
-
+  <script>
+    const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
     const shell = document.querySelector('[data-controller-shell]');
     const status = document.querySelector('[data-status]');
     const stickZone = document.querySelector('[data-stick-zone]');
@@ -368,6 +367,27 @@
     let connection = null;
     let lastSentTimestamp = 0;
     let connectionTimeout = null;
+    let peerPromise = null;
+
+    function loadPeer() {
+      if (window.Peer !== undefined) {
+        return Promise.resolve(window.Peer);
+      }
+
+      if (peerPromise !== null) {
+        return peerPromise;
+      }
+
+      peerPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.onload = () => resolve(window.Peer);
+        script.onerror = reject;
+        script.src = PEER_JS_URL;
+        document.body.appendChild(script);
+      });
+
+      return peerPromise;
+    }
 
     async function requestLandscape() {
       try {
@@ -420,6 +440,7 @@
       }, 8000);
 
       const peerId = await createPeerId(code);
+      const Peer = await loadPeer();
       const peer = new Peer();
       peer.on('error', showError);
       peer.on('open', () => {
