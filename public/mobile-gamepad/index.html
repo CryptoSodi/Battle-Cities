@@ -355,8 +355,9 @@
     const stick = document.querySelector('[data-stick]');
     const stickNub = document.querySelector('[data-stick-nub]');
     const buttons = Array.from(document.querySelectorAll('[data-button]'));
-    const params = new URLSearchParams(document.location.hash.substr(1));
-    const roomCode = params.get('rc');
+    const queryParams = new URLSearchParams(document.location.search);
+    const hashParams = new URLSearchParams(document.location.hash.substr(1));
+    const roomCode = queryParams.get('rc') || hashParams.get('rc');
     const buttonState = Array.from({ length: 4 }, () => ({
       pressed: false,
       touched: false,
@@ -366,6 +367,7 @@
     let connected = false;
     let connection = null;
     let lastSentTimestamp = 0;
+    let connectionTimeout = null;
 
     async function requestLandscape() {
       try {
@@ -396,6 +398,7 @@
       }
 
       connected = true;
+      clearTimeout(connectionTimeout);
       status.textContent = 'Connected';
       status.classList.add('connected');
     }
@@ -408,6 +411,14 @@
     }
 
     async function startConnection(code) {
+      connectionTimeout = setTimeout(() => {
+        if (connected) {
+          return;
+        }
+
+        status.textContent = 'Room not found';
+      }, 8000);
+
       const peerId = await createPeerId(code);
       const peer = new Peer();
       peer.on('error', showError);
