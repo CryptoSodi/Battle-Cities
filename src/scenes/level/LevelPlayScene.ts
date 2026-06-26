@@ -70,6 +70,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, inputManager, session } = updateArgs;
+    document.querySelectorAll('.mobile-gamepad-qr').forEach((element) => {
+      element.remove();
+    });
     // Drop any input state carried in from the menu/transition so a key still
     // "held" (or stuck from a missed keyup) can't move the tank on spawn.
     inputManager.reset();

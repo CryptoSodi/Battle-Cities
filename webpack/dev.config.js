@@ -9,7 +9,8 @@ module.exports = merge(baseConfig, {
 
   devServer: {
     contentBase: './dist',
-    host: '0.0.0.0',
+    host: '192.168.1.15',
     https: true,
+    public: '192.168.1.15:8081',
   },
 });

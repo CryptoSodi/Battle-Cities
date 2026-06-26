@@ -6,5 +6,5 @@ export const LevelSelectionInputContext: InputContext = {
   Prev: [InputControl.Left],
   FastNext: [InputControl.Up],
   FastPrev: [InputControl.Down],
-  Select: [InputControl.Select, InputControl.PrimaryAction],
+  Select: [InputControl.PrimaryAction],
 };

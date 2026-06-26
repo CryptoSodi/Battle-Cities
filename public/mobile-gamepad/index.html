@@ -7,6 +7,10 @@
   <style>
     :root {
       color-scheme: dark;
+      --controller-width: 920px;
+      --controller-height: 460px;
+      --stick-size: 240px;
+      --stick-nub-size: 96px;
       --gold: #ffae0a;
       --ink: #090b0f;
       --panel: #141922;
@@ -37,11 +41,25 @@
     }
 
     body {
-      align-items: stretch;
+      align-items: center;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .controller-shell {
       box-sizing: border-box;
       display: grid;
-      grid-template-rows: auto 1fr;
-      padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      grid-template-rows: 58px 1fr;
+      height: var(--controller-height);
+      left: 50%;
+      padding: 14px 18px 18px;
+      position: fixed;
+      top: 50%;
+      transform: translate(-50%, -50%) scale(var(--controller-scale, 1));
+      transform-origin: center;
+      width: var(--controller-width);
     }
 
     .controller-header {
@@ -57,7 +75,7 @@
 
     .brand {
       color: var(--gold);
-      font-size: clamp(16px, 4vw, 24px);
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: 0;
       line-height: 1;
@@ -69,7 +87,7 @@
       border: 1px solid var(--line);
       border-radius: 6px;
       color: var(--muted);
-      font-size: clamp(12px, 2.6vw, 15px);
+      font-size: 14px;
       font-weight: 700;
       line-height: 1;
       padding: 8px 10px;
@@ -85,10 +103,149 @@
       position: relative;
     }
 
+    .stick-zone,
+    .button-zone {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      position: absolute;
+      top: 32px;
+      bottom: 44px;
+      width: 42%;
+    }
+
+    .stick-zone {
+      left: 0;
+    }
+
+    .button-zone {
+      right: 0;
+    }
+
+    .stick {
+      background: rgba(246, 247, 251, 0.08);
+      border: 3px solid rgba(246, 247, 251, 0.36);
+      border-radius: 50%;
+      height: var(--stick-size);
+      position: relative;
+      width: var(--stick-size);
+    }
+
+    .stick-guide {
+      background: rgba(255, 174, 10, 0.18);
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .stick-guide.vertical {
+      height: 72%;
+      width: 4px;
+    }
+
+    .stick-guide.horizontal {
+      height: 4px;
+      width: 72%;
+    }
+
+    .stick-guide.diagonal-a,
+    .stick-guide.diagonal-b {
+      height: 4px;
+      width: 72%;
+    }
+
+    .stick-guide.diagonal-a {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .stick-guide.diagonal-b {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .stick-arrow {
+      color: rgba(246, 247, 251, 0.7);
+      font-size: 26px;
+      font-weight: 900;
+      left: 50%;
+      line-height: 1;
+      pointer-events: none;
+      position: absolute;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+      top: 50%;
+      transform:
+        translate(-50%, -50%)
+        rotate(var(--angle))
+        translateY(calc(var(--stick-size) * -0.41))
+        rotate(calc(-1 * var(--angle)));
+    }
+
+    .stick-nub {
+      background: var(--gold);
+      border-radius: 50%;
+      box-shadow:
+        inset 0 -8px 0 rgba(0, 0, 0, 0.18),
+        0 0 0 8px rgba(255, 174, 10, 0.2);
+      height: var(--stick-nub-size);
+      left: 50%;
+      pointer-events: none;
+      position: absolute;
+      top: 50%;
+      transform: translate(calc(-50% + var(--stick-x, 0px)), calc(-50% + var(--stick-y, 0px)));
+      width: var(--stick-nub-size);
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 92px);
+      grid-template-rows: repeat(2, 92px);
+      gap: 18px;
+    }
+
+    .pad-button {
+      align-items: center;
+      background: var(--panel-strong);
+      border: 3px solid var(--line);
+      border-radius: 50%;
+      color: var(--text);
+      display: flex;
+      font-size: 34px;
+      font-weight: 900;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    .pad-button.pressed {
+      background: var(--gold);
+      border-color: var(--text);
+      color: var(--ink);
+    }
+
+    .pad-button[data-button="2"] {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .pad-button[data-button="3"] {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .pad-button[data-button="0"] {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .pad-button[data-button="1"] {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
     .hint {
       bottom: 0;
       color: var(--muted);
-      font-size: clamp(11px, 2.4vw, 14px);
+      font-size: 13px;
       left: 50%;
       line-height: 1.2;
       pointer-events: none;
@@ -99,31 +256,8 @@
       z-index: 2;
     }
 
-    gamepad-input {
-      box-sizing: border-box;
-      color: var(--text);
-      display: block;
-      height: 100%;
-      max-height: calc(100vh - 72px);
-      padding: clamp(16px, 4vw, 32px) 0 clamp(26px, 5vw, 42px);
-      position: absolute;
-      inset: 0;
-      width: 100%;
-    }
-
-    @media (orientation: portrait) {
-      body {
-        grid-template-rows: auto 1fr auto;
-      }
-
-      gamepad-input {
-        padding-top: 6vh;
-        padding-bottom: 8vh;
-      }
-
-      .hint::after {
-        content: " Rotate for a wider controller.";
-      }
+    body.portrait .controller-shell {
+      transform: translate(-50%, -50%) rotate(90deg) scale(var(--controller-scale, 1));
     }
 
     dialog {
@@ -138,33 +272,251 @@
   </style>
 </head>
 <body>
-  <header class="controller-header">
-    <div class="brand">Battle Cities</div>
-    <div class="status" data-status>Connecting</div>
-  </header>
-  <main class="controller-stage">
-    <div class="hint">Left pad moves. A fires. X rapid fires.</div>
-  </main>
+  <section class="controller-shell" data-controller-shell>
+    <header class="controller-header">
+      <div class="brand">Battle Cities</div>
+      <div class="status" data-status>Connecting</div>
+    </header>
+    <main class="controller-stage">
+      <div class="stick-zone">
+        <div class="stick" data-stick>
+          <div class="stick-guide vertical"></div>
+          <div class="stick-guide horizontal"></div>
+          <div class="stick-guide diagonal-a"></div>
+          <div class="stick-guide diagonal-b"></div>
+          <div class="stick-arrow" style="--angle: 0deg">▲</div>
+          <div class="stick-arrow" style="--angle: 45deg">▲</div>
+          <div class="stick-arrow" style="--angle: 90deg">▲</div>
+          <div class="stick-arrow" style="--angle: 135deg">▲</div>
+          <div class="stick-arrow" style="--angle: 180deg">▲</div>
+          <div class="stick-arrow" style="--angle: 225deg">▲</div>
+          <div class="stick-arrow" style="--angle: 270deg">▲</div>
+          <div class="stick-arrow" style="--angle: 315deg">▲</div>
+          <div class="stick-nub" data-stick-nub></div>
+        </div>
+      </div>
+      <div class="button-zone">
+        <div class="buttons">
+          <div class="pad-button" data-button="2">X</div>
+          <div class="pad-button" data-button="3">Y</div>
+          <div class="pad-button" data-button="0">A</div>
+          <div class="pad-button" data-button="1">B</div>
+        </div>
+      </div>
+      <div class="hint">Left pad moves. A fires. X rapid fires.</div>
+    </main>
+  </section>
   <script type="module">
+    import { Peer } from './peer.js';
+
+    const shell = document.querySelector('[data-controller-shell]');
     const status = document.querySelector('[data-status]');
+    const stick = document.querySelector('[data-stick]');
+    const stickNub = document.querySelector('[data-stick-nub]');
+    const buttons = Array.from(document.querySelectorAll('[data-button]'));
     const params = new URLSearchParams(document.location.hash.substr(1));
     const roomCode = params.get('rc');
+    const controllerSize = { width: 920, height: 460 };
+    const buttonState = Array.from({ length: 4 }, () => ({
+      pressed: false,
+      touched: false,
+      value: 0
+    }));
+    const axes = [0, 0];
+    let connected = false;
+    let connection = null;
+    let lastSentTimestamp = 0;
+
+    function fitController() {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      document.body.classList.toggle('portrait', isPortrait);
+
+      const availableWidth = window.innerWidth;
+      const availableHeight = window.innerHeight;
+      const width = isPortrait ? controllerSize.height : controllerSize.width;
+      const height = isPortrait ? controllerSize.width : controllerSize.height;
+      const scale = Math.min(availableWidth / width, availableHeight / height);
+
+      shell.style.setProperty('--controller-scale', Math.min(scale, 1).toString());
+    }
+
+    async function requestLandscape() {
+      try {
+        if (document.fullscreenElement === null) {
+          await document.documentElement.requestFullscreen();
+        }
+
+        await screen.orientation?.lock?.('landscape');
+        fitController();
+      } catch (error) {
+        // Orientation lock requires a user gesture and is not available in all
+        // mobile browsers. The fixed landscape layout still works without it.
+      }
+    }
+
+    window.addEventListener('resize', fitController);
+    window.addEventListener('orientationchange', fitController);
+    window.addEventListener('pointerdown', requestLandscape, { once: true });
+    fitController();
 
     if (roomCode === null) {
       status.textContent = 'Missing room';
     } else {
-      await (await import('./player.js')).startPlayer(roomCode);
-      const pad = document.querySelector('gamepad-input');
-      document.querySelector('.controller-stage').appendChild(pad);
+      startConnection(roomCode);
+    }
 
-      const markConnected = () => {
-        status.textContent = 'Connected';
-        status.classList.add('connected');
-        pad.removeEventListener('input', markConnected);
+    function setConnected() {
+      if (connected) {
+        return;
+      }
+
+      connected = true;
+      status.textContent = 'Connected';
+      status.classList.add('connected');
+    }
+
+    async function createPeerId(code) {
+      const hash = await crypto.subtle.digest('SHA-1', new TextEncoder('utf-8').encode(code));
+      return Array.from(new Uint8Array(hash))
+        .map((value) => value.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    async function startConnection(code) {
+      const peerId = await createPeerId(code);
+      const peer = new Peer();
+      peer.on('error', showError);
+      peer.on('open', () => {
+        connection = peer.connect(peerId);
+        connection.on('error', showError);
+        connection.on('open', () => {
+          setConnected();
+          sendGamepad(true);
+          requestAnimationFrame(sendLoop);
+        });
+      });
+    }
+
+    function sendLoop() {
+      sendGamepad(true);
+      requestAnimationFrame(sendLoop);
+    }
+
+    function sendGamepad(force = false) {
+      if (connection === null || connection.open !== true) {
+        return;
+      }
+
+      const timestamp = performance.now();
+      if (!force && timestamp <= lastSentTimestamp) {
+        return;
+      }
+
+      lastSentTimestamp = timestamp;
+      connection.send({
+        type: 'gamepads',
+        timestamp: Date.now(),
+        gamepads: [{
+          axes: axes.slice(),
+          buttons: buttonState.map((button) => Object.assign({}, button)),
+          connected: true,
+          id: 'Battle Cities Mobile Controller',
+          index: 0,
+          mapping: 'standard',
+          timestamp
+        }]
+      });
+    }
+
+    function showError(error) {
+      console.error(error);
+      status.textContent = 'Error';
+    }
+
+    function updateStick(clientX, clientY) {
+      const rect = stick.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const inputRadius = rect.width / 2;
+      const visualRadius = stick.offsetWidth / 2;
+      let dx = (clientX - centerX) / inputRadius;
+      let dy = (clientY - centerY) / inputRadius;
+
+      if (document.body.classList.contains('portrait')) {
+        const rotatedX = dy;
+        const rotatedY = -dx;
+        dx = rotatedX;
+        dy = rotatedY;
+      }
+
+      const length = Math.hypot(dx, dy);
+      if (length > 1) {
+        dx /= length;
+        dy /= length;
+      }
+
+      axes[0] = dx;
+      axes[1] = dy;
+
+      const visualTravel = visualRadius;
+      stickNub.style.setProperty('--stick-x', `${dx * visualTravel}px`);
+      stickNub.style.setProperty('--stick-y', `${dy * visualTravel}px`);
+      setConnected();
+      sendGamepad();
+    }
+
+    function resetStick() {
+      axes[0] = 0;
+      axes[1] = 0;
+      stickNub.style.setProperty('--stick-x', '0px');
+      stickNub.style.setProperty('--stick-y', '0px');
+      sendGamepad();
+    }
+
+    let stickPointerId = null;
+    stick.addEventListener('pointerdown', (event) => {
+      stickPointerId = event.pointerId;
+      stick.setPointerCapture(stickPointerId);
+      updateStick(event.clientX, event.clientY);
+    });
+    stick.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== stickPointerId) {
+        return;
+      }
+
+      updateStick(event.clientX, event.clientY);
+    });
+    stick.addEventListener('pointerrawupdate', (event) => {
+      if (event.pointerId !== stickPointerId) {
+        return;
+      }
+
+      updateStick(event.clientX, event.clientY);
+    });
+    stick.addEventListener('lostpointercapture', () => {
+      stickPointerId = null;
+      resetStick();
+    });
+
+    buttons.forEach((button) => {
+      const index = Number(button.dataset.button);
+      const setButton = (pressed) => {
+        buttonState[index].pressed = pressed;
+        buttonState[index].touched = pressed;
+        buttonState[index].value = pressed ? 1 : 0;
+        button.classList.toggle('pressed', pressed);
+        setConnected();
+        sendGamepad();
       };
 
-      pad.addEventListener('input', markConnected);
-    }
+      button.addEventListener('pointerdown', (event) => {
+        button.setPointerCapture(event.pointerId);
+        setButton(true);
+      });
+      button.addEventListener('lostpointercapture', () => {
+        setButton(false);
+      });
+    });
   </script>
 </body>
 </html>

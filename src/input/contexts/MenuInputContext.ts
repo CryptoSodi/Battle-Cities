@@ -6,6 +6,6 @@ export const MenuInputContext: InputContext = {
   VerticalNext: [InputControl.Down],
   HorizontalNext: [InputControl.Right],
   HorizontalPrev: [InputControl.Left],
-  Skip: [InputControl.PrimaryAction, InputControl.Select],
-  Select: [InputControl.PrimaryAction, InputControl.Select],
+  Skip: [InputControl.PrimaryAction],
+  Select: [InputControl.PrimaryAction],
 };

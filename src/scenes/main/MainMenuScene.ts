@@ -279,13 +279,25 @@ export class MainMenuScene extends GameScene {
     }
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width / config.CANVAS_WIDTH;
-    const scaleY = rect.height / config.CANVAS_HEIGHT;
+    const visibleLeft = Math.max(rect.left, 0);
+    const visibleRight = Math.min(rect.right, window.innerWidth);
+    const visibleTop = Math.max(rect.top, 0);
+    const visibleBottom = Math.min(rect.bottom, window.innerHeight);
+    const visibleWidth = Math.max(visibleRight - visibleLeft, 1);
+    const visibleHeight = Math.max(visibleBottom - visibleTop, 1);
+    const qrWidth = Math.max(160, Math.min(240, visibleWidth * 0.32));
+    const qrHeight = qrWidth + 58;
+    const margin = Math.max(12, visibleWidth * 0.025);
+    const left = Math.max(
+      visibleLeft + margin,
+      visibleRight - qrWidth - margin,
+    );
+    const top = visibleTop + visibleHeight * 0.22;
 
-    this.mobileGamepadQrElement.style.left = `${rect.left + 650 * scaleX}px`;
-    this.mobileGamepadQrElement.style.top = `${rect.top + 250 * scaleY}px`;
-    this.mobileGamepadQrElement.style.width = `${118 * scaleX}px`;
-    this.mobileGamepadQrElement.style.minHeight = `${150 * scaleY}px`;
+    this.mobileGamepadQrElement.style.left = `${left}px`;
+    this.mobileGamepadQrElement.style.top = `${top}px`;
+    this.mobileGamepadQrElement.style.width = `${qrWidth}px`;
+    this.mobileGamepadQrElement.style.minHeight = `${qrHeight}px`;
   }
 
   private removeMobileGamepadQrElement(): void {
