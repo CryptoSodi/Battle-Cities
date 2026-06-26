@@ -328,8 +328,8 @@
         const controllerHeight = isPortrait ? viewportWidth : viewportHeight;
         const shortSide = Math.min(controllerWidth, controllerHeight);
         const longSide = Math.max(controllerWidth, controllerHeight);
-        const stickSize = Math.min(shortSide * 0.7, longSide * 0.3, 280);
-        const buttonSize = Math.min(shortSide * 0.24, 104);
+        const stickSize = Math.min(shortSide * 0.72, longSide * 0.34, 560);
+        const buttonSize = Math.min(shortSide * 0.23, 220);
 
         document.body.classList.toggle('portrait', isPortrait);
         shell.style.setProperty('--controller-width', `${controllerWidth}px`);
