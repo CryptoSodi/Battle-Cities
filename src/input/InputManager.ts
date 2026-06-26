@@ -4,6 +4,7 @@ import {
   InputDevice,
   InputMethod,
   KeyboardInputDevice,
+  MobileGamepadInputDevice,
 } from '../core';
 import { GameStorage } from '../game';
 import * as config from '../config';
@@ -24,12 +25,14 @@ import { InputButtonCodePresenter } from './InputButtonCodePresenter';
 import { InputControl } from './InputControl';
 import { InputDeviceType } from './InputDeviceType';
 import { InputVariant } from './InputVariant';
+import { MobileGamepadHost } from './mobile';
 
 export class InputManager {
   private deviceMap = new Map<InputDeviceType, InputDevice[]>();
   private bindings = new Map<InputBindingType, InputBinding>();
   private presenters = new Map<InputDeviceType, InputButtonCodePresenter>();
   private storage: GameStorage;
+  private mobileGamepadHost = new MobileGamepadHost();
   // Active device is always the one last interacted with. Use it only for
   // single-player interactions. It might be helpful when user for example
   // was playing on keyboard and then started pressing buttons on gamepad -
@@ -48,6 +51,10 @@ export class InputManager {
     this.deviceMap.set(InputDeviceType.Gamepad, [
       new GamepadInputDevice(0),
       new GamepadInputDevice(1),
+    ]);
+    this.deviceMap.set(InputDeviceType.MobileGamepad, [
+      new MobileGamepadInputDevice(this.mobileGamepadHost, 0),
+      new MobileGamepadInputDevice(this.mobileGamepadHost, 1),
     ]);
 
     if (this.deviceMap.size > 0) {
@@ -82,6 +89,14 @@ export class InputManager {
       InputBindingType.SecondaryGamepad,
       new SecondaryGamepadInputBinding(),
     );
+    this.bindings.set(
+      InputBindingType.PrimaryMobileGamepad,
+      new PrimaryGamepadInputBinding(),
+    );
+    this.bindings.set(
+      InputBindingType.SecondaryMobileGamepad,
+      new SecondaryGamepadInputBinding(),
+    );
 
     this.presenters.set(
       InputDeviceType.Keyboard,
@@ -89,6 +104,10 @@ export class InputManager {
     );
     this.presenters.set(
       InputDeviceType.Gamepad,
+      new GamepadButtonCodePresenter(),
+    );
+    this.presenters.set(
+      InputDeviceType.MobileGamepad,
       new GamepadButtonCodePresenter(),
     );
   }
@@ -125,6 +144,10 @@ export class InputManager {
     const presenter = this.presenters.get(deviceType);
 
     return presenter;
+  }
+
+  public getMobileGamepadHost(): MobileGamepadHost {
+    return this.mobileGamepadHost;
   }
 
   public getMethodByVariant(variant: InputVariant): InputMethod {

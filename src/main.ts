@@ -98,6 +98,42 @@ document.body.classList.toggle('scanlines-disabled', !showScanlines);
 const inputManager = new InputManager(gameStorage);
 inputManager.listen();
 
+const mobileGamepadStyle = document.createElement('style');
+mobileGamepadStyle.textContent = `
+.mobile-gamepad-qr {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.78);
+  border: 2px solid #ffae0a;
+  box-sizing: border-box;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  font: 12px monospace;
+  gap: 4px;
+  padding: 8px;
+  pointer-events: auto;
+  position: fixed;
+  text-align: center;
+  z-index: 20;
+}
+.mobile-gamepad-qr__title {
+  color: #ffae0a;
+  font-size: 10px;
+  line-height: 1.1;
+}
+.mobile-gamepad-qr__image {
+  background: #fff;
+  display: block;
+  image-rendering: pixelated;
+  width: 100%;
+}
+.mobile-gamepad-qr__code {
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+`;
+document.head.appendChild(mobileGamepadStyle);
+
 const audioLoader = new AudioLoader(audioManifest);
 const imageLoader = new ImageLoader();
 

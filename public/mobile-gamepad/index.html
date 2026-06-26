@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0, viewport-fit=cover">
+  <title>Battle Cities Controller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --gold: #ffae0a;
+      --ink: #090b0f;
+      --panel: #141922;
+      --panel-strong: #202936;
+      --line: #3b4658;
+      --text: #f6f7fb;
+      --muted: #aeb7c7;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    html,
+    body {
+      background:
+        linear-gradient(90deg, rgba(255, 174, 10, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 174, 10, 0.08) 1px, transparent 1px),
+        radial-gradient(circle at 50% 30%, #202936 0, var(--ink) 52%);
+      background-size: 28px 28px, 28px 28px, auto;
+      color: var(--text);
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      position: fixed;
+      touch-action: none;
+      user-select: none;
+      width: 100%;
+      -webkit-user-select: none;
+    }
+
+    body {
+      align-items: stretch;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    }
+
+    .controller-header {
+      align-items: center;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      min-height: 44px;
+      pointer-events: none;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand {
+      color: var(--gold);
+      font-size: clamp(16px, 4vw, 24px);
+      font-weight: 800;
+      letter-spacing: 0;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .status {
+      background: rgba(20, 25, 34, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: clamp(12px, 2.6vw, 15px);
+      font-weight: 700;
+      line-height: 1;
+      padding: 8px 10px;
+      text-transform: uppercase;
+    }
+
+    .status.connected {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .controller-stage {
+      position: relative;
+    }
+
+    .hint {
+      bottom: 0;
+      color: var(--muted);
+      font-size: clamp(11px, 2.4vw, 14px);
+      left: 50%;
+      line-height: 1.2;
+      pointer-events: none;
+      position: absolute;
+      text-align: center;
+      transform: translateX(-50%);
+      width: min(420px, 90vw);
+      z-index: 2;
+    }
+
+    gamepad-input {
+      box-sizing: border-box;
+      color: var(--text);
+      display: block;
+      height: 100%;
+      max-height: calc(100vh - 72px);
+      padding: clamp(16px, 4vw, 32px) 0 clamp(26px, 5vw, 42px);
+      position: absolute;
+      inset: 0;
+      width: 100%;
+    }
+
+    @media (orientation: portrait) {
+      body {
+        grid-template-rows: auto 1fr auto;
+      }
+
+      gamepad-input {
+        padding-top: 6vh;
+        padding-bottom: 8vh;
+      }
+
+      .hint::after {
+        content: " Rotate for a wider controller.";
+      }
+    }
+
+    dialog {
+      background: #b3212b;
+      border: 0;
+      border-radius: 6px;
+      color: #fff;
+      font: 16px system-ui, sans-serif;
+      max-width: 86vw;
+      padding: 16px 40px 16px 16px;
+    }
+  </style>
+</head>
+<body>
+  <header class="controller-header">
+    <div class="brand">Battle Cities</div>
+    <div class="status" data-status>Connecting</div>
+  </header>
+  <main class="controller-stage">
+    <div class="hint">Left pad moves. A fires. X rapid fires.</div>
+  </main>
+  <script type="module">
+    const status = document.querySelector('[data-status]');
+    const params = new URLSearchParams(document.location.hash.substr(1));
+    const roomCode = params.get('rc');
+
+    if (roomCode === null) {
+      status.textContent = 'Missing room';
+    } else {
+      await (await import('./player.js')).startPlayer(roomCode);
+      const pad = document.querySelector('gamepad-input');
+      document.querySelector('.controller-stage').appendChild(pad);
+
+      const markConnected = () => {
+        status.textContent = 'Connected';
+        status.classList.add('connected');
+        pad.removeEventListener('input', markConnected);
+      };
+
+      pad.addEventListener('input', markConnected);
+    }
+  </script>
+</body>
+</html>

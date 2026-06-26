@@ -56,6 +56,8 @@ export class InputBindingType {
         return '0';
       case InputDeviceType.Gamepad:
         return '1';
+      case InputDeviceType.MobileGamepad:
+        return '2';
     }
     return '?';
   }
@@ -78,6 +80,16 @@ export class InputBindingType {
   public static SecondaryGamepad = new InputBindingType(
     1,
     InputDeviceType.Gamepad,
+  );
+
+  public static PrimaryMobileGamepad = new InputBindingType(
+    0,
+    InputDeviceType.MobileGamepad,
+  );
+
+  public static SecondaryMobileGamepad = new InputBindingType(
+    1,
+    InputDeviceType.MobileGamepad,
   );
 
   public static TertiaryKeyboard = new InputBindingType(

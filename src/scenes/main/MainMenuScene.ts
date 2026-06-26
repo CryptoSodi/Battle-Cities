@@ -1,7 +1,7 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
 import { Menu, SpriteText, TextMenuItem } from '../../gameObjects';
-import { MenuInputContext } from '../../input';
+import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
 import * as config from '../../config';
@@ -33,8 +33,12 @@ export class MainMenuScene extends GameScene {
   private session: Session;
   private mapLoader: MapLoader;
   private pointsHighscoreManager: PointsHighscoreManager;
+  private mobileGamepadQrElement: HTMLElement = null;
+  private mobileGamepadQrRequested = false;
+  private mobileGamepadQrEnabled = false;
 
   protected setup({
+    inputManager,
     mapLoader,
     pointsHighscoreManager,
     session,
@@ -120,10 +124,17 @@ export class MainMenuScene extends GameScene {
     }
 
     this.root.add(this.group);
+
+    this.mobileGamepadQrEnabled = true;
+    this.ensureMobileGamepadQrElement(inputManager);
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
     const { deltaTime, inputManager } = updateArgs;
+
+    this.mobileGamepadQrEnabled = true;
+    this.ensureMobileGamepadQrElement(inputManager);
+    this.syncMobileGamepadQrSize();
 
     const inputMethod = inputManager.getActiveMethod();
 
@@ -189,29 +200,100 @@ export class MainMenuScene extends GameScene {
   }
 
   private handleSinglePlayerSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.session.start(1, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
 
   private handleMultiPlayerSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.session.setMultiplayer();
     this.session.start(1, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
 
   private handleModesSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.ModesMenu);
   };
 
   private handleEditorSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.EditorMenu);
   };
 
   private handleSettingsSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.SettingsMenu);
   };
 
   private handleAboutSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainAbout);
   };
+
+  private ensureMobileGamepadQrElement(inputManager: InputManager): void {
+    if (
+      this.mobileGamepadQrRequested ||
+      this.mobileGamepadQrElement !== null ||
+      !this.mobileGamepadQrEnabled
+    ) {
+      return;
+    }
+
+    this.mobileGamepadQrRequested = true;
+    inputManager
+      .getMobileGamepadHost()
+      .createQrElement()
+      .then((element) => {
+        this.mobileGamepadQrRequested = false;
+        if (!this.mobileGamepadQrEnabled) {
+          return;
+        }
+
+        this.removeMobileGamepadQrElement();
+        this.mobileGamepadQrElement = element;
+        document.body.appendChild(element);
+        this.syncMobileGamepadQrSize();
+      })
+      .catch((error) => {
+        this.mobileGamepadQrRequested = false;
+        console.error(error);
+      });
+  }
+
+  private syncMobileGamepadQrSize(): void {
+    if (this.mobileGamepadQrElement === null) {
+      return;
+    }
+
+    const canvas = document.querySelector('canvas');
+    if (canvas === null) {
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / config.CANVAS_WIDTH;
+    const scaleY = rect.height / config.CANVAS_HEIGHT;
+
+    this.mobileGamepadQrElement.style.left = `${rect.left + 650 * scaleX}px`;
+    this.mobileGamepadQrElement.style.top = `${rect.top + 250 * scaleY}px`;
+    this.mobileGamepadQrElement.style.width = `${118 * scaleX}px`;
+    this.mobileGamepadQrElement.style.minHeight = `${150 * scaleY}px`;
+  }
+
+  private removeMobileGamepadQrElement(): void {
+    const existingElements = document.querySelectorAll('.mobile-gamepad-qr');
+    existingElements.forEach((element) => {
+      element.remove();
+    });
+
+    this.mobileGamepadQrElement = null;
+  }
 }

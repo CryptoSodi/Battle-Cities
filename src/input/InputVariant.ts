@@ -55,4 +55,20 @@ export class InputVariant {
     InputBindingType.SecondaryGamepad,
     1,
   );
+  public static PrimaryMobileGamepad0 = new InputVariant(
+    InputBindingType.PrimaryMobileGamepad,
+    0,
+  );
+  public static PrimaryMobileGamepad1 = new InputVariant(
+    InputBindingType.PrimaryMobileGamepad,
+    1,
+  );
+  public static SecondaryMobileGamepad0 = new InputVariant(
+    InputBindingType.SecondaryMobileGamepad,
+    0,
+  );
+  public static SecondaryMobileGamepad1 = new InputVariant(
+    InputBindingType.SecondaryMobileGamepad,
+    1,
+  );
 }
