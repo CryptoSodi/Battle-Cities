@@ -2,7 +2,7 @@ import { GamepadButtonCode } from '../codes';
 import { InputDevice } from '../InputDevice';
 import { MobileGamepadHost, RemoteGamepad } from '../../../input/mobile';
 
-const AXIS_DEAD_ZONE = 0.35;
+const AXIS_DEAD_ZONE = 0.22;
 
 export class MobileGamepadInputDevice implements InputDevice {
   private host: MobileGamepadHost;

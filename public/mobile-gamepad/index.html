@@ -369,6 +369,8 @@
     let lastSentTimestamp = 0;
     let connectionTimeout = null;
     let peerPromise = null;
+    let sendQueued = false;
+    let lastSentState = '';
 
     function loadPeer() {
       if (window.Peer !== undefined) {
@@ -466,14 +468,26 @@
         connection.on('open', () => {
           setConnected();
           sendGamepad(true);
-          requestAnimationFrame(sendLoop);
+          setInterval(() => sendGamepad(true), 250);
         });
       });
     }
 
-    function sendLoop() {
-      sendGamepad(true);
-      requestAnimationFrame(sendLoop);
+    function getGamepadStateKey() {
+      const buttonBits = buttonState.map((button) => button.value).join('');
+      return `${axes[0].toFixed(3)},${axes[1].toFixed(3)}:${buttonBits}`;
+    }
+
+    function scheduleSend() {
+      if (sendQueued) {
+        return;
+      }
+
+      sendQueued = true;
+      requestAnimationFrame(() => {
+        sendQueued = false;
+        sendGamepad();
+      });
     }
 
     function sendGamepad(force = false) {
@@ -482,11 +496,13 @@
       }
 
       const timestamp = performance.now();
-      if (!force && timestamp <= lastSentTimestamp) {
+      const stateKey = getGamepadStateKey();
+      if (!force && stateKey === lastSentState) {
         return;
       }
 
       lastSentTimestamp = timestamp;
+      lastSentState = stateKey;
       connection.send({
         type: 'gamepads',
         timestamp: Date.now(),
@@ -536,7 +552,7 @@
       stickNub.style.setProperty('--stick-x', `${dx * visualTravel}px`);
       stickNub.style.setProperty('--stick-y', `${dy * visualTravel}px`);
       setConnected();
-      sendGamepad();
+      scheduleSend();
     }
 
     function resetStick() {
@@ -544,7 +560,7 @@
       axes[1] = 0;
       stickNub.style.setProperty('--stick-x', '0px');
       stickNub.style.setProperty('--stick-y', '0px');
-      sendGamepad();
+      scheduleSend();
     }
 
     let stickPointerId = null;
@@ -581,7 +597,7 @@
         buttonState[index].value = pressed ? 1 : 0;
         button.classList.toggle('pressed', pressed);
         setConnected();
-        sendGamepad();
+        scheduleSend();
       };
 
       button.addEventListener('pointerdown', (event) => {
