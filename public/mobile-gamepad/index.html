@@ -333,13 +333,14 @@
         const stickMax = isFullscreen ? 430 : 560;
         const buttonMax = isFullscreen ? 168 : 220;
         const stickSize = Math.min(shortSide * 0.72, longSide * 0.34, stickMax);
+        const nubSize = isFullscreen ? Math.min(stickSize * 0.34, 132) : stickSize * 0.4;
         const buttonSize = Math.min(shortSide * 0.23, buttonMax);
 
         document.body.classList.toggle('portrait', isPortrait);
         shell.style.setProperty('--controller-width', `${controllerWidth}px`);
         shell.style.setProperty('--controller-height', `${controllerHeight}px`);
         shell.style.setProperty('--stick-size', `${stickSize}px`);
-        shell.style.setProperty('--stick-nub-size', `${stickSize * 0.4}px`);
+        shell.style.setProperty('--stick-nub-size', `${nubSize}px`);
         shell.style.setProperty('--button-size', `${buttonSize}px`);
       }
 
