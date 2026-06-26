@@ -65,6 +65,13 @@ export class KeyboardInputDevice implements InputDevice {
     this.upCodes = upCodes;
   }
 
+  public reset(): void {
+    this.listenedDownCodes = [];
+    this.downCodes = [];
+    this.holdCodes = [];
+    this.upCodes = [];
+  }
+
   public getDownCodes(): number[] {
     return this.downCodes;
   }

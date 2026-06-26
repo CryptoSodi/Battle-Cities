@@ -23,6 +23,9 @@ export class Bullet extends GameObject {
   public speed: number;
   public tags = [Tag.Bullet];
   public died = new Subject();
+  // Becomes true once the bullet has been spent (exploded or nullified) so it
+  // can only deal damage once — e.g. it can't kill two overlapping tanks.
+  private consumed = false;
   private hitBrickSound: Sound;
   private hitSteelSound: Sound;
 
@@ -74,7 +77,18 @@ export class Bullet extends GameObject {
     this.collideWalls(collision);
   }
 
+  // True once the bullet has already hit something this collision pass. Tanks
+  // check this so a single bullet can't damage more than one of them.
+  public isSpent(): boolean {
+    return this.consumed;
+  }
+
   public nullify(): void {
+    if (this.consumed) {
+      return;
+    }
+    this.consumed = true;
+
     this.removeSelf();
 
     this.collider.unregister();
@@ -83,6 +97,11 @@ export class Bullet extends GameObject {
   }
 
   public explode(): void {
+    if (this.consumed) {
+      return;
+    }
+    this.consumed = true;
+
     const explosion = new SmallExplosion();
     explosion.updateMatrix();
     explosion.setCenter(this.getCenter());

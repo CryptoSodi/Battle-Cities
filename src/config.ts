@@ -10,10 +10,6 @@ export const FIELD_TILE_COUNT = 20;
 export const FIELD_TILE_COUNT_WIDTH = FIELD_TILE_COUNT;
 export const FIELD_TILE_COUNT_HEIGHT = FIELD_TILE_COUNT;
 export const VIEWPORT_FIELD_TILE_COUNT = 16;
-// Gameplay-only camera zoom. Applied at render time to the field subtree, so
-// the play area shows fewer/larger tiles WITHOUT resizing the canvas, HUD, or
-// menus. 1 = no zoom; 2 = show half as many tiles (e.g. 40 -> 20).
-export const GAMEPLAY_ZOOM = 2;
 export const LEGACY_FIELD_SIZE = LEGACY_FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const FIELD_SIZE = FIELD_TILE_COUNT * TILE_SIZE_LARGE;
 export const VIEWPORT_FIELD_SIZE =
@@ -131,6 +127,24 @@ const RESPONSIVE_CANVAS_SIZE = getResponsiveCanvasSize();
 
 export const CANVAS_WIDTH = RESPONSIVE_CANVAS_SIZE.width;
 export const CANVAS_HEIGHT = RESPONSIVE_CANVAS_SIZE.height;
+
+// Gameplay-only camera zoom (render-time scale of the field subtree; the HUD
+// and menus are unaffected). The zoom is chosen so the play area always shows
+// ~TARGET_TILES_WIDE medium (32px) tiles across, regardless of screen size —
+// so wider screens get more zoom to keep the tile count constant. Recomputed
+// on resize because the resize handler reloads the page. ZOOM_MIN/MAX are just
+// safety rails for extreme viewports.
+export const TARGET_TILES_WIDE = 34.5;
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 6;
+
+export function getResponsiveZoom(): number {
+  const playWidth = CANVAS_WIDTH - BORDER_LEFT_WIDTH - BORDER_RIGHT_WIDTH;
+  const zoom = playWidth / (TARGET_TILES_WIDE * TILE_SIZE_MEDIUM);
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+}
+
+export const GAMEPLAY_ZOOM = getResponsiveZoom();
 
 // Supersampling factor: the canvas backing store renders at this multiple of
 // the logical size, so HD art (authored at 4x) resolves to full detail on

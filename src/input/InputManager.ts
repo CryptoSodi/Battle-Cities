@@ -237,6 +237,17 @@ export class InputManager {
     });
   }
 
+  // Clear cached/held state on every device. Call when entering gameplay so a
+  // key still "held" from a missed keyup or menu navigation can't make the
+  // tank move on its own.
+  public reset(): void {
+    this.deviceMap.forEach((devices) => {
+      for (const device of devices) {
+        device.reset();
+      }
+    });
+  }
+
   public loadAllBindings(): void {
     this.bindings.forEach((binding, bindingType) => {
       const key = this.getBindingStorageKey(bindingType);

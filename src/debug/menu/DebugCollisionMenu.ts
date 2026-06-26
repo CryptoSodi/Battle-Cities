@@ -13,17 +13,23 @@ export class DebugCollisionMenu extends DebugMenu {
   private itemsContainer: GameObject;
   private items: GameObject[] = [];
   private root: GameObject;
+  private getCameraSource: () => GameObject | null;
   private isShown = false;
 
   constructor(
     collisionSystem: CollisionSystem,
     root: GameObject,
+    // Returns the zoomed subtree root (the field) so the debug rects can be
+    // drawn with the same camera zoom; otherwise they'd be drawn at unzoomed
+    // coordinates and misalign with the zoomed gameplay.
+    getCameraSource: () => GameObject | null = (): GameObject | null => null,
     options: DebugMenuOptions = {},
   ) {
     super('Collision', options);
 
     this.collisionSystem = collisionSystem;
     this.root = root;
+    this.getCameraSource = getCameraSource;
 
     this.itemsContainer = new GameObject();
 
@@ -46,6 +52,15 @@ export class DebugCollisionMenu extends DebugMenu {
   public update(): void {
     if (!this.isShown) {
       return;
+    }
+
+    // Match the gameplay camera zoom so the debug rects line up with the
+    // zoomed field instead of being drawn at 1:1.
+    const cameraSource = this.getCameraSource();
+    if (cameraSource !== null) {
+      this.itemsContainer.cameraZoom = cameraSource.cameraZoom;
+      this.itemsContainer.cameraPivotX = cameraSource.cameraPivotX;
+      this.itemsContainer.cameraPivotY = cameraSource.cameraPivotY;
     }
 
     this.clear();

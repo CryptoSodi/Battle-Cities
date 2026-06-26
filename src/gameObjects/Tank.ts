@@ -798,6 +798,30 @@ export class Tank extends GameObject {
       }
     }
 
+    // Players must not push enemy tanks. If the player is moving into an enemy
+    // (regardless of who is the "stronger" initiator), the player stops at the
+    // enemy's previous position and the enemy is never displaced by it.
+    // Mirrored on the enemy's side so the outcome is the same no matter which
+    // tank's collide() runs first this pass. Scoped to player<->enemy only, so
+    // enemy<->enemy and the anti-block logic above are unaffected.
+    if (
+      this.tags.includes(Tag.Player) &&
+      other.tags.includes(Tag.Enemy) &&
+      selfDot > 0
+    ) {
+      this.resolveMinkowski(otherPrevBox);
+      this.tankCollisionResolution = TankCollisionResolution.Self;
+      return;
+    }
+    if (
+      this.tags.includes(Tag.Enemy) &&
+      other.tags.includes(Tag.Player) &&
+      otherDot > 0
+    ) {
+      // The player is driving into us — don't move because of the player.
+      return;
+    }
+
     // In case current tank has other collision with walls, let him be, and
     // resolve collsion ourselves
     if (hasWallCollision) {
@@ -870,6 +894,12 @@ export class Tank extends GameObject {
 
       // Prevent self-destruction
       if (this.bullets.includes(bullet)) {
+        return;
+      }
+
+      // A bullet only hits once: if another tank already consumed it this
+      // collision pass (e.g. two enemies overlapping), don't take damage too.
+      if (bullet.isSpent()) {
         return;
       }
 

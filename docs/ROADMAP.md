@@ -40,6 +40,11 @@ One polished, demoable match that closes the **earn → spend → play** loop, *
 
 (With game-first priority, art + core gameplay polish lead; economy pieces are stubbed behind interfaces.)
 
+### Backlog — gameplay ideas
+- **Zoom-out powerup** — a temporary pickup that widens the player's view (lowers the gameplay camera zoom) for a duration, then eases back. The render-only camera zoom already exists (`config.GAMEPLAY_ZOOM`, live-adjustable via the debug Camera panel and a per-frame `cameraZoom` on the level scene), so this is mostly: add a powerup type + sprite, and have it animate the active zoom down for its duration. Wire through the existing `powerup` system.
+- **Speed-boost powerup** — a temporary pickup that increases the player tank's move speed for a duration, then reverts. Tank speed comes from `TankAttributes` (`moveSpeed`), so this is mostly: add a powerup type + sprite, apply a speed multiplier on pickup, and restore it on expiry. Wire through the existing `powerup` system.
+- **Ram powerup (under consideration)** — an intentional, bounded "push" mechanic: while active, the player can shove enemy tanks (and/or a heavy tank tier could shove lighter ones). NOTE: pushing currently happens *unintentionally* as a side effect of `Tank.collideTanks` resolution — when both tanks move you can nudge an enemy along its travel direction, **including sideways** (a sideways-moving enemy can be pushed sideways). The plan is to make tanks fully solid by default (no pushing) and gate any pushing behind this powerup so it's a deliberate, balanced ability rather than an exploit.
+
 ### Later — multiplayer
 Per `Agents.md`: server-authoritative online play (match state, enemy/bullet validation, scores). Required before any real-prize tournaments.
 

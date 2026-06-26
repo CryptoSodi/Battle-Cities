@@ -17,6 +17,10 @@ export class NullInputDevice implements InputDevice {
     // Do nothing
   }
 
+  public reset(): void {
+    // Do nothing
+  }
+
   public getDownCodes(): number[] {
     return [];
   }

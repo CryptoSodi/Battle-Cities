@@ -38,20 +38,29 @@ export class PlayerTankBehavior extends TankBehavior {
     }
 
     if (!tank.isSliding() && !tank.isStunned()) {
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveUp)) {
-        tank.rotate(Rotation.Up);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveDown)) {
-        tank.rotate(Rotation.Down);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveLeft)) {
-        tank.rotate(Rotation.Left);
-      }
-      if (inputMethod.isHoldLastAny(LevelPlayInputContext.MoveRight)) {
-        tank.rotate(Rotation.Right);
+      // Drive rotation + movement off the most-recently-held DIRECTION key,
+      // ignoring any other held keys (fire, etc.) in between. Using the
+      // device's global "last key" here let a fire press freeze rotation and
+      // leave the tank moving in a stale direction.
+      const directions: [number[], Rotation][] = [
+        [LevelPlayInputContext.MoveUp, Rotation.Up],
+        [LevelPlayInputContext.MoveDown, Rotation.Down],
+        [LevelPlayInputContext.MoveLeft, Rotation.Left],
+        [LevelPlayInputContext.MoveRight, Rotation.Right],
+      ];
+
+      let bestIndex = -1;
+      let bestRotation: Rotation = null;
+      for (const [controls, rotation] of directions) {
+        const index = inputMethod.getHoldLastIndex(controls);
+        if (index > bestIndex) {
+          bestIndex = index;
+          bestRotation = rotation;
+        }
       }
 
-      if (inputMethod.isHoldAny(MOVE_CONTROLS)) {
+      if (bestRotation !== null) {
+        tank.rotate(bestRotation);
         tank.move(deltaTime);
       }
     }

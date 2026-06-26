@@ -96,6 +96,22 @@ export class InputMethod {
     return isHoldLastAny;
   }
 
+  // Position (in hold order) of the most-recently-held code among `controls`,
+  // or -1 if none are held. Lets callers find which of several controls was
+  // pressed last while IGNORING other held keys (e.g. fire) in between.
+  public getHoldLastIndex(controls: number[]): number {
+    const targetCodes = this.unmapList(controls);
+    const codes = this.device.getHoldCodes();
+
+    for (let index = codes.length - 1; index >= 0; index -= 1) {
+      if (targetCodes.includes(codes[index])) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
   public isUp(control: number): boolean {
     const codes = this.device.getUpCodes();
     const isUp = codes.includes(this.unmap(control));

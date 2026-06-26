@@ -70,6 +70,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, inputManager, session } = updateArgs;
+    // Drop any input state carried in from the menu/transition so a key still
+    // "held" (or stuck from a missed keyup) can't move the tank on spawn.
+    inputManager.reset();
     const { mapConfig } = this.params;
     const fieldWidth = mapConfig.getFieldWidth();
     const fieldHeight = mapConfig.getFieldHeight();
@@ -77,6 +80,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.debugCollisionMenu = new DebugCollisionMenu(
       collisionSystem,
       this.root,
+      () => this.world?.field ?? null,
       { top: 470 },
     );
     this.debugCameraMenu = new DebugCameraMenu(

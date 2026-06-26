@@ -1,0 +1,238 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0" />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    html, body {
+      overscroll-behavior: none;
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      background: black;
+      color: white;
+    }
+    body  {
+      margin: 0;
+    }
+    thumbstick-input, button-cluster-input {
+      display: block;
+      width: 4cm;
+    }
+    @media (pointer: coarse) {
+      thumbstick-input, button-cluster-input {
+        width: 8cm;
+      }
+    }
+    gamepad-input {
+      height: 100%;
+      max-height: 100%;
+      max-width: 100%;
+    }
+    url-qr-code {
+      position: absolute;
+      inset: 0;
+    }
+  </style>
+</head>
+<body>
+  <!--
+   <div style="font-size: 10vh">
+    x: <span class="x"></span><br/>
+    y: <span class="y"></span><br/>
+    z: <span class="z"></span><br/>
+    a: <span class="a"></span><br/>
+    b: <span class="b"></span><br/>
+    g: <span class="g"></span><br/>
+    abs: <span class="abs"></span><br/>
+  </div>
+  <div style="font-size: 10vh">
+    a: <span class="a"></span><br/>
+    b: <span class="b"></span><br/>
+    x: <span class="x"></span><br/>
+    y: <span class="y"></span><br/>
+  </div>
+  <div id="extras" style="font-size: 2vw; font-family: sans-serif">
+  -->
+  </div>
+  <script type="module">
+    import './gamepad.js';
+    import './wakelock.js';
+
+    const params = new URLSearchParams(document.location.hash.substr(1));
+    const roomCode = params.get('rc');
+    if (roomCode != null) {
+      await (await import('./player.js')).startPlayer(roomCode);
+    } else {
+      const webGamepadUrl = document.location;
+      const host = await (await import('./host.js')).startHost({ webGamepadUrl });
+      const qr = host.getQrCode();
+      qr.showurl = '';
+      document.body.appendChild(qr);
+
+      const style = document.createElement('style');
+      style.textContent = `
+      gamepad-input {
+        position: absolute;
+        inset: 0;
+        transform: translate(calc(var(--x, 0) * 1px), calc(var(--y, 0) * 1px));
+        height: 10vmin;
+        width: 10vmin;
+        border-radius: 50%;
+      }`;
+      document.head.appendChild(style);
+
+      window.addEventListener('gamepadconnected', (e) => {
+        const padDisplay = document.createElement('gamepad-input');
+        padDisplay.overlap = '';
+        padDisplay.style.background = `hsl(${Math.random()}turn,100%,65%)`;
+        padDisplay.value = e.gamepad;
+        document.body.appendChild(padDisplay);
+
+        const disconnect = ({gamepad}) => {
+          if (padDisplay.value.index !== gamepad.index) return;
+          padDisplay.remove();
+          padDisplay.value = gamepad;
+          window.removeEventListener('gamepaddisconnected', disconnect);
+        };
+        window.addEventListener('gamepaddisconnected', disconnect);
+
+        let lastUpdate = Date.now();
+        let x = 0;
+        let y = 0;
+        let lastPadTimestamp = Date.now();
+        const updateDisplay = () => {
+          if (!padDisplay.value.connected) return;
+          const gamepad = navigator.getGamepads()[padDisplay.value.index];
+          if (!gamepad?.connected) return;
+          const timestamp = gamepad?.timestamp;
+          if (timestamp != lastPadTimestamp) {
+            padDisplay.value = gamepad;
+            lastPadTimestamp = timestamp;
+          }
+          const currentTime = Date.now();
+          const deltaTime = currentTime - lastUpdate;
+
+          const deadZone = (axis) =>
+            Math.sign(axis) * Math.max(Math.abs(axis) - .1, 0) / .9;
+          let xAxis = deadZone(gamepad.axes[0]);
+          let yAxis = deadZone(gamepad.axes[1]);
+          if (xAxis**2 + yAxis**2 > 1) {
+            let theta = Math.atan(yAxis / xAxis);
+            let sign = Math.sign(xAxis);
+            xAxis = sign * Math.cos(theta);
+            yAxis = sign * Math.sin(theta);
+          }
+
+          x += xAxis * deltaTime;
+          y += yAxis * deltaTime;
+          const maxX = window.innerWidth - padDisplay.offsetWidth;
+          const maxY = window.innerHeight - padDisplay.offsetHeight;
+          x = (x < 0) ? 0 : (x > maxX) ? maxX : x;
+          y = (y < 0) ? 0 : (y > maxY) ? maxY : y;
+          padDisplay.style.setProperty('--x', x);
+          padDisplay.style.setProperty('--y', y);
+          lastUpdate = currentTime;
+          requestAnimationFrame(updateDisplay);
+        }
+        updateDisplay();
+      });
+    }
+
+    // Doesn't work unless HTTPS, (*\.)?localhost, 127.0.0.1, or file:// urls
+    // 0.0.0.0 does *not* work.
+    if (false) {
+      const none = { textContent: "" };
+      const accelX = document.querySelector('.x') ?? none;
+      const accelY = document.querySelector('.y') ?? none;
+      const accelZ = document.querySelector('.z') ?? none;
+      const a = document.querySelector('.a') ?? none;
+      const b = document.querySelector('.b') ?? none;
+      const g = document.querySelector('.g') ?? none;
+      const abs = document.querySelector('.abs') ?? none;
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      let alpha = 0;
+      let beta = 0;
+      let gamma = 0;
+      let absolute = false;
+      // window.addEventListener('devicemotion', (e) => {
+      //   ({x, y, z} = e.acceleration);
+      //   ({alpha, beta, gamma} = e.rotationRate);
+      // }, true);
+      window.addEventListener('deviceorientation', (e) => {
+        ({alpha, beta, gamma, absolute} = e);
+      }, true);
+      const updateDisplay = () => {
+        accelX.textContent = x?.toFixed(3);
+        accelY.textContent = y?.toFixed(3);
+        accelZ.textContent = z?.toFixed(3);
+        a.textContent = alpha?.toFixed(3);
+        b.textContent = beta?.toFixed(3);
+        g.textContent = gamma?.toFixed(3);
+        abs.textContent = absolute;
+        requestAnimationFrame(updateDisplay);
+      };
+      updateDisplay();
+    }
+
+    // for full gamepad:
+    // if navigator.maxTouchPoints <= 1,
+    // alert user that they won't have a great experience
+    // detect portrait vs landscape prompt user to rotate device
+    // offer to go fullscreen
+    // request no sleep
+    // input.meta.url query params to configure
+
+    // Need better support for pressing two buttons at once with one thumb.
+    // Right now it only checks the midpoint.
+    // The width/height that pointer events gives us might not be good enough.
+
+    // // for mapping to onscreen controls:
+    // // from https://stackoverflow.com/a/36144688
+    // function click(x, y) {
+    //   document.elementFromPoint(x, y).dispatchEvent(
+    //     new MouseEvent('click', {
+    //       view: window,
+    //       bubbles: true,
+    //       cancelable: true,
+    //       screenX: x,
+    //       screenY: y
+    //     })
+    //   );
+    // }
+
+    // wire format:
+    // TODO(geophree): figure out connected/id/index/mapping
+    // - index implied?
+    // array of doubles
+    // - version
+    // - ??? total length?
+    // - number of gamepads
+    // - number of included gamepads (until last non-zero)
+    // - ??? list of indexes for each included gamepad?
+    // - is a gamepad:
+    //   - length of gamepad (zero means disconnected?)
+    //   - timestamp
+    //   - axes:
+    //     - number of axes
+    //     - number of included axes (until last non-zero)
+    //     - list of axes (doubles) (range: -1.0 - 1.0)
+    //   - is buttons:
+    //     - number of buttons
+    //     - number of included buttons (until last non-zero)
+    //     - list of buttons:
+    //       - double with two boolean bits (& 2 and & 4) (pressed/touched)
+    //       - the double itself is pressure (range: 0.0 - 1.0) (val %= 2)
+
+    // TODO(geophree):
+    // - thumbstick: octagon limiter (gamecube style)
+    //   - small size, goes out of its bounds
+    //     - easier to put two with d-pad and face buttons on phone
+  </script>
+</body>
+</html>
