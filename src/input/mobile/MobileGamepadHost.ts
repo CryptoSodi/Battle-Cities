@@ -31,6 +31,7 @@ interface PeerConstructor {
 const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
 const QR_CODE_URL = 'https://unpkg.com/qrcode@1.5.1/build/qrcode.js';
 const MOBILE_GAMEPAD_PATH = '/mobile-gamepad/';
+const MOBILE_GAMEPAD_VERSION = '2026-06-26-horizontal-controller';
 const ROOM_CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 
 function getRoomCodeLetter(): string {
@@ -132,6 +133,7 @@ export class MobileGamepadHost {
     this.roomCode = Array.from({ length: 4 }, getRoomCodeLetter).join('');
 
     const playerUrl = new URL(MOBILE_GAMEPAD_PATH, window.location.href);
+    playerUrl.searchParams.set('v', MOBILE_GAMEPAD_VERSION);
     playerUrl.hash = `?rc=${this.roomCode}`;
     this.playerUrl = playerUrl.toString();
 
