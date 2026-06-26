@@ -258,6 +258,12 @@
       z-index: 2;
     }
 
+    @media (orientation: portrait) {
+      .controller-shell {
+        transform: translate(-50%, -50%) rotate(90deg) scale(var(--controller-scale, 0.86));
+      }
+    }
+
     body.portrait .controller-shell {
       transform: translate(-50%, -50%) rotate(90deg) scale(var(--controller-scale, 1));
     }
@@ -308,6 +314,30 @@
       <div class="hint">Left pad moves. A fires. X rapid fires.</div>
     </main>
   </section>
+  <script>
+    (function () {
+      const shell = document.querySelector('[data-controller-shell]');
+      const controllerSize = { width: 920, height: 460 };
+
+      function fitController() {
+        const viewportWidth = window.visualViewport?.width || window.innerWidth;
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        const isPortrait = viewportHeight > viewportWidth;
+        const width = isPortrait ? controllerSize.height : controllerSize.width;
+        const height = isPortrait ? controllerSize.width : controllerSize.height;
+        const scale = Math.min(viewportWidth / width, viewportHeight / height, 1);
+
+        document.body.classList.toggle('portrait', isPortrait);
+        shell.style.setProperty('--controller-scale', Math.max(scale, 0.72).toString());
+      }
+
+      window.mobileControllerFit = fitController;
+      window.addEventListener('resize', fitController);
+      window.addEventListener('orientationchange', fitController);
+      window.visualViewport?.addEventListener('resize', fitController);
+      fitController();
+    }());
+  </script>
   <script type="module">
     import { Peer } from './peer.js';
 
@@ -318,7 +348,6 @@
     const buttons = Array.from(document.querySelectorAll('[data-button]'));
     const params = new URLSearchParams(document.location.hash.substr(1));
     const roomCode = params.get('rc');
-    const controllerSize = { width: 920, height: 460 };
     const buttonState = Array.from({ length: 4 }, () => ({
       pressed: false,
       touched: false,
@@ -329,19 +358,6 @@
     let connection = null;
     let lastSentTimestamp = 0;
 
-    function fitController() {
-      const isPortrait = window.innerHeight > window.innerWidth;
-      document.body.classList.toggle('portrait', isPortrait);
-
-      const availableWidth = window.innerWidth;
-      const availableHeight = window.innerHeight;
-      const width = isPortrait ? controllerSize.height : controllerSize.width;
-      const height = isPortrait ? controllerSize.width : controllerSize.height;
-      const scale = Math.min(availableWidth / width, availableHeight / height);
-
-      shell.style.setProperty('--controller-scale', Math.min(scale, 1).toString());
-    }
-
     async function requestLandscape() {
       try {
         if (document.fullscreenElement === null) {
@@ -349,17 +365,15 @@
         }
 
         await screen.orientation?.lock?.('landscape');
-        fitController();
+        window.mobileControllerFit?.();
       } catch (error) {
         // Orientation lock requires a user gesture and is not available in all
         // mobile browsers. The fixed landscape layout still works without it.
       }
     }
 
-    window.addEventListener('resize', fitController);
-    window.addEventListener('orientationchange', fitController);
     window.addEventListener('pointerdown', requestLandscape, { once: true });
-    fitController();
+    window.mobileControllerFit?.();
 
     if (roomCode === null) {
       status.textContent = 'Missing room';
