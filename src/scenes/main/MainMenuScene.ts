@@ -134,7 +134,6 @@ export class MainMenuScene extends GameScene {
 
     this.mobileGamepadQrEnabled = true;
     this.ensureMobileGamepadQrElement(inputManager);
-    this.syncMobileGamepadQrSize();
 
     const inputMethod = inputManager.getActiveMethod();
 
@@ -260,44 +259,11 @@ export class MainMenuScene extends GameScene {
         this.removeMobileGamepadQrElement();
         this.mobileGamepadQrElement = element;
         document.body.appendChild(element);
-        this.syncMobileGamepadQrSize();
       })
       .catch((error) => {
         this.mobileGamepadQrRequested = false;
         console.error(error);
       });
-  }
-
-  private syncMobileGamepadQrSize(): void {
-    if (this.mobileGamepadQrElement === null) {
-      return;
-    }
-
-    const canvas = document.querySelector('canvas');
-    if (canvas === null) {
-      return;
-    }
-
-    const rect = canvas.getBoundingClientRect();
-    const visibleLeft = Math.max(rect.left, 0);
-    const visibleRight = Math.min(rect.right, window.innerWidth);
-    const visibleTop = Math.max(rect.top, 0);
-    const visibleBottom = Math.min(rect.bottom, window.innerHeight);
-    const visibleWidth = Math.max(visibleRight - visibleLeft, 1);
-    const visibleHeight = Math.max(visibleBottom - visibleTop, 1);
-    const qrWidth = Math.max(160, Math.min(240, visibleWidth * 0.32));
-    const qrHeight = qrWidth + 58;
-    const margin = Math.max(12, visibleWidth * 0.025);
-    const left = Math.max(
-      visibleLeft + margin,
-      visibleRight - qrWidth - margin,
-    );
-    const top = visibleTop + visibleHeight * 0.22;
-
-    this.mobileGamepadQrElement.style.left = `${left}px`;
-    this.mobileGamepadQrElement.style.top = `${top}px`;
-    this.mobileGamepadQrElement.style.width = `${qrWidth}px`;
-    this.mobileGamepadQrElement.style.minHeight = `${qrHeight}px`;
   }
 
   private removeMobileGamepadQrElement(): void {

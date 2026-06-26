@@ -113,7 +113,10 @@ mobileGamepadStyle.textContent = `
   padding: 8px;
   pointer-events: auto;
   position: fixed;
+  right: clamp(12px, 3vw, 32px);
   text-align: center;
+  top: clamp(72px, 20vh, 180px);
+  width: clamp(160px, 22vw, 240px);
   z-index: 20;
 }
 .mobile-gamepad-qr__title {
@@ -130,6 +133,13 @@ mobileGamepadStyle.textContent = `
 .mobile-gamepad-qr__code {
   font-size: 16px;
   letter-spacing: 2px;
+}
+@media (max-width: 620px) {
+  .mobile-gamepad-qr {
+    right: 12px;
+    top: 64px;
+    width: 150px;
+  }
 }
 `;
 document.head.appendChild(mobileGamepadStyle);
