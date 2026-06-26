@@ -329,8 +329,11 @@
         const controllerHeight = isPortrait ? viewportWidth : viewportHeight;
         const shortSide = Math.min(controllerWidth, controllerHeight);
         const longSide = Math.max(controllerWidth, controllerHeight);
-        const stickSize = Math.min(shortSide * 0.72, longSide * 0.34, 560);
-        const buttonSize = Math.min(shortSide * 0.23, 220);
+        const isFullscreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
+        const stickMax = isFullscreen ? 430 : 560;
+        const buttonMax = isFullscreen ? 168 : 220;
+        const stickSize = Math.min(shortSide * 0.72, longSide * 0.34, stickMax);
+        const buttonSize = Math.min(shortSide * 0.23, buttonMax);
 
         document.body.classList.toggle('portrait', isPortrait);
         shell.style.setProperty('--controller-width', `${controllerWidth}px`);
@@ -343,6 +346,8 @@
       window.mobileControllerFit = fitController;
       window.addEventListener('resize', fitController);
       window.addEventListener('orientationchange', fitController);
+      document.addEventListener('fullscreenchange', fitController);
+      document.addEventListener('webkitfullscreenchange', fitController);
       window.visualViewport?.addEventListener('resize', fitController);
       fitController();
     }());
