@@ -103,28 +103,6 @@
       color: var(--gold);
     }
 
-    .fullscreen-button {
-      align-items: center;
-      background: rgba(20, 25, 34, 0.86);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      color: var(--text);
-      display: flex;
-      font-size: 26px;
-      font-weight: 900;
-      height: 48px;
-      justify-content: center;
-      line-height: 1;
-      min-width: 54px;
-      padding: 0;
-      touch-action: manipulation;
-      -webkit-touch-callout: none;
-    }
-
-    .fullscreen-button.hidden {
-      display: none;
-    }
-
     .controller-stage {
       position: relative;
     }
@@ -308,7 +286,6 @@
   <section class="controller-shell" data-controller-shell>
     <header class="controller-header">
       <div class="brand">Battle Cities</div>
-      <button class="fullscreen-button" type="button" data-fullscreen-button aria-label="Fullscreen">⛶</button>
       <div class="status" data-status>Connecting</div>
     </header>
     <main class="controller-stage">
@@ -374,7 +351,6 @@
     const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
     const shell = document.querySelector('[data-controller-shell]');
     const status = document.querySelector('[data-status]');
-    const fullscreenButton = document.querySelector('[data-fullscreen-button]');
     const stickZone = document.querySelector('[data-stick-zone]');
     const stick = document.querySelector('[data-stick]');
     const stickNub = document.querySelector('[data-stick-nub]');
@@ -428,11 +404,7 @@
       return request.call(root);
     }
 
-    function syncFullscreenButton() {
-      fullscreenButton.classList.toggle('hidden', getFullscreenElement() !== null);
-    }
-
-    async function requestLandscape() {
+    async function requestFullscreenIfNeeded() {
       try {
         if (getFullscreenElement() === null) {
           await requestFullscreen();
@@ -443,26 +415,10 @@
       } catch (error) {
         // Orientation lock requires a user gesture and is not available in all
         // mobile browsers. The fixed landscape layout still works without it.
-      } finally {
-        syncFullscreenButton();
       }
     }
 
-    fullscreenButton.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      requestLandscape();
-    });
-    fullscreenButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      requestLandscape();
-    });
-    document.addEventListener('fullscreenchange', syncFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
-    window.addEventListener('pointerdown', requestLandscape, { once: true });
     window.mobileControllerFit?.();
-    syncFullscreenButton();
     window.addEventListener('contextmenu', (event) => {
       event.preventDefault();
     });
@@ -593,6 +549,7 @@
 
     let stickPointerId = null;
     stickZone.addEventListener('pointerdown', (event) => {
+      requestFullscreenIfNeeded();
       stickPointerId = event.pointerId;
       stickZone.setPointerCapture(stickPointerId);
       updateStick(event.clientX, event.clientY);
@@ -628,6 +585,7 @@
       };
 
       button.addEventListener('pointerdown', (event) => {
+        requestFullscreenIfNeeded();
         button.setPointerCapture(event.pointerId);
         setButton(true);
       });
