@@ -40,6 +40,7 @@
       touch-action: none;
       user-select: none;
       width: 100%;
+      -webkit-touch-callout: none;
       -webkit-user-select: none;
     }
 
@@ -78,7 +79,7 @@
 
     .brand {
       color: var(--gold);
-      font-size: 24px;
+      font-size: 40px;
       font-weight: 800;
       letter-spacing: 0;
       line-height: 1;
@@ -90,10 +91,10 @@
       border: 1px solid var(--line);
       border-radius: 6px;
       color: var(--muted);
-      font-size: 14px;
+      font-size: 22px;
       font-weight: 700;
       line-height: 1;
-      padding: 8px 10px;
+      padding: 12px 14px;
       text-transform: uppercase;
     }
 
@@ -405,6 +406,9 @@
 
     window.addEventListener('pointerdown', requestLandscape, { once: true });
     window.mobileControllerFit?.();
+    window.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+    });
 
     if (roomCode === null) {
       status.textContent = 'Missing room';
