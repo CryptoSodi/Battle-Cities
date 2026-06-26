@@ -9,8 +9,9 @@
   <style>
     :root {
       color-scheme: dark;
-      --controller-width: 920px;
-      --controller-height: 460px;
+      --controller-width: 100vw;
+      --controller-height: 100vh;
+      --button-size: 92px;
       --stick-size: 240px;
       --stick-nub-size: 96px;
       --gold: #ffae0a;
@@ -59,7 +60,7 @@
       padding: 14px 18px 18px;
       position: fixed;
       top: 50%;
-      transform: translate(-50%, -50%) scale(var(--controller-scale, 1));
+      transform: translate(-50%, -50%);
       transform-origin: center;
       width: var(--controller-width);
     }
@@ -111,8 +112,8 @@
       display: flex;
       justify-content: center;
       position: absolute;
-      top: 32px;
-      bottom: 44px;
+      top: 8px;
+      bottom: 8px;
       width: 42%;
     }
 
@@ -200,8 +201,8 @@
 
     .buttons {
       display: grid;
-      grid-template-columns: repeat(3, 92px);
-      grid-template-rows: repeat(2, 92px);
+      grid-template-columns: repeat(3, var(--button-size));
+      grid-template-rows: repeat(2, var(--button-size));
       gap: 18px;
     }
 
@@ -245,6 +246,7 @@
     }
 
     .hint {
+      display: none;
       bottom: 0;
       color: var(--muted);
       font-size: 13px;
@@ -260,12 +262,12 @@
 
     @media (orientation: portrait) {
       .controller-shell {
-        transform: translate(-50%, -50%) rotate(90deg) scale(var(--controller-scale, 0.86));
+        transform: translate(-50%, -50%) rotate(90deg);
       }
     }
 
     body.portrait .controller-shell {
-      transform: translate(-50%, -50%) rotate(90deg) scale(var(--controller-scale, 1));
+      transform: translate(-50%, -50%) rotate(90deg);
     }
 
     dialog {
@@ -286,7 +288,7 @@
       <div class="status" data-status>Connecting</div>
     </header>
     <main class="controller-stage">
-      <div class="stick-zone">
+      <div class="stick-zone" data-stick-zone>
         <div class="stick" data-stick>
           <div class="stick-guide vertical"></div>
           <div class="stick-guide horizontal"></div>
@@ -317,18 +319,24 @@
   <script>
     (function () {
       const shell = document.querySelector('[data-controller-shell]');
-      const controllerSize = { width: 920, height: 460 };
 
       function fitController() {
         const viewportWidth = window.visualViewport?.width || window.innerWidth;
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
         const isPortrait = viewportHeight > viewportWidth;
-        const width = isPortrait ? controllerSize.height : controllerSize.width;
-        const height = isPortrait ? controllerSize.width : controllerSize.height;
-        const scale = Math.min(viewportWidth / width, viewportHeight / height, 1);
+        const controllerWidth = isPortrait ? viewportHeight : viewportWidth;
+        const controllerHeight = isPortrait ? viewportWidth : viewportHeight;
+        const shortSide = Math.min(controllerWidth, controllerHeight);
+        const longSide = Math.max(controllerWidth, controllerHeight);
+        const stickSize = Math.min(shortSide * 0.7, longSide * 0.3, 280);
+        const buttonSize = Math.min(shortSide * 0.24, 104);
 
         document.body.classList.toggle('portrait', isPortrait);
-        shell.style.setProperty('--controller-scale', Math.max(scale, 0.72).toString());
+        shell.style.setProperty('--controller-width', `${controllerWidth}px`);
+        shell.style.setProperty('--controller-height', `${controllerHeight}px`);
+        shell.style.setProperty('--stick-size', `${stickSize}px`);
+        shell.style.setProperty('--stick-nub-size', `${stickSize * 0.4}px`);
+        shell.style.setProperty('--button-size', `${buttonSize}px`);
       }
 
       window.mobileControllerFit = fitController;
@@ -343,6 +351,7 @@
 
     const shell = document.querySelector('[data-controller-shell]');
     const status = document.querySelector('[data-status]');
+    const stickZone = document.querySelector('[data-stick-zone]');
     const stick = document.querySelector('[data-stick]');
     const stickNub = document.querySelector('[data-stick-nub]');
     const buttons = Array.from(document.querySelectorAll('[data-button]'));
@@ -490,26 +499,26 @@
     }
 
     let stickPointerId = null;
-    stick.addEventListener('pointerdown', (event) => {
+    stickZone.addEventListener('pointerdown', (event) => {
       stickPointerId = event.pointerId;
-      stick.setPointerCapture(stickPointerId);
+      stickZone.setPointerCapture(stickPointerId);
       updateStick(event.clientX, event.clientY);
     });
-    stick.addEventListener('pointermove', (event) => {
+    stickZone.addEventListener('pointermove', (event) => {
       if (event.pointerId !== stickPointerId) {
         return;
       }
 
       updateStick(event.clientX, event.clientY);
     });
-    stick.addEventListener('pointerrawupdate', (event) => {
+    stickZone.addEventListener('pointerrawupdate', (event) => {
       if (event.pointerId !== stickPointerId) {
         return;
       }
 
       updateStick(event.clientX, event.clientY);
     });
-    stick.addEventListener('lostpointercapture', () => {
+    stickZone.addEventListener('lostpointercapture', () => {
       stickPointerId = null;
       resetStick();
     });
