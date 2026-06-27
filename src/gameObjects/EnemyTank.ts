@@ -3,7 +3,7 @@ import { GameUpdateArgs, GameState, Tag } from '../game';
 import { TankColor, TankSkinAnimation, TankTier } from '../tank';
 import * as config from '../config';
 
-import { Tank } from './Tank';
+import { Tank, TankCollisionResolution } from './Tank';
 
 export class EnemyTank extends Tank {
   public tags = [Tag.Tank, Tag.Enemy];
@@ -78,6 +78,7 @@ export class EnemyTank extends Tank {
 
       // When tank spawns during freeze his collision box should be updated
       this.collider.update();
+      this.tankCollisionResolution = TankCollisionResolution.Unknown;
 
       // Tanks with drop should be blinking when paused or freezed
       this.updateAnimation(updateArgs.deltaTime);

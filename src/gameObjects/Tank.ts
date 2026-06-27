@@ -47,7 +47,7 @@ enum PlayerCollisionState {
   WaitCollide,
 }
 
-enum TankCollisionResolution {
+export enum TankCollisionResolution {
   Unknown,
   Self,
   Both,
@@ -675,7 +675,11 @@ export class Tank extends GameObject {
       // with player. If at the moment of collision the intersecrion area is
       // not enough for bullet to hit, then we disable collision at all and
       // enemy tank will move "through" player tank.
-      if (this.tags.includes(Tag.Enemy) && other.tags.includes(Tag.Player)) {
+      if (
+        this.tags.includes(Tag.Enemy) &&
+        other.tags.includes(Tag.Player) &&
+        !this.isFrozenCollision(other)
+      ) {
         // If enemy is already colliding with player - skip it right away
         if (this.playerCollisionState.is(PlayerCollisionState.Colliding)) {
           return;
@@ -729,7 +733,11 @@ export class Tank extends GameObject {
     // If player tank is colliding with enemy who decided to temporarily
     // ignore collsion with player. We also check if enemy is waiting because
     // we don't know which tank's #collide() is called first
-    if (this.tags.includes(Tag.Player) && other.tags.includes(Tag.Enemy)) {
+    if (
+      this.tags.includes(Tag.Player) &&
+      other.tags.includes(Tag.Enemy) &&
+      !this.isFrozenCollision(other)
+    ) {
       if (
         other.playerCollisionState.is(PlayerCollisionState.Colliding) ||
         other.playerCollisionState.is(PlayerCollisionState.WaitCollide)
@@ -741,7 +749,11 @@ export class Tank extends GameObject {
     // If enemy tank who decided to temporarily ignore collsion with player
     // is colliding with player. We also check if enemy is waiting because
     // we don't know which tank's #collide() is called first.
-    if (this.tags.includes(Tag.Enemy) && other.tags.includes(Tag.Player)) {
+    if (
+      this.tags.includes(Tag.Enemy) &&
+      other.tags.includes(Tag.Player) &&
+      !this.isFrozenCollision(other)
+    ) {
       if (
         this.playerCollisionState.is(PlayerCollisionState.Colliding) ||
         other.playerCollisionState.is(PlayerCollisionState.WaitCollide)
@@ -944,6 +956,10 @@ export class Tank extends GameObject {
     this.updateMatrix(true);
 
     this.collider.update();
+  }
+
+  protected isFrozenCollision(other: Tank): boolean {
+    return this.freezeState.is(true) || other.freezeState.is(true);
   }
 
   protected getClosestContacts(
