@@ -163,6 +163,9 @@ mobileGamepadStyle.textContent = `
   font-size: 16px;
   letter-spacing: 2px;
 }
+.mobile-gamepad-qr.hidden {
+  display: none;
+}
 @media (max-width: 620px) {
   .mobile-gamepad-qr {
     left: 12px;

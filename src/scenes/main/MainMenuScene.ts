@@ -134,6 +134,7 @@ export class MainMenuScene extends GameScene {
 
     this.mobileGamepadQrEnabled = true;
     this.ensureMobileGamepadQrElement(inputManager);
+    this.updateMobileGamepadQrVisibility(inputManager);
 
     const inputMethod = inputManager.getActiveMethod();
 
@@ -259,6 +260,7 @@ export class MainMenuScene extends GameScene {
         this.removeMobileGamepadQrElement();
         this.mobileGamepadQrElement = element;
         document.body.appendChild(element);
+        this.updateMobileGamepadQrVisibility(inputManager);
       })
       .catch((error) => {
         this.mobileGamepadQrRequested = false;
@@ -273,5 +275,15 @@ export class MainMenuScene extends GameScene {
     });
 
     this.mobileGamepadQrElement = null;
+  }
+
+  private updateMobileGamepadQrVisibility(inputManager: InputManager): void {
+    if (this.mobileGamepadQrElement === null) {
+      return;
+    }
+
+    const gamepad = inputManager.getMobileGamepadHost().getGamepad(0);
+    const isConnected = gamepad !== null && gamepad.connected === true;
+    this.mobileGamepadQrElement.classList.toggle('hidden', isConnected);
   }
 }
