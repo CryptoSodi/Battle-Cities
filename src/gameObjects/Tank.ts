@@ -892,6 +892,16 @@ export class Tank extends GameObject {
       return;
     }
 
+    if (
+      this.tags.includes(Tag.Enemy) &&
+      other.tags.includes(Tag.Enemy) &&
+      isSelfMoving
+    ) {
+      this.resolveMinkowski(otherPrevBox);
+      this.tankCollisionResolution = TankCollisionResolution.Self;
+      return;
+    }
+
     // For the rest of the situations, we just let them be. During testing
     // this seemed to work fine.
   }
