@@ -139,29 +139,7 @@ export class Tank extends GameObject {
   protected update(updateArgs: GameUpdateArgs): void {
     const { deltaTime, gameState } = updateArgs;
 
-    if (this.spawnCollisionState.is(SpawnCollisionState.WaitCollide)) {
-      // Collide has not been called on prev frame means tank is not colliding
-      // with anything
-      this.enablePostSpawnCollision();
-    } else if (this.spawnCollisionState.is(SpawnCollisionState.WaitUpdate)) {
-      // If collision actually exists, #collide() will be called right after
-      // this first update and we will know the state of collision.
-      // If it won't be called, this state will stay hanging and we will receive
-      // it here on the next #update() call. That means that tank is not
-      // colliding with anything and we should make it collidable.
-      this.spawnCollisionState.set(SpawnCollisionState.WaitCollide);
-    }
-
-    if (this.playerCollisionState.is(PlayerCollisionState.WaitCollide)) {
-      // Collide has not been called on prev frame means tank is not colliding
-      // with player
-      this.playerCollisionState.set(PlayerCollisionState.NotColliding);
-    } else if (this.playerCollisionState.is(PlayerCollisionState.Colliding)) {
-      // If tanks were previously colliding. From here we wait for next
-      // #collide() call, where it either goes back to colliding or not
-      //  colliding.
-      this.playerCollisionState.set(PlayerCollisionState.WaitCollide);
-    }
+    this.updateCollisionStates();
 
     this.shieldTimer.update(deltaTime);
 
@@ -227,6 +205,32 @@ export class Tank extends GameObject {
     this.isOnIce = false;
 
     this.tankCollisionResolution = TankCollisionResolution.Unknown;
+  }
+
+  protected updateCollisionStates(): void {
+    if (this.spawnCollisionState.is(SpawnCollisionState.WaitCollide)) {
+      // Collide has not been called on prev frame means tank is not colliding
+      // with anything
+      this.enablePostSpawnCollision();
+    } else if (this.spawnCollisionState.is(SpawnCollisionState.WaitUpdate)) {
+      // If collision actually exists, #collide() will be called right after
+      // this first update and we will know the state of collision.
+      // If it won't be called, this state will stay hanging and we will receive
+      // it here on the next #update() call. That means that tank is not
+      // colliding with anything and we should make it collidable.
+      this.spawnCollisionState.set(SpawnCollisionState.WaitCollide);
+    }
+
+    if (this.playerCollisionState.is(PlayerCollisionState.WaitCollide)) {
+      // Collide has not been called on prev frame means tank is not colliding
+      // with player
+      this.playerCollisionState.set(PlayerCollisionState.NotColliding);
+    } else if (this.playerCollisionState.is(PlayerCollisionState.Colliding)) {
+      // If tanks were previously colliding. From here we wait for next
+      // #collide() call, where it either goes back to colliding or not
+      //  colliding.
+      this.playerCollisionState.set(PlayerCollisionState.WaitCollide);
+    }
   }
 
   protected updateAnimation(deltaTime: number): void {

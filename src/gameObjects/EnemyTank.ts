@@ -74,6 +74,8 @@ export class EnemyTank extends Tank {
     // Only update animation when idle, other components should not receive
     // updates
     if (isIdle) {
+      this.updateCollisionStates();
+
       // When tank spawns during freeze his collision box should be updated
       this.collider.update();
 
