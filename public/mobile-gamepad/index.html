@@ -355,17 +355,6 @@
   </script>
   <script>
     const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
-    const PEER_CONFIG = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        {
-          urls: [
-            'turn:eu-0.turn.peerjs.com:3478',
-            'turn:us-0.turn.peerjs.com:3478'
-          ]
-        }
-      ]
-    };
     const shell = document.querySelector('[data-controller-shell]');
     const status = document.querySelector('[data-status]');
     const stickZone = document.querySelector('[data-stick-zone]');
@@ -507,9 +496,7 @@
 
       targetPeerId = await createPeerId(code);
       const Peer = await loadPeer();
-      peer = new Peer(undefined, {
-        config: PEER_CONFIG
-      });
+      peer = new Peer();
       peer.on('error', (error) => {
         showError(error);
         scheduleReconnect();
@@ -542,10 +529,7 @@
         return;
       }
 
-      connection = peer.connect(targetPeerId, {
-        reliable: true,
-        serialization: 'json'
-      });
+      connection = peer.connect(targetPeerId);
       connection.on('error', (error) => {
         showError(error);
         scheduleReconnect();
@@ -593,9 +577,7 @@
         reconnectTimeout = null;
         try {
           const Peer = await loadPeer();
-          peer = new Peer(undefined, {
-            config: PEER_CONFIG
-          });
+          peer = new Peer();
           peer.on('error', (error) => {
             showError(error);
             scheduleReconnect();
@@ -702,7 +684,6 @@
       const visualTravel = visualRadius;
       stickNub.style.setProperty('--stick-x', `${dx * visualTravel}px`);
       stickNub.style.setProperty('--stick-y', `${dy * visualTravel}px`);
-      setConnected();
       scheduleSend();
     }
 
@@ -748,7 +729,6 @@
         buttonState[index].touched = pressed;
         buttonState[index].value = pressed ? 1 : 0;
         button.classList.toggle('pressed', pressed);
-        setConnected();
         scheduleSend();
       };
 
