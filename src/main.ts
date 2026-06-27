@@ -121,7 +121,8 @@ function getCanvasPointerPosition(event: PointerEvent): Vector {
   return new Vector(x, y);
 }
 
-gameRenderer.getDomElement().addEventListener('pointerup', (event) => {
+gameRenderer.getDomElement().addEventListener('pointerdown', (event) => {
+  event.preventDefault();
   pendingPointerClick = getCanvasPointerPosition(event);
 });
 

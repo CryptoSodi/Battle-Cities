@@ -68,13 +68,17 @@ export class Menu extends GameObject {
   }
 
   public selectItemAtPoint(point: Vector): boolean {
-    const itemIndex = this.items.findIndex((item) => {
-      return (
-        item.isFocusable() && item.getWorldBoundingBox().containsPoint(point)
-      );
-    });
+    const box = this.getWorldBoundingBox();
+    const itemIndex = Math.floor(
+      (point.y - box.min.y) / this.options.itemHeight,
+    );
 
-    if (itemIndex === -1) {
+    if (
+      !box.containsPoint(point) ||
+      itemIndex < 0 ||
+      itemIndex >= this.items.length ||
+      !this.items[itemIndex].isFocusable()
+    ) {
       return false;
     }
 
