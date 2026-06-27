@@ -141,8 +141,125 @@ mobileGamepadStyle.textContent = `
     width: 150px;
   }
 }
+.mobile-gamepad-debug {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.68);
+  border: 1px solid rgba(255, 174, 10, 0.7);
+  bottom: 12px;
+  box-sizing: border-box;
+  color: #fff;
+  display: none;
+  font: 11px monospace;
+  gap: 10px;
+  left: 12px;
+  padding: 8px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 21;
+}
+.mobile-gamepad-debug.visible {
+  display: flex;
+}
+.mobile-gamepad-debug__stick {
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  height: 96px;
+  position: relative;
+  width: 96px;
+}
+.mobile-gamepad-debug__nub {
+  background: #ffae0a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(255, 174, 10, 0.2);
+  height: 28px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(calc(-50% + var(--debug-x, 0px)), calc(-50% + var(--debug-y, 0px)));
+  width: 28px;
+}
+.mobile-gamepad-debug__buttons {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(2, 30px);
+  grid-template-rows: repeat(2, 30px);
+}
+.mobile-gamepad-debug__button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  font-weight: 700;
+  justify-content: center;
+}
+.mobile-gamepad-debug__button.pressed {
+  background: #ffae0a;
+  border-color: #fff;
+  color: #000;
+}
+.mobile-gamepad-debug__meta {
+  min-width: 112px;
+  white-space: pre-line;
+}
 `;
 document.head.appendChild(mobileGamepadStyle);
+
+const mobileGamepadDebugElement = document.createElement('div');
+mobileGamepadDebugElement.className = 'mobile-gamepad-debug';
+mobileGamepadDebugElement.innerHTML = `
+  <div class="mobile-gamepad-debug__stick">
+    <div class="mobile-gamepad-debug__nub" data-mobile-debug-nub></div>
+  </div>
+  <div class="mobile-gamepad-debug__buttons">
+    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="2">X</div>
+    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="3">Y</div>
+    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="0">A</div>
+    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="1">B</div>
+  </div>
+  <div class="mobile-gamepad-debug__meta" data-mobile-debug-meta>mobile pad</div>
+`;
+document.body.appendChild(mobileGamepadDebugElement);
+
+const mobileGamepadDebugNub = mobileGamepadDebugElement.querySelector(
+  '[data-mobile-debug-nub]',
+) as HTMLElement;
+const mobileGamepadDebugButtons = Array.from(
+  mobileGamepadDebugElement.querySelectorAll('[data-mobile-debug-button]'),
+) as HTMLElement[];
+const mobileGamepadDebugMeta = mobileGamepadDebugElement.querySelector(
+  '[data-mobile-debug-meta]',
+) as HTMLElement;
+
+function updateMobileGamepadDebug(): void {
+  const gamepad = inputManager.getMobileGamepadHost().getGamepad(0);
+  const visible = gamepad !== null && gamepad.connected === true;
+  mobileGamepadDebugElement.classList.toggle('visible', visible);
+
+  if (!visible) {
+    return;
+  }
+
+  const axisX = Math.max(-1, Math.min(1, gamepad.axes[0] || 0));
+  const axisY = Math.max(-1, Math.min(1, gamepad.axes[1] || 0));
+  mobileGamepadDebugNub.style.setProperty('--debug-x', `${axisX * 42}px`);
+  mobileGamepadDebugNub.style.setProperty('--debug-y', `${axisY * 42}px`);
+
+  mobileGamepadDebugButtons.forEach((buttonElement) => {
+    const index = Number(buttonElement.dataset.mobileDebugButton);
+    const pressed = gamepad.buttons[index]?.pressed === true;
+    buttonElement.classList.toggle('pressed', pressed);
+  });
+
+  const age = gamepad.receivedAt === undefined ? 0 : Date.now() - gamepad.receivedAt;
+  mobileGamepadDebugMeta.textContent = [
+    `x ${axisX.toFixed(2)}`,
+    `y ${axisY.toFixed(2)}`,
+    `${age}ms ago`,
+  ].join('\n');
+}
 
 const audioLoader = new AudioLoader(audioManifest);
 const imageLoader = new ImageLoader();
@@ -259,6 +376,7 @@ gameLoop.render.addListener(() => {
   }
 
   gameState.update();
+  updateMobileGamepadDebug();
 
   stats.end();
 });

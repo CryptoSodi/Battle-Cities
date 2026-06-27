@@ -10,6 +10,7 @@ export interface RemoteGamepad {
   connected: boolean;
   index: number;
   timestamp: number;
+  receivedAt?: number;
 }
 
 interface PeerConnection {
@@ -170,7 +171,10 @@ export class MobileGamepadHost {
         }
 
         this.lastTimestamp = data.timestamp;
-        this.gamepads = data.gamepads || [];
+        this.gamepads = (data.gamepads || []).map((gamepad: RemoteGamepad) => ({
+          ...gamepad,
+          receivedAt: Date.now(),
+        }));
       });
 
       connection.peerConnection?.addEventListener(
