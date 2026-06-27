@@ -1,5 +1,5 @@
 import { BoxCollider, Collision, GameObject } from '../core';
-import { GameUpdateArgs, Tag } from '../game';
+import { GameUpdateArgs, Rotation, Tag } from '../game';
 import { TankBulletWallDamage } from '../tank';
 import * as config from '../config';
 
@@ -12,8 +12,8 @@ export class TerrainTileDestroyer extends GameObject {
   constructor(argDamage: number) {
     const damage = Math.min(argDamage, TankBulletWallDamage.High);
 
-    const width = config.TILE_SIZE_MEDIUM;
-    const depth = config.TILE_SIZE_SMALL * damage;
+    const width = config.TILE_SIZE_LARGE;
+    const depth = config.TILE_SIZE_SMALL;
 
     super(width, depth);
 
@@ -39,7 +39,9 @@ export class TerrainTileDestroyer extends GameObject {
       return;
     }
 
-    tileContacts.forEach((contact) => {
+    const frontContacts = this.getFrontRowContacts(tileContacts);
+
+    frontContacts.forEach((contact) => {
       const tile = contact.collider.object as TerrainTile;
 
       const isBrickWall = tile.tags.includes(Tag.Brick);
@@ -53,6 +55,34 @@ export class TerrainTileDestroyer extends GameObject {
         this.destroy();
       }
     });
+  }
+
+  private getFrontRowContacts(
+    contacts: Collision['contacts'],
+  ): Collision['contacts'] {
+    const rotation = this.getWorldRotation();
+
+    if (rotation === Rotation.Up) {
+      const frontY = Math.max(...contacts.map((contact) => contact.box.max.y));
+      return contacts.filter((contact) => contact.box.max.y === frontY);
+    }
+
+    if (rotation === Rotation.Down) {
+      const frontY = Math.min(...contacts.map((contact) => contact.box.min.y));
+      return contacts.filter((contact) => contact.box.min.y === frontY);
+    }
+
+    if (rotation === Rotation.Left) {
+      const frontX = Math.max(...contacts.map((contact) => contact.box.max.x));
+      return contacts.filter((contact) => contact.box.max.x === frontX);
+    }
+
+    if (rotation === Rotation.Right) {
+      const frontX = Math.min(...contacts.map((contact) => contact.box.min.x));
+      return contacts.filter((contact) => contact.box.min.x === frontX);
+    }
+
+    return contacts;
   }
 
   private destroy(): void {
