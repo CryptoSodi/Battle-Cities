@@ -371,12 +371,18 @@
     }));
     const axes = [0, 0];
     let connected = false;
+    let peer = null;
     let connection = null;
     let lastSentTimestamp = 0;
     let connectionTimeout = null;
+    let heartbeatInterval = null;
+    let reconnectTimeout = null;
+    let reconnectAttempt = 0;
+    let targetPeerId = null;
     let peerPromise = null;
     let sendQueued = false;
     let lastSentState = '';
+    let wakeLock = null;
 
     function loadPeer() {
       if (window.Peer !== undefined) {
@@ -426,10 +432,27 @@
       }
     }
 
+    async function requestWakeLock() {
+      if (wakeLock !== null || document.visibilityState !== 'visible') {
+        return;
+      }
+
+      try {
+        wakeLock = await navigator.wakeLock?.request?.('screen') || null;
+        wakeLock?.addEventListener?.('release', () => {
+          wakeLock = null;
+        });
+      } catch (error) {
+        wakeLock = null;
+      }
+    }
+
     window.mobileControllerFit?.();
     window.addEventListener('contextmenu', (event) => {
       event.preventDefault();
     });
+    document.addEventListener('visibilitychange', requestWakeLock);
+    requestWakeLock();
 
     if (roomCode === null) {
       status.textContent = 'Missing room';
@@ -448,6 +471,12 @@
       status.classList.add('connected');
     }
 
+    function setDisconnected(label = 'Reconnecting') {
+      connected = false;
+      status.textContent = label;
+      status.classList.remove('connected');
+    }
+
     async function createPeerId(code) {
       const hash = await crypto.subtle.digest('SHA-1', new TextEncoder('utf-8').encode(code));
       return Array.from(new Uint8Array(hash))
@@ -464,19 +493,113 @@
         status.textContent = 'Room not found';
       }, 8000);
 
-      const peerId = await createPeerId(code);
+      targetPeerId = await createPeerId(code);
       const Peer = await loadPeer();
-      const peer = new Peer();
-      peer.on('error', showError);
-      peer.on('open', () => {
-        connection = peer.connect(peerId);
-        connection.on('error', showError);
-        connection.on('open', () => {
-          setConnected();
-          sendGamepad(true);
-          setInterval(() => sendGamepad(true), 250);
-        });
+      peer = new Peer();
+      peer.on('error', (error) => {
+        showError(error);
+        scheduleReconnect();
       });
+      peer.on('disconnected', () => {
+        setDisconnected();
+        try {
+          peer.reconnect();
+        } catch (error) {
+          showError(error);
+        }
+        scheduleReconnect();
+      });
+      peer.on('close', () => {
+        setDisconnected();
+        schedulePeerRestart(code);
+      });
+      peer.on('open', () => {
+        connectToHost();
+      });
+    }
+
+    function connectToHost() {
+      if (peer === null || peer.open !== true || targetPeerId === null) {
+        scheduleReconnect();
+        return;
+      }
+
+      if (connection !== null && connection.open === true) {
+        return;
+      }
+
+      connection = peer.connect(targetPeerId, { reliable: true });
+      connection.on('error', (error) => {
+        showError(error);
+        scheduleReconnect();
+      });
+      connection.on('close', () => {
+        connection = null;
+        setDisconnected();
+        scheduleReconnect();
+      });
+      connection.on('open', () => {
+        reconnectAttempt = 0;
+        setConnected();
+        startHeartbeat();
+        sendGamepad(true);
+      });
+    }
+
+    function startHeartbeat() {
+      if (heartbeatInterval !== null) {
+        clearInterval(heartbeatInterval);
+      }
+
+      heartbeatInterval = setInterval(() => sendGamepad(true), 250);
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimeout !== null || connected) {
+        return;
+      }
+
+      const delay = Math.min(4000, 350 + reconnectAttempt * 350);
+      reconnectAttempt += 1;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectToHost();
+      }, delay);
+    }
+
+    async function schedulePeerRestart(code) {
+      if (reconnectTimeout !== null) {
+        return;
+      }
+
+      reconnectTimeout = setTimeout(async () => {
+        reconnectTimeout = null;
+        try {
+          const Peer = await loadPeer();
+          peer = new Peer();
+          peer.on('error', (error) => {
+            showError(error);
+            scheduleReconnect();
+          });
+          peer.on('disconnected', () => {
+            setDisconnected();
+            try {
+              peer.reconnect();
+            } catch (error) {
+              showError(error);
+            }
+            scheduleReconnect();
+          });
+          peer.on('close', () => {
+            setDisconnected();
+            schedulePeerRestart(code);
+          });
+          peer.on('open', connectToHost);
+        } catch (error) {
+          showError(error);
+          schedulePeerRestart(code);
+        }
+      }, 1000);
     }
 
     function getGamepadStateKey() {
@@ -526,7 +649,9 @@
 
     function showError(error) {
       console.error(error);
-      status.textContent = 'Error';
+      if (!connected) {
+        status.textContent = 'Reconnecting';
+      }
     }
 
     function updateStick(clientX, clientY) {
@@ -572,6 +697,7 @@
     let stickPointerId = null;
     stickZone.addEventListener('pointerdown', (event) => {
       requestFullscreenIfNeeded();
+      requestWakeLock();
       stickPointerId = event.pointerId;
       stickZone.setPointerCapture(stickPointerId);
       updateStick(event.clientX, event.clientY);
@@ -608,6 +734,7 @@
 
       button.addEventListener('pointerdown', (event) => {
         requestFullscreenIfNeeded();
+        requestWakeLock();
         button.setPointerCapture(event.pointerId);
         setButton(true);
       });

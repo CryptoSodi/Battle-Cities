@@ -13,8 +13,6 @@ export interface RemoteGamepad {
   receivedAt?: number;
 }
 
-export const REMOTE_GAMEPAD_STALE_MS = 750;
-
 interface PeerConnection {
   on(eventName: string, callback: (event?: any) => void): void;
   close(): void;
@@ -182,7 +180,8 @@ export class MobileGamepadHost {
       connection.peerConnection?.addEventListener(
         'connectionstatechange',
         () => {
-          if (connection.peerConnection.connectionState === 'disconnected') {
+          const state = connection.peerConnection.connectionState;
+          if (state === 'failed' || state === 'closed') {
             connection.close();
           }
         },

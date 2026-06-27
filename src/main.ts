@@ -25,7 +25,6 @@ import {
   Session,
 } from './game';
 import { InputHintSettings, InputManager } from './input';
-import { REMOTE_GAMEPAD_STALE_MS } from './input/mobile';
 import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
@@ -151,12 +150,12 @@ mobileGamepadStyle.textContent = `
   bottom: 14px;
   box-sizing: border-box;
   display: none;
-  height: 116px;
+  height: 128px;
   left: 14px;
-  opacity: 0.86;
+  opacity: 0.92;
   pointer-events: none;
   position: fixed;
-  width: 190px;
+  width: 214px;
   z-index: 21;
 }
 .mobile-gamepad-debug.visible {
@@ -167,9 +166,9 @@ mobileGamepadStyle.textContent = `
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
   height: 96px;
-  left: 10px;
+  left: 18px;
   position: absolute;
-  top: 10px;
+  top: 16px;
   width: 96px;
 }
 .mobile-gamepad-debug__body::before,
@@ -203,9 +202,9 @@ mobileGamepadStyle.textContent = `
 }
 .mobile-gamepad-debug__dpad {
   height: 34px;
-  left: 112px;
+  left: 128px;
   position: absolute;
-  top: 41px;
+  top: 48px;
   width: 34px;
 }
 .mobile-gamepad-debug__direction {
@@ -257,20 +256,29 @@ mobileGamepadStyle.textContent = `
   color: #000;
 }
 .mobile-gamepad-debug__button--x {
-  right: 38px;
-  top: 16px;
+  right: 44px;
+  top: 22px;
 }
 .mobile-gamepad-debug__button--y {
-  right: 10px;
-  top: 44px;
+  right: 16px;
+  top: 50px;
 }
 .mobile-gamepad-debug__button--a {
-  right: 66px;
-  top: 44px;
+  right: 72px;
+  top: 50px;
 }
 .mobile-gamepad-debug__button--b {
-  right: 38px;
-  top: 72px;
+  right: 44px;
+  top: 78px;
+}
+.mobile-gamepad-debug__meta {
+  bottom: 9px;
+  color: rgba(255, 255, 255, 0.68);
+  font: 10px monospace;
+  left: 122px;
+  line-height: 1.15;
+  position: absolute;
+  white-space: pre-line;
 }
 `;
 document.head.appendChild(mobileGamepadStyle);
@@ -291,6 +299,7 @@ mobileGamepadDebugElement.innerHTML = `
   <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--y" data-mobile-debug-button="3">Y</div>
   <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--a" data-mobile-debug-button="0">A</div>
   <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--b" data-mobile-debug-button="1">B</div>
+  <div class="mobile-gamepad-debug__meta" data-mobile-debug-meta>mobile pad</div>
 `;
 document.body.appendChild(mobileGamepadDebugElement);
 
@@ -303,13 +312,13 @@ const mobileGamepadDebugButtons = Array.from(
 const mobileGamepadDebugDirections = Array.from(
   mobileGamepadDebugElement.querySelectorAll('[data-mobile-debug-direction]'),
 ) as HTMLElement[];
+const mobileGamepadDebugMeta = mobileGamepadDebugElement.querySelector(
+  '[data-mobile-debug-meta]',
+) as HTMLElement;
+
 function updateMobileGamepadDebug(): void {
   const gamepad = inputManager.getMobileGamepadHost().getGamepad(0);
-  const age = gamepad?.receivedAt === undefined ? 0 : Date.now() - gamepad.receivedAt;
-  const visible =
-    gamepad !== null &&
-    gamepad.connected === true &&
-    age <= REMOTE_GAMEPAD_STALE_MS;
+  const visible = gamepad !== null && gamepad.connected === true;
   mobileGamepadDebugElement.classList.toggle('visible', visible);
 
   if (!visible) {
@@ -340,6 +349,13 @@ function updateMobileGamepadDebug(): void {
     const pressed = gamepad.buttons[index]?.pressed === true;
     buttonElement.classList.toggle('pressed', pressed);
   });
+
+  const age = gamepad.receivedAt === undefined ? 0 : Date.now() - gamepad.receivedAt;
+  mobileGamepadDebugMeta.textContent = [
+    `x ${axisX.toFixed(2)}`,
+    `y ${axisY.toFixed(2)}`,
+    `${age}ms ago`,
+  ].join('\n');
 }
 
 const audioLoader = new AudioLoader(audioManifest);
