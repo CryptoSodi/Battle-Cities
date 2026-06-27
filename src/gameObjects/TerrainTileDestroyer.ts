@@ -39,8 +39,8 @@ export class TerrainTileDestroyer extends GameObject {
       return;
     }
 
-    tileContacts.forEach((contact) => {
-      const tile = contact.collider.object as TerrainTile;
+    const contact = tileContacts.find((tileContact) => {
+      const tile = tileContact.collider.object as TerrainTile;
 
       const isBrickWall = tile.tags.includes(Tag.Brick);
       const isSteelWall = tile.tags.includes(Tag.Steel);
@@ -48,11 +48,15 @@ export class TerrainTileDestroyer extends GameObject {
       // TODO: this check should be a part of bullet attributes model
       const canDestroySteelWall = this.damage === TankBulletWallDamage.High;
 
-      if (isBrickWall || (isSteelWall && canDestroySteelWall)) {
-        tile.destroy();
-        this.destroy();
-      }
+      return isBrickWall || (isSteelWall && canDestroySteelWall);
     });
+
+    if (contact !== undefined) {
+      const tile = contact.collider.object as TerrainTile;
+
+      tile.destroy();
+      this.destroy();
+    }
   }
 
   private destroy(): void {
