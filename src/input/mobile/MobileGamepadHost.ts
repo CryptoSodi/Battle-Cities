@@ -26,14 +26,25 @@ interface PeerInstance {
 }
 
 interface PeerConstructor {
-  new (id?: string): PeerInstance;
+  new (id?: string, options?: any): PeerInstance;
 }
 
 const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
 const QR_CODE_URL = 'https://unpkg.com/qrcode@1.5.1/build/qrcode.js';
 const MOBILE_GAMEPAD_PATH = '/mobile-gamepad/';
-const MOBILE_GAMEPAD_VERSION = '2026-06-27-small-fullscreen-knob';
+const MOBILE_GAMEPAD_VERSION = '2026-06-27-latency-connect-fix';
 const ROOM_CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
+const PEER_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    {
+      urls: [
+        'turn:eu-0.turn.peerjs.com:3478',
+        'turn:us-0.turn.peerjs.com:3478',
+      ],
+    },
+  ],
+};
 
 function getRoomCodeLetter(): string {
   const index = Math.floor(Math.random() * ROOM_CODE_LETTERS.length);
@@ -70,7 +81,6 @@ export class MobileGamepadHost {
   private roomCode = '';
   private playerUrl = '';
   private gamepads: RemoteGamepad[] = [];
-  private lastSequence = 0;
   private lastTimestamp = 0;
 
   public start(): Promise<void> {
@@ -142,7 +152,9 @@ export class MobileGamepadHost {
 
     const peerId = await createPeerId(this.roomCode);
     const Peer = (await loadScript(PEER_JS_URL, 'Peer')) as PeerConstructor;
-    const peer = new Peer(peerId);
+    const peer = new Peer(peerId, {
+      config: PEER_CONFIG,
+    });
 
     peer.on('error', (event) => {
       // Keep the game usable if the phone-controller service is unavailable.
@@ -157,6 +169,8 @@ export class MobileGamepadHost {
   }
 
   private handleConnection(connection: PeerConnection): void {
+    let lastConnectionSequence = 0;
+
     connection.on('error', (event) => {
       console.error(event);
     });
@@ -169,7 +183,7 @@ export class MobileGamepadHost {
 
         if (
           typeof data.seq === 'number' &&
-          data.seq <= this.lastSequence
+          data.seq <= lastConnectionSequence
         ) {
           return;
         }
@@ -182,7 +196,7 @@ export class MobileGamepadHost {
         }
 
         if (typeof data.seq === 'number') {
-          this.lastSequence = data.seq;
+          lastConnectionSequence = data.seq;
         }
 
         this.lastTimestamp = data.timestamp;
