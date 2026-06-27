@@ -383,7 +383,17 @@
     let sendQueued = false;
     let lastSentState = '';
     let sendSequence = 0;
+    let lastSendLogAt = 0;
     let wakeLock = null;
+
+    function log(message, data) {
+      if (data === undefined) {
+        console.log(`[mobile-gamepad] ${message}`);
+        return;
+      }
+
+      console.log(`[mobile-gamepad] ${message}`, data);
+    }
 
     function loadPeer() {
       if (window.Peer !== undefined) {
@@ -486,6 +496,7 @@
     }
 
     async function startConnection(code) {
+      log('start connection', { roomCode: code });
       connectionTimeout = setTimeout(() => {
         if (connected) {
           return;
@@ -498,10 +509,12 @@
       const Peer = await loadPeer();
       peer = new Peer();
       peer.on('error', (error) => {
+        log('peer error', error);
         showError(error);
         scheduleReconnect();
       });
       peer.on('disconnected', () => {
+        log('peer disconnected');
         setDisconnected();
         try {
           peer.reconnect();
@@ -511,35 +524,47 @@
         scheduleReconnect();
       });
       peer.on('close', () => {
+        log('peer close');
         setDisconnected();
         schedulePeerRestart(code);
       });
       peer.on('open', () => {
+        log('peer open', { id: peer.id, targetPeerId });
         connectToHost();
       });
     }
 
     function connectToHost() {
       if (peer === null || peer.open !== true || targetPeerId === null) {
+        log('connect delayed', {
+          hasPeer: peer !== null,
+          peerOpen: peer?.open === true,
+          hasTarget: targetPeerId !== null
+        });
         scheduleReconnect();
         return;
       }
 
       if (connection !== null && connection.open === true) {
+        log('connect skipped: channel already open');
         return;
       }
 
+      log('connecting to host', { targetPeerId });
       connection = peer.connect(targetPeerId);
       connection.on('error', (error) => {
+        log('data channel error', error);
         showError(error);
         scheduleReconnect();
       });
       connection.on('close', () => {
+        log('data channel close');
         connection = null;
         setDisconnected();
         scheduleReconnect();
       });
       connection.on('open', () => {
+        log('data channel open');
         reconnectAttempt = 0;
         setConnected();
         startHeartbeat();
@@ -552,18 +577,25 @@
         clearInterval(heartbeatInterval);
       }
 
+      log('start 30hz sender');
       heartbeatInterval = setInterval(() => sendGamepad(true), 1000 / 30);
     }
 
     function scheduleReconnect() {
       if (reconnectTimeout !== null || connected) {
+        log('reconnect skipped', {
+          pending: reconnectTimeout !== null,
+          connected
+        });
         return;
       }
 
       const delay = Math.min(4000, 350 + reconnectAttempt * 350);
       reconnectAttempt += 1;
+      log('reconnect scheduled', { attempt: reconnectAttempt, delay });
       reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
+        log('reconnect attempt', { attempt: reconnectAttempt });
         connectToHost();
       }, delay);
     }
@@ -579,10 +611,12 @@
           const Peer = await loadPeer();
           peer = new Peer();
           peer.on('error', (error) => {
+            log('restarted peer error', error);
             showError(error);
             scheduleReconnect();
           });
           peer.on('disconnected', () => {
+            log('restarted peer disconnected');
             setDisconnected();
             try {
               peer.reconnect();
@@ -592,11 +626,16 @@
             scheduleReconnect();
           });
           peer.on('close', () => {
+            log('restarted peer close');
             setDisconnected();
             schedulePeerRestart(code);
           });
-          peer.on('open', connectToHost);
+          peer.on('open', () => {
+            log('restarted peer open', { id: peer.id, targetPeerId });
+            connectToHost();
+          });
         } catch (error) {
+          log('peer restart failed', error);
           showError(error);
           schedulePeerRestart(code);
         }
@@ -633,9 +672,10 @@
 
       lastSentTimestamp = timestamp;
       lastSentState = stateKey;
+      const sequence = sendSequence += 1;
       connection.send({
         type: 'gamepads',
-        seq: sendSequence += 1,
+        seq: sequence,
         timestamp: Date.now(),
         gamepads: [{
           axes: axes.slice(),
@@ -647,6 +687,15 @@
           timestamp
         }]
       });
+
+      if (force && timestamp - lastSendLogAt > 1000) {
+        lastSendLogAt = timestamp;
+        log('packet sent', {
+          seq: sequence,
+          axes: axes.map((axis) => Number(axis.toFixed(2))),
+          buttons: buttonState.map((button) => button.value)
+        });
+      }
     }
 
     function showError(error) {

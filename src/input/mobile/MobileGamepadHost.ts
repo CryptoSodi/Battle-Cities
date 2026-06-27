@@ -32,8 +32,17 @@ interface PeerConstructor {
 const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
 const QR_CODE_URL = 'https://unpkg.com/qrcode@1.5.1/build/qrcode.js';
 const MOBILE_GAMEPAD_PATH = '/mobile-gamepad/';
-const MOBILE_GAMEPAD_VERSION = '2026-06-27-transport-baseline-fix';
+const MOBILE_GAMEPAD_VERSION = '2026-06-27-transport-logs';
 const ROOM_CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
+
+function log(message: string, data?: any): void {
+  if (data === undefined) {
+    console.log(`[mobile-gamepad-host] ${message}`);
+    return;
+  }
+
+  console.log(`[mobile-gamepad-host] ${message}`, data);
+}
 
 function getRoomCodeLetter(): string {
   const index = Math.floor(Math.random() * ROOM_CODE_LETTERS.length);
@@ -145,10 +154,16 @@ export class MobileGamepadHost {
 
     peer.on('error', (event) => {
       // Keep the game usable if the phone-controller service is unavailable.
+      log('peer error', event);
       console.error(event);
     });
 
+    peer.on('open', () => {
+      log('peer open', { peerId, roomCode: this.roomCode });
+    });
+
     peer.on('connection', (connection: PeerConnection) => {
+      log('controller connection received');
       this.handleConnection(connection);
     });
 
@@ -157,8 +172,11 @@ export class MobileGamepadHost {
 
   private handleConnection(connection: PeerConnection): void {
     let lastConnectionSequence = 0;
+    let firstPacketReceived = false;
+    let lastPacketLogAt = 0;
 
     connection.on('error', (event) => {
+      log('connection error', event);
       console.error(event);
     });
 
@@ -190,13 +208,27 @@ export class MobileGamepadHost {
         ...gamepad,
         receivedAt: Date.now(),
       }));
+
+      const now = Date.now();
+      if (!firstPacketReceived || now - lastPacketLogAt > 1000) {
+        firstPacketReceived = true;
+        lastPacketLogAt = now;
+        const gamepad = this.gamepads[0];
+        log('packet received', {
+          seq: data.seq,
+          axes: gamepad?.axes,
+          buttons: gamepad?.buttons?.map((button) => button.value),
+        });
+      }
     });
 
     connection.on('open', () => {
+      log('data channel open');
       connection.peerConnection?.addEventListener(
         'connectionstatechange',
         () => {
           const state = connection.peerConnection.connectionState;
+          log('webrtc connection state', state);
           if (state === 'failed' || state === 'closed') {
             connection.close();
           }
@@ -205,6 +237,7 @@ export class MobileGamepadHost {
     });
 
     connection.on('close', () => {
+      log('data channel close');
       this.gamepads.forEach((gamepad) => {
         gamepad.connected = false;
       });
