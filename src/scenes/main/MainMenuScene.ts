@@ -164,16 +164,6 @@ export class MainMenuScene extends GameScene {
       return;
     }
 
-    if (updateArgs.pointerClick !== null) {
-      const wasMenuItemSelected = this.menu.selectItemAtPoint(
-        updateArgs.pointerClick,
-      );
-      updateArgs.pointerClick = null;
-      if (wasMenuItemSelected) {
-        return;
-      }
-    }
-
     super.update(updateArgs);
   }
 

@@ -91,6 +91,14 @@ export class Menu extends GameObject {
   protected update(updateArgs: GameUpdateArgs): void {
     const { inputManager } = updateArgs;
 
+    if (updateArgs.pointerClick !== null) {
+      const wasItemSelected = this.selectItemAtPoint(updateArgs.pointerClick);
+      if (wasItemSelected) {
+        updateArgs.pointerClick = null;
+        return;
+      }
+    }
+
     const inputMethod = inputManager.getActiveMethod();
 
     if (inputMethod.isDownAny(MenuInputContext.VerticalPrev)) {
