@@ -142,66 +142,142 @@ mobileGamepadStyle.textContent = `
   }
 }
 .mobile-gamepad-debug {
-  align-items: center;
-  background: rgba(0, 0, 0, 0.68);
-  border: 1px solid rgba(255, 174, 10, 0.7);
-  bottom: 12px;
+  --debug-x: 0px;
+  --debug-y: 0px;
+  background: rgba(9, 13, 22, 0.82);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  bottom: 14px;
   box-sizing: border-box;
-  color: #fff;
   display: none;
-  font: 11px monospace;
-  gap: 10px;
-  left: 12px;
-  padding: 8px;
+  height: 128px;
+  left: 14px;
+  opacity: 0.92;
   pointer-events: none;
   position: fixed;
+  width: 214px;
   z-index: 21;
 }
 .mobile-gamepad-debug.visible {
-  display: flex;
+  display: block;
 }
-.mobile-gamepad-debug__stick {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid rgba(255, 255, 255, 0.45);
+.mobile-gamepad-debug__body {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
   height: 96px;
-  position: relative;
+  left: 18px;
+  position: absolute;
+  top: 16px;
   width: 96px;
 }
-.mobile-gamepad-debug__nub {
-  background: #ffae0a;
-  border-radius: 50%;
-  box-shadow: 0 0 0 5px rgba(255, 174, 10, 0.2);
-  height: 28px;
-  left: 50%;
+.mobile-gamepad-debug__body::before,
+.mobile-gamepad-debug__body::after {
+  background: rgba(255, 174, 10, 0.22);
+  content: "";
+  height: 2px;
+  left: 18px;
   position: absolute;
-  top: 50%;
-  transform: translate(calc(-50% + var(--debug-x, 0px)), calc(-50% + var(--debug-y, 0px)));
-  width: 28px;
+  top: 47px;
+  width: 60px;
 }
-.mobile-gamepad-debug__buttons {
-  display: grid;
-  gap: 5px;
-  grid-template-columns: repeat(2, 30px);
-  grid-template-rows: repeat(2, 30px);
+.mobile-gamepad-debug__body::after {
+  transform: rotate(90deg);
+}
+.mobile-gamepad-debug__stick {
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 50%;
+  height: 34px;
+  left: 49px;
+  position: absolute;
+  top: 49px;
+  transform: translate(calc(-50% + var(--debug-x)), calc(-50% + var(--debug-y)));
+  width: 34px;
+}
+.mobile-gamepad-debug__stick.pressed {
+  background: #ffae0a;
+  border-color: #fff;
+  box-shadow: 0 0 0 5px rgba(255, 174, 10, 0.28);
+}
+.mobile-gamepad-debug__dpad {
+  height: 34px;
+  left: 128px;
+  position: absolute;
+  top: 48px;
+  width: 34px;
+}
+.mobile-gamepad-debug__direction {
+  border: 5px solid transparent;
+  height: 0;
+  opacity: 0.48;
+  position: absolute;
+  width: 0;
+}
+.mobile-gamepad-debug__direction.active {
+  opacity: 1;
+}
+.mobile-gamepad-debug__direction--up {
+  border-bottom-color: #fff;
+  left: 12px;
+  top: -2px;
+}
+.mobile-gamepad-debug__direction--down {
+  border-top-color: #fff;
+  bottom: -2px;
+  left: 12px;
+}
+.mobile-gamepad-debug__direction--left {
+  border-right-color: #fff;
+  left: -2px;
+  top: 12px;
+}
+.mobile-gamepad-debug__direction--right {
+  border-left-color: #fff;
+  right: -2px;
+  top: 12px;
 }
 .mobile-gamepad-debug__button {
   align-items: center;
   background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.82);
   display: flex;
-  font-weight: 700;
+  font: 700 11px Arial, sans-serif;
+  height: 28px;
   justify-content: center;
+  position: absolute;
+  width: 28px;
 }
 .mobile-gamepad-debug__button.pressed {
   background: #ffae0a;
   border-color: #fff;
   color: #000;
 }
+.mobile-gamepad-debug__button--x {
+  right: 44px;
+  top: 22px;
+}
+.mobile-gamepad-debug__button--y {
+  right: 16px;
+  top: 50px;
+}
+.mobile-gamepad-debug__button--a {
+  right: 72px;
+  top: 50px;
+}
+.mobile-gamepad-debug__button--b {
+  right: 44px;
+  top: 78px;
+}
 .mobile-gamepad-debug__meta {
-  min-width: 112px;
+  bottom: 9px;
+  color: rgba(255, 255, 255, 0.68);
+  font: 10px monospace;
+  left: 122px;
+  line-height: 1.15;
+  position: absolute;
   white-space: pre-line;
 }
 `;
@@ -210,24 +286,31 @@ document.head.appendChild(mobileGamepadStyle);
 const mobileGamepadDebugElement = document.createElement('div');
 mobileGamepadDebugElement.className = 'mobile-gamepad-debug';
 mobileGamepadDebugElement.innerHTML = `
-  <div class="mobile-gamepad-debug__stick">
-    <div class="mobile-gamepad-debug__nub" data-mobile-debug-nub></div>
+  <div class="mobile-gamepad-debug__body">
+    <div class="mobile-gamepad-debug__stick" data-mobile-debug-stick></div>
   </div>
-  <div class="mobile-gamepad-debug__buttons">
-    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="2">X</div>
-    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="3">Y</div>
-    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="0">A</div>
-    <div class="mobile-gamepad-debug__button" data-mobile-debug-button="1">B</div>
+  <div class="mobile-gamepad-debug__dpad">
+    <div class="mobile-gamepad-debug__direction mobile-gamepad-debug__direction--up" data-mobile-debug-direction="up"></div>
+    <div class="mobile-gamepad-debug__direction mobile-gamepad-debug__direction--down" data-mobile-debug-direction="down"></div>
+    <div class="mobile-gamepad-debug__direction mobile-gamepad-debug__direction--left" data-mobile-debug-direction="left"></div>
+    <div class="mobile-gamepad-debug__direction mobile-gamepad-debug__direction--right" data-mobile-debug-direction="right"></div>
   </div>
+  <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--x" data-mobile-debug-button="2">X</div>
+  <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--y" data-mobile-debug-button="3">Y</div>
+  <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--a" data-mobile-debug-button="0">A</div>
+  <div class="mobile-gamepad-debug__button mobile-gamepad-debug__button--b" data-mobile-debug-button="1">B</div>
   <div class="mobile-gamepad-debug__meta" data-mobile-debug-meta>mobile pad</div>
 `;
 document.body.appendChild(mobileGamepadDebugElement);
 
-const mobileGamepadDebugNub = mobileGamepadDebugElement.querySelector(
-  '[data-mobile-debug-nub]',
+const mobileGamepadDebugStick = mobileGamepadDebugElement.querySelector(
+  '[data-mobile-debug-stick]',
 ) as HTMLElement;
 const mobileGamepadDebugButtons = Array.from(
   mobileGamepadDebugElement.querySelectorAll('[data-mobile-debug-button]'),
+) as HTMLElement[];
+const mobileGamepadDebugDirections = Array.from(
+  mobileGamepadDebugElement.querySelectorAll('[data-mobile-debug-direction]'),
 ) as HTMLElement[];
 const mobileGamepadDebugMeta = mobileGamepadDebugElement.querySelector(
   '[data-mobile-debug-meta]',
@@ -244,8 +327,22 @@ function updateMobileGamepadDebug(): void {
 
   const axisX = Math.max(-1, Math.min(1, gamepad.axes[0] || 0));
   const axisY = Math.max(-1, Math.min(1, gamepad.axes[1] || 0));
-  mobileGamepadDebugNub.style.setProperty('--debug-x', `${axisX * 42}px`);
-  mobileGamepadDebugNub.style.setProperty('--debug-y', `${axisY * 42}px`);
+  mobileGamepadDebugElement.style.setProperty('--debug-x', `${axisX * 31}px`);
+  mobileGamepadDebugElement.style.setProperty('--debug-y', `${axisY * 31}px`);
+  mobileGamepadDebugStick.classList.toggle(
+    'pressed',
+    Math.abs(axisX) > 0.08 || Math.abs(axisY) > 0.08,
+  );
+
+  mobileGamepadDebugDirections.forEach((directionElement) => {
+    const direction = directionElement.dataset.mobileDebugDirection;
+    const active =
+      (direction === 'up' && axisY < -0.22) ||
+      (direction === 'down' && axisY > 0.22) ||
+      (direction === 'left' && axisX < -0.22) ||
+      (direction === 'right' && axisX > 0.22);
+    directionElement.classList.toggle('active', active);
+  });
 
   mobileGamepadDebugButtons.forEach((buttonElement) => {
     const index = Number(buttonElement.dataset.mobileDebugButton);
