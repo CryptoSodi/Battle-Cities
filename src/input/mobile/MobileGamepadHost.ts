@@ -70,6 +70,7 @@ export class MobileGamepadHost {
   private roomCode = '';
   private playerUrl = '';
   private gamepads: RemoteGamepad[] = [];
+  private lastSequence = 0;
   private lastTimestamp = 0;
 
   public start(): Promise<void> {
@@ -166,8 +167,22 @@ export class MobileGamepadHost {
           return;
         }
 
-        if (data.timestamp <= this.lastTimestamp) {
+        if (
+          typeof data.seq === 'number' &&
+          data.seq <= this.lastSequence
+        ) {
           return;
+        }
+
+        if (
+          typeof data.seq !== 'number' &&
+          data.timestamp <= this.lastTimestamp
+        ) {
+          return;
+        }
+
+        if (typeof data.seq === 'number') {
+          this.lastSequence = data.seq;
         }
 
         this.lastTimestamp = data.timestamp;

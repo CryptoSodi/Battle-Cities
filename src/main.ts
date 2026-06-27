@@ -150,12 +150,12 @@ mobileGamepadStyle.textContent = `
   bottom: 14px;
   box-sizing: border-box;
   display: none;
-  height: 128px;
+  height: 154px;
   left: 14px;
   opacity: 0.92;
   pointer-events: none;
   position: fixed;
-  width: 214px;
+  width: 258px;
   z-index: 21;
 }
 .mobile-gamepad-debug.visible {
@@ -165,21 +165,21 @@ mobileGamepadStyle.textContent = `
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
-  height: 96px;
+  height: 120px;
   left: 18px;
   position: absolute;
-  top: 16px;
-  width: 96px;
+  top: 17px;
+  width: 120px;
 }
 .mobile-gamepad-debug__body::before,
 .mobile-gamepad-debug__body::after {
   background: rgba(255, 174, 10, 0.22);
   content: "";
   height: 2px;
-  left: 18px;
+  left: 22px;
   position: absolute;
-  top: 47px;
-  width: 60px;
+  top: 59px;
+  width: 76px;
 }
 .mobile-gamepad-debug__body::after {
   transform: rotate(90deg);
@@ -188,12 +188,12 @@ mobileGamepadStyle.textContent = `
   background: rgba(255, 255, 255, 0.13);
   border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: 50%;
-  height: 34px;
-  left: 49px;
+  height: 42px;
+  left: 61px;
   position: absolute;
-  top: 49px;
+  top: 61px;
   transform: translate(calc(-50% + var(--debug-x)), calc(-50% + var(--debug-y)));
-  width: 34px;
+  width: 42px;
 }
 .mobile-gamepad-debug__stick.pressed {
   background: #ffae0a;
@@ -202,9 +202,9 @@ mobileGamepadStyle.textContent = `
 }
 .mobile-gamepad-debug__dpad {
   height: 34px;
-  left: 128px;
+  left: 158px;
   position: absolute;
-  top: 48px;
+  top: 60px;
   width: 34px;
 }
 .mobile-gamepad-debug__direction {
@@ -244,11 +244,11 @@ mobileGamepadStyle.textContent = `
   border-radius: 50%;
   color: rgba(255, 255, 255, 0.82);
   display: flex;
-  font: 700 11px Arial, sans-serif;
-  height: 28px;
+  font: 700 13px Arial, sans-serif;
+  height: 34px;
   justify-content: center;
   position: absolute;
-  width: 28px;
+  width: 34px;
 }
 .mobile-gamepad-debug__button.pressed {
   background: #ffae0a;
@@ -256,26 +256,26 @@ mobileGamepadStyle.textContent = `
   color: #000;
 }
 .mobile-gamepad-debug__button--x {
-  right: 44px;
-  top: 22px;
+  right: 52px;
+  top: 25px;
 }
 .mobile-gamepad-debug__button--y {
-  right: 16px;
-  top: 50px;
+  right: 18px;
+  top: 59px;
 }
 .mobile-gamepad-debug__button--a {
-  right: 72px;
-  top: 50px;
+  right: 86px;
+  top: 59px;
 }
 .mobile-gamepad-debug__button--b {
-  right: 44px;
-  top: 78px;
+  right: 52px;
+  top: 93px;
 }
 .mobile-gamepad-debug__meta {
-  bottom: 9px;
+  bottom: 11px;
   color: rgba(255, 255, 255, 0.68);
-  font: 10px monospace;
-  left: 122px;
+  font: 12px monospace;
+  left: 152px;
   line-height: 1.15;
   position: absolute;
   white-space: pre-line;
@@ -327,8 +327,8 @@ function updateMobileGamepadDebug(): void {
 
   const axisX = Math.max(-1, Math.min(1, gamepad.axes[0] || 0));
   const axisY = Math.max(-1, Math.min(1, gamepad.axes[1] || 0));
-  mobileGamepadDebugElement.style.setProperty('--debug-x', `${axisX * 31}px`);
-  mobileGamepadDebugElement.style.setProperty('--debug-y', `${axisY * 31}px`);
+  mobileGamepadDebugElement.style.setProperty('--debug-x', `${axisX * 39}px`);
+  mobileGamepadDebugElement.style.setProperty('--debug-y', `${axisY * 39}px`);
   mobileGamepadDebugStick.classList.toggle(
     'pressed',
     Math.abs(axisX) > 0.08 || Math.abs(axisY) > 0.08,

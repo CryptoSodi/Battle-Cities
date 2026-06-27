@@ -330,10 +330,10 @@
         const shortSide = Math.min(controllerWidth, controllerHeight);
         const longSide = Math.max(controllerWidth, controllerHeight);
         const isFullscreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
-        const stickMax = isFullscreen ? 430 : 560;
+        const stickMax = isFullscreen ? 340 : 420;
         const buttonMax = isFullscreen ? 168 : 220;
-        const stickSize = Math.min(shortSide * 0.72, longSide * 0.34, stickMax);
-        const nubSize = isFullscreen ? Math.min(stickSize * 0.34, 132) : stickSize * 0.4;
+        const stickSize = Math.min(shortSide * 0.58, longSide * 0.28, stickMax);
+        const nubSize = isFullscreen ? Math.min(stickSize * 0.32, 104) : stickSize * 0.36;
         const buttonSize = Math.min(shortSide * 0.23, buttonMax);
 
         document.body.classList.toggle('portrait', isPortrait);
@@ -382,6 +382,7 @@
     let peerPromise = null;
     let sendQueued = false;
     let lastSentState = '';
+    let sendSequence = 0;
     let wakeLock = null;
 
     function loadPeer() {
@@ -528,7 +529,16 @@
         return;
       }
 
-      connection = peer.connect(targetPeerId, { reliable: true });
+      connection = peer.connect(targetPeerId, {
+        reliable: false,
+        serialization: 'json',
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'] }
+          ]
+        }
+      });
       connection.on('error', (error) => {
         showError(error);
         scheduleReconnect();
@@ -551,7 +561,7 @@
         clearInterval(heartbeatInterval);
       }
 
-      heartbeatInterval = setInterval(() => sendGamepad(true), 250);
+      heartbeatInterval = setInterval(() => sendGamepad(true), 1000 / 30);
     }
 
     function scheduleReconnect() {
@@ -634,6 +644,7 @@
       lastSentState = stateKey;
       connection.send({
         type: 'gamepads',
+        seq: sendSequence += 1,
         timestamp: Date.now(),
         gamepads: [{
           axes: axes.slice(),
