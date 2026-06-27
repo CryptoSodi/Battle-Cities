@@ -1,6 +1,10 @@
 import { GamepadButtonCode } from '../codes';
 import { InputDevice } from '../InputDevice';
-import { MobileGamepadHost, RemoteGamepad } from '../../../input/mobile';
+import {
+  MobileGamepadHost,
+  REMOTE_GAMEPAD_STALE_MS,
+  RemoteGamepad,
+} from '../../../input/mobile';
 
 const AXIS_DEAD_ZONE = 0.22;
 
@@ -92,6 +96,13 @@ export class MobileGamepadInputDevice implements InputDevice {
   private getGamepad(): RemoteGamepad {
     const gamepad = this.host.getGamepad(this.deviceIndex);
     if (gamepad === null || gamepad.connected !== true) {
+      return null;
+    }
+
+    if (
+      gamepad.receivedAt !== undefined &&
+      Date.now() - gamepad.receivedAt > REMOTE_GAMEPAD_STALE_MS
+    ) {
       return null;
     }
 

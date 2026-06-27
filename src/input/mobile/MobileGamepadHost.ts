@@ -13,6 +13,8 @@ export interface RemoteGamepad {
   receivedAt?: number;
 }
 
+export const REMOTE_GAMEPAD_STALE_MS = 750;
+
 interface PeerConnection {
   on(eventName: string, callback: (event?: any) => void): void;
   close(): void;
