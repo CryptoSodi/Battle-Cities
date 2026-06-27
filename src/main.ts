@@ -98,6 +98,33 @@ document.body.classList.toggle('scanlines-disabled', !showScanlines);
 const inputManager = new InputManager(gameStorage);
 inputManager.listen();
 
+let pendingPointerClick: Vector = null;
+
+function getCanvasPointerPosition(event: PointerEvent): Vector {
+  const canvas = gameRenderer.getDomElement();
+  const bounds = canvas.getBoundingClientRect();
+  const x = Math.max(
+    0,
+    Math.min(
+      config.CANVAS_WIDTH,
+      ((event.clientX - bounds.left) / bounds.width) * config.CANVAS_WIDTH,
+    ),
+  );
+  const y = Math.max(
+    0,
+    Math.min(
+      config.CANVAS_HEIGHT,
+      ((event.clientY - bounds.top) / bounds.height) * config.CANVAS_HEIGHT,
+    ),
+  );
+
+  return new Vector(x, y);
+}
+
+gameRenderer.getDomElement().addEventListener('pointerup', (event) => {
+  pendingPointerClick = getCanvasPointerPosition(event);
+});
+
 const mobileGamepadStyle = document.createElement('style');
 mobileGamepadStyle.textContent = `
 .mobile-gamepad-qr {
@@ -113,9 +140,10 @@ mobileGamepadStyle.textContent = `
   padding: 8px;
   pointer-events: auto;
   position: fixed;
-  right: clamp(12px, 3vw, 32px);
+  left: clamp(12px, 3vw, 32px);
   text-align: center;
-  top: clamp(72px, 20vh, 180px);
+  top: 50%;
+  transform: translateY(-50%);
   width: clamp(160px, 22vw, 240px);
   z-index: 20;
 }
@@ -136,8 +164,8 @@ mobileGamepadStyle.textContent = `
 }
 @media (max-width: 620px) {
   .mobile-gamepad-qr {
-    right: 12px;
-    top: 64px;
+    left: 12px;
+    top: 50%;
     width: 150px;
   }
 }
@@ -430,6 +458,7 @@ const updateArgs: GameUpdateArgs = {
   gameState,
   mapLoader,
   pointsHighscoreManager,
+  pointerClick: null,
   rng,
   rectFontLoader,
   session,
@@ -454,6 +483,8 @@ gameLoop.update.addListener((event) => {
   inputManager.update();
 
   updateArgs.deltaTime = event.deltaTime;
+  updateArgs.pointerClick = pendingPointerClick;
+  pendingPointerClick = null;
 
   const scene = sceneRouter.getCurrentScene();
   scene.invokeUpdate(updateArgs);

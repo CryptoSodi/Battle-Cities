@@ -8,6 +8,7 @@ import {
   SpriteFontLoader,
   SpriteLoader,
   State,
+  Vector,
 } from '../core';
 import { InputHintSettings, InputManager } from '../input';
 import { MapLoader } from '../map';
@@ -31,6 +32,7 @@ export interface GameUpdateArgs {
   gameStorage: GameStorage;
   mapLoader: MapLoader;
   pointsHighscoreManager: PointsHighscoreManager;
+  pointerClick?: Vector;
   rng: Prng;
   rectFontLoader: RectFontLoader;
   session: Session;

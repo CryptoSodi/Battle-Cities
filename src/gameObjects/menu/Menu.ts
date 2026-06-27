@@ -1,4 +1,4 @@
-import { GameObject, Subject } from '../../core';
+import { GameObject, Subject, Vector } from '../../core';
 import { GameUpdateArgs } from '../../game';
 import { MenuInputContext } from '../../input';
 
@@ -65,6 +65,23 @@ export class Menu extends GameObject {
 
   public reset(): void {
     this.focusItem(0);
+  }
+
+  public selectItemAtPoint(point: Vector): boolean {
+    const itemIndex = this.items.findIndex((item) => {
+      return (
+        item.isFocusable() && item.getWorldBoundingBox().containsPoint(point)
+      );
+    });
+
+    if (itemIndex === -1) {
+      return false;
+    }
+
+    this.focusItem(itemIndex);
+    this.notifyItemSelected();
+
+    return true;
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
