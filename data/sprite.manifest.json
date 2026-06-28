@@ -182,7 +182,7 @@
     "scale": 4
   },
   "terrain.border-steel": {
-    "file": "data/graphics/steel-inset-frame.png",
+    "file": "data/graphics/steel-soft-inset-frame.png",
     "rect": [0, 0, 128, 128],
     "scale": 4
   },
