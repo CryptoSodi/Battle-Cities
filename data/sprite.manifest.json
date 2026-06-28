@@ -181,6 +181,11 @@
     "rect": [0, 0, 128, 128],
     "scale": 4
   },
+  "terrain.border-steel": {
+    "file": "data/graphics/steel-inset-frame.png",
+    "rect": [0, 0, 128, 128],
+    "scale": 4
+  },
   "terrain.jungle.1": {
     "file": "data/graphics/jungle.png",
     "rect": [0, 0, 128, 128],
