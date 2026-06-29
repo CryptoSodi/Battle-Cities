@@ -44,7 +44,7 @@ export class LevelPlayerScript extends LevelScript {
 
     if (config.IS_DEV) {
       const debugMenu = new DebugLevelPlayerMenu({
-        top: 300,
+        top: 365,
       });
       debugMenu.attach();
       debugMenu.upgradeRequest.addListener((partyIndex) => {
@@ -161,6 +161,13 @@ export class LevelPlayerScript extends LevelScript {
 
     if (powerupType === PowerupType.Shield) {
       tank.activateShield(config.SHIELD_POWERUP_DURATION);
+    }
+
+    if (powerupType === PowerupType.Speed) {
+      tank.activateSpeedBoost(
+        config.SPEED_POWERUP_DURATION,
+        config.SPEED_POWERUP_MULTIPLIER,
+      );
     }
 
     if (powerupType === PowerupType.Upgrade) {

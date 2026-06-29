@@ -34,6 +34,8 @@ export class DebugLevelPowerupMenu extends DebugMenu {
     this.appendButton('Spawn', this.handleSpawn);
     this.appendButton('Spawn: base defence', this.handleSpawnBaseDefence);
     this.appendButton('Spawn: freeze', this.handleSpawnFreeze);
+    this.appendButton('Spawn: speed', this.handleSpawnSpeed);
+    this.appendButton('Spawn: zoom out', this.handleSpawnZoomOut);
     this.appendButton('Spawn: wipeout', this.handleSpawnWipeout);
   }
 
@@ -73,6 +75,14 @@ export class DebugLevelPowerupMenu extends DebugMenu {
 
   private handleSpawnFreeze = (): void => {
     this.spawnRequest.notify(PowerupType.Freeze);
+  };
+
+  private handleSpawnSpeed = (): void => {
+    this.spawnRequest.notify(PowerupType.Speed);
+  };
+
+  private handleSpawnZoomOut = (): void => {
+    this.spawnRequest.notify(PowerupType.ZoomOut);
   };
 
   private handleSpawnWipeout = (): void => {

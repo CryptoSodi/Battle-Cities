@@ -9,7 +9,9 @@ const AVAILABLE_TYPES = [
   PowerupType.Freeze,
   PowerupType.Life,
   PowerupType.Shield,
+  PowerupType.Speed,
   PowerupType.Upgrade,
+  PowerupType.ZoomOut,
   PowerupType.Wipeout,
 ];
 

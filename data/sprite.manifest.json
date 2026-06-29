@@ -53,6 +53,16 @@
     "rect": [0, 0, 256, 240],
     "scale": 4
   },
+  "powerup.speed": {
+    "file": "data/graphics/powerup-speed.png",
+    "rect": [0, 0, 256, 240],
+    "scale": 4
+  },
+  "powerup.zoomout": {
+    "file": "data/graphics/powerup-zoomout.png",
+    "rect": [0, 0, 256, 240],
+    "scale": 4
+  },
   "powerup.clock": {
     "file": "data/graphics/powerup-clock.png",
     "rect": [0, 0, 256, 240],

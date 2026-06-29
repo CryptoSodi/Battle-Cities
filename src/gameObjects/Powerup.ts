@@ -100,8 +100,12 @@ export class Powerup extends GameObject {
         return 'powerup.tank';
       case PowerupType.Shield:
         return 'powerup.helmet';
+      case PowerupType.Speed:
+        return 'powerup.speed';
       case PowerupType.Upgrade:
         return 'powerup.star';
+      case PowerupType.ZoomOut:
+        return 'powerup.zoomout';
       case PowerupType.Wipeout:
         return 'powerup.grenade';
     }

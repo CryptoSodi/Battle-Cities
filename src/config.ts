@@ -135,16 +135,21 @@ export const CANVAS_HEIGHT = RESPONSIVE_CANVAS_SIZE.height;
 // on resize because the resize handler reloads the page. ZOOM_MIN/MAX are just
 // safety rails for extreme viewports.
 export const TARGET_TILES_WIDE = 34.5;
+export const CLASSIC_TARGET_TILES_WIDE = 27;
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 6;
 
-export function getResponsiveZoom(): number {
+export function getResponsiveZoom(targetTilesWide = TARGET_TILES_WIDE): number {
   const playWidth = CANVAS_WIDTH - BORDER_LEFT_WIDTH - BORDER_RIGHT_WIDTH;
-  const zoom = playWidth / (TARGET_TILES_WIDE * TILE_SIZE_MEDIUM);
+  const zoom = playWidth / (targetTilesWide * TILE_SIZE_MEDIUM);
   return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
 }
 
 export const GAMEPLAY_ZOOM = getResponsiveZoom();
+export const ZOOM_OUT_POWERUP_MULTIPLIER = 0.72;
+export const ZOOM_OUT_POWERUP_DURATION = 10;
+export const SPEED_POWERUP_MULTIPLIER = 1.45;
+export const SPEED_POWERUP_DURATION = 10;
 
 // Supersampling factor: the canvas backing store renders at this multiple of
 // the logical size, so HD art (authored at 4x) resolves to full detail on
@@ -246,12 +251,12 @@ export const WALL_SHADOW_Z_INDEX = -900;
 // faked as several silhouettes stepped outward to the max offset: near the wall
 // many steps overlap (dark), at the far edge only the last step reaches (faint).
 // A larger X than Y reads as a wall with a visible side face (more depth).
-export const WALL_SHADOW_OFFSET_X = 14;
-export const WALL_SHADOW_OFFSET_Y = 9;
+export const WALL_SHADOW_OFFSET_X = 9;
+export const WALL_SHADOW_OFFSET_Y = 6;
 export const WALL_SHADOW_STEPS = 6;
 export const WALL_SHADOW_COLOR = '#000000';
 // Per-step alpha; near-edge darkness ≈ 1 - (1 - alpha)^STEPS.
-export const WALL_SHADOW_ALPHA = 0.1;
+export const WALL_SHADOW_ALPHA = 0.14;
 
 // Drop shadow for brick text (e.g. the menu title). Tighter than the wall
 // shadow since the letter tiles are small.

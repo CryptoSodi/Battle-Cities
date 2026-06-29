@@ -30,8 +30,9 @@ export class MapConfig {
   }
 
   public fillAndValidate(dto: MapDto): MapDto {
+    const dtoWithFieldDefaults = this.addMissingFieldDefaults(dto);
     const { value: validatedDto, error: schemaError } = MapDtoSchema.validate(
-      dto,
+      dtoWithFieldDefaults,
     );
 
     if (schemaError !== undefined) {
@@ -46,6 +47,32 @@ export class MapConfig {
     }
 
     return validatedDto;
+  }
+
+  private addMissingFieldDefaults(dto: MapDto): MapDto {
+    if (dto.field !== undefined) {
+      return dto;
+    }
+
+    const hasMapContent =
+      dto.base !== undefined ||
+      (dto.terrain?.regions?.length ?? 0) > 0 ||
+      (dto.spawn?.enemy?.locations?.length ?? 0) > 0 ||
+      (dto.spawn?.enemy?.list?.length ?? 0) > 0 ||
+      (dto.spawn?.player?.locations?.length ?? 0) > 0;
+
+    const isLegacyMap = dto.version === undefined || dto.version < 2;
+    if (!hasMapContent || !isLegacyMap) {
+      return dto;
+    }
+
+    return {
+      ...dto,
+      field: {
+        widthTiles: config.LEGACY_FIELD_TILE_COUNT,
+        heightTiles: config.LEGACY_FIELD_TILE_COUNT,
+      },
+    };
   }
 
   public addTerrainRegion(region: TerrainRegionConfig): void {

@@ -5,7 +5,7 @@ import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory } from '../../terrain';
-import { Rect, Vector } from '../../core';
+import { Rect, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
@@ -46,6 +46,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private debugCameraMenu: DebugCameraMenu;
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
   private cameraZoom = config.GAMEPLAY_ZOOM;
+  private baseCameraZoom = config.GAMEPLAY_ZOOM;
+  private zoomOutTimer = new Timer();
   private initialCameraTarget: Vector;
 
   private allScripts: LevelScript[] = [];
@@ -79,19 +81,28 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const { mapConfig } = this.params;
     const fieldWidth = mapConfig.getFieldWidth();
     const fieldHeight = mapConfig.getFieldHeight();
+    const targetTilesWide =
+      mapConfig.getFieldTileWidth() === config.LEGACY_FIELD_TILE_COUNT &&
+      mapConfig.getFieldTileHeight() === config.LEGACY_FIELD_TILE_COUNT
+        ? config.CLASSIC_TARGET_TILES_WIDE
+        : config.TARGET_TILES_WIDE;
+    this.baseCameraZoom = config.getResponsiveZoom(targetTilesWide);
+    this.cameraZoom = this.baseCameraZoom;
+    this.zoomOutTimer.done.addListener(this.handleZoomOutTimer);
 
     this.debugCollisionMenu = new DebugCollisionMenu(
       collisionSystem,
       this.root,
       () => this.world?.field ?? null,
-      { top: 470 },
+      { top: 560 },
     );
     this.debugCameraMenu = new DebugCameraMenu(
       () => this.cameraZoom,
       (zoom) => {
+        this.baseCameraZoom = zoom;
         this.cameraZoom = zoom;
       },
-      { left: undefined, top: 580 },
+      { left: undefined, top: 690 },
     );
     if (config.IS_DEV) {
       this.debugCollisionMenu.attach();
@@ -230,6 +241,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected update(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, gameState } = updateArgs;
+    this.zoomOutTimer.update(updateArgs.deltaTime);
 
     this.alwaysUpdateScripts.forEach((script) => {
       script.invokeUpdate(updateArgs);
@@ -428,6 +440,16 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (event.type === PowerupType.Life) {
       playerSession.addLife();
     }
+
+    if (event.type === PowerupType.ZoomOut) {
+      this.cameraZoom =
+        this.baseCameraZoom * config.ZOOM_OUT_POWERUP_MULTIPLIER;
+      this.zoomOutTimer.reset(config.ZOOM_OUT_POWERUP_DURATION);
+    }
+  };
+
+  private handleZoomOutTimer = (): void => {
+    this.cameraZoom = this.baseCameraZoom;
   };
 
   private handleBaseDied = (): void => {

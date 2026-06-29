@@ -3,6 +3,8 @@ export enum PowerupType {
   Freeze = 'freeze',
   Life = 'life',
   Shield = 'shield',
+  Speed = 'speed',
   Upgrade = 'upgrade',
+  ZoomOut = 'zoomout',
   Wipeout = 'wipeout',
 }
