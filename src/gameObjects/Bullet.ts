@@ -211,6 +211,7 @@ export class Bullet extends GameObject {
         }
 
         this.parent.attach(destroyer);
+        this.snapDestroyerToBrickGrid(destroyer);
 
         // TODO: it collides with multiple "bricks", multiple audio sources are
         // triggered
@@ -258,5 +259,25 @@ export class Bullet extends GameObject {
       default:
         return 'unknown';
     }
+  }
+
+  private snapDestroyerToBrickGrid(destroyer: TerrainTileDestroyer): void {
+    destroyer.updateMatrix();
+    const destroyerBox = destroyer.getBoundingBox();
+    const rotation = destroyer.getWorldRotation();
+
+    if (rotation === Rotation.Up || rotation === Rotation.Down) {
+      const snappedMinX =
+        Math.round(destroyerBox.min.x / config.TILE_SIZE_SMALL) *
+        config.TILE_SIZE_SMALL;
+      destroyer.position.addX(snappedMinX - destroyerBox.min.x);
+    } else if (rotation === Rotation.Left || rotation === Rotation.Right) {
+      const snappedMinY =
+        Math.round(destroyerBox.min.y / config.TILE_SIZE_SMALL) *
+        config.TILE_SIZE_SMALL;
+      destroyer.position.addY(snappedMinY - destroyerBox.min.y);
+    }
+
+    destroyer.updateMatrix(true);
   }
 }

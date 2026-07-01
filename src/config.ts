@@ -163,6 +163,9 @@ export const CAMERA_LOOK_AHEAD_LERP = 0.08; // easing of the look-ahead offset
 export const CAMERA_TRAUMA_DECAY = 1.6; // trauma units drained per second
 export const CAMERA_MAX_SHAKE = 12; // logical px shake amplitude at trauma = 1
 export const CAMERA_SHAKE_INTENSITY = 1; // master scalar (0 disables shake)
+// How long the camera holds on the player's death blast before releasing back
+// to the spawn point (must be < PLAYER_SPAWN_DELAY so the pan lands first).
+export const CAMERA_DEATH_HOLD = 0.9;
 // How much trauma [0..1] each event adds.
 export const CAMERA_TRAUMA_FIRE = 0.1;
 export const CAMERA_TRAUMA_TILE = 0.08;
@@ -186,7 +189,9 @@ export const ICE_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const BULLET_WIDTH = 12;
 
 export const PLAYER_FIRST_SPAWN_DELAY = 0;
-export const PLAYER_SPAWN_DELAY = 0;
+// Delay before the player respawns after dying — long enough for the death
+// blast to finish and the camera to pan back to the spawn point.
+export const PLAYER_SPAWN_DELAY = 1.5;
 export const ENEMY_FIRST_SPAWN_DELAY = 0.16;
 export const ENEMY_SPAWN_DELAY = 3;
 

@@ -55,6 +55,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private lookAheadX = 0;
   private lookAheadY = 0;
   private cameraTrauma = 0;
+  // When set, the camera focuses this world point instead of following the
+  // player (death blast hold, destroyed-base pan). Auto-cleared by the timer
+  // for the death hold; left set (no timer) for the base.
+  private cameraFocus: Vector = null;
+  private cameraFocusTimer = new Timer();
 
   private allScripts: LevelScript[] = [];
   private alwaysUpdateScripts: LevelScript[] = [];
@@ -95,6 +100,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.baseCameraZoom = config.getResponsiveZoom(targetTilesWide);
     this.cameraZoom = this.baseCameraZoom;
     this.zoomOutTimer.done.addListener(this.handleZoomOutTimer);
+    this.cameraFocusTimer.done.addListener(() => {
+      this.cameraFocus = null;
+    });
 
     this.debugCollisionMenu = new DebugCollisionMenu(
       collisionSystem,
@@ -265,6 +273,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   protected update(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, gameState } = updateArgs;
     this.zoomOutTimer.update(updateArgs.deltaTime);
+    this.cameraFocusTimer.update(updateArgs.deltaTime);
 
     this.alwaysUpdateScripts.forEach((script) => {
       script.invokeUpdate(updateArgs);
@@ -335,17 +344,28 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.world.field.cameraPivotX = pivotX;
     this.world.field.cameraPivotY = pivotY;
 
-    const targetCenter =
-      targetTank !== null && targetTank !== undefined
-        ? targetTank.getCenter()
-        : this.initialCameraTarget;
+    // Camera target: a temporary focus override (holding on the death blast, or
+    // panning to the destroyed base) takes priority; otherwise follow player 1,
+    // falling back to the spawn point when there is no player tank.
+    const following =
+      this.cameraFocus === null &&
+      targetTank !== null &&
+      targetTank !== undefined;
+    let targetCenter: Vector;
+    if (this.cameraFocus !== null) {
+      targetCenter = this.cameraFocus;
+    } else if (targetTank !== null && targetTank !== undefined) {
+      targetCenter = targetTank.getCenter();
+    } else {
+      targetCenter = this.initialCameraTarget;
+    }
 
     // Look-ahead: bias the centered point toward the player's movement so more
-    // of the level ahead is visible. Derived from the player's velocity (delta
-    // of center) and eased, so it leads while moving and recenters when idle.
-    if (targetCenter !== null && targetCenter !== undefined) {
-      let desiredLookX = 0;
-      let desiredLookY = 0;
+    // of the level ahead is visible. Only while actively following the player;
+    // eases back to zero otherwise (focus / spawn / dead).
+    let desiredLookX = 0;
+    let desiredLookY = 0;
+    if (following) {
       if (this.prevPlayerCenter !== null) {
         const vx = targetCenter.x - this.prevPlayerCenter.x;
         const vy = targetCenter.y - this.prevPlayerCenter.y;
@@ -355,12 +375,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           desiredLookY = (vy / speed) * config.CAMERA_LOOK_AHEAD;
         }
       }
-      this.lookAheadX +=
-        (desiredLookX - this.lookAheadX) * config.CAMERA_LOOK_AHEAD_LERP;
-      this.lookAheadY +=
-        (desiredLookY - this.lookAheadY) * config.CAMERA_LOOK_AHEAD_LERP;
       this.prevPlayerCenter = targetCenter.clone();
+    } else {
+      this.prevPlayerCenter = null;
     }
+    this.lookAheadX +=
+      (desiredLookX - this.lookAheadX) * config.CAMERA_LOOK_AHEAD_LERP;
+    this.lookAheadY +=
+      (desiredLookY - this.lookAheadY) * config.CAMERA_LOOK_AHEAD_LERP;
 
     // World point to keep centered (target + look-ahead), clamped so the visible
     // window never leaves the field (or centered when the field is smaller).
@@ -466,6 +488,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {
     this.addCameraTrauma(config.CAMERA_TRAUMA_PLAYER_DIED);
+    // Hold the camera on the death blast for a moment before it releases back
+    // to the spawn point (where the respawn, delayed by PLAYER_SPAWN_DELAY,
+    // then plays out).
+    this.cameraFocus = event.centerPosition.clone();
+    this.cameraFocusTimer.reset(config.CAMERA_DEATH_HOLD);
     const playerSession = this.session.getPlayer(event.partyIndex);
     playerSession.removeLife();
 
@@ -541,6 +568,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   private handleBaseDied = (): void => {
     this.addCameraTrauma(config.CAMERA_TRAUMA_BASE_DIED);
+    // Pan the camera to the base so the player sees it get destroyed. No timer —
+    // it stays there through the game-over sequence.
+    const basePosition = this.params.mapConfig.getBasePosition();
+    this.cameraFocus = new Vector(
+      basePosition.x + config.BASE_DEFAULT_SIZE.width / 2,
+      basePosition.y + config.BASE_DEFAULT_SIZE.height / 2,
+    );
+    this.cameraFocusTimer.stop();
     this.session.setGameOver();
 
     this.pauseScript.disable();
