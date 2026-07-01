@@ -25,6 +25,10 @@ export class PlayerTank extends Tank {
   protected setup(updateArgs: GameUpdateArgs): void {
     const { spriteLoader } = updateArgs;
 
+    // Give the player tank momentum (a short acceleration ramp to full speed).
+    // Enemies keep the default instant response.
+    this.moveAcceleration = config.PLAYER_MOVE_ACCELERATION;
+
     // Player only has one color
     this.colors.push(TankColorFactory.createPlayerColor(this.partyIndex));
 

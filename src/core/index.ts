@@ -4,6 +4,7 @@ export * from './graphics';
 export * from './input';
 export * from './loaders';
 export * from './painters';
+export * from './particles';
 export * from './scene';
 export * from './storage';
 export * from './text';

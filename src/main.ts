@@ -9,6 +9,7 @@ import {
   GameRenderer,
   ImageLoader,
   Logger,
+  ParticleSystem,
   Prng,
   RectFontLoader,
   SpriteFontLoader,
@@ -99,6 +100,9 @@ const inputManager = new InputManager(gameStorage);
 inputManager.listen();
 
 let pendingPointerClick: Vector = null;
+// Wall-clock timestamp of the last particle update, for real-time (not fixed
+// sim step) cosmetic animation.
+let lastParticleTime: number = null;
 
 function getCanvasPointerPosition(event: PointerEvent): Vector {
   const canvas = gameRenderer.getDomElement();
@@ -449,18 +453,26 @@ const gameState = new State<GameState>(GameState.Playing);
 // record getSeed() to reproduce a run deterministically.
 const rng = new Prng((Date.now() >>> 0) || 1);
 
+// Cosmetic particle overlay (dust, sparks, debris). Own canvas over the game
+// canvas; matches the game's logical resolution so world coords line up.
+const particles = new ParticleSystem(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+const gameLoop = new GameLoop();
+
 const updateArgs: GameUpdateArgs = {
   audioManager,
   audioLoader,
   collisionSystem,
   colorSpriteFontGenerator,
   deltaTime: 0,
+  hitStop: (seconds: number) => gameLoop.hitStop(seconds),
   gameStorage,
   imageLoader,
   inputHintSettings,
   inputManager,
   gameState,
   mapLoader,
+  particles,
   pointsHighscoreManager,
   pointerClick: null,
   rng,
@@ -469,8 +481,6 @@ const updateArgs: GameUpdateArgs = {
   spriteFontLoader,
   spriteLoader,
 };
-
-const gameLoop = new GameLoop();
 
 const stats = new Stats();
 const debugGameLoopMenu = new DebugGameLoopMenu(gameLoop);
@@ -514,6 +524,18 @@ gameLoop.render.addListener((event) => {
   if (root != null) {
     gameRenderer.render(root, event.alpha);
   }
+
+  // Cosmetic particle overlay: advance + draw once per animation frame using
+  // real elapsed time, independent of the fixed sim step. Clamped so a
+  // backgrounded tab doesn't fast-forward the effects on return.
+  const now = performance.now();
+  const particleDt =
+    lastParticleTime === null
+      ? 0
+      : Math.min(0.05, (now - lastParticleTime) / 1000);
+  lastParticleTime = now;
+  particles.update(particleDt);
+  particles.render();
 
   gameState.update();
   updateMobileGamepadDebug();
@@ -569,6 +591,8 @@ async function main(): Promise<void> {
 
   document.body.removeChild(loadingElement);
   document.body.appendChild(gameRenderer.getDomElement());
+  // Particle overlay sits directly above the game canvas.
+  document.body.appendChild(particles.getDomElement());
 
   gameLoop.start();
   // gameLoop.next();

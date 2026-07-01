@@ -9,6 +9,8 @@ import {
 import { GameUpdateArgs } from '../game';
 import * as config from '../config';
 
+import { emitExplosion } from './explosionEffect';
+
 export class SmallExplosion extends GameObject {
   public zIndex = config.SMALL_EXPLOSION_Z_INDEX;
   public readonly painter = new SpritePainter();
@@ -21,7 +23,7 @@ export class SmallExplosion extends GameObject {
     this.painter.alignment = SpriteAlignment.MiddleCenter;
   }
 
-  protected setup({ spriteLoader }: GameUpdateArgs): void {
+  protected setup({ spriteLoader, particles }: GameUpdateArgs): void {
     this.animation = new Animation(
       spriteLoader.loadList([
         'explosion.small.1',
@@ -30,6 +32,14 @@ export class SmallExplosion extends GameObject {
       ]),
       { delay: 0.05, loop: false },
     );
+
+    // Light spark puff on impact (no smoke) layered over the sprite. Refresh
+    // the matrix first: the creator sets our center via setCenter() *after*
+    // updateMatrix(), leaving boundingBox stale at the origin — reading
+    // getCenter() without this would emit the burst at the top-left corner.
+    this.updateMatrix();
+    const center = this.getCenter();
+    emitExplosion(particles, center.x, center.y, { scale: 0.45, smoke: false });
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

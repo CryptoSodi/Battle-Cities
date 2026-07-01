@@ -163,6 +163,9 @@ export const CAMERA_LOOK_AHEAD_LERP = 0.08; // easing of the look-ahead offset
 export const CAMERA_TRAUMA_DECAY = 1.6; // trauma units drained per second
 export const CAMERA_MAX_SHAKE = 12; // logical px shake amplitude at trauma = 1
 export const CAMERA_SHAKE_INTENSITY = 1; // master scalar (0 disables shake)
+// Particle overlay master scalar (reduced-motion / low-end). Scales emitted
+// counts; 0 disables particle effects entirely.
+export const PARTICLE_INTENSITY = 1;
 // How long the camera holds on the player's death blast before releasing back
 // to the spawn point (must be < PLAYER_SPAWN_DELAY so the pan lands first).
 export const CAMERA_DEATH_HOLD = 0.9;
@@ -172,6 +175,27 @@ export const CAMERA_TRAUMA_TILE = 0.08;
 export const CAMERA_TRAUMA_ENEMY_EXPLODE = 0.42;
 export const CAMERA_TRAUMA_PLAYER_DIED = 0.6;
 export const CAMERA_TRAUMA_BASE_DIED = 0.85;
+
+// Hit-stop (brief real-time simulation freeze) + white screen flash on impacts.
+// Durations in seconds; flashes in [0..1]. Scaled by CAMERA_SHAKE_INTENSITY at
+// the call sites so the reduced-motion switch disables them too.
+export const HIT_STOP_KILL = 0.045;
+export const HIT_STOP_DEATH = 0.11;
+export const FLASH_PLAYER_DIED = 0.35;
+export const FLASH_BASE_DIED = 0.55;
+
+// Per-sprite white flash when a tank takes a (non-fatal or fatal) hit. The
+// sprite is tinted toward white by SPRITE_FLASH_HIT [0..1] on impact, decaying
+// to 0 over SPRITE_FLASH_DECAY_SECONDS. Render-only (see SpritePainter.flash),
+// scaled by CAMERA_SHAKE_INTENSITY so reduced-motion disables it.
+export const SPRITE_FLASH_HIT = 0.85;
+export const SPRITE_FLASH_DECAY_SECONDS = 0.11;
+
+// LevelJuiceScript ambient FX (cosmetic overlay, Math.random only, gated by
+// PARTICLE_INTENSITY). Tread dust puffs behind moving tanks; spark bursts when
+// a tank survives a hit.
+export const TREAD_DUST_DISTANCE = 9; // px a tank travels between dust puffs
+export const HIT_SPARK_COUNT = 8; // sparks when a tank survives a hit
 
 // Supersampling factor: the canvas backing store renders at this multiple of
 // the logical size, so HD art (authored at 4x) resolves to full detail on
@@ -185,6 +209,11 @@ export const STEEL_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const JUNGLE_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const WATER_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const ICE_TILE_SIZE = TILE_SIZE_MEDIUM;
+
+// Player tank movement momentum: acceleration toward full move speed, in
+// units/s^2 (move speeds are ~120-240 u/s). Higher = snappier; Infinity would
+// be the classic instant response. Enemies always use instant.
+export const PLAYER_MOVE_ACCELERATION = 1400;
 
 export const BULLET_WIDTH = 12;
 

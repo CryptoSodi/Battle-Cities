@@ -93,6 +93,21 @@
     "rect": [0, 0, 256, 240],
     "scale": 4
   },
+  "shop.fuel": {
+    "file": "data/graphics/shop-fuel-can.svg",
+    "rect": [0, 0, 128, 128],
+    "scale": 2
+  },
+  "shop.coin": {
+    "file": "data/graphics/shop-bct-coin.svg",
+    "rect": [0, 0, 128, 128],
+    "scale": 2
+  },
+  "shop.bundle": {
+    "file": "data/graphics/shop-bundle-crate.svg",
+    "rect": [0, 0, 128, 128],
+    "scale": 2
+  },
   "points.100": {
     "file": "data/graphics/sprite.png",
     "rect": [1184, 656, 56, 28]

@@ -3,6 +3,7 @@ import {
   CollisionSystem,
   ColorSpriteFontGenerator,
   ImageLoader,
+  ParticleSystem,
   Prng,
   RectFontLoader,
   SpriteFontLoader,
@@ -25,12 +26,15 @@ export interface GameUpdateArgs {
   collisionSystem: CollisionSystem;
   colorSpriteFontGenerator: ColorSpriteFontGenerator;
   deltaTime: number;
+  // Freeze the simulation for a few real-time seconds (hit-stop / impact punch).
+  hitStop: (seconds: number) => void;
   imageLoader: ImageLoader;
   inputHintSettings: InputHintSettings;
   inputManager: InputManager;
   gameState: State<GameState>;
   gameStorage: GameStorage;
   mapLoader: MapLoader;
+  particles: ParticleSystem;
   pointsHighscoreManager: PointsHighscoreManager;
   pointerClick?: Vector;
   rng: Prng;

@@ -10,6 +10,9 @@ export class CanvasRenderContext extends RenderContext {
   private viewScale = 1;
   private viewOffsetX = 0;
   private viewOffsetY = 0;
+  // Per-source-sheet white silhouettes, built lazily and reused, so the hit
+  // flash costs one extra blit rather than a per-frame tint computation.
+  private whiteMaskCache = new Map<CanvasImageSource, HTMLCanvasElement>();
 
   public init(): void {
     this.context = this.canvas.getContext('2d');
@@ -25,19 +28,86 @@ export class CanvasRenderContext extends RenderContext {
     imageSource: ImageSource,
     sourceRect: Rect,
     destinationRect: Rect,
+    flash = 0,
   ): void {
     const s = this.viewScale;
+    const element = imageSource.getElement();
+    const dx = Math.round(destinationRect.x * s + this.viewOffsetX);
+    const dy = Math.round(destinationRect.y * s + this.viewOffsetY);
+    const dw = destinationRect.width * s;
+    const dh = destinationRect.height * s;
+
     this.context.drawImage(
-      imageSource.getElement(),
+      element,
       sourceRect.x,
       sourceRect.y,
       sourceRect.width,
       sourceRect.height,
-      Math.round(destinationRect.x * s + this.viewOffsetX),
-      Math.round(destinationRect.y * s + this.viewOffsetY),
-      destinationRect.width * s,
-      destinationRect.height * s,
+      dx,
+      dy,
+      dw,
+      dh,
     );
+
+    // Hit flash: overlay the white silhouette of the same sprite at `flash`
+    // opacity. The silhouette shares the sprite's alpha, so only the sprite's
+    // pixels lighten (not a white box).
+    if (flash > 0) {
+      const mask = this.getWhiteMask(element);
+      if (mask !== null) {
+        const prevAlpha = this.context.globalAlpha;
+        this.context.globalAlpha = prevAlpha * Math.min(1, flash);
+        this.context.drawImage(
+          mask,
+          sourceRect.x,
+          sourceRect.y,
+          sourceRect.width,
+          sourceRect.height,
+          dx,
+          dy,
+          dw,
+          dh,
+        );
+        this.context.globalAlpha = prevAlpha;
+      }
+    }
+  }
+
+  // Returns (building once) a white silhouette of the given sheet: every opaque
+  // texel painted white, preserving alpha. Used for the per-sprite hit flash.
+  private getWhiteMask(element: CanvasImageSource): HTMLCanvasElement | null {
+    const cached = this.whiteMaskCache.get(element);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const width =
+      (element as HTMLImageElement).naturalWidth ||
+      (element as HTMLCanvasElement).width;
+    const height =
+      (element as HTMLImageElement).naturalHeight ||
+      (element as HTMLCanvasElement).height;
+    if (!width || !height) {
+      return null;
+    }
+
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskContext = maskCanvas.getContext('2d');
+    if (maskContext === null) {
+      return null;
+    }
+
+    maskContext.drawImage(element, 0, 0);
+    // Keep the drawn alpha, replace all color with white.
+    maskContext.globalCompositeOperation = 'source-atop';
+    maskContext.fillStyle = 'rgb(255,255,255)';
+    maskContext.fillRect(0, 0, width, height);
+    maskContext.globalCompositeOperation = 'source-over';
+
+    this.whiteMaskCache.set(element, maskCanvas);
+    return maskCanvas;
   }
 
   public clear(): void {

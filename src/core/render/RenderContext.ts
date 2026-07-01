@@ -15,10 +15,13 @@ export abstract class RenderContext {
   abstract init(): void;
   abstract clear(): void;
   abstract clearRect(x: number, y: number, width: number, height: number): void;
+  // `flash` in [0..1] tints the sprite toward white (per-sprite hit flash);
+  // 0 (default) draws the image unmodified.
   abstract drawImage(
     imageSource: ImageSource,
     sourceRect: Rect,
     destinationRect: Rect,
+    flash?: number,
   );
   abstract fillRect(
     x: number,

@@ -15,6 +15,7 @@ export * from './DropShadowPainter';
 export * from './EditorInputHint';
 export * from './EnemyTank';
 export * from './Explosion';
+export * from './explosionEffect';
 export * from './Field';
 export * from './GameOverNotice';
 export * from './GroundField';

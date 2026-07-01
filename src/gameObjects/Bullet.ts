@@ -10,6 +10,7 @@ import { GameUpdateArgs, Rotation, Tag } from '../game';
 import { TankBulletWallDamage } from '../tank';
 import * as config from '../config';
 
+import { emitMuzzleFlash } from './explosionEffect';
 import { SmallExplosion } from './SmallExplosion';
 import { TerrainTileDestroyer } from './TerrainTileDestroyer';
 
@@ -48,6 +49,7 @@ export class Bullet extends GameObject {
   protected setup({
     audioLoader,
     collisionSystem,
+    particles,
     spriteLoader,
   }: GameUpdateArgs): void {
     collisionSystem.register(this.collider);
@@ -60,6 +62,26 @@ export class Bullet extends GameObject {
     const sprite = spriteLoader.load(spriteId);
 
     this.painter.sprite = sprite;
+
+    // Muzzle flash at the gun tip (bullet spawn), pointed the way it's headed.
+    let dirX = 0;
+    let dirY = 0;
+    if (rotation === Rotation.Up) {
+      dirY = -1;
+    } else if (rotation === Rotation.Down) {
+      dirY = 1;
+    } else if (rotation === Rotation.Left) {
+      dirX = -1;
+    } else if (rotation === Rotation.Right) {
+      dirX = 1;
+    }
+    // attach() (in Tank.fire) reparents the bullet to the field and rewrites
+    // its matrix/position but leaves boundingBox stale; with matrixAutoUpdate
+    // off, getCenter() would otherwise read the old tank-local box and emit the
+    // flash at the world origin (top-left). Refresh the box first.
+    this.updateMatrix();
+    const center = this.getCenter();
+    emitMuzzleFlash(particles, center.x, center.y, dirX, dirY);
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

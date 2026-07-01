@@ -1,11 +1,17 @@
 import { DebugCameraMenu, DebugCollisionMenu } from '../../debug';
 import { GameUpdateArgs, GameState, Session } from '../../game';
-import { Border, GroundField, Tank, WallShadowField } from '../../gameObjects';
+import {
+  Border,
+  BrickSuperTerrainTile,
+  GroundField,
+  Tank,
+  WallShadowField,
+} from '../../gameObjects';
 import { InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
-import { TerrainFactory } from '../../terrain';
-import { Rect, Timer, Vector } from '../../core';
+import { TerrainFactory, TerrainType } from '../../terrain';
+import { ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
@@ -22,6 +28,7 @@ import {
   LevelGameOverScript,
   LevelInfoScript,
   LevelIntroScript,
+  LevelJuiceScript,
   LevelMinimapScript,
   LevelPauseScript,
   LevelPlayerOverScript,
@@ -60,6 +67,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // for the death hold; left set (no timer) for the base.
   private cameraFocus: Vector = null;
   private cameraFocusTimer = new Timer();
+  private particles: ParticleSystem;
+  private requestHitStop: (seconds: number) => void = () => undefined;
 
   private allScripts: LevelScript[] = [];
   private alwaysUpdateScripts: LevelScript[] = [];
@@ -73,6 +82,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private gameOverScript: LevelGameOverScript;
   private infoScript: LevelInfoScript;
   private introScript: LevelIntroScript;
+  private juiceScript: LevelJuiceScript;
   private playerOverScript: LevelPlayerOverScript;
   private playerScript: LevelPlayerScript;
   private pointsScript: LevelPointsScript;
@@ -89,6 +99,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // Drop any input state carried in from the menu/transition so a key still
     // "held" (or stuck from a missed keyup) can't move the tank on spawn.
     inputManager.reset();
+    // Fresh overlay — drop any particles left over from a previous scene.
+    this.particles = updateArgs.particles;
+    this.particles.clear();
+    this.requestHitStop = updateArgs.hitStop;
     const { mapConfig } = this.params;
     const fieldWidth = mapConfig.getFieldWidth();
     const fieldHeight = mapConfig.getFieldHeight();
@@ -173,6 +187,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           size: tile.size.clone(),
         });
       });
+
+      // Bricks are nested super-tiles: the super-tile's `destroyed` only fires
+      // once the whole 32px cell is cleared, so per-brick chips would otherwise
+      // show no debris. Spawn debris off each individual sub-brick instead.
+      if (tile instanceof BrickSuperTerrainTile) {
+        tile.subTileDestroyed.addListener((center) => {
+          this.spawnDebrisAt(center.x, center.y);
+        });
+      }
     }
 
     this.world.field.add(...tiles);
@@ -185,6 +208,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.gameOverScript = new LevelGameOverScript();
     this.infoScript = new LevelInfoScript();
     this.introScript = new LevelIntroScript();
+    this.juiceScript = new LevelJuiceScript();
     this.pauseScript = new LevelPauseScript();
     this.playerOverScript = new LevelPlayerOverScript();
     this.playerScript = new LevelPlayerScript();
@@ -202,6 +226,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.gameOverScript,
       this.infoScript,
       this.introScript,
+      this.juiceScript,
       this.pauseScript,
       this.playerOverScript,
       this.playerScript,
@@ -230,6 +255,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         this.minimapScript,
         this.baseScript,
         this.explosionScript,
+        this.juiceScript,
         this.infoScript,
         this.enemyScript,
         this.spawnScript,
@@ -259,15 +285,49 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     });
     this.eventBus.enemyExploded.addListener(() => {
       this.addCameraTrauma(config.CAMERA_TRAUMA_ENEMY_EXPLODE);
+      // Brief hit-stop for kill crunch. Explosion particles come from the
+      // Explosion object itself.
+      this.requestHitStop(config.HIT_STOP_KILL * config.CAMERA_SHAKE_INTENSITY);
     });
-    this.eventBus.mapTileDestroyed.addListener(() => {
+    this.eventBus.mapTileDestroyed.addListener((event) => {
       this.addCameraTrauma(config.CAMERA_TRAUMA_TILE);
+      // Brick debris is emitted per sub-brick via subTileDestroyed; the
+      // super-tile's own destroy event would double the burst on the last
+      // chip. Other tile types (steel, etc.) still spawn debris here.
+      if (event.type !== TerrainType.BrickSuper) {
+        this.spawnTileDebris(event.position, event.size);
+      }
     });
   }
 
   // Adds screen-shake trauma (clamped to 1). Presentation-only.
   private addCameraTrauma(amount: number): void {
     this.cameraTrauma = Math.min(1, this.cameraTrauma + amount);
+  }
+
+  // Cosmetic debris flecks when a whole tile (e.g. steel) is destroyed.
+  private spawnTileDebris(position: Vector, size: Size): void {
+    this.spawnDebrisAt(position.x + size.width / 2, position.y + size.height / 2);
+  }
+
+  // Cosmetic debris flecks emitted at a field-local center point.
+  private spawnDebrisAt(centerX: number, centerY: number): void {
+    const count = Math.round(6 * config.PARTICLE_INTENSITY);
+    for (let i = 0; i < count; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 70;
+      this.particles.spawn({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 40,
+        life: 0.35 + Math.random() * 0.35,
+        size: 2 + Math.random() * 2,
+        color: 'rgb(150,72,40)',
+        gravity: 300,
+        drag: 1.2,
+      });
+    }
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
@@ -461,6 +521,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.world.field.position.set(newX, newY);
       this.world.field.updateMatrix(true);
     }
+
+    // Feed the same camera transform to the particle overlay so particles
+    // (in field-local coords) map to the same screen position as the world.
+    // screen = local * zoom + (field.position * zoom + pivot * (1 - zoom)).
+    this.particles.setView(
+      zoom,
+      newX * zoom + pivotX * (1 - zoom),
+      newY * zoom + pivotY * (1 - zoom),
+    );
   }
 
   private clampTanksToFieldBounds(): void {
@@ -488,6 +557,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {
     this.addCameraTrauma(config.CAMERA_TRAUMA_PLAYER_DIED);
+    this.requestHitStop(config.HIT_STOP_DEATH * config.CAMERA_SHAKE_INTENSITY);
+    this.particles.flash(config.FLASH_PLAYER_DIED * config.CAMERA_SHAKE_INTENSITY);
     // Hold the camera on the death blast for a moment before it releases back
     // to the spawn point (where the respawn, delayed by PLAYER_SPAWN_DELAY,
     // then plays out).
@@ -568,6 +639,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   private handleBaseDied = (): void => {
     this.addCameraTrauma(config.CAMERA_TRAUMA_BASE_DIED);
+    this.requestHitStop(config.HIT_STOP_DEATH * config.CAMERA_SHAKE_INTENSITY);
+    this.particles.flash(config.FLASH_BASE_DIED * config.CAMERA_SHAKE_INTENSITY);
     // Pan the camera to the base so the player sees it get destroyed. No timer —
     // it stays there through the game-over sequence.
     const basePosition = this.params.mapConfig.getBasePosition();

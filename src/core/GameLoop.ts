@@ -57,6 +57,9 @@ export class GameLoop {
   // Global multiplier on simulation time. 1 = normal, <1 = slow-mo, 0 = frozen
   // (render still runs). Used for hit-stop and slow-motion effects.
   private timeScale = 1;
+  // Remaining REAL-time seconds to freeze the simulation for (hit-stop). Real
+  // time — the sim is frozen, so a sim timer couldn't tick it back down.
+  private hitStopRemaining = 0;
 
   constructor(options: GameLoopOptions = {}) {
     this.options = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -87,6 +90,14 @@ export class GameLoop {
 
   public setTimeScale(value: number): void {
     this.timeScale = Math.max(0, value);
+  }
+
+  // Freeze the simulation for `seconds` of real time (hit-stop / impact punch).
+  // Rendering keeps running; overlapping requests take the longest.
+  public hitStop(seconds: number): void {
+    if (seconds > this.hitStopRemaining) {
+      this.hitStopRemaining = seconds;
+    }
   }
 
   // For manual stepping over frames when loop is paused. Advances exactly
@@ -129,7 +140,15 @@ export class GameLoop {
 
     this.lastTimestamp = timestamp;
 
-    this.accumulator += frameTime * this.timeScale;
+    // Hit-stop: while frozen, drain the freeze by REAL elapsed time and feed no
+    // time into the sim (render still runs below), then resume normally.
+    let effectiveTimeScale = this.timeScale;
+    if (this.hitStopRemaining > 0) {
+      this.hitStopRemaining = Math.max(0, this.hitStopRemaining - frameTime);
+      effectiveTimeScale = 0;
+    }
+
+    this.accumulator += frameTime * effectiveTimeScale;
 
     let steps = 0;
     while (

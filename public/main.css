@@ -64,3 +64,11 @@ canvas {
   image-rendering: pixelated;
   width: 100vw;
 }
+
+/* Cosmetic particle overlay, composited directly over the game canvas. */
+.particle-overlay {
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 1;
+}

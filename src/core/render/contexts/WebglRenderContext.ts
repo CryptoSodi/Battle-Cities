@@ -35,9 +35,13 @@ uniform sampler2D u_texture;
 uniform bool u_useTexture;
 uniform vec4 u_color;
 uniform float u_alpha;
+uniform float u_flash;
 varying vec2 v_texcoord;
 void main() {
   vec4 color = u_useTexture ? texture2D(u_texture, v_texcoord) : u_color;
+  // Tint toward white for the hit flash; alpha is left untouched so
+  // transparent texels stay transparent (white silhouette, not a box).
+  color.rgb = mix(color.rgb, vec3(1.0), u_flash);
   color.a *= u_alpha;
   gl_FragColor = color;
 }
@@ -56,6 +60,7 @@ export class WebglRenderContext extends RenderContext {
   private uUseTexture: WebGLUniformLocation;
   private uColor: WebGLUniformLocation;
   private uAlpha: WebGLUniformLocation;
+  private uFlash: WebGLUniformLocation;
   private quadBuffer: WebGLBuffer;
   private lineBuffer: WebGLBuffer;
   private projection: Matrix4;
@@ -113,6 +118,7 @@ export class WebglRenderContext extends RenderContext {
     this.uUseTexture = gl.getUniformLocation(this.program, 'u_useTexture');
     this.uColor = gl.getUniformLocation(this.program, 'u_color');
     this.uAlpha = gl.getUniformLocation(this.program, 'u_alpha');
+    this.uFlash = gl.getUniformLocation(this.program, 'u_flash');
 
     // Unit quad shared by every sprite/fill (two triangles covering 0..1).
     this.quadBuffer = gl.createBuffer();
@@ -152,6 +158,7 @@ export class WebglRenderContext extends RenderContext {
     image: ImageSource,
     sourceRect: Rect,
     destinationRect: Rect,
+    flash = 0,
   ): void {
     const gl = this.gl;
     const element = image.getElement() as TexImageSource;
@@ -181,6 +188,7 @@ export class WebglRenderContext extends RenderContext {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1i(this.uUseTexture, 1);
     gl.uniform1f(this.uAlpha, this.globalAlpha);
+    gl.uniform1f(this.uFlash, flash);
     gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
     gl.uniformMatrix4fv(this.uTextureMatrix, false, textureMatrix.elements);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -203,6 +211,7 @@ export class WebglRenderContext extends RenderContext {
     gl.uniform1i(this.uUseTexture, 0);
     gl.uniform4fv(this.uColor, this.parseColor(color));
     gl.uniform1f(this.uAlpha, this.globalAlpha);
+    gl.uniform1f(this.uFlash, 0);
     gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
     gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -271,6 +280,7 @@ export class WebglRenderContext extends RenderContext {
     gl.uniform1i(this.uUseTexture, 0);
     gl.uniform4fv(this.uColor, this.parseColor(color));
     gl.uniform1f(this.uAlpha, this.globalAlpha);
+    gl.uniform1f(this.uFlash, 0);
     gl.uniformMatrix4fv(this.uMatrix, false, this.projection.elements);
     gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
     gl.drawArrays(mode, 0, positions.length);

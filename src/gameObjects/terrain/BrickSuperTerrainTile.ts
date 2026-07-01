@@ -1,4 +1,4 @@
-import { BoxCollider } from '../../core';
+import { BoxCollider, Subject, Vector } from '../../core';
 import { GameUpdateArgs, Tag } from '../../game';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
@@ -18,6 +18,11 @@ export class BrickSuperTerrainTile extends TerrainTile {
   public type = TerrainType.BrickSuper;
   public collider = new BoxCollider(this);
   public readonly tags = [Tag.BlockMove];
+  // Fires for each individual sub-brick destroyed (not just when the whole
+  // super-tile clears), carrying the sub-brick's field-local center. Purely
+  // cosmetic hook — the level scene uses it to spawn destruction debris so
+  // every chipped brick shows particles, not only the final one in a cell.
+  public subTileDestroyed = new Subject<Vector>();
   private subTiles: BrickTerrainTile[];
 
   constructor(subTiles: BrickTerrainTile[]) {
@@ -48,6 +53,15 @@ export class BrickSuperTerrainTile extends TerrainTile {
           return;
         }
         this.subTiles.splice(index, 1);
+
+        // Sub-tile position is local to this super-tile; lift it to field-local
+        // (same space the particle overlay expects) for the debris burst.
+        this.subTileDestroyed.notify(
+          new Vector(
+            this.position.x + tile.position.x + tile.size.width / 2,
+            this.position.y + tile.position.y + tile.size.height / 2,
+          ),
+        );
 
         if (this.subTiles.length === 0) {
           this.destroy();

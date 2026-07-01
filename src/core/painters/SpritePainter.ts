@@ -10,6 +10,9 @@ export class SpritePainter extends Painter {
   public alignment: SpriteAlignment;
   public sprite: Sprite = null;
   public opacity = 1;
+  // White-tint amount [0..1] for a hit flash. 0 = draw unmodified. Render-only;
+  // set by the owning object (e.g. Tank on hit) and never read by the sim.
+  public flash = 0;
 
   constructor(sprite: Sprite = null, alignment = SpriteAlignment.MiddleCenter) {
     super();
@@ -64,6 +67,7 @@ export class SpritePainter extends Painter {
       this.sprite.image,
       this.sprite.sourceRect,
       destinationRect,
+      this.flash,
     );
 
     if (this.opacity !== 1) {
