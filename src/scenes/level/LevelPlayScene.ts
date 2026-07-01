@@ -127,6 +127,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.inputManager = inputManager;
     this.session = session;
+    this.applyRunExtraLives();
 
     const playerSpawnPositions = mapConfig.getPlayerSpawnPositions();
     this.initialCameraTarget =
@@ -451,6 +452,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private handleZoomOutTimer = (): void => {
     this.cameraZoom = this.baseCameraZoom;
   };
+
+  private applyRunExtraLives(): void {
+    const extraLives = this.session.getRunConsumables().extraLives;
+
+    for (let index = 0; index < extraLives; index += 1) {
+      this.session.primaryPlayer.addLife();
+      if (this.session.isMultiplayer()) {
+        this.session.secondaryPlayer.addLife();
+      }
+    }
+  }
 
   private handleBaseDied = (): void => {
     this.session.setGameOver();

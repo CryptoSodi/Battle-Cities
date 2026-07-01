@@ -19,4 +19,12 @@ export class MenuDescription extends GameObject {
     this.text.position.set(16, 16);
     this.add(this.text);
   }
+
+  public setMessage(message: string): void {
+    this.message = message;
+
+    if (this.text !== undefined) {
+      this.text.setText(message);
+    }
+  }
 }

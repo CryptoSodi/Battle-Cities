@@ -18,6 +18,7 @@ import {
   MainGameOverScene,
   MainHighscoreScene,
   MainMenuScene,
+  MainShopScene,
   MainVictoryScene,
 } from './main';
 import { ModesCustomScene, ModesMenuScene } from './modes';
@@ -45,6 +46,7 @@ export class GameSceneRouter extends SceneRouter<GameScene> {
     this.register(GameSceneType.MainGameOver, MainGameOverScene);
     this.register(GameSceneType.MainHighscore, MainHighscoreScene);
     this.register(GameSceneType.MainMenu, MainMenuScene);
+    this.register(GameSceneType.MainShop, MainShopScene);
     this.register(GameSceneType.MainVictory, MainVictoryScene);
     this.register(GameSceneType.ModesMenu, ModesMenuScene);
     this.register(GameSceneType.ModesCustom, ModesCustomScene);

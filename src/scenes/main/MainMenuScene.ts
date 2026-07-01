@@ -4,6 +4,7 @@ import { Menu, SpriteText, TextMenuItem } from '../../gameObjects';
 import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
+import { ShopManager } from '../../shop';
 import * as config from '../../config';
 
 import { GameScene } from '../GameScene';
@@ -27,12 +28,14 @@ export class MainMenuScene extends GameScene {
   private multiPlayerItem: TextMenuItem;
   private modesItem: TextMenuItem;
   private editorItem: TextMenuItem;
+  private shopItem: TextMenuItem;
   private settingsItem: TextMenuItem;
   private aboutItem: TextMenuItem;
   private state: State = State.Ready;
   private session: Session;
   private mapLoader: MapLoader;
   private pointsHighscoreManager: PointsHighscoreManager;
+  private shopManager: ShopManager;
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mobileGamepadQrEnabled = false;
@@ -43,10 +46,12 @@ export class MainMenuScene extends GameScene {
     pointsHighscoreManager,
     session,
     spriteLoader,
+    gameStorage,
   }: GameUpdateArgs): void {
     this.session = session;
     this.mapLoader = mapLoader;
     this.pointsHighscoreManager = pointsHighscoreManager;
+    this.shopManager = new ShopManager(gameStorage);
 
     // Restore source for maps to default
     mapLoader.restoreDefaultReader();
@@ -97,6 +102,9 @@ export class MainMenuScene extends GameScene {
     this.editorItem = new TextMenuItem('CONSTRUCTION');
     this.editorItem.selected.addListener(this.handleEditorSelected);
 
+    this.shopItem = new TextMenuItem('SHOP');
+    this.shopItem.selected.addListener(this.handleShopSelected);
+
     this.settingsItem = new TextMenuItem('SETTINGS');
     this.settingsItem.selected.addListener(this.handleSettingsSelected);
 
@@ -109,7 +117,7 @@ export class MainMenuScene extends GameScene {
       menuItems.push(this.multiPlayerItem, this.modesItem, this.editorItem);
     }
 
-    menuItems.push(this.settingsItem, this.aboutItem);
+    menuItems.push(this.shopItem, this.settingsItem, this.aboutItem);
 
     this.menu = new Menu();
     this.menu.setItems(menuItems);
@@ -202,6 +210,11 @@ export class MainMenuScene extends GameScene {
   private handleSinglePlayerSelected = (): void => {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
+    if (!this.prepareTokenRun()) {
+      this.navigator.push(GameSceneType.MainShop);
+      return;
+    }
+
     this.session.start(1, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
@@ -209,10 +222,25 @@ export class MainMenuScene extends GameScene {
   private handleMultiPlayerSelected = (): void => {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
+    if (!this.prepareTokenRun()) {
+      this.navigator.push(GameSceneType.MainShop);
+      return;
+    }
+
     this.session.setMultiplayer();
     this.session.start(1, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
   };
+
+  private prepareTokenRun(): boolean {
+    if (!this.shopManager.consumeFuelForRun()) {
+      return false;
+    }
+
+    this.session.setRunConsumables(this.shopManager.consumeEquippedItems());
+
+    return true;
+  }
 
   private handleModesSelected = (): void => {
     this.mobileGamepadQrEnabled = false;
@@ -224,6 +252,12 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.EditorMenu);
+  };
+
+  private handleShopSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+    this.navigator.push(GameSceneType.MainShop);
   };
 
   private handleSettingsSelected = (): void => {

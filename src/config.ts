@@ -220,6 +220,16 @@ export const STORAGE_KEY_SETTINGS_SHOW_LEVEL_HINT = 'settings.show-level-hint';
 export const STORAGE_KEY_SETTINGS_SHOW_EDITOR_HINT =
   'settings.show-editor-hint';
 export const STORAGE_KEY_SETTINGS_SHOW_SCANLINES = 'settings.show-scanlines';
+export const STORAGE_KEY_SHOP_WALLET_CONNECTED = 'shop.wallet-connected';
+export const STORAGE_KEY_SHOP_WALLET_ADDRESS = 'shop.wallet-address';
+export const STORAGE_KEY_SHOP_TOKEN_BALANCE = 'shop.token-balance';
+export const STORAGE_KEY_SHOP_FUEL_BALANCE = 'shop.fuel-balance';
+export const STORAGE_KEY_SHOP_INVENTORY = 'shop.inventory';
+export const STORAGE_KEY_SHOP_LOADOUT = 'shop.loadout';
+export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
+
+export const SHOP_STARTING_TOKEN_BALANCE = 1000;
+export const SHOP_RUN_FUEL_COST = 1;
 
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [
   { x: FIELD_CONTENT_OFFSET_X + 256, y: FIELD_CONTENT_OFFSET_Y + 768 },

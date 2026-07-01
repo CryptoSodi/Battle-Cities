@@ -114,7 +114,8 @@ export class LevelPlayerScript extends LevelScript {
     // Check if tank tier from previous level should be activated.
     // If tank dies - it loses all this tiers, so it applies only to first
     // spawn.
-    if (playerSession.isLevelFirstSpawn()) {
+    const isLevelFirstSpawn = playerSession.isLevelFirstSpawn();
+    if (isLevelFirstSpawn) {
       const carryoverTier = playerSession.getTankTier();
       tank.upgrade(carryoverTier, false);
     }
@@ -152,7 +153,29 @@ export class LevelPlayerScript extends LevelScript {
     this.tanks[partyIndex] = tank;
 
     this.world.addPlayerTank(partyIndex, tank);
+    this.applyRunConsumables(partyIndex, tank, isLevelFirstSpawn);
   };
+
+  private applyRunConsumables(
+    partyIndex: number,
+    tank: PlayerTank,
+    isLevelFirstSpawn: boolean,
+  ): void {
+    if (partyIndex !== 0 || !isLevelFirstSpawn) {
+      return;
+    }
+
+    const runConsumables = this.session.getRunConsumables();
+    runConsumables.powerups.forEach((type) => {
+      this.eventBus.powerupPicked.notify({
+        type,
+        centerPosition: tank.getCenter(),
+        partyIndex,
+      });
+    });
+
+    this.session.clearRunConsumables();
+  }
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
     const { type: powerupType, partyIndex } = event;

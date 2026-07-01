@@ -1,4 +1,10 @@
 import { SessionPlayer } from './SessionPlayer';
+import { PowerupType } from '../powerup';
+
+export interface SessionRunConsumables {
+  powerups: PowerupType[];
+  extraLives: number;
+}
 
 enum State {
   Idle,
@@ -17,6 +23,7 @@ export class Session {
   private multiplayer: boolean;
   private seenIntro: boolean;
   private state: State;
+  private runConsumables: SessionRunConsumables;
 
   constructor() {
     this.reset();
@@ -43,6 +50,10 @@ export class Session {
     this.state = State.Idle;
     this.playtest = false;
     this.multiplayer = false;
+    this.runConsumables = {
+      powerups: [],
+      extraLives: 0,
+    };
 
     this.primaryPlayer.reset();
     this.secondaryPlayer.reset();
@@ -158,5 +169,20 @@ export class Session {
 
   public isMultiplayer(): boolean {
     return this.multiplayer;
+  }
+
+  public setRunConsumables(runConsumables: SessionRunConsumables): void {
+    this.runConsumables = runConsumables;
+  }
+
+  public getRunConsumables(): SessionRunConsumables {
+    return this.runConsumables;
+  }
+
+  public clearRunConsumables(): void {
+    this.runConsumables = {
+      powerups: [],
+      extraLives: 0,
+    };
   }
 }
