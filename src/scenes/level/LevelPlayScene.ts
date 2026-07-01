@@ -49,6 +49,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private baseCameraZoom = config.GAMEPLAY_ZOOM;
   private zoomOutTimer = new Timer();
   private initialCameraTarget: Vector;
+  // Reactive-camera state (all presentation-only; never read by the sim).
+  private cameraBase: Vector = null; // smoothed follow position (no shake)
+  private prevPlayerCenter: Vector = null;
+  private lookAheadX = 0;
+  private lookAheadY = 0;
+  private cameraTrauma = 0;
 
   private allScripts: LevelScript[] = [];
   private alwaysUpdateScripts: LevelScript[] = [];
@@ -238,6 +244,22 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.handleLevelGameOverMoveBlocked,
     );
     this.eventBus.levelWinCompleted.addListener(this.handleLevelWinCompleted);
+
+    // Reactive-camera trauma (screen shake) fed off gameplay events.
+    this.eventBus.playerFired.addListener(() => {
+      this.addCameraTrauma(config.CAMERA_TRAUMA_FIRE);
+    });
+    this.eventBus.enemyExploded.addListener(() => {
+      this.addCameraTrauma(config.CAMERA_TRAUMA_ENEMY_EXPLODE);
+    });
+    this.eventBus.mapTileDestroyed.addListener(() => {
+      this.addCameraTrauma(config.CAMERA_TRAUMA_TILE);
+    });
+  }
+
+  // Adds screen-shake trauma (clamped to 1). Presentation-only.
+  private addCameraTrauma(amount: number): void {
+    this.cameraTrauma = Math.min(1, this.cameraTrauma + amount);
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
@@ -268,7 +290,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     });
 
-    this.updateCamera();
+    this.updateCamera(updateArgs.deltaTime);
 
     this.root.updateWorldMatrix(false, true);
 
@@ -282,11 +304,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.clampTanksToFieldBounds();
   }
 
-  private updateCamera(): void {
+  private updateCamera(deltaTime: number): void {
     const targetTank = this.world.getPlayerTanks()[0];
     const fieldWidth = this.world.field.size.width;
     const fieldHeight = this.world.field.size.height;
-    const viewportWidth = config.CANVAS_WIDTH - config.BORDER_LEFT_WIDTH - config.BORDER_RIGHT_WIDTH;
+    const viewportWidth =
+      config.CANVAS_WIDTH -
+      config.BORDER_LEFT_WIDTH -
+      config.BORDER_RIGHT_WIDTH;
     const viewportHeight =
       config.CANVAS_HEIGHT -
       config.LEVEL_PLAY_TOP_OFFSET -
@@ -315,47 +340,96 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         ? targetTank.getCenter()
         : this.initialCameraTarget;
 
-    // World point to keep centered, clamped so the visible window never leaves
-    // the field (or centered when the field is smaller than the window).
+    // Look-ahead: bias the centered point toward the player's movement so more
+    // of the level ahead is visible. Derived from the player's velocity (delta
+    // of center) and eased, so it leads while moving and recenters when idle.
+    if (targetCenter !== null && targetCenter !== undefined) {
+      let desiredLookX = 0;
+      let desiredLookY = 0;
+      if (this.prevPlayerCenter !== null) {
+        const vx = targetCenter.x - this.prevPlayerCenter.x;
+        const vy = targetCenter.y - this.prevPlayerCenter.y;
+        const speed = Math.hypot(vx, vy);
+        if (speed > 0.01) {
+          desiredLookX = (vx / speed) * config.CAMERA_LOOK_AHEAD;
+          desiredLookY = (vy / speed) * config.CAMERA_LOOK_AHEAD;
+        }
+      }
+      this.lookAheadX +=
+        (desiredLookX - this.lookAheadX) * config.CAMERA_LOOK_AHEAD_LERP;
+      this.lookAheadY +=
+        (desiredLookY - this.lookAheadY) * config.CAMERA_LOOK_AHEAD_LERP;
+      this.prevPlayerCenter = targetCenter.clone();
+    }
+
+    // World point to keep centered (target + look-ahead), clamped so the visible
+    // window never leaves the field (or centered when the field is smaller).
     let centerX = fieldWidth / 2;
     let centerY = fieldHeight / 2;
     if (targetCenter !== null && targetCenter !== undefined) {
+      const rawX = targetCenter.x + this.lookAheadX;
+      const rawY = targetCenter.y + this.lookAheadY;
       centerX =
         fieldWidth <= windowWidth
           ? fieldWidth / 2
           : Math.max(
               windowWidth / 2,
-              Math.min(fieldWidth - windowWidth / 2, targetCenter.x),
+              Math.min(fieldWidth - windowWidth / 2, rawX),
             );
       centerY =
         fieldHeight <= windowHeight
           ? fieldHeight / 2
           : Math.max(
               windowHeight / 2,
-              Math.min(fieldHeight - windowHeight / 2, targetCenter.y),
+              Math.min(fieldHeight - windowHeight / 2, rawY),
             );
     }
 
     // field.position is a plain translation (collision-safe); the renderer adds
     // the zoom around the pivot. Centering: screen(centerX) == pivotX.
-    const nextX = pivotX - centerX;
-    const nextY = pivotY - centerY;
+    const targetX = pivotX - centerX;
+    const targetY = pivotY - centerY;
 
-    const currentX = this.world.field.position.x;
-    const currentY = this.world.field.position.y;
-    const deltaX = nextX - currentX;
-    const deltaY = nextY - currentY;
-
-    // Normal following snaps (locked, no lag). A large jump — e.g. recentering
-    // on the spawn when the player dies — eases in instead, so the whole field
-    // (enemies included) pans smoothly rather than teleporting.
-    const SNAP_THRESHOLD = 8;
-    let newX = nextX;
-    let newY = nextY;
-    if (Math.hypot(deltaX, deltaY) > SNAP_THRESHOLD) {
-      newX = currentX + deltaX * 0.2;
-      newY = currentY + deltaY * 0.2;
+    // Follow: the camera BASE tracks the target. During normal play it snaps
+    // (locked, zero lag) so driving feels crisp; only a large discontinuous
+    // jump — e.g. recentering on the spawn after death — eases in so the whole
+    // field pans smoothly instead of teleporting. Shake is added on top of the
+    // base (below) so it never feeds back into the follow. First frame snaps.
+    if (this.cameraBase === null) {
+      this.cameraBase = new Vector(targetX, targetY);
+    } else {
+      const dx = targetX - this.cameraBase.x;
+      const dy = targetY - this.cameraBase.y;
+      if (Math.hypot(dx, dy) > config.CAMERA_SNAP_THRESHOLD) {
+        this.cameraBase.x += dx * config.CAMERA_FOLLOW_LERP;
+        this.cameraBase.y += dy * config.CAMERA_FOLLOW_LERP;
+      } else {
+        this.cameraBase.x = targetX;
+        this.cameraBase.y = targetY;
+      }
     }
+
+    // Trauma shake: decays over time; offset scales with trauma^2 for a punchy
+    // falloff. Cosmetic only, so it uses unseeded Math.random (NOT the sim rng)
+    // and is divided by zoom so the on-screen magnitude is zoom-independent.
+    this.cameraTrauma = Math.max(
+      0,
+      this.cameraTrauma - config.CAMERA_TRAUMA_DECAY * deltaTime,
+    );
+    const shakeMagnitude =
+      this.cameraTrauma *
+      this.cameraTrauma *
+      config.CAMERA_MAX_SHAKE *
+      config.CAMERA_SHAKE_INTENSITY;
+    let shakeX = 0;
+    let shakeY = 0;
+    if (shakeMagnitude > 0) {
+      shakeX = ((Math.random() * 2 - 1) * shakeMagnitude) / zoom;
+      shakeY = ((Math.random() * 2 - 1) * shakeMagnitude) / zoom;
+    }
+
+    const newX = this.cameraBase.x + shakeX;
+    const newY = this.cameraBase.y + shakeY;
 
     if (
       this.world.field.position.x !== newX ||
@@ -391,6 +465,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {
+    this.addCameraTrauma(config.CAMERA_TRAUMA_PLAYER_DIED);
     const playerSession = this.session.getPlayer(event.partyIndex);
     playerSession.removeLife();
 
@@ -465,6 +540,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   private handleBaseDied = (): void => {
+    this.addCameraTrauma(config.CAMERA_TRAUMA_BASE_DIED);
     this.session.setGameOver();
 
     this.pauseScript.disable();

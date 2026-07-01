@@ -151,6 +151,25 @@ export const ZOOM_OUT_POWERUP_DURATION = 10;
 export const SPEED_POWERUP_MULTIPLIER = 1.45;
 export const SPEED_POWERUP_DURATION = 10;
 
+// Reactive camera (follow-lerp, look-ahead, trauma shake). Purely cosmetic —
+// it only translates the field for presentation and never affects the sim, so
+// the shake may use unseeded Math.random without breaking replay determinism.
+export const CAMERA_FOLLOW_LERP = 0.2; // ease factor for large recenter jumps
+// Below this distance the camera snaps to the target (crisp, lag-free play);
+// larger jumps (e.g. death respawn recenter) ease in via CAMERA_FOLLOW_LERP.
+export const CAMERA_SNAP_THRESHOLD = 8;
+export const CAMERA_LOOK_AHEAD = 28; // logical px the view leads the player by
+export const CAMERA_LOOK_AHEAD_LERP = 0.08; // easing of the look-ahead offset
+export const CAMERA_TRAUMA_DECAY = 1.6; // trauma units drained per second
+export const CAMERA_MAX_SHAKE = 12; // logical px shake amplitude at trauma = 1
+export const CAMERA_SHAKE_INTENSITY = 1; // master scalar (0 disables shake)
+// How much trauma [0..1] each event adds.
+export const CAMERA_TRAUMA_FIRE = 0.1;
+export const CAMERA_TRAUMA_TILE = 0.08;
+export const CAMERA_TRAUMA_ENEMY_EXPLODE = 0.42;
+export const CAMERA_TRAUMA_PLAYER_DIED = 0.6;
+export const CAMERA_TRAUMA_BASE_DIED = 0.85;
+
 // Supersampling factor: the canvas backing store renders at this multiple of
 // the logical size, so HD art (authored at 4x) resolves to full detail on
 // screen instead of being sampled down to the gameplay tile size. Gameplay and
@@ -183,6 +202,7 @@ export const FREEZE_POWERUP_DURATION = 10;
 
 export const FRIENDLY_FIRE_STUN_DURATION = 5;
 export const ICE_SLIDE_DURATION = 0.5;
+export const PLAYER_TANK_VISUAL_PADDING = 8;
 
 export const POINTS_POWERUP_DURATION = 0.8;
 export const POINTS_ENEMY_TANK_DURATION = 0.16;

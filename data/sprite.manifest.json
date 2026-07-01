@@ -673,162 +673,162 @@
   },
   "tank.player.primary.a.up.1": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [24, 24, 208, 208],
+    "rect": [0, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.up.2": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [280, 24, 208, 208],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.down.1": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [536, 24, 208, 208],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.down.2": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [792, 24, 208, 208],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.left.1": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [1048, 24, 208, 208],
+    "rect": [1024, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.left.2": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [1304, 24, 208, 208],
+    "rect": [1280, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.right.1": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [1560, 24, 208, 208],
+    "rect": [1536, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.a.right.2": {
     "file": "data/graphics/player-tank-primary-star1.png",
-    "rect": [1816, 24, 208, 208],
+    "rect": [1792, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.up.1": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [24, 0, 208, 256],
+    "rect": [0, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.up.2": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [280, 0, 208, 256],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.down.1": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [536, 0, 208, 256],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.down.2": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [792, 0, 208, 256],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.left.1": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [1024, 24, 256, 208],
+    "rect": [1024, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.left.2": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [1280, 24, 256, 208],
+    "rect": [1280, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.right.1": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [1536, 24, 256, 208],
+    "rect": [1536, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.right.2": {
     "file": "data/graphics/player-tank-primary-star2.png",
-    "rect": [1792, 24, 256, 208],
+    "rect": [1792, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.up.1": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [24, 8, 208, 240],
+    "rect": [0, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.up.2": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [280, 8, 208, 240],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.down.1": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [536, 8, 208, 240],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.down.2": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [792, 8, 208, 240],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.left.1": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [1032, 24, 240, 208],
+    "rect": [1024, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.left.2": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [1288, 24, 240, 208],
+    "rect": [1280, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.right.1": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [1544, 24, 240, 208],
+    "rect": [1536, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.right.2": {
     "file": "data/graphics/player-tank-primary-star3.png",
-    "rect": [1800, 24, 240, 208],
+    "rect": [1792, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.up.1": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [16, 8, 224, 240],
+    "rect": [0, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.up.2": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [272, 8, 224, 240],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.down.1": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [528, 8, 224, 240],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.down.2": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [784, 8, 224, 240],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.left.1": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [1032, 16, 240, 224],
+    "rect": [1024, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.left.2": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [1288, 16, 240, 224],
+    "rect": [1280, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.right.1": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [1544, 16, 240, 224],
+    "rect": [1536, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.d.right.2": {
     "file": "data/graphics/player-tank-primary-star4.png",
-    "rect": [1800, 16, 240, 224],
+    "rect": [1792, 0, 256, 256],
     "scale": 4
   },
   "tank.player.secondary.a.up.1": {

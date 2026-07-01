@@ -491,11 +491,19 @@ gameLoop.update.addListener((event) => {
   pendingPointerClick = null;
 
   const scene = sceneRouter.getCurrentScene();
+  // Snapshot positions before the step moves anything, so the renderer can
+  // interpolate between this step and the next for smooth motion.
+  const root = scene.getRoot();
+  if (root != null) {
+    root.traverse((object) => {
+      object.interpCapture();
+    });
+  }
   scene.invokeUpdate(updateArgs);
 });
 
 // Presentation: runs exactly once per animation frame.
-gameLoop.render.addListener(() => {
+gameLoop.render.addListener((event) => {
   stats.begin();
 
   const scene = sceneRouter.getCurrentScene();
@@ -504,7 +512,7 @@ gameLoop.render.addListener(() => {
   // it exists — e.g. a frame between scene transitions where no sim step has
   // run for the newly-current scene yet.
   if (root != null) {
-    gameRenderer.render(root);
+    gameRenderer.render(root, event.alpha);
   }
 
   gameState.update();

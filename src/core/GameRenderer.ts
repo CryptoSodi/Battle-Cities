@@ -60,7 +60,18 @@ export class GameRenderer {
     return this.canvas;
   }
 
-  public render(root: RenderObject): void {
+  public render(root: RenderObject, alpha = 0): void {
+    // Render interpolation: temporarily move objects to their interpolated
+    // position between fixed sim steps (alpha = fraction toward the next step),
+    // so motion is smooth even when the display refresh rate differs from the
+    // sim rate. Positions are restored after drawing, so the sim is untouched.
+    const interpolating = alpha > 0;
+    if (interpolating) {
+      root.traverse((object) => {
+        object.interpApply(alpha);
+      });
+    }
+
     // Recompute world matrices for the whole tree. Cheap when little moved
     // thanks to the internal dirty flag.
     root.updateWorldMatrix(false, true);
@@ -134,6 +145,14 @@ export class GameRenderer {
     });
 
     this.context.setView(1, 0, 0);
+
+    // Undo the interpolation so the next sim step reads real positions.
+    if (interpolating) {
+      root.traverse((object) => {
+        object.interpRestore();
+      });
+      root.updateWorldMatrix(false, true);
+    }
   }
 
   private renderObject(renderObject: RenderObject): void {

@@ -42,10 +42,65 @@ export class Transform extends Node {
   public matrixAutoUpdate = false;
   public worldMatrixNeedsUpdate = false;
 
+  // Render interpolation: position at the start of the current sim step
+  // (interpPrev) and the real position (interpActual) saved while the object is
+  // temporarily moved to its interpolated position for drawing. Presentation
+  // only — the sim always runs on the real position.
+  public interpPrev = new Vector(0, 0);
+  public interpActual = new Vector(0, 0);
+  public interpHasPrev = false;
+  public interpApplied = false;
+
   constructor(width = 0, height = 0) {
     super();
 
     this.size = new Size(width, height);
+  }
+
+  // Snapshot the current position as the "previous" step state. Called once per
+  // fixed sim step (before the step moves anything) so the renderer can
+  // interpolate between steps.
+  public interpCapture(): void {
+    this.interpPrev.copyFrom(this.position);
+    this.interpHasPrev = true;
+  }
+
+  // Temporarily move the object forward along last step's velocity for
+  // rendering: current + (current - prev) * alpha, where alpha is the fraction
+  // into the not-yet-simulated next step. Extrapolation (not interpolation) is
+  // used so there is NO added latency when the display is matched to the sim
+  // rate (alpha ~ 0 -> draw the real position), while still smoothing motion on
+  // higher-refresh displays. Only position is extrapolated (rotation is
+  // discrete). Marks the subtree dirty so world matrices recompute. No-op for
+  // objects that didn't move (prev == current) or have no captured previous.
+  public interpApply(alpha: number): void {
+    this.interpApplied = false;
+    if (!this.interpHasPrev) {
+      return;
+    }
+    if (
+      this.interpPrev.x === this.position.x &&
+      this.interpPrev.y === this.position.y
+    ) {
+      return;
+    }
+    this.interpActual.copyFrom(this.position);
+    this.position.set(
+      this.interpActual.x + (this.interpActual.x - this.interpPrev.x) * alpha,
+      this.interpActual.y + (this.interpActual.y - this.interpPrev.y) * alpha,
+    );
+    this.updateMatrix(true);
+    this.interpApplied = true;
+  }
+
+  // Restore the real position after drawing an interpolated frame.
+  public interpRestore(): void {
+    if (!this.interpApplied) {
+      return;
+    }
+    this.position.copyFrom(this.interpActual);
+    this.updateMatrix(true);
+    this.interpApplied = false;
   }
 
   public rotate(rotation: number): void {

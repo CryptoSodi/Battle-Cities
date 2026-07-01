@@ -124,6 +124,12 @@ export class Tank extends GameObject {
     SKIN_LAYER_DESCRIPTIONS.forEach(() => {
       const layer = new GameObject();
       layer.size.copyFrom(this.size);
+      if (this.tags.includes(Tag.Player)) {
+        const padding = config.PLAYER_TANK_VISUAL_PADDING;
+        layer.position.set(-padding, -padding);
+        layer.size.width += padding * 2;
+        layer.size.height += padding * 2;
+      }
 
       const painter = new SpritePainter();
       painter.alignment = SpriteAlignment.MiddleCenter;

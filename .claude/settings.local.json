@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://api.mainnet-beta.solana.com -X POST -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"DWnskykZu7JbA7sZvJo7uuLBrhgunPzEfmAgjsHuSM4T\"]}')",
+      "WebSearch",
+      "mcp__visualize__read_me",
+      "Bash(identify data/graphics/sprite.png)",
+      "Bash(node -e 'const fs=require\\(\"fs\"\\);const j=JSON.parse\\(fs.readFileSync\\(\"C:/Users/tassa/AppData/Local/Temp/claude/C--repos-BattleCity/8e601f54-debe-45cb-af87-d8f90c1b53fa/tasks/wzl4badjl.output\",\"utf8\"\\)\\);fs.writeFileSync\\(\"C:/repos/BattleCity/docs/REIMAGINATION.md\",j.result.synth.docMarkdown\\);console.log\\(\"wrote \"+j.result.synth.docMarkdown.length+\" chars to docs/REIMAGINATION.md\"\\);')",
+      "Bash(node tools/artgen/player-tank.js)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node tools/artgen/enemy-tanks.js)",
+      "Bash(node tools/artgen/terrain.js)",
+      "Bash(node tools/artgen/powerups.js)",
+      "Bash(node tools/artgen/base.js)",
+      "Bash(node tools/artgen/effects.js)",
+      "Bash(node tools/artgen/ui.js)",
+      "Bash(node tools/artgen/brick-variants.js)",
+      "mcp__visualize__show_widget",
+      "Bash(node -e 'const m=require\\(\"./data/sprite.manifest.json\"\\);Object.keys\\(m\\).filter\\(k=>k.startsWith\\(\"terrain.water\"\\)\\).sort\\(\\).forEach\\(k=>console.log\\(k, JSON.stringify\\(m[k].rect\\), \"scale\", m[k].scale\\)\\);')"
+    ]
+  }
+}
