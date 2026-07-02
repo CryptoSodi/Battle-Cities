@@ -1,6 +1,7 @@
 const merge = require('webpack-merge');
 
 const baseConfig = require('./base.config');
+const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
 
 function readJsonBody(request) {
@@ -25,6 +26,12 @@ function sendJson(response, status, body) {
   response.status(status).json(body);
 }
 
+function setReplayCookie(response, replayGuest) {
+  if (replayGuest.setCookie !== null) {
+    response.setHeader('set-cookie', replayGuest.setCookie);
+  }
+}
+
 function attachReplayApi(app) {
   if (app.locals?.battleCityReplayApiAttached) {
     return;
@@ -33,10 +40,15 @@ function attachReplayApi(app) {
   app.locals.battleCityReplayApiAttached = true;
 
   app.get('/api/replays', async (request, response) => {
-    const { id, guestId } = request.query;
+    const replayGuest = replayIdentity.resolveReplayGuest(
+      request.headers.cookie || '',
+    );
+    setReplayCookie(response, replayGuest);
+
+    const { id } = request.query;
 
     if (typeof id === 'string') {
-      const record = await replayStore.readRecord(id);
+      const record = await replayStore.readRecord(id, replayGuest.guestId);
       if (record === null) {
         sendJson(response, 404, { error: 'Replay not found' });
         return;
@@ -46,17 +58,17 @@ function attachReplayApi(app) {
       return;
     }
 
-    if (!replayStore.isValidGuestId(guestId)) {
-      sendJson(response, 400, { error: 'Missing guestId' });
-      return;
-    }
-
     sendJson(response, 200, {
-      items: await replayStore.listSummaries(guestId),
+      items: await replayStore.listSummaries(replayGuest.guestId),
     });
   });
 
   app.post('/api/replays', async (request, response) => {
+    const replayGuest = replayIdentity.resolveReplayGuest(
+      request.headers.cookie || '',
+    );
+    setReplayCookie(response, replayGuest);
+
     let body;
     try {
       body = await readJsonBody(request);
@@ -65,15 +77,15 @@ function attachReplayApi(app) {
       return;
     }
 
-    if (
-      !replayStore.isValidGuestId(body.guestId) ||
-      !replayStore.isValidReplay(body.replay)
-    ) {
+    if (!replayStore.isValidReplay(body.replay)) {
       sendJson(response, 400, { error: 'Invalid replay payload' });
       return;
     }
 
-    const record = await replayStore.createRecord(body.guestId, body.replay);
+    const record = await replayStore.createRecord(
+      replayGuest.guestId,
+      body.replay,
+    );
     sendJson(response, 201, { item: replayStore.toSummary(record) });
   });
 }

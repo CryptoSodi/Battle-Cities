@@ -1,7 +1,6 @@
 import { DeviceInputFrame } from '../core';
 import { GameStorage, SessionRunConsumables } from '../game';
 import { InputDeviceType } from '../input';
-import * as config from '../config';
 
 import { EnemyMovementFrame } from './EnemyMovementFrame';
 import { PowerupSpawnFrame } from './PowerupSpawnFrame';
@@ -38,79 +37,29 @@ export interface SavedReplayRecord extends SavedReplaySummary {
 }
 
 export async function saveReplay(
-  gameStorage: GameStorage,
+  _gameStorage: GameStorage,
   replay: SavedReplay,
 ): Promise<void> {
-  gameStorage.set(config.STORAGE_KEY_DEBUG_LAST_REPLAY, JSON.stringify(replay));
-  gameStorage.save();
+  const response = await fetch('/api/replays', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      replay,
+    }),
+  });
 
-  try {
-    await fetch('/api/replays', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        guestId: getReplayGuestId(gameStorage),
-        replay,
-      }),
-    });
-  } catch {
-    // Server replay storage is best-effort for now; localStorage remains the
-    // fallback so recording does not break local webpack-dev-server sessions.
+  if (!response.ok) {
+    throw new Error('Replay could not be saved.');
   }
-}
-
-// Returns null if nothing has been recorded yet, or what's stored doesn't
-// look like a SavedReplay (e.g. an older/incompatible format).
-export function loadReplay(gameStorage: GameStorage): SavedReplay | null {
-  const json = gameStorage.get(config.STORAGE_KEY_DEBUG_LAST_REPLAY);
-
-  if (json === undefined || json === null) {
-    return null;
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return null;
-  }
-
-  const isValid =
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    typeof parsed.seed === 'number' &&
-    typeof parsed.levelNumber === 'number' &&
-    typeof parsed.deviceFrames === 'object' &&
-    parsed.deviceFrames !== null &&
-    typeof parsed.activeDeviceType === 'number' &&
-    typeof parsed.enemyTraces === 'object' &&
-    parsed.enemyTraces !== null &&
-    Array.isArray(parsed.powerupSpawns);
-
-  if (!isValid) {
-    return null;
-  }
-
-  if (parsed.runConsumables === undefined) {
-    parsed.runConsumables = createEmptyRunConsumables();
-  }
-
-  if (!isValidRunConsumables(parsed.runConsumables)) {
-    return null;
-  }
-
-  return parsed as SavedReplay;
 }
 
 export async function listReplaySummaries(
-  gameStorage: GameStorage,
+  _gameStorage: GameStorage,
 ): Promise<SavedReplaySummary[]> {
   try {
-    const response = await fetch(
-      `/api/replays?guestId=${encodeURIComponent(getReplayGuestId(gameStorage))}`,
-    );
+    const response = await fetch('/api/replays');
     if (!response.ok) {
       throw new Error(response.statusText);
     }
@@ -120,31 +69,14 @@ export async function listReplaySummaries(
       return body.items.filter(isValidReplaySummary);
     }
   } catch {
-    // Fall back below.
-  }
-
-  const replay = loadReplay(gameStorage);
-  if (replay === null) {
     return [];
   }
-
-  return [
-    {
-      id: 'local-last',
-      createdAt: '',
-      levelNumber: replay.levelNumber,
-    },
-  ];
 }
 
 export async function loadReplayRecord(
-  gameStorage: GameStorage,
+  _gameStorage: GameStorage,
   id: string,
 ): Promise<SavedReplay | null> {
-  if (id === 'local-last') {
-    return loadReplay(gameStorage);
-  }
-
   try {
     const response = await fetch(`/api/replays?id=${encodeURIComponent(id)}`);
     if (!response.ok) {
@@ -165,21 +97,6 @@ export async function loadReplayRecord(
   }
 
   return null;
-}
-
-function getReplayGuestId(gameStorage: GameStorage): string {
-  let guestId = gameStorage.get(config.STORAGE_KEY_DEBUG_REPLAY_GUEST_ID);
-  if (guestId !== undefined && guestId !== null && guestId !== '') {
-    return guestId;
-  }
-
-  guestId = `guest-${Date.now().toString(36)}-${Math.floor(
-    Math.random() * 0xffffff,
-  ).toString(36)}`;
-  gameStorage.set(config.STORAGE_KEY_DEBUG_REPLAY_GUEST_ID, guestId);
-  gameStorage.save();
-
-  return guestId;
 }
 
 function isValidReplaySummary(value): boolean {
