@@ -8,7 +8,36 @@
     <link rel="stylesheet" href="main.css" />
   </head>
   <body>
-    <div data-loading class="loading">LOADING...</div>
+    <main class="auth-shell" data-auth-shell>
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <div class="auth-kicker">Battle Cities</div>
+        <h1 id="auth-title">Enter the battlefield</h1>
+        <p class="auth-copy">
+          Sign in to record matches, protect replays, and prepare your scores for
+          verified leaderboards.
+        </p>
+
+        <div class="auth-actions" aria-label="Login options">
+          <button class="auth-button auth-button--primary" type="button" data-auth-guest>
+            <span class="auth-button__mark" aria-hidden="true">G</span>
+            Continue as guest
+          </button>
+          <button class="auth-button" type="button" data-auth-wallet>
+            <span class="auth-button__mark" aria-hidden="true">W</span>
+            Connect wallet
+          </button>
+          <button class="auth-button" type="button" data-auth-google>
+            <span class="auth-button__mark" aria-hidden="true">G</span>
+            Continue with Google
+          </button>
+        </div>
+
+        <p class="auth-status" data-auth-status role="status" aria-live="polite">
+          Guest login is ready for testing.
+        </p>
+      </section>
+    </main>
+    <div data-loading class="loading" hidden>LOADING...</div>
     <script src="main.js"></script>
   </body>
 </html>

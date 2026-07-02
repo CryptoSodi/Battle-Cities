@@ -5,6 +5,8 @@ require('../server/loadLocalEnv').loadLocalEnv();
 const baseConfig = require('./base.config');
 const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
+const sessionIdentity = require('../server/sessionIdentity');
+const sessionStore = require('../server/sessionStore');
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -40,6 +42,51 @@ function attachReplayApi(app) {
   }
   app.locals = app.locals || {};
   app.locals.battleCityReplayApiAttached = true;
+
+  app.get('/api/session', async (request, response) => {
+    const sessionId = sessionIdentity.resolveSession(
+      request.headers.cookie || '',
+    );
+
+    if (sessionId === null) {
+      sendJson(response, 200, { authenticated: false });
+      return;
+    }
+
+    const session = await sessionStore.readSession(sessionId);
+    if (session === null) {
+      response.setHeader(
+        'set-cookie',
+        sessionIdentity.createClearedSessionCookie(),
+      );
+      sendJson(response, 200, { authenticated: false });
+      return;
+    }
+
+    sendJson(response, 200, sessionStore.toPublicSession(session));
+  });
+
+  app.post('/api/session', async (request, response) => {
+    let body;
+    try {
+      body = await readJsonBody(request);
+    } catch (error) {
+      sendJson(response, 400, { error: 'Invalid JSON' });
+      return;
+    }
+
+    if (body.provider !== 'guest') {
+      sendJson(response, 400, { error: 'Unsupported login provider' });
+      return;
+    }
+
+    const session = await sessionStore.createGuestSession();
+    response.setHeader(
+      'set-cookie',
+      sessionIdentity.createSessionCookie(session.id),
+    );
+    sendJson(response, 201, sessionStore.toPublicSession(session));
+  });
 
   app.get('/api/replays', async (request, response) => {
     const replayGuest = replayIdentity.resolveReplayGuest(

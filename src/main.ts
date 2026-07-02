@@ -39,6 +39,15 @@ import * as rectFontConfig from '../data/fonts/rect-font.json';
 import * as mapManifest from '../data/map.manifest.json';
 
 const loadingElement = document.querySelector('[data-loading]');
+const authShellElement = document.querySelector('[data-auth-shell]') as HTMLElement;
+const guestLoginButton = document.querySelector('[data-auth-guest]') as HTMLButtonElement;
+const walletLoginButton = document.querySelector(
+  '[data-auth-wallet]',
+) as HTMLButtonElement;
+const googleLoginButton = document.querySelector(
+  '[data-auth-google]',
+) as HTMLButtonElement;
+const authStatusElement = document.querySelector('[data-auth-status]') as HTMLElement;
 
 const log = new Logger('main', Logger.Level.Debug);
 
@@ -486,8 +495,96 @@ const stats = new Stats();
 const debugGameLoopMenu = new DebugGameLoopMenu(gameLoop);
 
 if (config.IS_DEV) {
-  document.body.appendChild(stats.dom);
   debugGameLoopMenu.attach();
+}
+
+function waitForLogin(): Promise<void> {
+  return new Promise((resolve) => {
+    let loginStarted = false;
+
+    const setStatus = (message: string): void => {
+      if (authStatusElement !== null) {
+        authStatusElement.textContent = message;
+      }
+    };
+
+    const setGuestBusy = (busy: boolean): void => {
+      if (guestLoginButton !== null) {
+        guestLoginButton.disabled = busy;
+        guestLoginButton.setAttribute('aria-busy', busy ? 'true' : 'false');
+      }
+    };
+
+    const startGuestSession = async (): Promise<void> => {
+      if (loginStarted) {
+        return;
+      }
+
+      loginStarted = true;
+      setGuestBusy(true);
+      setStatus('Starting guest session...');
+
+      try {
+        const response = await fetch('/api/session', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ provider: 'guest' }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Guest session failed.');
+        }
+
+        setStatus('Guest session ready.');
+        resolve();
+      } catch {
+        loginStarted = false;
+        setGuestBusy(false);
+        setStatus('Could not start guest session. Try again.');
+      }
+    };
+
+    fetch('/api/session')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((session) => {
+        if (session?.authenticated === true) {
+          loginStarted = true;
+          setStatus('Guest session is already active.');
+          resolve();
+        }
+      })
+      .catch(() => undefined);
+
+    guestLoginButton?.addEventListener('click', () => {
+      startGuestSession();
+    });
+
+    walletLoginButton?.addEventListener('click', () => {
+      setStatus('Wallet connect is next. Guest login is ready for testing.');
+    });
+
+    googleLoginButton?.addEventListener('click', () => {
+      setStatus('Google login is next. Guest login is ready for testing.');
+    });
+  });
+}
+
+function enterGameView(): void {
+  if (authShellElement !== null) {
+    authShellElement.remove();
+  }
+
+  if (loadingElement instanceof HTMLElement) {
+    loadingElement.hidden = false;
+  }
+
+  document.body.classList.add('game-running');
+
+  if (config.IS_DEV) {
+    document.body.appendChild(stats.dom);
+  }
 }
 
 // Simulation: runs at a fixed timestep, possibly several times per animation
@@ -544,6 +641,9 @@ gameLoop.render.addListener((event) => {
 });
 
 async function main(): Promise<void> {
+  await waitForLogin();
+  enterGameView();
+
   log.time('Audio preload');
   loadingElement.textContent = 'Loading audio...';
   await audioLoader.preloadAllAsync();
