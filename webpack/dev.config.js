@@ -1,5 +1,7 @@
 const merge = require('webpack-merge');
 
+require('../server/loadLocalEnv').loadLocalEnv();
+
 const baseConfig = require('./base.config');
 const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
