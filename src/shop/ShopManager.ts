@@ -4,6 +4,7 @@ import * as config from '../config';
 import {
   getPowerupTypeForInventoryItem,
   ShopCatalogItem,
+  ShopCurrency,
   ShopInventoryItemId,
   ShopItemId,
   ShopLoadoutSlot,
@@ -19,54 +20,63 @@ const CATALOG: ShopCatalogItem[] = [
     id: ShopItemId.FuelOne,
     name: 'FUEL X1',
     price: 10,
+    solPrice: 0.01,
     reward: { fuel: 1 },
   },
   {
     id: ShopItemId.FuelFive,
     name: 'FUEL X5',
     price: 45,
+    solPrice: 0.04,
     reward: { fuel: 5 },
   },
   {
     id: ShopItemId.FuelTwenty,
     name: 'FUEL X20',
     price: 160,
+    solPrice: 0.12,
     reward: { fuel: 20 },
   },
   {
     id: ShopItemId.Shield,
     name: 'SHIELD',
     price: 25,
+    solPrice: 0.02,
     reward: { inventory: { [ShopInventoryItemId.Shield]: 1 } },
   },
   {
     id: ShopItemId.BaseDefence,
     name: 'BASE DEFENCE',
     price: 30,
+    solPrice: 0.025,
     reward: { inventory: { [ShopInventoryItemId.BaseDefence]: 1 } },
   },
   {
     id: ShopItemId.Freeze,
     name: 'FREEZE',
     price: 35,
+    solPrice: 0.03,
     reward: { inventory: { [ShopInventoryItemId.Freeze]: 1 } },
   },
   {
     id: ShopItemId.Wipeout,
     name: 'WIPEOUT',
     price: 45,
+    solPrice: 0.04,
     reward: { inventory: { [ShopInventoryItemId.Wipeout]: 1 } },
   },
   {
     id: ShopItemId.ExtraLife,
     name: 'EXTRA LIFE',
     price: 40,
+    solPrice: 0.035,
     reward: { inventory: { [ShopInventoryItemId.ExtraLife]: 1 } },
   },
   {
     id: ShopItemId.StarterPack,
     name: 'STARTER PACK',
     price: 90,
+    solPrice: 0.08,
     reward: {
       fuel: 5,
       inventory: {
@@ -114,6 +124,12 @@ export class ShopManager {
         config.SHOP_STARTING_TOKEN_BALANCE,
       );
     }
+    if (this.storage.get(config.STORAGE_KEY_SHOP_SOL_BALANCE) === undefined) {
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_SOL_BALANCE,
+        config.SHOP_STARTING_SOL_BALANCE,
+      );
+    }
 
     this.storage.save();
   }
@@ -126,6 +142,13 @@ export class ShopManager {
     return this.storage.getNumber(
       config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
       config.SHOP_STARTING_TOKEN_BALANCE,
+    );
+  }
+
+  public getSolBalance(): number {
+    return this.storage.getNumber(
+      config.STORAGE_KEY_SHOP_SOL_BALANCE,
+      config.SHOP_STARTING_SOL_BALANCE,
     );
   }
 
@@ -145,7 +168,10 @@ export class ShopManager {
     return this.getLoadout()[slot] || null;
   }
 
-  public purchaseItem(itemId: ShopItemId): ShopPurchaseResult {
+  public purchaseItem(
+    itemId: ShopItemId,
+    currency = ShopCurrency.Token,
+  ): ShopPurchaseResult {
     if (!this.isWalletConnected()) {
       return { ok: false, statusText: 'CONNECT WALLET' };
     }
@@ -155,15 +181,25 @@ export class ShopManager {
       return { ok: false, statusText: 'ITEM NOT FOUND' };
     }
 
-    const tokenBalance = this.getTokenBalance();
-    if (tokenBalance < item.price) {
-      return { ok: false, statusText: 'NEED MORE BCT' };
+    if (currency === ShopCurrency.Sol) {
+      const solBalance = this.getSolBalance();
+      if (solBalance < item.solPrice) {
+        return { ok: false, statusText: 'NEED MORE SOL' };
+      }
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_SOL_BALANCE,
+        Number((solBalance - item.solPrice).toFixed(4)),
+      );
+    } else {
+      const tokenBalance = this.getTokenBalance();
+      if (tokenBalance < item.price) {
+        return { ok: false, statusText: 'NEED MORE BCT' };
+      }
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+        tokenBalance - item.price,
+      );
     }
-
-    this.storage.setNumber(
-      config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
-      tokenBalance - item.price,
-    );
 
     this.addFuel(item.reward.fuel || 0);
     this.addInventory(item.reward.inventory || {});

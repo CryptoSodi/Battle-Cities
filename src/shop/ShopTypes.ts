@@ -26,6 +26,11 @@ export enum ShopLoadoutSlot {
   Passive = 'passive',
 }
 
+export enum ShopCurrency {
+  Token = 'token',
+  Sol = 'sol',
+}
+
 export interface ShopCatalogReward {
   fuel?: number;
   inventory?: Partial<Record<ShopInventoryItemId, number>>;
@@ -35,6 +40,7 @@ export interface ShopCatalogItem {
   id: ShopItemId;
   name: string;
   price: number;
+  solPrice: number;
   reward: ShopCatalogReward;
 }
 

@@ -30,6 +30,17 @@ export abstract class RenderContext {
     height: number,
     color: string,
   );
+  abstract drawText(
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    fontSize: number,
+    fontFamily: string,
+    fontWeight: string,
+    color: string,
+    align?: CanvasTextAlign,
+  );
   abstract getGlobalAlpha(): number;
   abstract setGlobalAlpha(alpha: number);
   // View transform applied to subsequent draws: screen = world * scale + offset.

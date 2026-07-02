@@ -135,6 +135,32 @@ export class CanvasRenderContext extends RenderContext {
     );
   }
 
+  public drawText(
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    fontSize: number,
+    fontFamily: string,
+    fontWeight: string,
+    color: string,
+    align: CanvasTextAlign = 'left',
+  ): void {
+    const s = this.viewScale;
+    this.context.save();
+    this.context.fillStyle = color;
+    this.context.font = `${fontWeight} ${fontSize * s}px ${fontFamily}`;
+    this.context.textAlign = align;
+    this.context.textBaseline = 'top';
+    this.context.fillText(
+      text,
+      x * s + this.viewOffsetX,
+      y * s + this.viewOffsetY,
+      maxWidth * s,
+    );
+    this.context.restore();
+  }
+
   public getGlobalAlpha(): number {
     return this.context.globalAlpha;
   }

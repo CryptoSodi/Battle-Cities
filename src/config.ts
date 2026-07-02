@@ -289,6 +289,7 @@ export const STORAGE_KEY_SETTINGS_SHOW_SCANLINES = 'settings.show-scanlines';
 export const STORAGE_KEY_SHOP_WALLET_CONNECTED = 'shop.wallet-connected';
 export const STORAGE_KEY_SHOP_WALLET_ADDRESS = 'shop.wallet-address';
 export const STORAGE_KEY_SHOP_TOKEN_BALANCE = 'shop.token-balance';
+export const STORAGE_KEY_SHOP_SOL_BALANCE = 'shop.sol-balance';
 export const STORAGE_KEY_SHOP_FUEL_BALANCE = 'shop.fuel-balance';
 export const STORAGE_KEY_SHOP_INVENTORY = 'shop.inventory';
 export const STORAGE_KEY_SHOP_LOADOUT = 'shop.loadout';
@@ -299,6 +300,7 @@ export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
 export const STORAGE_KEY_DEBUG_LAST_REPLAY = 'debug.last-replay';
 
 export const SHOP_STARTING_TOKEN_BALANCE = 1000;
+export const SHOP_STARTING_SOL_BALANCE = 1.25;
 export const SHOP_RUN_FUEL_COST = 1;
 
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [

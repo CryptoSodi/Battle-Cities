@@ -69,6 +69,7 @@ export class WebglRenderContext extends RenderContext {
   private viewOffsetX = 0;
   private viewOffsetY = 0;
   private textureMap = new Map<TexImageSource, WebGLTexture>();
+  private textCanvasMap = new Map<string, HTMLCanvasElement>();
   private colorCache = new Map<string, [number, number, number, number]>();
   private renderScale: number;
 
@@ -217,6 +218,44 @@ export class WebglRenderContext extends RenderContext {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
+  public drawText(
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    fontSize: number,
+    fontFamily: string,
+    fontWeight: string,
+    color: string,
+    align: CanvasTextAlign = 'left',
+  ): void {
+    const canvas = this.getTextCanvas(
+      text,
+      maxWidth,
+      fontSize,
+      fontFamily,
+      fontWeight,
+      color,
+      align,
+    );
+    const texture = this.getTexture(canvas);
+    const gl = this.gl;
+    const s = this.viewScale;
+    const matrix = this.projection.clone();
+    matrix.translate(x * s + this.viewOffsetX, y * s + this.viewOffsetY, 0);
+    matrix.scale(canvas.width * s, canvas.height * s, 1);
+
+    this.bindQuad();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(this.uUseTexture, 1);
+    gl.uniform1f(this.uAlpha, this.globalAlpha);
+    gl.uniform1f(this.uFlash, 0);
+    gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
+    gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
   public getGlobalAlpha(): number {
     return this.globalAlpha;
   }
@@ -310,6 +349,51 @@ export class WebglRenderContext extends RenderContext {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     this.textureMap.set(element, texture);
     return texture;
+  }
+
+  private getTextCanvas(
+    text: string,
+    maxWidth: number,
+    fontSize: number,
+    fontFamily: string,
+    fontWeight: string,
+    color: string,
+    align: CanvasTextAlign,
+  ): HTMLCanvasElement {
+    const width = Math.max(1, Math.ceil(maxWidth));
+    const height = Math.max(1, Math.ceil(fontSize * 1.35));
+    const key = [
+      text,
+      width,
+      height,
+      fontSize,
+      fontFamily,
+      fontWeight,
+      color,
+      align,
+    ].join('|');
+    const existing = this.textCanvasMap.get(key);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (context !== null) {
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = color;
+      context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      context.textAlign = align;
+      context.textBaseline = 'top';
+      const textX =
+        align === 'center' ? width / 2 : align === 'right' ? width : 0;
+      context.fillText(text, textX, 0, width);
+    }
+
+    this.textCanvasMap.set(key, canvas);
+    return canvas;
   }
 
   private parseColor(color: string): [number, number, number, number] {

@@ -5,11 +5,13 @@ import {
   SpritePainter,
   Vector,
 } from '../../core';
+import { Painter } from '../../core/Painter';
+import { RenderContext } from '../../core/render';
 import { GameUpdateArgs } from '../../game';
-import { SpriteText } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
 import {
   ShopCatalogItem,
+  ShopCurrency,
   ShopInventoryItemId,
   ShopItemId,
   ShopLoadoutSlot,
@@ -31,13 +33,19 @@ enum ShopCategory {
   Packs,
 }
 
-type ShopActionKind = 'view' | 'category' | 'page' | 'catalog' | 'slot' | 'wallet' | 'back';
+enum ShopMarket {
+  Token,
+  Sol,
+}
+
+type ShopActionKind = 'view' | 'market' | 'category' | 'page' | 'catalog' | 'slot' | 'wallet' | 'back';
 
 interface ShopAction {
   key: string;
   kind: ShopActionKind;
   target: ShopButton | ShopCard;
   view?: ShopView;
+  market?: ShopMarket;
   category?: ShopCategory;
   pageDelta?: number;
   itemId?: ShopItemId;
@@ -70,10 +78,69 @@ const CARD_HEIGHT = 176;
 const CARD_GAP_X = 24;
 const CARD_GAP_Y = 22;
 const ICON_SIZE = 82;
+const BUTTON_LABEL_INSET = 10;
+const SHOP_FONT = 'Inter, Segoe UI, Arial, sans-serif';
 
-class ShopText extends SpriteText {
-  constructor(text = '', color = config.COLOR_WHITE) {
-    super(text, { color, letterSpacing: 0, lineSpacing: 18 });
+class NativeTextPainter extends Painter {
+  public text: string;
+  public color: string;
+  public fontSize: number;
+  public fontWeight: string;
+  public maxWidth: number;
+
+  constructor(
+    text: string,
+    color: string,
+    fontSize: number,
+    fontWeight: string,
+    maxWidth: number,
+  ) {
+    super();
+    this.text = text;
+    this.color = color;
+    this.fontSize = fontSize;
+    this.fontWeight = fontWeight;
+    this.maxWidth = maxWidth;
+  }
+
+  public paint(context: RenderContext, renderObject: GameObject): void {
+    const { min } = renderObject.getWorldBoundingBox();
+    context.drawText(
+      this.text,
+      min.x,
+      min.y,
+      this.maxWidth,
+      this.fontSize,
+      SHOP_FONT,
+      this.fontWeight,
+      this.color,
+    );
+  }
+}
+
+class ShopText extends GameObject {
+  public painter: NativeTextPainter;
+
+  constructor(
+    text = '',
+    color = config.COLOR_WHITE,
+    fontSize = 24,
+    fontWeight = '700',
+    maxWidth: number = null,
+  ) {
+    const width = maxWidth ?? Math.max(24, Math.ceil(text.length * fontSize * 0.62));
+    super(width, Math.ceil(fontSize * 1.35));
+    this.painter = new NativeTextPainter(text, color, fontSize, fontWeight, width);
+  }
+
+  public setText(text: string): void {
+    this.painter.text = text;
+    this.setNeedsPaint();
+  }
+
+  public setColor(color: string): void {
+    this.painter.color = color;
+    this.setNeedsPaint();
   }
 }
 
@@ -100,8 +167,14 @@ class ShopButton extends GameObject {
     this.background.lineWidth = 2;
     this.painter = this.background;
 
-    this.label = new ShopText(text, config.COLOR_WHITE);
-    this.label.position.set(16, 14);
+    this.label = new ShopText(
+      text,
+      config.COLOR_WHITE,
+      26,
+      '800',
+      width - BUTTON_LABEL_INSET * 2,
+    );
+    this.label.position.set(BUTTON_LABEL_INSET, Math.max(8, Math.round((height - 34) / 2)));
     this.add(this.label);
   }
 
@@ -174,16 +247,16 @@ class ShopCard extends GameObject {
     this.icon.position.set(width - ICON_SIZE - 16, 48);
     this.add(this.icon);
 
-    this.title = new ShopText('', COLOR_YELLOW);
+    this.title = new ShopText('', COLOR_YELLOW, 24, '800', width - 36);
     this.title.position.set(18, 16);
     this.add(this.title);
 
-    this.detail = new ShopText('', config.COLOR_WHITE);
+    this.detail = new ShopText('', config.COLOR_WHITE, 28, '800', width - ICON_SIZE - 50);
     this.detail.position.set(20, 84);
     this.add(this.detail);
 
-    this.price = new ShopText('', config.COLOR_BLACK);
-    this.price.position.set(18, height - 31);
+    this.price = new ShopText('', config.COLOR_BLACK, 26, '900', width - 36);
+    this.price.position.set(18, height - 34);
     this.add(this.price);
   }
 
@@ -210,9 +283,10 @@ class ShopCard extends GameObject {
 export class MainShopScene extends GameScene {
   private shopManager: ShopManager;
   private view = ShopView.Shop;
+  private market = ShopMarket.Token;
   private category = ShopCategory.All;
   private catalogPage = 0;
-  private statusText = 'CONNECT WALLET TO BUY ITEMS';
+  private statusText = 'CONNECT WALLET TO BUY WITH BCT OR SOL';
   private actions: ShopAction[] = [];
   private focusedActionIndex = 0;
   private pendingActionIndex: number = null;
@@ -256,16 +330,17 @@ export class MainShopScene extends GameScene {
     const originX = Math.max(24, Math.round((this.root.size.width - SHOP_WIDTH) / 2));
     const originY = Math.max(24, TOP_Y);
 
-    const title = new ShopText('GAME SHOP', COLOR_YELLOW);
+    const title = new ShopText('Game Shop', COLOR_YELLOW, 54, '900', 360);
     title.position.set(originX + 16, originY - 70);
     this.root.add(title);
 
-    const helper = new ShopText('BCT  /  ITEMS  /  FUEL  /  LOADOUT', COLOR_MUTED);
-    helper.position.set(originX + 18, originY - 36);
+    const helper = new ShopText('Buy with BCT token or SOL', COLOR_MUTED, 18, '700', 360);
+    helper.position.set(originX + 18, originY - 18);
     this.root.add(helper);
 
-    this.addViewTab(originX + 16, originY, 'BCT SHOP', ShopView.Shop);
-    this.addViewTab(originX + 242, originY, 'LOADOUT', ShopView.Loadout);
+    this.addMarketTab(originX + 16, originY, 'TOKEN SHOP', ShopMarket.Token);
+    this.addMarketTab(originX + 246, originY, 'SOL SHOP', ShopMarket.Sol);
+    this.addViewTab(originX + 476, originY, 'LOADOUT', ShopView.Loadout);
 
     const shell = new ShopPanel(SHOP_WIDTH, SHOP_HEIGHT, COLOR_PANEL);
     shell.position.set(originX, originY + TAB_HEIGHT - 2);
@@ -287,7 +362,7 @@ export class MainShopScene extends GameScene {
     panel.position.set(x, y);
     this.root.add(panel);
 
-    const heading = new ShopText('INVENTORY', COLOR_MUTED);
+    const heading = new ShopText('Inventory', COLOR_MUTED, 28, '800', SIDE_WIDTH - 56);
     heading.position.set(x + 28, y + 30);
     this.root.add(heading);
 
@@ -303,32 +378,39 @@ export class MainShopScene extends GameScene {
 
     this.addResourceChip(
       x + 28,
-      y + 132,
+      y + 124,
       'BCT',
       this.shopManager.getTokenBalance().toString(),
       'shop.coin',
     );
     this.addResourceChip(
       x + 28,
-      y + 202,
+      y + 184,
+      'SOL',
+      this.formatSol(this.shopManager.getSolBalance()),
+      'shop.coin',
+    );
+    this.addResourceChip(
+      x + 28,
+      y + 244,
       'FUEL',
       this.shopManager.getFuelBalance().toString(),
       'shop.fuel',
     );
 
-    const inventoryY = y + 292;
-    const inventoryTitle = new ShopText('OWNED', COLOR_MUTED);
+    const inventoryY = y + 324;
+    const inventoryTitle = new ShopText('Owned', COLOR_MUTED, 24, '800', SIDE_WIDTH - 56);
     inventoryTitle.position.set(x + 28, inventoryY);
     this.root.add(inventoryTitle);
 
     this.addInventoryTile(x + 28, inventoryY + 42, ShopInventoryItemId.Shield);
     this.addInventoryTile(x + 160, inventoryY + 42, ShopInventoryItemId.BaseDefence);
-    this.addInventoryTile(x + 28, inventoryY + 122, ShopInventoryItemId.Freeze);
-    this.addInventoryTile(x + 160, inventoryY + 122, ShopInventoryItemId.Wipeout);
-    this.addInventoryTile(x + 28, inventoryY + 202, ShopInventoryItemId.ExtraLife);
+    this.addInventoryTile(x + 28, inventoryY + 114, ShopInventoryItemId.Freeze);
+    this.addInventoryTile(x + 160, inventoryY + 114, ShopInventoryItemId.Wipeout);
+    this.addInventoryTile(x + 28, inventoryY + 186, ShopInventoryItemId.ExtraLife);
 
-    const loadoutY = y + 586;
-    const loadoutTitle = new ShopText('EQUIPPED', COLOR_MUTED);
+    const loadoutY = y + 556;
+    const loadoutTitle = new ShopText('Equipped', COLOR_MUTED, 24, '800', SIDE_WIDTH - 56);
     loadoutTitle.position.set(x + 28, loadoutY);
     this.root.add(loadoutTitle);
 
@@ -349,9 +431,9 @@ export class MainShopScene extends GameScene {
 
   private renderShopContent(x: number, y: number): void {
     this.addCategoryButton(x, y, 'ALL', ShopCategory.All);
-    this.addCategoryButton(x + 142, y, 'FUEL', ShopCategory.Fuel);
-    this.addCategoryButton(x + 300, y, 'POWER', ShopCategory.Powerups);
-    this.addCategoryButton(x + 490, y, 'PACKS', ShopCategory.Packs);
+    this.addCategoryButton(x + 160, y, 'FUEL', ShopCategory.Fuel);
+    this.addCategoryButton(x + 340, y, 'POWER', ShopCategory.Powerups);
+    this.addCategoryButton(x + 560, y, 'PACKS', ShopCategory.Packs);
 
     const line = new ShopPanel(SHOP_WIDTH - SIDE_WIDTH - 92, 2, '#2c2a22');
     line.position.set(x, y + FILTER_HEIGHT + 14);
@@ -366,12 +448,12 @@ export class MainShopScene extends GameScene {
     );
 
     if (pageCount > 1) {
-      this.addButton(x + 674, y, 76, FILTER_HEIGHT, 'PREV', {
+      this.addButton(x + 704, y, 72, FILTER_HEIGHT, 'P-', {
         key: 'page:prev',
         kind: 'page',
         pageDelta: -1,
       }, false);
-      this.addButton(x + 758, y, 76, FILTER_HEIGHT, 'NEXT', {
+      this.addButton(x + 790, y, 72, FILTER_HEIGHT, 'P+', {
         key: 'page:next',
         kind: 'page',
         pageDelta: 1,
@@ -379,14 +461,14 @@ export class MainShopScene extends GameScene {
     }
 
     if (items.length === 0) {
-      const empty = new ShopText('NO ITEMS IN THIS CATEGORY', COLOR_MUTED);
+      const empty = new ShopText('No items in this category', COLOR_MUTED, 26, '700', 520);
       empty.position.set(x, y + 110);
       this.root.add(empty);
       return;
     }
 
     if (this.category === ShopCategory.All) {
-      const sectionText = new ShopText(`ALL ITEMS ${this.catalogPage + 1}/${pageCount}`, config.COLOR_WHITE);
+      const sectionText = new ShopText(`All Items ${this.catalogPage + 1}/${pageCount}`, config.COLOR_WHITE, 30, '900', 360);
       sectionText.position.set(x, y + 84);
       this.root.add(sectionText);
 
@@ -407,7 +489,7 @@ export class MainShopScene extends GameScene {
       const section = this.getItemSection(item.id);
       if (section !== currentSection) {
         currentSection = section;
-        const sectionText = new ShopText(section, config.COLOR_WHITE);
+        const sectionText = new ShopText(section, config.COLOR_WHITE, 28, '900', 360);
         sectionText.position.set(x, sectionY);
         this.root.add(sectionText);
         sectionY += 44;
@@ -428,11 +510,11 @@ export class MainShopScene extends GameScene {
   }
 
   private renderLoadoutContent(x: number, y: number): void {
-    const title = new ShopText('LOADOUT', config.COLOR_WHITE);
+    const title = new ShopText('Loadout', config.COLOR_WHITE, 34, '900', 360);
     title.position.set(x, y);
     this.root.add(title);
 
-    const helper = new ShopText('SELECT A SLOT TO CYCLE OWNED ITEMS', COLOR_MUTED);
+    const helper = new ShopText('Select a slot to cycle owned items', COLOR_MUTED, 20, '700', 520);
     helper.position.set(x, y + 34);
     this.root.add(helper);
 
@@ -440,7 +522,7 @@ export class MainShopScene extends GameScene {
     this.addSlotCard(x + CARD_WIDTH + CARD_GAP_X, y + 90, ShopLoadoutSlot.ActiveTwo, 'ACTIVE 2');
     this.addSlotCard(x + (CARD_WIDTH + CARD_GAP_X) * 2, y + 90, ShopLoadoutSlot.Passive, 'PASSIVE');
 
-    const ownedTitle = new ShopText('OWNED CONSUMABLES', config.COLOR_WHITE);
+    const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
     ownedTitle.position.set(x, y + 288);
     this.root.add(ownedTitle);
 
@@ -453,11 +535,27 @@ export class MainShopScene extends GameScene {
     ]);
 
     const note = new ShopText(
-      'BOUGHT ITEMS ARE CONSUMED WHEN A RUN STARTS',
+      'Bought items are consumed when a run starts',
       COLOR_MUTED,
+      20,
+      '700',
+      620,
     );
     note.position.set(x, y + 532);
     this.root.add(note);
+  }
+
+  private addMarketTab(
+    x: number,
+    y: number,
+    text: string,
+    market: ShopMarket,
+  ): void {
+    this.addButton(x, y, 210, TAB_HEIGHT, text, {
+      key: `market:${market}`,
+      kind: 'market',
+      market,
+    }, this.view === ShopView.Shop && this.market === market);
   }
 
   private addViewTab(
@@ -466,7 +564,7 @@ export class MainShopScene extends GameScene {
     text: string,
     view: ShopView,
   ): void {
-    this.addButton(x, y, 214, TAB_HEIGHT, text, {
+    this.addButton(x, y, 190, TAB_HEIGHT, text, {
       key: `view:${view}`,
       kind: 'view',
       view,
@@ -479,7 +577,7 @@ export class MainShopScene extends GameScene {
     text: string,
     category: ShopCategory,
   ): void {
-    const width = text === 'POWER' || text === 'PACKS' ? 166 : 122;
+    const width = text === 'POWER' || text === 'PACKS' ? 186 : 140;
     this.addButton(x, y, width, FILTER_HEIGHT, text, {
       key: `category:${category}`,
       kind: 'category',
@@ -493,7 +591,7 @@ export class MainShopScene extends GameScene {
     card.setContent(
       this.getItemTitle(item.id),
       this.getRewardText(item),
-      `${item.price} BCT`,
+      this.getPriceText(item),
     );
     this.root.add(card);
 
@@ -656,6 +754,14 @@ export class MainShopScene extends GameScene {
       return;
     }
 
+    if (action.kind === 'market') {
+      this.view = ShopView.Shop;
+      this.market = action.market;
+      this.catalogPage = 0;
+      this.renderShop(action.key);
+      return;
+    }
+
     if (action.kind === 'category') {
       this.category = action.category;
       this.catalogPage = 0;
@@ -684,7 +790,10 @@ export class MainShopScene extends GameScene {
     }
 
     if (action.kind === 'catalog') {
-      const result = this.shopManager.purchaseItem(action.itemId);
+      const result = this.shopManager.purchaseItem(
+        action.itemId,
+        this.market === ShopMarket.Sol ? ShopCurrency.Sol : ShopCurrency.Token,
+      );
       this.statusText = result.statusText;
       this.renderShop(action.key);
       return;
@@ -850,6 +959,17 @@ export class MainShopScene extends GameScene {
       });
     }
     return rewards.join(' / ');
+  }
+
+  private getPriceText(item: ShopCatalogItem): string {
+    if (this.market === ShopMarket.Sol) {
+      return `${this.formatSol(item.solPrice)} SOL`;
+    }
+    return `${item.price} BCT`;
+  }
+
+  private formatSol(value: number): string {
+    return value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
   }
 
   private getItemMeta(itemId: ShopItemId): string {
