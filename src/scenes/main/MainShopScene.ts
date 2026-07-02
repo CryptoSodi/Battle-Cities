@@ -49,6 +49,7 @@ const COLOR_PANEL = '#171611';
 const COLOR_PANEL_ALT = '#211f18';
 const COLOR_CARD = '#2b2605';
 const COLOR_CARD_ALT = '#3b3511';
+const COLOR_CARD_FOCUS = '#4a3f0b';
 const COLOR_YELLOW = config.COLOR_YELLOW;
 const COLOR_YELLOW_DARK = '#8a6b00';
 const COLOR_MUTED = config.COLOR_GRAY;
@@ -64,11 +65,11 @@ const TAB_HEIGHT = 52;
 const FILTER_HEIGHT = 48;
 const CARD_COLUMNS = 3;
 const CARD_PAGE_SIZE = 6;
-const CARD_WIDTH = 268;
+const CARD_WIDTH = 260;
 const CARD_HEIGHT = 176;
 const CARD_GAP_X = 24;
 const CARD_GAP_Y = 22;
-const ICON_SIZE = 88;
+const ICON_SIZE = 82;
 
 class ShopText extends SpriteText {
   constructor(text = '', color = config.COLOR_WHITE) {
@@ -146,6 +147,7 @@ class ShopIcon extends GameObject {
 
 class ShopCard extends GameObject {
   private background: RectPainter;
+  private footer: ShopPanel;
   private title: ShopText;
   private detail: ShopText;
   private price: ShopText;
@@ -164,12 +166,12 @@ class ShopCard extends GameObject {
     glow.setZIndex(-1);
     this.add(glow);
 
-    const footer = new ShopPanel(width, 40, COLOR_YELLOW, null);
-    footer.position.set(0, height - 40);
-    this.add(footer);
+    this.footer = new ShopPanel(width, 40, COLOR_YELLOW, null);
+    this.footer.position.set(0, height - 40);
+    this.add(this.footer);
 
     this.icon = new ShopIcon(iconId);
-    this.icon.position.set(width - ICON_SIZE - 18, 46);
+    this.icon.position.set(width - ICON_SIZE - 16, 48);
     this.add(this.icon);
 
     this.title = new ShopText('', COLOR_YELLOW);
@@ -197,8 +199,10 @@ class ShopCard extends GameObject {
 
   public setFocused(focused: boolean): void {
     this.focused = focused;
+    this.background.fillColor = focused ? COLOR_CARD_FOCUS : COLOR_CARD;
     this.background.strokeColor = focused ? config.COLOR_WHITE : COLOR_YELLOW_DARK;
     this.background.lineWidth = focused ? 4 : 2;
+    this.footer.painter.fillColor = focused ? config.COLOR_WHITE : COLOR_YELLOW;
     this.setNeedsPaint();
   }
 }
@@ -362,12 +366,12 @@ export class MainShopScene extends GameScene {
     );
 
     if (pageCount > 1) {
-      this.addButton(x + 622, y, 76, FILTER_HEIGHT, 'PREV', {
+      this.addButton(x + 674, y, 76, FILTER_HEIGHT, 'PREV', {
         key: 'page:prev',
         kind: 'page',
         pageDelta: -1,
       }, false);
-      this.addButton(x + 704, y, 76, FILTER_HEIGHT, 'NEXT', {
+      this.addButton(x + 758, y, 76, FILTER_HEIGHT, 'NEXT', {
         key: 'page:next',
         kind: 'page',
         pageDelta: 1,
@@ -389,7 +393,7 @@ export class MainShopScene extends GameScene {
       items.forEach((item, index) => {
         const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
         const cardY =
-          y + 112 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
+          y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
         this.addCatalogCard(cardX, cardY, item);
       });
       return;

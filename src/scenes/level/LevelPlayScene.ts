@@ -1,5 +1,5 @@
 import { DebugCameraMenu, DebugCollisionMenu } from '../../debug';
-import { GameUpdateArgs, GameState, Session } from '../../game';
+import { GameUpdateArgs, GameState, GameStorage, Session } from '../../game';
 import {
   Border,
   BrickSuperTerrainTile,
@@ -42,6 +42,8 @@ import {
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
+import { saveReplay } from '../../replay';
+
 import { LevelPlayLocationParams } from './params';
 
 export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
@@ -49,6 +51,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private eventBus: LevelEventBus;
   private session: Session;
   private inputManager: InputManager;
+  private gameStorage: GameStorage;
+  // Seed the match actually started with (captured once, before any replay's
+  // reseed), so a real (non-replay) run can save it alongside the recording.
+  private recordedSeed: number;
   private debugCollisionMenu: DebugCollisionMenu;
   private debugCameraMenu: DebugCameraMenu;
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
@@ -92,10 +98,34 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private winScript: LevelWinScript;
 
   protected setup(updateArgs: GameUpdateArgs): void {
-    const { collisionSystem, inputManager, session } = updateArgs;
+    const { collisionSystem, inputManager, gameStorage, rng, session } = updateArgs;
+    this.gameStorage = gameStorage;
     document.querySelectorAll('.mobile-gamepad-qr').forEach((element) => {
       element.remove();
     });
+
+    // Dev-only match replay (see src/replay): if entered with a recorded
+    // replay, reseed the sim to the exact point its recording started from
+    // and swap every input device for a RecordedInputDevice playing that log
+    // back. Otherwise, reseed to a fresh checkpoint (rng is one shared
+    // instance for the whole app session, so rng.getSeed() would only return
+    // its original app-startup seed, not where its sequence currently sits --
+    // reseeding here gives a clean, capturable starting point for this
+    // level's draws) and wrap every device in an InputRecorderDevice so a
+    // real playthrough gets captured and can be saved as the next "last
+    // replay". Both branches must run BEFORE reset() below so recording/
+    // playback starts at the same point (right after reset) it'll be read
+    // back from.
+    const { replay } = this.params;
+    if (replay !== undefined) {
+      rng.reseed(replay.seed);
+      inputManager.startReplay(replay.deviceFrames);
+    } else {
+      this.recordedSeed = (Date.now() >>> 0) || 1;
+      rng.reseed(this.recordedSeed);
+      inputManager.startRecording();
+    }
+
     // Drop any input state carried in from the menu/transition so a key still
     // "held" (or stuck from a missed keyup) can't move the tank on spawn.
     inputManager.reset();
@@ -668,6 +698,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // Restore input
     this.inputManager.listen();
 
+    this.finishInputCapture();
+
     if (this.session.isPlaytest()) {
       this.navigator.replace(GameSceneType.EditorMenu);
       return;
@@ -677,6 +709,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   };
 
   private handleLevelWinCompleted = (): void => {
+    this.finishInputCapture();
+
     if (this.session.isPlaytest()) {
       this.navigator.replace(GameSceneType.EditorMenu);
       return;
@@ -684,4 +718,23 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.navigator.replace(GameSceneType.LevelScore);
   };
+
+  // Wraps up whichever input capture mode this level started in: saves a
+  // completed recording as the next "last replay" (dev-only REPLAY menu
+  // item), or just restores live devices after a replay finished playing.
+  private finishInputCapture(): void {
+    if (this.inputManager.isRecording()) {
+      const deviceFrames = this.inputManager.stopRecording();
+      saveReplay(this.gameStorage, {
+        seed: this.recordedSeed,
+        levelNumber: this.session.getLevelNumber(),
+        deviceFrames,
+      });
+      return;
+    }
+
+    if (this.inputManager.isReplaying()) {
+      this.inputManager.stopReplay();
+    }
+  }
 }

@@ -1,3 +1,4 @@
+export * from './AudioMixer';
 export * from './collision';
 export * from './file';
 export * from './graphics';

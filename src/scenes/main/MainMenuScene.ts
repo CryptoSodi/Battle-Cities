@@ -1,9 +1,10 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
-import { GameUpdateArgs, Session } from '../../game';
+import { GameUpdateArgs, GameStorage, Session } from '../../game';
 import { Menu, SpriteText, TextMenuItem } from '../../gameObjects';
 import { InputManager, MenuInputContext } from '../../input';
-import { MapLoader } from '../../map';
+import { MapConfig, MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
+import { loadReplay } from '../../replay';
 import { ShopManager } from '../../shop';
 import * as config from '../../config';
 
@@ -28,12 +29,14 @@ export class MainMenuScene extends GameScene {
   private multiPlayerItem: TextMenuItem;
   private modesItem: TextMenuItem;
   private editorItem: TextMenuItem;
+  private replayItem: TextMenuItem;
   private shopItem: TextMenuItem;
   private settingsItem: TextMenuItem;
   private aboutItem: TextMenuItem;
   private state: State = State.Ready;
   private session: Session;
   private mapLoader: MapLoader;
+  private gameStorage: GameStorage;
   private pointsHighscoreManager: PointsHighscoreManager;
   private shopManager: ShopManager;
   private mobileGamepadQrElement: HTMLElement = null;
@@ -50,6 +53,7 @@ export class MainMenuScene extends GameScene {
   }: GameUpdateArgs): void {
     this.session = session;
     this.mapLoader = mapLoader;
+    this.gameStorage = gameStorage;
     this.pointsHighscoreManager = pointsHighscoreManager;
     this.shopManager = new ShopManager(gameStorage);
 
@@ -102,6 +106,11 @@ export class MainMenuScene extends GameScene {
     this.editorItem = new TextMenuItem('CONSTRUCTION');
     this.editorItem.selected.addListener(this.handleEditorSelected);
 
+    // Dev-only: watch the last recorded match back (see src/replay). Never
+    // shown outside config.IS_DEV builds -- see the menuItems assembly below.
+    this.replayItem = new TextMenuItem('REPLAY');
+    this.replayItem.selected.addListener(this.handleReplaySelected);
+
     this.shopItem = new TextMenuItem('SHOP');
     this.shopItem.selected.addListener(this.handleShopSelected);
 
@@ -114,7 +123,12 @@ export class MainMenuScene extends GameScene {
     const menuItems = [this.singlePlayerItem];
 
     if (config.IS_DEV) {
-      menuItems.push(this.multiPlayerItem, this.modesItem, this.editorItem);
+      menuItems.push(
+        this.multiPlayerItem,
+        this.modesItem,
+        this.editorItem,
+        this.replayItem,
+      );
     }
 
     menuItems.push(this.shopItem, this.settingsItem, this.aboutItem);
@@ -258,6 +272,38 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainShop);
+  };
+
+  // Dev-only: load the map the last recorded match was played on, then enter
+  // LevelPlay with that recording -- LevelPlayScene sees `replay` in its
+  // params and plays it back instead of reading live input. No-ops (besides a
+  // console warning) if nothing has been recorded yet.
+  private handleReplaySelected = (): void => {
+    const replay = loadReplay(this.gameStorage);
+    if (replay === null) {
+      // eslint-disable-next-line no-console
+      console.warn('No recorded replay found — play a match first.');
+      return;
+    }
+
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+
+    const handleLoaded = (mapConfig: MapConfig): void => {
+      this.mapLoader.error.removeListener(handleError);
+      this.navigator.push(GameSceneType.LevelPlay, { mapConfig, replay });
+    };
+    const handleError = (): void => {
+      this.mapLoader.loaded.removeListener(handleLoaded);
+      // eslint-disable-next-line no-console
+      console.warn(
+        `Could not load level ${replay.levelNumber} for the recorded replay.`,
+      );
+    };
+
+    this.mapLoader.loaded.addListenerOnce(handleLoaded);
+    this.mapLoader.error.addListenerOnce(handleError);
+    this.mapLoader.loadAsync(replay.levelNumber);
   };
 
   private handleSettingsSelected = (): void => {

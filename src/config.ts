@@ -166,6 +166,17 @@ export const CAMERA_SHAKE_INTENSITY = 1; // master scalar (0 disables shake)
 // Particle overlay master scalar (reduced-motion / low-end). Scales emitted
 // counts; 0 disables particle effects entirely.
 export const PARTICLE_INTENSITY = 1;
+
+// Web Audio mixer (see core/AudioMixer). AUDIO_MASTER_VOLUME is the default
+// master level (overridden by the persisted settings volume); the two bus
+// levels balance impacts vs. ambient loops; AUDIO_MASTER_INTENSITY is the
+// reduced-audio / low-end scalar layered on top of everything.
+export const AUDIO_MASTER_VOLUME = 1;
+export const AUDIO_MASTER_INTENSITY = 1;
+export const AUDIO_SFX_VOLUME = 1;
+export const AUDIO_MUSIC_VOLUME = 0.8;
+// Discrete master-volume steps the audio settings menu cycles through.
+export const AUDIO_VOLUME_STEPS = [1, 0.75, 0.5, 0.25, 0];
 // How long the camera holds on the player's death blast before releasing back
 // to the spawn point (must be < PLAYER_SPAWN_DELAY so the pan lands first).
 export const CAMERA_DEATH_HOLD = 0.9;
@@ -267,6 +278,7 @@ export const STORAGE_KEY_POINTS_HIGHSCORE_SECONDARY =
 export const STORAGE_KEY_SETTINGS_INPUT_BINDINGS_PREFIX =
   'settings.input.bindings';
 export const STORAGE_KEY_SETTINGS_AUDIO_MUTED = 'settings.audio-muted';
+export const STORAGE_KEY_SETTINGS_AUDIO_VOLUME = 'settings.audio-volume';
 export const STORAGE_KEY_SETTINGS_SEEN_LEVEL_HINT = 'settings.seen-level-hint';
 export const STORAGE_KEY_SETTINGS_SEEN_EDITOR_HINT =
   'settings.seen-editor-hint';
@@ -281,6 +293,10 @@ export const STORAGE_KEY_SHOP_FUEL_BALANCE = 'shop.fuel-balance';
 export const STORAGE_KEY_SHOP_INVENTORY = 'shop.inventory';
 export const STORAGE_KEY_SHOP_LOADOUT = 'shop.loadout';
 export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
+
+// Dev-only: the most recently completed match's input recording, watchable
+// via the main menu's REPLAY item (config.IS_DEV builds only). See src/replay.
+export const STORAGE_KEY_DEBUG_LAST_REPLAY = 'debug.last-replay';
 
 export const SHOP_STARTING_TOKEN_BALANCE = 1000;
 export const SHOP_RUN_FUEL_COST = 1;

@@ -1,10 +1,13 @@
 import {
+  DeviceInputFrame,
   GamepadInputDevice,
   InputBinding,
   InputDevice,
   InputMethod,
+  InputRecorderDevice,
   KeyboardInputDevice,
   MobileGamepadInputDevice,
+  RecordedInputDevice,
 } from '../core';
 import { GameStorage } from '../game';
 import * as config from '../config';
@@ -40,6 +43,12 @@ export class InputManager {
   // seamlessly.
   // For multi-player you should query player-specific devices.
   private activeDeviceType: InputDeviceType = null;
+  // Pristine live devices, snapshotted once at construction so recording/
+  // replay (which swap deviceMap entries for InputRecorderDevice/
+  // RecordedInputDevice) can always be cleanly undone afterward.
+  private liveDeviceMap = new Map<InputDeviceType, InputDevice[]>();
+  private recording = false;
+  private replaying = false;
 
   constructor(storage: GameStorage) {
     this.storage = storage;
@@ -56,6 +65,10 @@ export class InputManager {
       new MobileGamepadInputDevice(this.mobileGamepadHost, 0),
       new MobileGamepadInputDevice(this.mobileGamepadHost, 1),
     ]);
+
+    this.deviceMap.forEach((devices, deviceType) => {
+      this.liveDeviceMap.set(deviceType, devices.slice());
+    });
 
     if (this.deviceMap.size > 0) {
       this.activeDeviceType = Array.from(this.deviceMap.keys())[0];
@@ -138,6 +151,120 @@ export class InputManager {
     }
 
     return device;
+  }
+
+  // Swaps the device at (deviceType, deviceIndex) for a different InputDevice
+  // implementation and returns the one it replaced (so a caller can restore
+  // it later). Used to wrap a device in an InputRecorderDevice to record a
+  // match, or to substitute a RecordedInputDevice to replay one -- everything
+  // downstream (bindings, InputMethod, behaviors) keeps working unchanged
+  // since they only ever see the InputDevice interface.
+  public replaceDevice(
+    deviceType: InputDeviceType,
+    deviceIndex: number,
+    device: InputDevice,
+  ): InputDevice {
+    const devices = this.deviceMap.get(deviceType);
+
+    if (devices === undefined) {
+      throw new Error(`Device type "${deviceType}" not registered`);
+    }
+
+    const previousDevice = devices[deviceIndex];
+    devices[deviceIndex] = device;
+
+    return previousDevice;
+  }
+
+  // Wraps every registered device (keyboard, both gamepads, both mobile
+  // gamepads) in an InputRecorderDevice, so a full match -- single or local
+  // multiplayer -- is captured regardless of which device(s) end up driving
+  // it. Recording every device (not just "the" active one) also means single-
+  // player's mid-match device switching (see activeDeviceType) is captured
+  // implicitly: replaying the same per-device logs reproduces the same
+  // switches, since InputManager derives activeDeviceType from device
+  // activity, not from a recorded decision.
+  public startRecording(): void {
+    if (this.recording || this.replaying) {
+      return;
+    }
+    this.recording = true;
+
+    this.deviceMap.forEach((devices) => {
+      devices.forEach((device, index) => {
+        devices[index] = new InputRecorderDevice(device);
+      });
+    });
+  }
+
+  public isRecording(): boolean {
+    return this.recording;
+  }
+
+  // Stops recording, restores the live devices, and returns everything
+  // captured -- keyed by "deviceType:deviceIndex" so it can be fed straight
+  // into startReplay() later (or serialized to JSON as-is).
+  public stopRecording(): Record<string, DeviceInputFrame[]> {
+    if (!this.recording) {
+      return {};
+    }
+    this.recording = false;
+
+    const log: Record<string, DeviceInputFrame[]> = {};
+
+    this.deviceMap.forEach((devices, deviceType) => {
+      devices.forEach((device, index) => {
+        if (device instanceof InputRecorderDevice) {
+          log[this.getDeviceKey(deviceType, index)] = device.getLog();
+        }
+      });
+    });
+
+    this.restoreLiveDevices();
+
+    return log;
+  }
+
+  // Substitutes every registered device for a RecordedInputDevice playing
+  // back the matching entry of `log` (empty if that device produced nothing
+  // in the original recording). Call inputManager.reset() right after, same
+  // as at the start of a real match, so playback cursors line up with where
+  // recording began.
+  public startReplay(log: Record<string, DeviceInputFrame[]>): void {
+    if (this.recording || this.replaying) {
+      return;
+    }
+    this.replaying = true;
+
+    this.deviceMap.forEach((devices, deviceType) => {
+      devices.forEach((_device, index) => {
+        const frames = log[this.getDeviceKey(deviceType, index)] ?? [];
+        devices[index] = new RecordedInputDevice(frames);
+      });
+    });
+  }
+
+  public isReplaying(): boolean {
+    return this.replaying;
+  }
+
+  public stopReplay(): void {
+    if (!this.replaying) {
+      return;
+    }
+    this.replaying = false;
+
+    this.restoreLiveDevices();
+  }
+
+  private restoreLiveDevices(): void {
+    this.liveDeviceMap.forEach((devices, deviceType) => {
+      this.deviceMap.set(deviceType, devices.slice());
+    });
+  }
+
+  private getDeviceKey(deviceType: InputDeviceType, deviceIndex: number): string {
+    return `${deviceType}:${deviceIndex}`;
   }
 
   public getPresenter(deviceType: InputDeviceType): InputButtonCodePresenter {

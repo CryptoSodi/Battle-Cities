@@ -11,6 +11,6 @@ module.exports = merge(baseConfig, {
     contentBase: './dist',
     host: '192.168.1.15',
     https: true,
-    public: '192.168.1.15:8081',
+    public: '192.168.1.15:8080',
   },
 });
