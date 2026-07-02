@@ -7,7 +7,7 @@ import {
   Tank,
   WallShadowField,
 } from '../../gameObjects';
-import { InputManager } from '../../input';
+import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory, TerrainType } from '../../terrain';
@@ -55,6 +55,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // Seed the match actually started with (captured once, before any replay's
   // reseed), so a real (non-replay) run can save it alongside the recording.
   private recordedSeed: number;
+  // Which device single-player input was reading from at recording start
+  // (see InputManager.activeDeviceType) -- must be saved and restored
+  // alongside the seed and device logs, or a replay's single-player input
+  // routing could start from a different device than the original match did.
+  private recordedActiveDeviceType: InputDeviceType;
+  // TEMPORARY diagnostic counter (remove once the replay-determinism bug is
+  // found): sim ticks elapsed since this level's setup(), so logged events
+  // can be compared by tick number across separate replay watches.
+  private replayDebugTick: number = null;
   private debugCollisionMenu: DebugCollisionMenu;
   private debugCameraMenu: DebugCameraMenu;
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
@@ -120,10 +129,35 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (replay !== undefined) {
       rng.reseed(replay.seed);
       inputManager.startReplay(replay.deviceFrames);
+      // Restore single-player's device-routing state to what it was when
+      // recording began -- it isn't captured by the per-device frame logs
+      // themselves (see InputManager.activeDeviceType), so without this a
+      // replay could read player input from the wrong device.
+      inputManager.setActiveDeviceType(replay.activeDeviceType);
+
+      // TEMPORARY diagnostic (remove once the replay-determinism bug is
+      // found): confirm the seed/data actually loaded is identical every
+      // time this same saved replay is watched.
+      if (config.IS_DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[replay] seed=', replay.seed, 'getSeed()=', rng.getSeed());
+        // eslint-disable-next-line no-console
+        console.log('[replay] activeDeviceType=', replay.activeDeviceType);
+        // eslint-disable-next-line no-console
+        console.log(
+          '[replay] deviceFrames checksum=',
+          JSON.stringify(replay.deviceFrames).length,
+          Object.keys(replay.deviceFrames)
+            .map((key) => `${key}:${replay.deviceFrames[key].length}`)
+            .join(' '),
+        );
+        this.replayDebugTick = 0;
+      }
     } else {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
       inputManager.startRecording();
+      this.recordedActiveDeviceType = inputManager.getActiveDeviceType();
     }
 
     // Drop any input state carried in from the menu/transition so a key still
@@ -328,6 +362,30 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         this.spawnTileDebris(event.position, event.size);
       }
     });
+
+    // TEMPORARY diagnostic (remove once the replay-determinism bug is
+    // found): log every enemy spawn's tick/type/position during a replay
+    // watch, so two separate watches of the same saved replay can be
+    // compared line-by-line for the first point they diverge.
+    if (config.IS_DEV) {
+      this.eventBus.enemySpawnCompleted.addListener((event) => {
+        if (this.replayDebugTick === null) {
+          return;
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+          '[replay] tick=',
+          this.replayDebugTick,
+          'enemySpawnCompleted partyIndex=',
+          event.partyIndex,
+          'type=',
+          event.type.tier,
+          'pos=',
+          event.centerPosition.x,
+          event.centerPosition.y,
+        );
+      });
+    }
   }
 
   // Adds screen-shake trauma (clamped to 1). Presentation-only.
@@ -362,6 +420,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected update(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, gameState } = updateArgs;
+    if (this.replayDebugTick !== null) {
+      this.replayDebugTick += 1;
+    }
     this.zoomOutTimer.update(updateArgs.deltaTime);
     this.cameraFocusTimer.update(updateArgs.deltaTime);
 
@@ -729,6 +790,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         seed: this.recordedSeed,
         levelNumber: this.session.getLevelNumber(),
         deviceFrames,
+        activeDeviceType: this.recordedActiveDeviceType,
       });
       return;
     }

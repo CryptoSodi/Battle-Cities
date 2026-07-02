@@ -8,5 +8,9 @@ export const LevelPlayInputContext: InputContext = {
   MoveRight: [InputControl.Right],
   Fire: [InputControl.PrimaryAction],
   RapidFire: [InputControl.SecondaryAction],
+  PowerOne: [InputControl.PowerOne],
+  PowerTwo: [InputControl.PowerTwo],
+  PowerThree: [InputControl.PowerThree],
+  PowerFour: [InputControl.PowerFour],
   Pause: [InputControl.Select],
 };

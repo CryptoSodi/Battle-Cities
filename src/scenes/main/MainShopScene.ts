@@ -314,9 +314,9 @@ export class MainShopScene extends GameScene {
       this.queueFocusedAction();
     }
 
-    super.update(updateArgs);
-
     this.activatePendingAction();
+
+    super.update(updateArgs);
   }
 
   private renderShop(preferredFocusKey: string = null): void {

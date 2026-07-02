@@ -251,7 +251,7 @@ export class MainMenuScene extends GameScene {
       return false;
     }
 
-    this.session.setRunConsumables(this.shopManager.consumeEquippedItems());
+    this.session.setRunConsumables(this.shopManager.getEquippedRunConsumables());
 
     return true;
   }

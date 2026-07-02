@@ -1,8 +1,10 @@
 import { SessionPlayer } from './SessionPlayer';
 import { PowerupType } from '../powerup';
+import { ShopInventoryItemId } from '../shop';
 
 export interface SessionRunConsumables {
   powerups: PowerupType[];
+  powerupItems: ShopInventoryItemId[];
   extraLives: number;
 }
 
@@ -52,6 +54,7 @@ export class Session {
     this.multiplayer = false;
     this.runConsumables = {
       powerups: [],
+      powerupItems: [],
       extraLives: 0,
     };
 
@@ -182,6 +185,7 @@ export class Session {
   public clearRunConsumables(): void {
     this.runConsumables = {
       powerups: [],
+      powerupItems: [],
       extraLives: 0,
     };
   }

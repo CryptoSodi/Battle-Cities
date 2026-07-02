@@ -253,11 +253,60 @@ export class ShopManager {
     return true;
   }
 
+  public getEquippedRunConsumables(): ShopRunConsumables {
+    const loadout = this.getLoadout();
+    const inventory = this.getInventory();
+    const consumables: ShopRunConsumables = {
+      powerups: [],
+      powerupItems: [],
+      extraLives: 0,
+    };
+
+    Object.keys(loadout).forEach((slotKey) => {
+      const slot = slotKey as ShopLoadoutSlot;
+      const itemId = loadout[slot];
+      if (itemId === undefined || (inventory[itemId] || 0) <= 0) {
+        return;
+      }
+
+      const powerupType = getPowerupTypeForInventoryItem(itemId);
+      if (powerupType !== null) {
+        consumables.powerupItems.push(itemId);
+        consumables.powerups.push(powerupType);
+      }
+    });
+
+    return consumables;
+  }
+
+  public consumeInventoryItem(itemId: ShopInventoryItemId): boolean {
+    const inventory = this.getInventory();
+    if ((inventory[itemId] || 0) <= 0) {
+      return false;
+    }
+
+    inventory[itemId] -= 1;
+    this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
+
+    const loadout = this.getLoadout();
+    Object.keys(loadout).forEach((slotKey) => {
+      const slot = slotKey as ShopLoadoutSlot;
+      if (loadout[slot] === itemId && (inventory[itemId] || 0) <= 0) {
+        delete loadout[slot];
+      }
+    });
+    this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
+    this.storage.save();
+
+    return true;
+  }
+
   public consumeEquippedItems(): ShopRunConsumables {
     const loadout = this.getLoadout();
     const inventory = this.getInventory();
     const consumables: ShopRunConsumables = {
       powerups: [],
+      powerupItems: [],
       extraLives: 0,
     };
 
@@ -279,6 +328,7 @@ export class ShopManager {
 
       const powerupType = getPowerupTypeForInventoryItem(itemId);
       if (powerupType !== null) {
+        consumables.powerupItems.push(itemId);
         consumables.powerups.push(powerupType);
       }
     });

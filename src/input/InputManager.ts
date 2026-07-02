@@ -300,6 +300,20 @@ export class InputManager {
     return method;
   }
 
+  // Which device single-player input currently reads from (see the field's
+  // own comment). Not part of any recorded replay log by itself -- a replay
+  // must capture and restore this alongside the input frames, or single-
+  // player's live device-switching behavior (see update() below) would start
+  // from whatever device was last active in the menu, not what the original
+  // recording actually started from.
+  public getActiveDeviceType(): InputDeviceType {
+    return this.activeDeviceType;
+  }
+
+  public setActiveDeviceType(deviceType: InputDeviceType): void {
+    this.activeDeviceType = deviceType;
+  }
+
   public getActiveDevice(): InputDevice {
     return this.getDevice(this.activeDeviceType);
   }

@@ -1,16 +1,22 @@
 import { DeviceInputFrame } from '../core';
 import { GameStorage } from '../game';
+import { InputDeviceType } from '../input';
 import * as config from '../config';
 
 // Everything needed to reproduce a match: the level it was played on, the
-// Prng seed the simulation started with, and every input device's per-tick
-// log (keyed the same way InputManager.startRecording()/startReplay() key
-// their Record<string, DeviceInputFrame[]>). Plain data -- round-trips
-// through JSON.stringify/parse with no custom (de)serialization.
+// Prng seed the simulation started with, every input device's per-tick log
+// (keyed the same way InputManager.startRecording()/startReplay() key their
+// Record<string, DeviceInputFrame[]>), and which device single-player input
+// was reading from when recording began (see InputManager.activeDeviceType --
+// it isn't derivable from the device logs alone, since it's an InputManager-
+// level routing decision, not part of any one device's own state). Plain
+// data -- round-trips through JSON.stringify/parse with no custom
+// (de)serialization.
 export interface SavedReplay {
   seed: number;
   levelNumber: number;
   deviceFrames: Record<string, DeviceInputFrame[]>;
+  activeDeviceType: InputDeviceType;
 }
 
 export function saveReplay(gameStorage: GameStorage, replay: SavedReplay): void {
@@ -40,7 +46,8 @@ export function loadReplay(gameStorage: GameStorage): SavedReplay | null {
     typeof parsed.seed === 'number' &&
     typeof parsed.levelNumber === 'number' &&
     typeof parsed.deviceFrames === 'object' &&
-    parsed.deviceFrames !== null;
+    parsed.deviceFrames !== null &&
+    typeof parsed.activeDeviceType === 'number';
 
   return isValid ? (parsed as SavedReplay) : null;
 }

@@ -52,6 +52,7 @@ export interface ShopPurchaseResult {
 
 export interface ShopRunConsumables {
   powerups: PowerupType[];
+  powerupItems: ShopInventoryItemId[];
   extraLives: number;
 }
 
@@ -67,6 +68,8 @@ export function getPowerupTypeForInventoryItem(
       return PowerupType.Freeze;
     case ShopInventoryItemId.Wipeout:
       return PowerupType.Wipeout;
+    case ShopInventoryItemId.ExtraLife:
+      return PowerupType.Life;
     default:
       return null;
   }

@@ -1,8 +1,17 @@
-import { Timer, Vector } from '../../core';
+import {
+  GameObject,
+  RectPainter,
+  SpriteAlignment,
+  SpritePainter,
+  Timer,
+  Vector,
+} from '../../core';
 import { DebugLevelPlayerMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
-import { PlayerTank } from '../../gameObjects';
+import { PlayerTank, SpriteText } from '../../gameObjects';
+import { LevelPlayInputContext } from '../../input';
 import { PowerupType } from '../../powerup';
+import { ShopInventoryItemId, ShopManager } from '../../shop';
 import { TankFactory, TankParty } from '../../tank';
 import * as config from '../../config';
 
@@ -12,12 +21,75 @@ import {
   LevelPowerupPickedEvent,
 } from '../events';
 
+const HOTBAR_SLOT_SIZE = 70;
+const HOTBAR_SLOT_GAP = 12;
+const HOTBAR_SLOT_COUNT = 4;
+
+class PowerHotbarSlot extends GameObject {
+  private readonly keyText: SpriteText;
+  private readonly icon: GameObject;
+  private readonly itemId: ShopInventoryItemId;
+
+  constructor(index: number, itemId: ShopInventoryItemId = null) {
+    super(HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
+
+    this.itemId = itemId;
+    this.painter = new RectPainter(
+      itemId === null ? 'rgba(26, 24, 16, 0.62)' : 'rgba(68, 56, 10, 0.82)',
+      itemId === null ? 'rgba(145, 119, 20, 0.35)' : config.COLOR_YELLOW,
+    );
+    (this.painter as RectPainter).lineWidth = 3;
+
+    this.keyText = new SpriteText((index + 1).toString(), {
+      color: itemId === null ? config.COLOR_GRAY : config.COLOR_WHITE,
+      letterSpacing: 0,
+    });
+    this.keyText.position.set(6, 4);
+    this.add(this.keyText);
+
+    this.icon = new GameObject(44, 44);
+    this.icon.position.set(17, 19);
+    this.icon.painter = new SpritePainter(null, SpriteAlignment.Stretch);
+    this.add(this.icon);
+  }
+
+  protected setup({ spriteLoader }: GameUpdateArgs): void {
+    if (this.itemId === null) {
+      return;
+    }
+
+    (this.icon.painter as SpritePainter).sprite = spriteLoader.load(
+      this.getIconId(this.itemId),
+    );
+  }
+
+  private getIconId(itemId: ShopInventoryItemId): string {
+    switch (itemId) {
+      case ShopInventoryItemId.Shield:
+        return 'powerup.helmet';
+      case ShopInventoryItemId.BaseDefence:
+        return 'powerup.shovel';
+      case ShopInventoryItemId.Freeze:
+        return 'powerup.clock';
+      case ShopInventoryItemId.Wipeout:
+        return 'powerup.grenade';
+      case ShopInventoryItemId.ExtraLife:
+        return 'powerup.tank';
+      default:
+        return 'shop.bundle';
+    }
+  }
+}
+
 export class LevelPlayerScript extends LevelScript {
   private positions: Vector[] = [];
   private timers: Timer[] = [];
   private tanks: PlayerTank[] = [];
+  private hotbar = new GameObject();
+  private shopManager: ShopManager = null;
 
-  protected setup({ session }: GameUpdateArgs): void {
+  protected setup({ gameStorage, session }: GameUpdateArgs): void {
+    this.shopManager = new ShopManager(gameStorage);
     this.eventBus.playerSpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
     this.eventBus.levelGameOverMoveBlocked.addListener(
@@ -69,12 +141,38 @@ export class LevelPlayerScript extends LevelScript {
         tank.attributes.moveSpeed += speed;
       });
     }
+
+    this.hotbar.position.set(
+      config.CANVAS_WIDTH -
+        config.BORDER_RIGHT_WIDTH -
+        HOTBAR_SLOT_COUNT * HOTBAR_SLOT_SIZE -
+        (HOTBAR_SLOT_COUNT - 1) * HOTBAR_SLOT_GAP -
+        18,
+      config.CANVAS_HEIGHT -
+        config.BORDER_TOP_BOTTOM_HEIGHT -
+        HOTBAR_SLOT_SIZE -
+        14,
+    );
+    this.hotbar.setZIndex(500);
+    this.world.sceneRoot.add(this.hotbar);
+    this.renderHotbar();
   }
 
-  protected update({ deltaTime }: GameUpdateArgs): void {
+  protected update({ deltaTime, inputManager }: GameUpdateArgs): void {
     this.timers.forEach((timer) => {
       timer.update(deltaTime);
     });
+
+    const inputMethod = inputManager.getActiveMethod();
+    if (inputMethod.isDownAny(LevelPlayInputContext.PowerOne)) {
+      this.useHotbarPower(0);
+    } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerTwo)) {
+      this.useHotbarPower(1);
+    } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerThree)) {
+      this.useHotbarPower(2);
+    } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerFour)) {
+      this.useHotbarPower(3);
+    }
   }
 
   private requestSpawn = (partyIndex: number): void => {
@@ -153,28 +251,47 @@ export class LevelPlayerScript extends LevelScript {
     this.tanks[partyIndex] = tank;
 
     this.world.addPlayerTank(partyIndex, tank);
-    this.applyRunConsumables(partyIndex, tank, isLevelFirstSpawn);
   };
 
-  private applyRunConsumables(
-    partyIndex: number,
-    tank: PlayerTank,
-    isLevelFirstSpawn: boolean,
-  ): void {
-    if (partyIndex !== 0 || !isLevelFirstSpawn) {
+  private useHotbarPower(index: number): void {
+    const tank = this.tanks[0];
+    if (tank === null || tank === undefined) {
       return;
     }
 
     const runConsumables = this.session.getRunConsumables();
-    runConsumables.powerups.forEach((type) => {
-      this.eventBus.powerupPicked.notify({
-        type,
-        centerPosition: tank.getCenter(),
-        partyIndex,
-      });
-    });
+    const itemId = runConsumables.powerupItems[index];
+    const type = runConsumables.powerups[index];
+    if (itemId === undefined || type === undefined) {
+      return;
+    }
 
-    this.session.clearRunConsumables();
+    if (!this.shopManager.consumeInventoryItem(itemId)) {
+      runConsumables.powerupItems.splice(index, 1);
+      runConsumables.powerups.splice(index, 1);
+      this.renderHotbar();
+      return;
+    }
+
+    runConsumables.powerupItems.splice(index, 1);
+    runConsumables.powerups.splice(index, 1);
+    this.eventBus.powerupPicked.notify({
+      type,
+      centerPosition: tank.getCenter(),
+      partyIndex: 0,
+    });
+    this.renderHotbar();
+  }
+
+  private renderHotbar(): void {
+    this.hotbar.removeAllChildren();
+    const runConsumables = this.session.getRunConsumables();
+
+    for (let index = 0; index < HOTBAR_SLOT_COUNT; index += 1) {
+      const slot = new PowerHotbarSlot(index, runConsumables.powerupItems[index]);
+      slot.position.set(index * (HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP), 0);
+      this.hotbar.add(slot);
+    }
   }
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
