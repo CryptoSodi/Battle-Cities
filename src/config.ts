@@ -298,6 +298,7 @@ export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
 // Dev-only: the most recently completed match's input recording, watchable
 // via the main menu's REPLAY item (config.IS_DEV builds only). See src/replay.
 export const STORAGE_KEY_DEBUG_LAST_REPLAY = 'debug.last-replay';
+export const STORAGE_KEY_DEBUG_REPLAY_GUEST_ID = 'debug.replay-guest-id';
 
 export const SHOP_STARTING_TOKEN_BALANCE = 1000;
 export const SHOP_STARTING_SOL_BALANCE = 1.25;

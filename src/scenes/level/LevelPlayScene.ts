@@ -822,7 +822,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
         enemyTraces: this.recordedEnemyTraces,
         powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
-      });
+      }).catch(() => undefined);
       return;
     }
 

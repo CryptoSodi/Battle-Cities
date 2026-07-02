@@ -12,6 +12,7 @@ export enum GameSceneType {
   MainGameOver,
   MainHighscore,
   MainMenu,
+  MainReplay,
   MainShop,
   MainVictory,
   ModesMenu,
