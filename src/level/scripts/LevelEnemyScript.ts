@@ -1,4 +1,4 @@
-import { Timer, Vector } from '../../core';
+import { Subject, Timer, Vector } from '../../core';
 import { GameUpdateArgs, Rotation } from '../../game';
 import { EnemyTank } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
@@ -27,6 +27,13 @@ export class LevelEnemyScript extends LevelScript {
   // RecordedTankBehavior) -- keyed by partyIndex, same as the saved replay's
   // own enemyTraces.
   private replayEnemyTraces: Record<number, EnemyMovementFrame[]> | null = null;
+  // Fires synchronously the moment a tank is constructed and pushed to
+  // aliveTanks -- deliberately NOT the eventBus.enemySpawnCompleted Subject,
+  // whose listener order between scripts depends on when each script's own
+  // (lazy, first-update-triggered) setup() runs, which isn't guaranteed to
+  // be before a listener registered eagerly elsewhere (see LevelPlayScene's
+  // enemy-fire recording, which needs the tank to already exist).
+  public tankCreated = new Subject<EnemyTank>();
 
   public setReplayEnemyTraces(
     traces: Record<number, EnemyMovementFrame[]> | null,
@@ -139,6 +146,7 @@ export class LevelEnemyScript extends LevelScript {
     });
 
     this.aliveTanks.push(tank);
+    this.tankCreated.notify(tank);
 
     this.world.field.add(tank);
   };

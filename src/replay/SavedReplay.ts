@@ -1,9 +1,10 @@
 import { DeviceInputFrame } from '../core';
-import { GameStorage } from '../game';
+import { GameStorage, SessionRunConsumables } from '../game';
 import { InputDeviceType } from '../input';
 import * as config from '../config';
 
 import { EnemyMovementFrame } from './EnemyMovementFrame';
+import { PowerupSpawnFrame } from './PowerupSpawnFrame';
 
 // Everything needed to reproduce a match: the level it was played on, the
 // Prng seed the simulation started with, every input device's per-tick log
@@ -11,17 +12,19 @@ import { EnemyMovementFrame } from './EnemyMovementFrame';
 // Record<string, DeviceInputFrame[]>), which device single-player input was
 // reading from when recording began (see InputManager.activeDeviceType -- it
 // isn't derivable from the device logs alone, since it's an InputManager-
-// level routing decision, not part of any one device's own state), and each
+// level routing decision, not part of any one device's own state), each
 // enemy's recorded movement (keyed by partyIndex) -- see EnemyMovementFrame
-// for why enemies are replayed by re-enacting recorded state rather than by
-// re-deriving it from the seed. Plain data -- round-trips through
-// JSON.stringify/parse with no custom (de)serialization.
+// -- and every powerup spawn's chosen type/position in order -- see
+// PowerupSpawnFrame. Plain data -- round-trips through JSON.stringify/parse
+// with no custom (de)serialization.
 export interface SavedReplay {
   seed: number;
   levelNumber: number;
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
+  runConsumables: SessionRunConsumables;
   enemyTraces: Record<number, EnemyMovementFrame[]>;
+  powerupSpawns: PowerupSpawnFrame[];
 }
 
 export function saveReplay(gameStorage: GameStorage, replay: SavedReplay): void {
@@ -54,7 +57,47 @@ export function loadReplay(gameStorage: GameStorage): SavedReplay | null {
     parsed.deviceFrames !== null &&
     typeof parsed.activeDeviceType === 'number' &&
     typeof parsed.enemyTraces === 'object' &&
-    parsed.enemyTraces !== null;
+    parsed.enemyTraces !== null &&
+    Array.isArray(parsed.powerupSpawns);
 
-  return isValid ? (parsed as SavedReplay) : null;
+  if (!isValid) {
+    return null;
+  }
+
+  if (parsed.runConsumables === undefined) {
+    parsed.runConsumables = createEmptyRunConsumables();
+  }
+
+  if (!isValidRunConsumables(parsed.runConsumables)) {
+    return null;
+  }
+
+  return parsed as SavedReplay;
+}
+
+function createEmptyRunConsumables(): SessionRunConsumables {
+  return {
+    powerups: [],
+    powerupItems: [],
+    powerupCounts: [],
+    extraLives: 0,
+  };
+}
+
+function isValidRunConsumables(value: any): boolean {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !Array.isArray(value.powerups) ||
+    !Array.isArray(value.powerupItems) ||
+    typeof value.extraLives !== 'number'
+  ) {
+    return false;
+  }
+
+  if (value.powerupCounts === undefined) {
+    value.powerupCounts = value.powerupItems.map(() => 1);
+  }
+
+  return Array.isArray(value.powerupCounts);
 }

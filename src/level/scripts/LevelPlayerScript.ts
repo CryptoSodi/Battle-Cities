@@ -95,9 +95,11 @@ export class LevelPlayerScript extends LevelScript {
   private tanks: PlayerTank[] = [];
   private hotbar = new GameObject();
   private shopManager: ShopManager = null;
+  private isReplaying = false;
 
-  protected setup({ gameStorage, session }: GameUpdateArgs): void {
+  protected setup({ gameStorage, inputManager, session }: GameUpdateArgs): void {
     this.shopManager = new ShopManager(gameStorage);
+    this.isReplaying = inputManager.isReplaying();
     this.eventBus.playerSpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
     this.eventBus.levelGameOverMoveBlocked.addListener(
@@ -276,7 +278,7 @@ export class LevelPlayerScript extends LevelScript {
       return;
     }
 
-    if (!this.shopManager.consumeInventoryItem(itemId)) {
+    if (!this.isReplaying && !this.shopManager.consumeInventoryItem(itemId)) {
       runConsumables.powerupItems.splice(index, 1);
       runConsumables.powerups.splice(index, 1);
       powerupCounts.splice(index, 1);

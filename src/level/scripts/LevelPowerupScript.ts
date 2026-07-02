@@ -1,8 +1,9 @@
-import { Prng, Rect, Timer } from '../../core';
+import { Prng, Rect, Timer, Vector } from '../../core';
 import { DebugLevelPowerupMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
 import { Powerup } from '../../gameObjects';
 import { PowerupFactory, PowerupGrid, PowerupType } from '../../powerup';
+import { PowerupSpawnFrame } from '../../replay';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
 
@@ -18,6 +19,25 @@ export class LevelPowerupScript extends LevelScript {
   private activePowerup: Powerup = null;
   private grid: PowerupGrid;
   private rng: Prng;
+  // Dev-only match replay (see src/replay/PowerupSpawnFrame): when set, each
+  // spawn() call re-enacts the next recorded (type, position) pair instead of
+  // drawing from rng.
+  private replayPowerupSpawns: PowerupSpawnFrame[] | null = null;
+  private replaySpawnIndex = 0;
+  private isRecordingPowerups = false;
+  private recordedPowerupSpawns: PowerupSpawnFrame[] = [];
+
+  public setReplayPowerupSpawns(frames: PowerupSpawnFrame[] | null): void {
+    this.replayPowerupSpawns = frames;
+  }
+
+  public startRecordingPowerups(): void {
+    this.isRecordingPowerups = true;
+  }
+
+  public getRecordedPowerupSpawns(): PowerupSpawnFrame[] {
+    return this.recordedPowerupSpawns;
+  }
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.rng = updateArgs.rng;
@@ -102,29 +122,59 @@ export class LevelPowerupScript extends LevelScript {
     // Override previous powerup with newly picked up one
     this.revoke();
 
-    const powerup =
-      type !== null
-        ? PowerupFactory.create(type)
-        : PowerupFactory.createRandom(this.rng);
-
-    // Block area around player tank at the moment of powerup spawn
-    // so player won't accidently pick up a powerup. After spawning free it back
-    // because player tank is in constant movement.
+    // Needed either way: to block spawn positions around live players below,
+    // or as the fallback "give directly to player" target further down.
     const playerTankRects = this.createPlayerTankRects();
-    if (playerTankRects.length > 0) {
-      this.grid.backup();
-      playerTankRects.forEach((playerTankRect) => {
-        if (playerTankRect === null) {
-          return;
-        }
-        this.grid.blockRect(playerTankRect);
-      });
+
+    let powerup: Powerup;
+    let position: Vector | null;
+
+    if (this.replayPowerupSpawns !== null) {
+      // Dev-only match replay: re-enact exactly which powerup spawned where,
+      // instead of drawing from rng (see PowerupSpawnFrame -- once enemies
+      // stopped consuming the same rng stream, its alignment with the
+      // original recording broke, so this must be replayed verbatim too).
+      const frame = this.replayPowerupSpawns[this.replaySpawnIndex] ?? null;
+      this.replaySpawnIndex += 1;
+      powerup =
+        frame !== null
+          ? PowerupFactory.create(frame.type)
+          : PowerupFactory.createRandom(this.rng); // recording exhausted; fall back
+      position =
+        frame !== null && frame.position !== null
+          ? new Vector(frame.position.x, frame.position.y)
+          : null;
+    } else {
+      powerup =
+        type !== null
+          ? PowerupFactory.create(type)
+          : PowerupFactory.createRandom(this.rng);
+
+      // Block area around player tank at the moment of powerup spawn
+      // so player won't accidently pick up a powerup. After spawning free it back
+      // because player tank is in constant movement.
+      if (playerTankRects.length > 0) {
+        this.grid.backup();
+        playerTankRects.forEach((playerTankRect) => {
+          if (playerTankRect === null) {
+            return;
+          }
+          this.grid.blockRect(playerTankRect);
+        });
+      }
+
+      position = this.grid.getRandomPosition(this.rng);
+
+      if (playerTankRects.length > 0) {
+        this.grid.restore();
+      }
     }
 
-    const position = this.grid.getRandomPosition(this.rng);
-
-    if (playerTankRects.length > 0) {
-      this.grid.restore();
+    if (this.isRecordingPowerups) {
+      this.recordedPowerupSpawns.push({
+        type: powerup.type,
+        position: position !== null ? { x: position.x, y: position.y } : null,
+      });
     }
 
     // In case no free position available, give powerup directly to player.

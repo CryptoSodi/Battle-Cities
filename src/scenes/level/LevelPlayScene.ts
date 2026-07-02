@@ -1,5 +1,11 @@
 import { DebugCameraMenu, DebugCollisionMenu } from '../../debug';
-import { GameUpdateArgs, GameState, GameStorage, Session } from '../../game';
+import {
+  GameUpdateArgs,
+  GameState,
+  GameStorage,
+  Session,
+  SessionRunConsumables,
+} from '../../game';
 import {
   Border,
   BrickSuperTerrainTile,
@@ -60,6 +66,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // alongside the seed and device logs, or a replay's single-player input
   // routing could start from a different device than the original match did.
   private recordedActiveDeviceType: InputDeviceType;
+  // Hotbar/loadout state as it existed when recording began. The per-device
+  // replay contains the 1/2/3/4 presses, but those presses only work if the
+  // same run consumables are loaded before playback starts.
+  private recordedRunConsumables: SessionRunConsumables;
   // Whether this run is recording (false while replaying or off; see setup()).
   private isRecordingReplay = false;
   // Enemies are replayed by re-enacting recorded movement rather than by
@@ -150,11 +160,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // themselves (see InputManager.activeDeviceType), so without this a
       // replay could read player input from the wrong device.
       inputManager.setActiveDeviceType(replay.activeDeviceType);
+      session.setRunConsumables(this.cloneRunConsumables(replay.runConsumables));
     } else {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
       inputManager.startRecording();
       this.recordedActiveDeviceType = inputManager.getActiveDeviceType();
+      this.recordedRunConsumables = this.cloneRunConsumables(
+        session.getRunConsumables(),
+      );
       this.isRecordingReplay = true;
     }
 
@@ -277,6 +291,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.playerScript = new LevelPlayerScript();
     this.pointsScript = new LevelPointsScript();
     this.powerupScript = new LevelPowerupScript();
+    if (replay !== undefined) {
+      this.powerupScript.setReplayPowerupSpawns(replay.powerupSpawns);
+    } else if (this.isRecordingReplay) {
+      this.powerupScript.startRecordingPowerups();
+    }
     this.spawnScript = new LevelSpawnScript();
     this.winScript = new LevelWinScript();
 
@@ -363,20 +382,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     });
 
     // Recording side of enemy replay (see the note above the reseed/replay
-    // branch in setup()): as each enemy spawns, start its trace and hook its
-    // `fired` Subject so the per-tick recording loop in update() knows to
-    // flag that tick. LevelEnemyScript's own enemySpawnCompleted listener
-    // (registered in its setup(), which runs before this one) has already
-    // constructed and added the tank by the time this fires, so it's already
-    // in getAliveTanks().
+    // branch in setup()): as each enemy is constructed, start its trace and
+    // hook its `fired` Subject so the per-tick recording loop in update()
+    // knows to flag that tick. Uses LevelEnemyScript.tankCreated (fired
+    // synchronously at construction) rather than eventBus.enemySpawnCompleted
+    // -- that Subject's listener order between scripts depends on when each
+    // script's own lazy setup() first runs, which isn't guaranteed to put
+    // LevelEnemyScript's tank-creating listener before this one.
     if (this.isRecordingReplay) {
-      this.eventBus.enemySpawnCompleted.addListener((event) => {
-        this.recordedEnemyTraces[event.partyIndex] = [];
-
-        const tank = this.enemyScript
-          .getAliveTanks()
-          .find((aliveTank) => aliveTank.partyIndex === event.partyIndex);
-        tank?.fired.addListener(() => {
+      this.enemyScript.tankCreated.addListener((tank) => {
+        this.recordedEnemyTraces[tank.partyIndex] = [];
+        tank.fired.addListener(() => {
           this.firedThisTick.add(tank);
         });
       });
@@ -803,7 +819,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         levelNumber: this.session.getLevelNumber(),
         deviceFrames,
         activeDeviceType: this.recordedActiveDeviceType,
+        runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
         enemyTraces: this.recordedEnemyTraces,
+        powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
       });
       return;
     }
@@ -811,5 +829,16 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (this.inputManager.isReplaying()) {
       this.inputManager.stopReplay();
     }
+  }
+
+  private cloneRunConsumables(
+    runConsumables: SessionRunConsumables,
+  ): SessionRunConsumables {
+    return {
+      powerups: runConsumables.powerups.slice(),
+      powerupItems: runConsumables.powerupItems.slice(),
+      powerupCounts: (runConsumables.powerupCounts || []).slice(),
+      extraLives: runConsumables.extraLives,
+    };
   }
 }
