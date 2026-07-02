@@ -49,6 +49,20 @@ const googleLoginButton = document.querySelector(
 ) as HTMLButtonElement;
 const authStatusElement = document.querySelector('[data-auth-status]') as HTMLElement;
 
+type PhantomProvider = {
+  isPhantom?: boolean;
+  connect: () => Promise<{ publicKey: { toString: () => string } }>;
+  signMessage: (
+    message: Uint8Array,
+    display?: string,
+  ) => Promise<{ signature: Uint8Array } | Uint8Array>;
+};
+
+type PhantomWindow = Window & {
+  phantom?: { solana?: PhantomProvider };
+  solana?: PhantomProvider;
+};
+
 const log = new Logger('main', Logger.Level.Debug);
 
 const rendererOverride = new URLSearchParams(window.location.search).get(
@@ -515,6 +529,60 @@ function waitForLogin(): Promise<void> {
       }
     };
 
+    const setWalletBusy = (busy: boolean): void => {
+      if (walletLoginButton !== null) {
+        walletLoginButton.disabled = busy;
+        walletLoginButton.setAttribute('aria-busy', busy ? 'true' : 'false');
+      }
+    };
+
+    const getPhantomProvider = (): PhantomProvider | null => {
+      const phantomWindow = window as PhantomWindow;
+      const provider = phantomWindow.phantom?.solana || phantomWindow.solana;
+
+      return provider?.isPhantom === true ? provider : null;
+    };
+
+    const startServerSession = async (body: object): Promise<void> => {
+      const response = await fetch('/api/session', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error('Session failed.');
+      }
+    };
+
+    const createWalletChallenge = async (
+      walletAddress: string,
+    ): Promise<{ nonce: string; message: string }> => {
+      const response = await fetch('/api/session', {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ walletAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Wallet challenge failed.');
+      }
+
+      return response.json();
+    };
+
+    const signatureToBase64 = (signature: Uint8Array): string => {
+      let binary = '';
+      signature.forEach((byte) => {
+        binary += String.fromCharCode(byte);
+      });
+      return window.btoa(binary);
+    };
+
     const startGuestSession = async (): Promise<void> => {
       if (loginStarted) {
         return;
@@ -525,18 +593,7 @@ function waitForLogin(): Promise<void> {
       setStatus('Starting guest session...');
 
       try {
-        const response = await fetch('/api/session', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({ provider: 'guest' }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Guest session failed.');
-        }
-
+        await startServerSession({ provider: 'guest' });
         setStatus('Guest session ready.');
         resolve();
       } catch {
@@ -546,12 +603,61 @@ function waitForLogin(): Promise<void> {
       }
     };
 
+    const startWalletSession = async (): Promise<void> => {
+      if (loginStarted) {
+        return;
+      }
+
+      const provider = getPhantomProvider();
+      if (provider === null) {
+        setStatus('Install Phantom wallet to connect with Solana.');
+        return;
+      }
+
+      loginStarted = true;
+      setWalletBusy(true);
+      setStatus('Connecting Phantom wallet...');
+
+      try {
+        const result = await provider.connect();
+        const walletAddress = result.publicKey.toString();
+        const challenge = await createWalletChallenge(walletAddress);
+        const encodedMessage = new TextEncoder().encode(challenge.message);
+        const signedMessage = await provider.signMessage(
+          encodedMessage,
+          'utf8',
+        );
+        const signature =
+          signedMessage instanceof Uint8Array
+            ? signedMessage
+            : signedMessage.signature;
+
+        await startServerSession({
+          provider: 'wallet',
+          walletAddress,
+          nonce: challenge.nonce,
+          message: challenge.message,
+          signature: signatureToBase64(signature),
+        });
+        setStatus('Phantom wallet connected.');
+        resolve();
+      } catch {
+        loginStarted = false;
+        setWalletBusy(false);
+        setStatus('Could not connect Phantom wallet. Try again.');
+      }
+    };
+
     fetch('/api/session')
       .then((response) => (response.ok ? response.json() : null))
       .then((session) => {
         if (session?.authenticated === true) {
           loginStarted = true;
-          setStatus('Guest session is already active.');
+          setStatus(
+            session.provider === 'wallet'
+              ? 'Wallet session is already active.'
+              : 'Guest session is already active.',
+          );
           resolve();
         }
       })
@@ -562,7 +668,7 @@ function waitForLogin(): Promise<void> {
     });
 
     walletLoginButton?.addEventListener('click', () => {
-      setStatus('Wallet connect is next. Guest login is ready for testing.');
+      startWalletSession();
     });
 
     googleLoginButton?.addEventListener('click', () => {

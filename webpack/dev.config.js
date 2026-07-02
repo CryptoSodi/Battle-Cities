@@ -7,6 +7,7 @@ const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
 const sessionIdentity = require('../server/sessionIdentity');
 const sessionStore = require('../server/sessionStore');
+const walletAuth = require('../server/walletAuth');
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -75,17 +76,51 @@ function attachReplayApi(app) {
       return;
     }
 
-    if (body.provider !== 'guest') {
+    if (body.provider !== 'guest' && body.provider !== 'wallet') {
       sendJson(response, 400, { error: 'Unsupported login provider' });
       return;
     }
 
-    const session = await sessionStore.createGuestSession();
+    if (
+      body.provider === 'wallet' &&
+      !(await walletAuth.verifyChallenge({
+        walletAddress: body.walletAddress,
+        nonce: body.nonce,
+        message: body.message,
+        signature: body.signature,
+      }))
+    ) {
+      sendJson(response, 401, { error: 'Invalid wallet signature' });
+      return;
+    }
+
+    const session =
+      body.provider === 'wallet'
+        ? await sessionStore.createWalletSession(body.walletAddress)
+        : await sessionStore.createGuestSession();
     response.setHeader(
       'set-cookie',
       sessionIdentity.createSessionCookie(session.id),
     );
     sendJson(response, 201, sessionStore.toPublicSession(session));
+  });
+
+  app.put('/api/session', async (request, response) => {
+    let body;
+    try {
+      body = await readJsonBody(request);
+    } catch (error) {
+      sendJson(response, 400, { error: 'Invalid JSON' });
+      return;
+    }
+
+    if (!walletAuth.isValidWalletAddress(body.walletAddress)) {
+      sendJson(response, 400, { error: 'Invalid wallet address' });
+      return;
+    }
+
+    const challenge = await walletAuth.createChallenge(body.walletAddress);
+    sendJson(response, 201, challenge);
   });
 
   app.get('/api/replays', async (request, response) => {

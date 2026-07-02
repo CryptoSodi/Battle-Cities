@@ -48,8 +48,12 @@ async function ensureSchema() {
       provider TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       last_seen_at TIMESTAMPTZ NOT NULL,
-      player_id TEXT NULL
+      player_id TEXT NULL,
+      wallet_address TEXT NULL
     );
+
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS wallet_address TEXT NULL;
 
     CREATE INDEX IF NOT EXISTS battlecity_sessions_provider_created_idx
       ON ${TABLE_NAME} (provider, created_at DESC);
@@ -65,13 +69,26 @@ function getSessionPath(id) {
 }
 
 async function createGuestSession() {
+  return createSession('guest', null);
+}
+
+async function createWalletSession(walletAddress) {
+  if (!isValidWalletAddress(walletAddress)) {
+    throw new Error('Invalid wallet address');
+  }
+
+  return createSession('wallet', walletAddress);
+}
+
+async function createSession(provider, walletAddress) {
   const now = new Date().toISOString();
   const session = {
     id: createSessionId(),
-    provider: 'guest',
+    provider,
     createdAt: now,
     lastSeenAt: now,
-    playerId: null,
+    playerId: walletAddress === null ? null : `wallet:${walletAddress}`,
+    walletAddress,
   };
 
   if (hasPersistentConfig()) {
@@ -79,8 +96,8 @@ async function createGuestSession() {
     await getPgPool().query(
       `
         INSERT INTO ${TABLE_NAME}
-          (id, provider, created_at, last_seen_at, player_id)
-        VALUES ($1, $2, $3, $4, $5)
+          (id, provider, created_at, last_seen_at, player_id, wallet_address)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `,
       [
         session.id,
@@ -88,6 +105,7 @@ async function createGuestSession() {
         session.createdAt,
         session.lastSeenAt,
         session.playerId,
+        session.walletAddress,
       ],
     );
     return session;
@@ -109,6 +127,7 @@ async function readSession(id) {
     const result = await getPgPool().query(
       `
         SELECT id, provider, created_at, last_seen_at, player_id
+          , wallet_address
         FROM ${TABLE_NAME}
         WHERE id = $1
         LIMIT 1
@@ -127,6 +146,7 @@ async function readSession(id) {
       createdAt: new Date(row.created_at).toISOString(),
       lastSeenAt: new Date(row.last_seen_at).toISOString(),
       playerId: row.player_id,
+      walletAddress: row.wallet_address,
     };
     await touchSession(session.id);
     return session;
@@ -171,6 +191,7 @@ function toPublicSession(session) {
     authenticated: true,
     provider: session.provider,
     playerId: session.playerId,
+    walletAddress: session.walletAddress || null,
     createdAt: session.createdAt,
   };
 }
@@ -190,15 +211,29 @@ function isValidSession(value) {
     typeof value === 'object' &&
     value !== null &&
     isValidSessionId(value.id) &&
-    value.provider === 'guest' &&
+    (value.provider === 'guest' || value.provider === 'wallet') &&
     typeof value.createdAt === 'string' &&
-    typeof value.lastSeenAt === 'string'
+    typeof value.lastSeenAt === 'string' &&
+    (value.walletAddress === null ||
+      typeof value.walletAddress === 'undefined' ||
+      isValidWalletAddress(value.walletAddress))
+  );
+}
+
+function isValidWalletAddress(value) {
+  return (
+    typeof value === 'string' &&
+    value.length >= 32 &&
+    value.length <= 64 &&
+    /^[1-9A-HJ-NP-Za-km-z]+$/.test(value)
   );
 }
 
 module.exports = {
   createGuestSession,
+  createWalletSession,
   isPersistentStoreConfigured: hasPersistentConfig,
+  isValidWalletAddress,
   readSession,
   toPublicSession,
 };
