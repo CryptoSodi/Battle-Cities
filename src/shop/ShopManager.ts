@@ -96,6 +96,8 @@ const ACTIVE_ITEMS = [
 
 const PASSIVE_ITEMS = [ShopInventoryItemId.ExtraLife];
 
+const MAX_POWERUP_STACK = 2;
+
 export class ShopManager {
   private storage: GameStorage;
 
@@ -165,7 +167,18 @@ export class ShopManager {
   }
 
   public getEquipped(slot: ShopLoadoutSlot): ShopInventoryItemId {
-    return this.getLoadout()[slot] || null;
+    const loadout = this.getLoadout();
+    const normalizedLoadout = this.normalizeLoadout(loadout);
+    return normalizedLoadout[slot] || null;
+  }
+
+  public getEquippedStackCount(slot: ShopLoadoutSlot): number {
+    const itemId = this.getEquipped(slot);
+    if (itemId === null) {
+      return 0;
+    }
+
+    return Math.min(MAX_POWERUP_STACK, this.getInventoryCount(itemId));
   }
 
   public purchaseItem(
@@ -214,9 +227,18 @@ export class ShopManager {
     const items =
       slot === ShopLoadoutSlot.Passive ? PASSIVE_ITEMS : ACTIVE_ITEMS;
     const loadout = this.getLoadout();
+    this.normalizeLoadout(loadout);
     const currentItem = loadout[slot] || null;
+    const equippedElsewhere = new Set<ShopInventoryItemId>();
+    Object.keys(loadout).forEach((slotKey) => {
+      const loadoutSlot = slotKey as ShopLoadoutSlot;
+      const itemId = loadout[loadoutSlot];
+      if (loadoutSlot !== slot && itemId !== undefined) {
+        equippedElsewhere.add(itemId);
+      }
+    });
     const ownedItems = items.filter((itemId) => {
-      return this.getInventoryCount(itemId) > 0;
+      return this.getInventoryCount(itemId) > 0 && !equippedElsewhere.has(itemId);
     });
     const choices = [null, ...ownedItems];
     const currentIndex = choices.indexOf(currentItem);
@@ -255,10 +277,12 @@ export class ShopManager {
 
   public getEquippedRunConsumables(): ShopRunConsumables {
     const loadout = this.getLoadout();
+    this.normalizeLoadout(loadout);
     const inventory = this.getInventory();
     const consumables: ShopRunConsumables = {
       powerups: [],
       powerupItems: [],
+      powerupCounts: [],
       extraLives: 0,
     };
 
@@ -271,8 +295,15 @@ export class ShopManager {
 
       const powerupType = getPowerupTypeForInventoryItem(itemId);
       if (powerupType !== null) {
+        if (consumables.powerupItems.indexOf(itemId) !== -1) {
+          return;
+        }
+
         consumables.powerupItems.push(itemId);
         consumables.powerups.push(powerupType);
+        consumables.powerupCounts.push(
+          Math.min(MAX_POWERUP_STACK, inventory[itemId] || 0),
+        );
       }
     });
 
@@ -289,6 +320,7 @@ export class ShopManager {
     this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
 
     const loadout = this.getLoadout();
+    this.normalizeLoadout(loadout);
     Object.keys(loadout).forEach((slotKey) => {
       const slot = slotKey as ShopLoadoutSlot;
       if (loadout[slot] === itemId && (inventory[itemId] || 0) <= 0) {
@@ -303,10 +335,12 @@ export class ShopManager {
 
   public consumeEquippedItems(): ShopRunConsumables {
     const loadout = this.getLoadout();
+    this.normalizeLoadout(loadout);
     const inventory = this.getInventory();
     const consumables: ShopRunConsumables = {
       powerups: [],
       powerupItems: [],
+      powerupCounts: [],
       extraLives: 0,
     };
 
@@ -330,6 +364,7 @@ export class ShopManager {
       if (powerupType !== null) {
         consumables.powerupItems.push(itemId);
         consumables.powerups.push(powerupType);
+        consumables.powerupCounts.push(1);
       }
     });
 
@@ -364,6 +399,27 @@ export class ShopManager {
 
   private getLoadout(): ShopLoadout {
     return this.getJson<ShopLoadout>(config.STORAGE_KEY_SHOP_LOADOUT, {});
+  }
+
+  private normalizeLoadout(loadout: ShopLoadout): ShopLoadout {
+    const equippedItems = new Set<ShopInventoryItemId>();
+
+    Object.keys(loadout).forEach((slotKey) => {
+      const slot = slotKey as ShopLoadoutSlot;
+      const itemId = loadout[slot];
+      if (itemId === undefined) {
+        return;
+      }
+
+      if (equippedItems.has(itemId)) {
+        delete loadout[slot];
+        return;
+      }
+
+      equippedItems.add(itemId);
+    });
+
+    return loadout;
   }
 
   private createMockTransactionHash(): string {

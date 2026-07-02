@@ -2,8 +2,9 @@ import { Timer, Vector } from '../../core';
 import { GameUpdateArgs, Rotation } from '../../game';
 import { EnemyTank } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
+import { EnemyMovementFrame } from '../../replay';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
-import { AiTankBehavior } from '../../tank/behaviors';
+import { AiTankBehavior, RecordedTankBehavior } from '../../tank/behaviors';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
@@ -21,6 +22,23 @@ export class LevelEnemyScript extends LevelScript {
   private spawnTimer = new Timer();
   private freezeTimer = new Timer();
   private spawningCount = 0;
+  // Dev-only match replay (see src/replay): when set, newly spawned enemies
+  // re-enact this recorded movement instead of deciding for themselves (see
+  // RecordedTankBehavior) -- keyed by partyIndex, same as the saved replay's
+  // own enemyTraces.
+  private replayEnemyTraces: Record<number, EnemyMovementFrame[]> | null = null;
+
+  public setReplayEnemyTraces(
+    traces: Record<number, EnemyMovementFrame[]> | null,
+  ): void {
+    this.replayEnemyTraces = traces;
+  }
+
+  // Exposes the currently-alive enemies so the scene can record their
+  // per-tick movement during a real (non-replay) playthrough.
+  public getAliveTanks(): EnemyTank[] {
+    return this.aliveTanks;
+  }
 
   protected setup(): void {
     this.eventBus.enemySpawnCompleted.addListener(this.handleSpawnCompleted);
@@ -71,7 +89,11 @@ export class LevelEnemyScript extends LevelScript {
       return;
     }
 
-    const tank = TankFactory.createEnemy(event.partyIndex, type);
+    const behavior =
+      this.replayEnemyTraces !== null
+        ? new RecordedTankBehavior(this.replayEnemyTraces[event.partyIndex] ?? [])
+        : new AiTankBehavior();
+    const tank = TankFactory.createEnemy(event.partyIndex, type, behavior);
     if (tank.behavior instanceof AiTankBehavior) {
       tank.behavior.setBasePosition(this.mapConfig.getBasePosition());
     }

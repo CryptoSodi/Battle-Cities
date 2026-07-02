@@ -5,6 +5,7 @@ import { ShopInventoryItemId } from '../shop';
 export interface SessionRunConsumables {
   powerups: PowerupType[];
   powerupItems: ShopInventoryItemId[];
+  powerupCounts: number[];
   extraLives: number;
 }
 
@@ -55,6 +56,7 @@ export class Session {
     this.runConsumables = {
       powerups: [],
       powerupItems: [],
+      powerupCounts: [],
       extraLives: 0,
     };
 
@@ -186,6 +188,7 @@ export class Session {
     this.runConsumables = {
       powerups: [],
       powerupItems: [],
+      powerupCounts: [],
       extraLives: 0,
     };
   }

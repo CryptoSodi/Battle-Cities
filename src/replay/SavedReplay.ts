@@ -3,20 +3,25 @@ import { GameStorage } from '../game';
 import { InputDeviceType } from '../input';
 import * as config from '../config';
 
+import { EnemyMovementFrame } from './EnemyMovementFrame';
+
 // Everything needed to reproduce a match: the level it was played on, the
 // Prng seed the simulation started with, every input device's per-tick log
 // (keyed the same way InputManager.startRecording()/startReplay() key their
-// Record<string, DeviceInputFrame[]>), and which device single-player input
-// was reading from when recording began (see InputManager.activeDeviceType --
-// it isn't derivable from the device logs alone, since it's an InputManager-
-// level routing decision, not part of any one device's own state). Plain
-// data -- round-trips through JSON.stringify/parse with no custom
-// (de)serialization.
+// Record<string, DeviceInputFrame[]>), which device single-player input was
+// reading from when recording began (see InputManager.activeDeviceType -- it
+// isn't derivable from the device logs alone, since it's an InputManager-
+// level routing decision, not part of any one device's own state), and each
+// enemy's recorded movement (keyed by partyIndex) -- see EnemyMovementFrame
+// for why enemies are replayed by re-enacting recorded state rather than by
+// re-deriving it from the seed. Plain data -- round-trips through
+// JSON.stringify/parse with no custom (de)serialization.
 export interface SavedReplay {
   seed: number;
   levelNumber: number;
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
+  enemyTraces: Record<number, EnemyMovementFrame[]>;
 }
 
 export function saveReplay(gameStorage: GameStorage, replay: SavedReplay): void {
@@ -47,7 +52,9 @@ export function loadReplay(gameStorage: GameStorage): SavedReplay | null {
     typeof parsed.levelNumber === 'number' &&
     typeof parsed.deviceFrames === 'object' &&
     parsed.deviceFrames !== null &&
-    typeof parsed.activeDeviceType === 'number';
+    typeof parsed.activeDeviceType === 'number' &&
+    typeof parsed.enemyTraces === 'object' &&
+    parsed.enemyTraces !== null;
 
   return isValid ? (parsed as SavedReplay) : null;
 }

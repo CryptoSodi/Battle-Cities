@@ -3,12 +3,14 @@ import { GameUpdateArgs, GameState, GameStorage, Session } from '../../game';
 import {
   Border,
   BrickSuperTerrainTile,
+  EnemyTank,
   GroundField,
   Tank,
   WallShadowField,
 } from '../../gameObjects';
 import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
+import { EnemyMovementFrame, saveReplay } from '../../replay';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory, TerrainType } from '../../terrain';
 import { ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
@@ -42,8 +44,6 @@ import {
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
-import { saveReplay } from '../../replay';
-
 import { LevelPlayLocationParams } from './params';
 
 export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
@@ -60,10 +60,16 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // alongside the seed and device logs, or a replay's single-player input
   // routing could start from a different device than the original match did.
   private recordedActiveDeviceType: InputDeviceType;
-  // TEMPORARY diagnostic counter (remove once the replay-determinism bug is
-  // found): sim ticks elapsed since this level's setup(), so logged events
-  // can be compared by tick number across separate replay watches.
-  private replayDebugTick: number = null;
+  // Whether this run is recording (false while replaying or off; see setup()).
+  private isRecordingReplay = false;
+  // Enemies are replayed by re-enacting recorded movement rather than by
+  // re-deriving it from AiTankBehavior + the seeded Prng (see
+  // RecordedTankBehavior for why). Keyed by partyIndex, populated once per
+  // tick in update() for every enemy alive that tick.
+  private recordedEnemyTraces: Record<number, EnemyMovementFrame[]> = {};
+  // Enemies that fired THIS tick, per the LevelEnemyScript.fired listener
+  // hooked at spawn time. Read and cleared each tick when recording a frame.
+  private firedThisTick = new Set<EnemyTank>();
   private debugCollisionMenu: DebugCollisionMenu;
   private debugCameraMenu: DebugCameraMenu;
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
@@ -125,6 +131,16 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // replay". Both branches must run BEFORE reset() below so recording/
     // playback starts at the same point (right after reset) it'll be read
     // back from.
+    //
+    // Enemies are handled separately from input: AiTankBehavior's decisions
+    // (fire timing, think/rotate chance) turned out not to reproduce
+    // perfectly from the seed alone across separate replay watches, even
+    // with byte-identical input and spawn events (verified). Rather than
+    // continue chasing that, enemies are replayed by directly re-enacting
+    // their recorded per-tick movement (see RecordedTankBehavior /
+    // enemyTraces) -- this guarantees an exact replay regardless of that
+    // open question, at the cost of the seed alone no longer being
+    // sufficient to prove enemy determinism.
     const { replay } = this.params;
     if (replay !== undefined) {
       rng.reseed(replay.seed);
@@ -134,30 +150,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // themselves (see InputManager.activeDeviceType), so without this a
       // replay could read player input from the wrong device.
       inputManager.setActiveDeviceType(replay.activeDeviceType);
-
-      // TEMPORARY diagnostic (remove once the replay-determinism bug is
-      // found): confirm the seed/data actually loaded is identical every
-      // time this same saved replay is watched.
-      if (config.IS_DEV) {
-        // eslint-disable-next-line no-console
-        console.log('[replay] seed=', replay.seed, 'getSeed()=', rng.getSeed());
-        // eslint-disable-next-line no-console
-        console.log('[replay] activeDeviceType=', replay.activeDeviceType);
-        // eslint-disable-next-line no-console
-        console.log(
-          '[replay] deviceFrames checksum=',
-          JSON.stringify(replay.deviceFrames).length,
-          Object.keys(replay.deviceFrames)
-            .map((key) => `${key}:${replay.deviceFrames[key].length}`)
-            .join(' '),
-        );
-        this.replayDebugTick = 0;
-      }
     } else {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
       inputManager.startRecording();
       this.recordedActiveDeviceType = inputManager.getActiveDeviceType();
+      this.isRecordingReplay = true;
     }
 
     // Drop any input state carried in from the menu/transition so a key still
@@ -268,6 +266,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.minimapScript = new LevelMinimapScript();
     this.baseScript = new LevelBaseScript();
     this.enemyScript = new LevelEnemyScript();
+    this.enemyScript.setReplayEnemyTraces(replay?.enemyTraces ?? null);
     this.explosionScript = new LevelExplosionScript();
     this.gameOverScript = new LevelGameOverScript();
     this.infoScript = new LevelInfoScript();
@@ -363,27 +362,23 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     });
 
-    // TEMPORARY diagnostic (remove once the replay-determinism bug is
-    // found): log every enemy spawn's tick/type/position during a replay
-    // watch, so two separate watches of the same saved replay can be
-    // compared line-by-line for the first point they diverge.
-    if (config.IS_DEV) {
+    // Recording side of enemy replay (see the note above the reseed/replay
+    // branch in setup()): as each enemy spawns, start its trace and hook its
+    // `fired` Subject so the per-tick recording loop in update() knows to
+    // flag that tick. LevelEnemyScript's own enemySpawnCompleted listener
+    // (registered in its setup(), which runs before this one) has already
+    // constructed and added the tank by the time this fires, so it's already
+    // in getAliveTanks().
+    if (this.isRecordingReplay) {
       this.eventBus.enemySpawnCompleted.addListener((event) => {
-        if (this.replayDebugTick === null) {
-          return;
-        }
-        // eslint-disable-next-line no-console
-        console.log(
-          '[replay] tick=',
-          this.replayDebugTick,
-          'enemySpawnCompleted partyIndex=',
-          event.partyIndex,
-          'type=',
-          event.type.tier,
-          'pos=',
-          event.centerPosition.x,
-          event.centerPosition.y,
-        );
+        this.recordedEnemyTraces[event.partyIndex] = [];
+
+        const tank = this.enemyScript
+          .getAliveTanks()
+          .find((aliveTank) => aliveTank.partyIndex === event.partyIndex);
+        tank?.fired.addListener(() => {
+          this.firedThisTick.add(tank);
+        });
       });
     }
   }
@@ -420,9 +415,6 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected update(updateArgs: GameUpdateArgs): void {
     const { collisionSystem, gameState } = updateArgs;
-    if (this.replayDebugTick !== null) {
-      this.replayDebugTick += 1;
-    }
     this.zoomOutTimer.update(updateArgs.deltaTime);
     this.cameraFocusTimer.update(updateArgs.deltaTime);
 
@@ -462,6 +454,26 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     collisionSystem.collide();
     this.clampTanksToFieldBounds();
+
+    // Enemy replay recording (see the note in setup()): capture each alive
+    // enemy's fully-settled position for this tick -- after movement AND
+    // collision resolution above, so replay re-enacts exactly what was drawn,
+    // not a pre-collision intermediate position.
+    if (this.isRecordingReplay) {
+      this.enemyScript.getAliveTanks().forEach((tank) => {
+        const trace = this.recordedEnemyTraces[tank.partyIndex];
+        if (trace === undefined) {
+          return;
+        }
+        trace.push({
+          x: tank.position.x,
+          y: tank.position.y,
+          rotation: tank.rotation,
+          fired: this.firedThisTick.has(tank),
+        });
+      });
+      this.firedThisTick.clear();
+    }
   }
 
   private updateCamera(deltaTime: number): void {
@@ -791,6 +803,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         levelNumber: this.session.getLevelNumber(),
         deviceFrames,
         activeDeviceType: this.recordedActiveDeviceType,
+        enemyTraces: this.recordedEnemyTraces,
       });
       return;
     }

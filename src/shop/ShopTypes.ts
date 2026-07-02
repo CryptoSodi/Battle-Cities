@@ -53,6 +53,7 @@ export interface ShopPurchaseResult {
 export interface ShopRunConsumables {
   powerups: PowerupType[];
   powerupItems: ShopInventoryItemId[];
+  powerupCounts: number[];
   extraLives: number;
 }
 

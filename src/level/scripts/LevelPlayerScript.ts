@@ -27,10 +27,11 @@ const HOTBAR_SLOT_COUNT = 4;
 
 class PowerHotbarSlot extends GameObject {
   private readonly keyText: SpriteText;
+  private readonly countText: SpriteText;
   private readonly icon: GameObject;
   private readonly itemId: ShopInventoryItemId;
 
-  constructor(index: number, itemId: ShopInventoryItemId = null) {
+  constructor(index: number, itemId: ShopInventoryItemId = null, count = 0) {
     super(HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE);
 
     this.itemId = itemId;
@@ -51,6 +52,13 @@ class PowerHotbarSlot extends GameObject {
     this.icon.position.set(17, 19);
     this.icon.painter = new SpritePainter(null, SpriteAlignment.Stretch);
     this.add(this.icon);
+
+    this.countText = new SpriteText(count > 1 ? `X${count}` : '', {
+      color: config.COLOR_YELLOW,
+      letterSpacing: 0,
+    });
+    this.countText.position.set(34, 48);
+    this.add(this.countText);
   }
 
   protected setup({ spriteLoader }: GameUpdateArgs): void {
@@ -260,6 +268,8 @@ export class LevelPlayerScript extends LevelScript {
     }
 
     const runConsumables = this.session.getRunConsumables();
+    const powerupCounts = runConsumables.powerupCounts || [];
+    runConsumables.powerupCounts = powerupCounts;
     const itemId = runConsumables.powerupItems[index];
     const type = runConsumables.powerups[index];
     if (itemId === undefined || type === undefined) {
@@ -269,12 +279,20 @@ export class LevelPlayerScript extends LevelScript {
     if (!this.shopManager.consumeInventoryItem(itemId)) {
       runConsumables.powerupItems.splice(index, 1);
       runConsumables.powerups.splice(index, 1);
+      powerupCounts.splice(index, 1);
       this.renderHotbar();
       return;
     }
 
-    runConsumables.powerupItems.splice(index, 1);
-    runConsumables.powerups.splice(index, 1);
+    const stackCount = powerupCounts[index] || 1;
+    if (stackCount > 1) {
+      powerupCounts[index] = stackCount - 1;
+    } else {
+      runConsumables.powerupItems.splice(index, 1);
+      runConsumables.powerups.splice(index, 1);
+      powerupCounts.splice(index, 1);
+    }
+
     this.eventBus.powerupPicked.notify({
       type,
       centerPosition: tank.getCenter(),
@@ -286,9 +304,15 @@ export class LevelPlayerScript extends LevelScript {
   private renderHotbar(): void {
     this.hotbar.removeAllChildren();
     const runConsumables = this.session.getRunConsumables();
+    const powerupCounts = runConsumables.powerupCounts || [];
+    runConsumables.powerupCounts = powerupCounts;
 
     for (let index = 0; index < HOTBAR_SLOT_COUNT; index += 1) {
-      const slot = new PowerHotbarSlot(index, runConsumables.powerupItems[index]);
+      const slot = new PowerHotbarSlot(
+        index,
+        runConsumables.powerupItems[index],
+        powerupCounts[index] || 0,
+      );
       slot.position.set(index * (HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP), 0);
       this.hotbar.add(slot);
     }

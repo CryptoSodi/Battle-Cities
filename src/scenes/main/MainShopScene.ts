@@ -1020,17 +1020,26 @@ export class MainShopScene extends GameScene {
 
   private getSlotLabel(slot: ShopLoadoutSlot): string {
     const itemId = this.shopManager.getEquipped(slot);
-    return itemId === null ? 'EMPTY' : this.getInventoryLabel(itemId);
+    if (itemId === null) {
+      return 'EMPTY';
+    }
+
+    const stackCount = this.shopManager.getEquippedStackCount(slot);
+    const stackLabel = stackCount > 1 ? ` x${stackCount}` : '';
+    return `${this.getInventoryLabel(itemId)}${stackLabel}`;
   }
 
   private getCompactSlotLabel(label: string): string {
-    switch (label) {
+    const [name, stackLabel = ''] = label.split(' x');
+    const suffix = stackLabel === '' ? '' : ` x${stackLabel}`;
+
+    switch (name) {
       case 'BASE DEF':
-        return 'BASE';
+        return `BASE${suffix}`;
       case 'WIPEOUT':
-        return 'WIPE';
+        return `WIPE${suffix}`;
       case 'EXTRA LIFE':
-        return 'LIFE';
+        return `LIFE${suffix}`;
       default:
         return label;
     }
