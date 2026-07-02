@@ -138,6 +138,13 @@ export class Menu extends GameObject {
     this.cursor.dirtyPaintBox();
     this.cursor.position.setY(this.cursor.size.height * this.focusedIndex);
     this.cursor.updateMatrix(true);
+    // Re-sync render-interpolation history right after this teleport. The
+    // cursor jumps whole rows in a single tick (unlike gameplay objects,
+    // which move in small continuous steps), and extrapolation (see
+    // Transform.interpApply) treats any jump as "last tick's velocity" and
+    // projects further along it -- without this, the cursor visibly
+    // overshoots past the new row for a couple of frames before settling.
+    this.cursor.interpCapture();
 
     this.focused.notify(this.focusedIndex);
 
