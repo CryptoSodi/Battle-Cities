@@ -243,17 +243,22 @@ export class MainMenuScene extends GameScene {
   private getPlayerStatusText(): string {
     const player = this.playerIdentity.getPlayer();
     if (player === null) {
-      return 'PLAYER: UNKNOWN';
+      return 'PLAYER UNKNOWN';
     }
 
-    return `${this.playerIdentity.getProviderLabel().toUpperCase()}: ${this.getSafePlayerName(
+    return `${this.playerIdentity.getProviderLabel().toUpperCase()}-${this.getSafePlayerName(
       player.displayName,
     )}`;
   }
 
   private getSafePlayerName(name: string): string {
-    const safeName = name.trim() || 'PLAYER';
-    return safeName.length > 18 ? `${safeName.slice(0, 15)}...` : safeName;
+    const safeName = name
+      .toUpperCase()
+      .replace(/[^A-Z0-9 -]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const playerName = safeName || 'PLAYER';
+    return playerName.length > 18 ? `${playerName.slice(0, 17)}-` : playerName;
   }
 
   private handleSinglePlayerSelected = (): void => {
