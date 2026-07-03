@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const playerStore = require('./playerStore');
 
 const TABLE_NAME = 'battlecity_sessions';
 
@@ -81,7 +82,10 @@ function getSessionPath(id) {
 }
 
 async function createGuestSession() {
-  return createSession('guest', null);
+  const player = await playerStore.createGuestPlayer();
+  return createSession('guest', {
+    playerId: player.id,
+  });
 }
 
 async function createWalletSession(walletAddress) {
@@ -89,7 +93,11 @@ async function createWalletSession(walletAddress) {
     throw new Error('Invalid wallet address');
   }
 
-  return createSession('wallet', walletAddress);
+  const player = await playerStore.findOrCreateWalletPlayer(walletAddress);
+  return createSession('wallet', {
+    playerId: player.id,
+    walletAddress,
+  });
 }
 
 async function createGoogleSession(profile) {
@@ -97,23 +105,23 @@ async function createGoogleSession(profile) {
     throw new Error('Invalid Google profile');
   }
 
-  return createSession('google', null, profile);
+  const player = await playerStore.findOrCreateGooglePlayer(profile);
+  return createSession('google', {
+    playerId: player.id,
+    googleProfile: profile,
+  });
 }
 
-async function createSession(provider, walletAddress, googleProfile = null) {
+async function createSession(provider, identity) {
+  const googleProfile = identity.googleProfile || null;
   const now = new Date().toISOString();
   const session = {
     id: createSessionId(),
     provider,
     createdAt: now,
     lastSeenAt: now,
-    playerId:
-      googleProfile !== null
-        ? `google:${googleProfile.sub}`
-        : walletAddress === null
-          ? null
-          : `wallet:${walletAddress}`,
-    walletAddress,
+    playerId: identity.playerId,
+    walletAddress: identity.walletAddress || null,
     googleSubject: googleProfile?.sub || null,
     googleEmail: googleProfile?.email || null,
     googleName: googleProfile?.name || null,

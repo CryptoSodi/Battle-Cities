@@ -7,6 +7,7 @@ const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
 const sessionIdentity = require('../server/sessionIdentity');
 const sessionStore = require('../server/sessionStore');
+const playerStore = require('../server/playerStore');
 const walletAuth = require('../server/walletAuth');
 const googleAuth = require('../server/googleAuth');
 
@@ -168,6 +169,34 @@ function attachReplayApi(app) {
       sessionIdentity.createClearedSessionCookie(),
     );
     sendJson(response, 200, { authenticated: false });
+  });
+
+  app.get('/api/player', async (request, response) => {
+    const sessionId = sessionIdentity.resolveSession(
+      request.headers.cookie || '',
+    );
+
+    if (sessionId === null) {
+      sendJson(response, 200, { authenticated: false });
+      return;
+    }
+
+    const session = await sessionStore.readSession(sessionId);
+    if (session === null || session.playerId === null) {
+      sendJson(response, 200, { authenticated: false });
+      return;
+    }
+
+    const player = await playerStore.readPlayer(session.playerId);
+    if (player === null) {
+      sendJson(response, 200, { authenticated: false });
+      return;
+    }
+
+    sendJson(response, 200, {
+      authenticated: true,
+      player: playerStore.toPublicPlayer(player),
+    });
   });
 
   app.get('/api/replays', async (request, response) => {
