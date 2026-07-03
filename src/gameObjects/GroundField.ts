@@ -11,26 +11,52 @@ import * as config from '../config';
 class GroundFieldPainter extends Painter {
   public sprites: Sprite[] = [];
   public tileSize = config.TILE_SIZE_MEDIUM;
+  private readonly destinationRect = new Rect();
 
   public paint(context: RenderContext, renderObject: RenderObject): void {
     if (this.sprites.length === 0) {
       return;
     }
 
-    const box = renderObject.getWorldBoundingBox().toRect();
-    const cols = Math.ceil(box.width / this.tileSize);
-    const rows = Math.ceil(box.height / this.tileSize);
+    const box = renderObject.getWorldBoundingBox();
+    const fieldX = box.min.x;
+    const fieldY = box.min.y;
+    const fieldWidth = box.max.x - box.min.x;
+    const fieldHeight = box.max.y - box.min.y;
+    const cols = Math.ceil(fieldWidth / this.tileSize);
+    const rows = Math.ceil(fieldHeight / this.tileSize);
+    const cull = context.getWorldCullBounds();
+    let startCol = 0;
+    let endCol = cols;
+    let startRow = 0;
+    let endRow = rows;
 
-    for (let row = 0; row < rows; row += 1) {
-      for (let col = 0; col < cols; col += 1) {
+    if (cull !== null) {
+      startCol = Math.max(
+        0,
+        Math.floor((cull.minX - fieldX) / this.tileSize),
+      );
+      endCol = Math.min(cols, Math.ceil((cull.maxX - fieldX) / this.tileSize));
+      startRow = Math.max(
+        0,
+        Math.floor((cull.minY - fieldY) / this.tileSize),
+      );
+      endRow = Math.min(rows, Math.ceil((cull.maxY - fieldY) / this.tileSize));
+      if (startCol >= endCol || startRow >= endRow) {
+        return;
+      }
+    }
+
+    const dest = this.destinationRect;
+    dest.width = this.tileSize;
+    dest.height = this.tileSize;
+
+    for (let row = startRow; row < endRow; row += 1) {
+      dest.y = fieldY + row * this.tileSize;
+      for (let col = startCol; col < endCol; col += 1) {
         const hash = Math.abs((col * 73856093) ^ (row * 19349663));
         const sprite = this.sprites[hash % this.sprites.length];
-        const dest = new Rect(
-          box.x + col * this.tileSize,
-          box.y + row * this.tileSize,
-          this.tileSize,
-          this.tileSize,
-        );
+        dest.x = fieldX + col * this.tileSize;
         context.drawImage(sprite.image, sprite.sourceRect, dest);
       }
     }

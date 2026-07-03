@@ -13,6 +13,11 @@ export class RenderObject extends Transform {
   public cameraZoom = 1;
   public cameraPivotX = 0;
   public cameraPivotY = 0;
+  // Optional culling camera for dev visual zoom-out. Null means cull with the
+  // rendered camera; set it on the camera root to keep culling on gameplay zoom.
+  public cameraCullZoom: number = null;
+  public cameraCullPivotX = 0;
+  public cameraCullPivotY = 0;
 
   // 0 by default
   // If null - will inherit from parent

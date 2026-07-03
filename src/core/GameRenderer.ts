@@ -21,6 +21,8 @@ const DEFAULT_OPTIONS = {
   renderScale: 1,
 };
 
+const WORLD_VIEWPORT_PADDING = 192;
+
 export class GameRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly options: GameRendererOptions;
@@ -107,6 +109,12 @@ export class GameRenderer {
     let viewScale = 1;
     let viewOffsetX = 0;
     let viewOffsetY = 0;
+    const viewportWidth = this.options.width || DEFAULT_OPTIONS.width;
+    const viewportHeight = this.options.height || DEFAULT_OPTIONS.height;
+    let viewportMinX = -WORLD_VIEWPORT_PADDING;
+    let viewportMinY = -WORLD_VIEWPORT_PADDING;
+    let viewportMaxX = viewportWidth + WORLD_VIEWPORT_PADDING;
+    let viewportMaxY = viewportHeight + WORLD_VIEWPORT_PADDING;
 
     root.traverse((object) => {
       // The root is the scene container itself; it has nothing to paint.
@@ -116,13 +124,33 @@ export class GameRenderer {
 
       const parentIsWorld =
         object.parent !== null && worldObjects.has(object.parent);
-      if (object.cameraZoom !== 1 || parentIsWorld) {
+      const isCameraRoot =
+        object.cameraZoom !== 1 || object.cameraCullZoom !== null;
+      if (isCameraRoot || parentIsWorld) {
         worldObjects.add(object);
-        if (object.cameraZoom !== 1) {
+        if (isCameraRoot) {
           viewScale = object.cameraZoom;
           // screen = world * scale + offset, pivoting around the play center.
           viewOffsetX = object.cameraPivotX * (1 - object.cameraZoom);
           viewOffsetY = object.cameraPivotY * (1 - object.cameraZoom);
+          const cullScale = object.cameraCullZoom ?? object.cameraZoom;
+          const cullPivotX =
+            object.cameraCullZoom === null
+              ? object.cameraPivotX
+              : object.cameraCullPivotX;
+          const cullPivotY =
+            object.cameraCullZoom === null
+              ? object.cameraPivotY
+              : object.cameraCullPivotY;
+          const cullOffsetX = cullPivotX * (1 - cullScale);
+          const cullOffsetY = cullPivotY * (1 - cullScale);
+          const invScale = 1 / cullScale;
+          viewportMinX = -cullOffsetX * invScale - WORLD_VIEWPORT_PADDING;
+          viewportMinY = -cullOffsetY * invScale - WORLD_VIEWPORT_PADDING;
+          viewportMaxX =
+            (viewportWidth - cullOffsetX) * invScale + WORLD_VIEWPORT_PADDING;
+          viewportMaxY =
+            (viewportHeight - cullOffsetY) * invScale + WORLD_VIEWPORT_PADDING;
         }
       }
 
@@ -130,6 +158,18 @@ export class GameRenderer {
         return;
       }
       if (!object.canRender()) {
+        return;
+      }
+      if (
+        worldObjects.has(object) &&
+        !this.intersectsWorldViewport(
+          object.getWorldBoundingBox(),
+          viewportMinX,
+          viewportMinY,
+          viewportMaxX,
+          viewportMaxY,
+        )
+      ) {
         return;
       }
 
@@ -144,13 +184,21 @@ export class GameRenderer {
     objects.forEach((object) => {
       if (worldObjects.has(object)) {
         this.context.setView(viewScale, viewOffsetX, viewOffsetY);
+        this.context.setWorldCullBounds(
+          viewportMinX,
+          viewportMinY,
+          viewportMaxX,
+          viewportMaxY,
+        );
       } else {
         this.context.setView(1, 0, 0);
+        this.context.clearWorldCullBounds();
       }
       this.renderObject(object);
     });
 
     this.context.setView(1, 0, 0);
+    this.context.clearWorldCullBounds();
 
     // Submit whatever the batching backend is still holding for this frame.
     this.context.flush();
@@ -180,6 +228,21 @@ export class GameRenderer {
       box.max.x - box.min.x,
       box.max.y - box.min.y,
       color,
+    );
+  }
+
+  private intersectsWorldViewport(
+    box: BoundingBox,
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ): boolean {
+    return (
+      box.min.x < maxX &&
+      box.max.x > minX &&
+      box.min.y < maxY &&
+      box.max.y > minY
     );
   }
 }

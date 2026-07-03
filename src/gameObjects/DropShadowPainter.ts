@@ -33,12 +33,19 @@ export class DropShadowPainter extends Painter {
         if (caster.isRemoved) {
           continue;
         }
-        const box = caster.getWorldBoundingBox().toRect();
+        const box = caster.getWorldBoundingBox();
+        const x = box.min.x + dx;
+        const y = box.min.y + dy;
+        const width = box.max.x - box.min.x;
+        const height = box.max.y - box.min.y;
+        if (!context.intersectsWorldCullBounds(x, y, width, height)) {
+          continue;
+        }
         context.fillRect(
-          box.x + dx,
-          box.y + dy,
-          box.width,
-          box.height,
+          x,
+          y,
+          width,
+          height,
           this.color,
         );
       }

@@ -85,6 +85,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
   private cameraZoom = config.GAMEPLAY_ZOOM;
   private baseCameraZoom = config.GAMEPLAY_ZOOM;
+  // Dev-only visual multiplier for inspecting outside the normal camera view.
+  private cameraVisualZoom = 1;
   private zoomOutTimer = new Timer();
   private initialCameraTarget: Vector;
   // Reactive-camera state (all presentation-only; never read by the sim).
@@ -205,6 +207,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       (zoom) => {
         this.baseCameraZoom = zoom;
         this.cameraZoom = zoom;
+      },
+      () => this.cameraVisualZoom,
+      (zoom) => {
+        this.cameraVisualZoom = zoom;
       },
       { left: undefined, top: 690 },
     );
@@ -466,6 +472,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     if (config.IS_DEV) {
       this.debugCollisionMenu.update();
+      this.debugCameraMenu.update();
     }
 
     collisionSystem.collide();
@@ -509,6 +516,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // area's screen center (the pivot), so the camera centers on the same world
     // point regardless of zoom — only the visible world window shrinks.
     const zoom = this.cameraZoom;
+    const renderZoom = zoom * this.cameraVisualZoom;
     const playLeft = config.BORDER_LEFT_WIDTH;
     const playTop =
       config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT;
@@ -519,9 +527,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const windowWidth = viewportWidth / zoom;
     const windowHeight = viewportHeight / zoom;
 
-    this.world.field.cameraZoom = zoom;
+    this.world.field.cameraZoom = renderZoom;
     this.world.field.cameraPivotX = pivotX;
     this.world.field.cameraPivotY = pivotY;
+    this.world.field.cameraCullZoom = zoom;
+    this.world.field.cameraCullPivotX = pivotX;
+    this.world.field.cameraCullPivotY = pivotY;
 
     // Camera target: a temporary focus override (holding on the death blast, or
     // panning to the destroyed base) takes priority; otherwise follow player 1,
@@ -625,8 +636,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     let shakeX = 0;
     let shakeY = 0;
     if (shakeMagnitude > 0) {
-      shakeX = ((Math.random() * 2 - 1) * shakeMagnitude) / zoom;
-      shakeY = ((Math.random() * 2 - 1) * shakeMagnitude) / zoom;
+      shakeX = ((Math.random() * 2 - 1) * shakeMagnitude) / renderZoom;
+      shakeY = ((Math.random() * 2 - 1) * shakeMagnitude) / renderZoom;
     }
 
     const newX = this.cameraBase.x + shakeX;
@@ -641,10 +652,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.world.field.updateMatrix(true);
     }
 
-    // Feed the same camera transform to the particle overlay so particles
+    // Feed the same visual camera transform to the particle overlay so particles
     // (in field-local coords) map to the same screen position as the world.
     // screen = local * zoom + (field.position * zoom + pivot * (1 - zoom)).
     this.particles.setView(
+      renderZoom,
+      newX * renderZoom + pivotX * (1 - renderZoom),
+      newY * renderZoom + pivotY * (1 - renderZoom),
+    );
+    this.particles.setCullView(
       zoom,
       newX * zoom + pivotX * (1 - zoom),
       newY * zoom + pivotY * (1 - zoom),

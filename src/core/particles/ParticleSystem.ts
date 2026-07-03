@@ -56,6 +56,9 @@ export class ParticleSystem {
   private viewScale = 1;
   private viewOffsetX = 0;
   private viewOffsetY = 0;
+  private cullScale = 1;
+  private cullOffsetX = 0;
+  private cullOffsetY = 0;
 
   // Full-screen white flash [0..1], decays over FLASH_FADE_SECONDS. Impact pop.
   private flashAlpha = 0;
@@ -98,6 +101,12 @@ export class ParticleSystem {
     this.viewScale = scale;
     this.viewOffsetX = offsetX;
     this.viewOffsetY = offsetY;
+  }
+
+  public setCullView(scale: number, offsetX: number, offsetY: number): void {
+    this.cullScale = scale;
+    this.cullOffsetX = offsetX;
+    this.cullOffsetY = offsetY;
   }
 
   // Trigger a full-screen white flash (impact punch). Takes the strongest of
@@ -174,9 +183,23 @@ export class ParticleSystem {
     }
 
     const scale = this.viewScale;
+    const cullScale = this.cullScale;
+    const canvasWidth = this.canvas.width;
+    const canvasHeight = this.canvas.height;
 
     for (let index = 0; index < this.count; index += 1) {
       const alpha = this.life[index] / this.maxLife[index];
+      const cullX = this.posX[index] * cullScale + this.cullOffsetX;
+      const cullY = this.posY[index] * cullScale + this.cullOffsetY;
+      const cullSize = this.size[index] * cullScale;
+      if (
+        cullX + cullSize < 0 ||
+        cullX - cullSize > canvasWidth ||
+        cullY + cullSize < 0 ||
+        cullY - cullSize > canvasHeight
+      ) {
+        continue;
+      }
       const screenX = this.posX[index] * scale + this.viewOffsetX;
       const screenY = this.posY[index] * scale + this.viewOffsetY;
       let drawSize = this.size[index] * scale;

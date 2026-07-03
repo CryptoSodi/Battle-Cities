@@ -5,8 +5,22 @@ import { Vector } from '../Vector';
 
 type Canvas = HTMLCanvasElement | OffscreenCanvas;
 
+export interface WorldCullBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 export abstract class RenderContext {
   protected canvas: Canvas;
+  private worldCullEnabled = false;
+  private readonly worldCullBounds: WorldCullBounds = {
+    minX: 0,
+    minY: 0,
+    maxX: 0,
+    maxY: 0,
+  };
 
   constructor(canvas: Canvas) {
     this.canvas = canvas;
@@ -51,6 +65,40 @@ export abstract class RenderContext {
   // View transform applied to subsequent draws: screen = world * scale + offset.
   // Used for the gameplay camera zoom. Default scale 1, offset 0 (identity).
   abstract setView(scale: number, offsetX: number, offsetY: number);
+  public setWorldCullBounds(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ): void {
+    this.worldCullEnabled = true;
+    this.worldCullBounds.minX = minX;
+    this.worldCullBounds.minY = minY;
+    this.worldCullBounds.maxX = maxX;
+    this.worldCullBounds.maxY = maxY;
+  }
+  public clearWorldCullBounds(): void {
+    this.worldCullEnabled = false;
+  }
+  public getWorldCullBounds(): WorldCullBounds | null {
+    return this.worldCullEnabled ? this.worldCullBounds : null;
+  }
+  public intersectsWorldCullBounds(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): boolean {
+    if (!this.worldCullEnabled) {
+      return true;
+    }
+    return (
+      x < this.worldCullBounds.maxX &&
+      x + width > this.worldCullBounds.minX &&
+      y < this.worldCullBounds.maxY &&
+      y + height > this.worldCullBounds.minY
+    );
+  }
   abstract strokePath(positions: Vector[], color: string);
   abstract strokeRect(
     x: number,
