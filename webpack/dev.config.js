@@ -8,6 +8,7 @@ const replayStore = require('../server/replayStore');
 const sessionIdentity = require('../server/sessionIdentity');
 const sessionStore = require('../server/sessionStore');
 const walletAuth = require('../server/walletAuth');
+const googleAuth = require('../server/googleAuth');
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -43,6 +44,36 @@ function attachReplayApi(app) {
   }
   app.locals = app.locals || {};
   app.locals.battleCityReplayApiAttached = true;
+
+  app.get('/api/auth/google/start', (request, response) => {
+    try {
+      const origin = googleAuth.getOriginFromExpressRequest(request);
+      response.redirect(googleAuth.createAuthorizationUrl(origin));
+    } catch (error) {
+      response.redirect('/?authError=google_config');
+    }
+  });
+
+  app.get('/api/auth/google/callback', async (request, response) => {
+    const { code, state } = request.query;
+
+    if (typeof code !== 'string' || typeof state !== 'string') {
+      response.redirect('/?authError=google');
+      return;
+    }
+
+    try {
+      const login = await googleAuth.completeLogin({ code, state });
+      const session = await sessionStore.createGoogleSession(login.profile);
+      response.setHeader(
+        'set-cookie',
+        sessionIdentity.createSessionCookie(session.id),
+      );
+      response.redirect('/');
+    } catch (error) {
+      response.redirect('/?authError=google');
+    }
+  });
 
   app.get('/api/session', async (request, response) => {
     const sessionId = sessionIdentity.resolveSession(
@@ -121,6 +152,22 @@ function attachReplayApi(app) {
 
     const challenge = await walletAuth.createChallenge(body.walletAddress);
     sendJson(response, 201, challenge);
+  });
+
+  app.delete('/api/session', async (request, response) => {
+    const sessionId = sessionIdentity.resolveSession(
+      request.headers.cookie || '',
+    );
+
+    if (sessionId !== null) {
+      await sessionStore.deleteSession(sessionId);
+    }
+
+    response.setHeader(
+      'set-cookie',
+      sessionIdentity.createClearedSessionCookie(),
+    );
+    sendJson(response, 200, { authenticated: false });
   });
 
   app.get('/api/replays', async (request, response) => {

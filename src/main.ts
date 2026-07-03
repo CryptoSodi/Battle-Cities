@@ -648,6 +648,25 @@ function waitForLogin(): Promise<void> {
       }
     };
 
+    const startGoogleSession = (): void => {
+      if (loginStarted) {
+        return;
+      }
+
+      loginStarted = true;
+      setStatus('Opening Google login...');
+      window.location.assign('/api/auth/google/start');
+    };
+
+    const authError = new URLSearchParams(window.location.search).get(
+      'authError',
+    );
+    if (authError === 'google_config') {
+      setStatus('Google login is not configured yet.');
+    } else if (authError === 'google') {
+      setStatus('Google login failed. Try again.');
+    }
+
     fetch('/api/session')
       .then((response) => (response.ok ? response.json() : null))
       .then((session) => {
@@ -656,7 +675,9 @@ function waitForLogin(): Promise<void> {
           setStatus(
             session.provider === 'wallet'
               ? 'Wallet session is already active.'
-              : 'Guest session is already active.',
+              : session.provider === 'google'
+                ? 'Google session is already active.'
+                : 'Guest session is already active.',
           );
           resolve();
         }
@@ -672,7 +693,7 @@ function waitForLogin(): Promise<void> {
     });
 
     googleLoginButton?.addEventListener('click', () => {
-      setStatus('Google login is next. Guest login is ready for testing.');
+      startGoogleSession();
     });
   });
 }

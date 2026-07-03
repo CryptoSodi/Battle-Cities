@@ -32,6 +32,7 @@ export class MainMenuScene extends GameScene {
   private shopItem: TextMenuItem;
   private settingsItem: TextMenuItem;
   private aboutItem: TextMenuItem;
+  private logoutItem: TextMenuItem;
   private state: State = State.Ready;
   private session: Session;
   private mapLoader: MapLoader;
@@ -119,6 +120,9 @@ export class MainMenuScene extends GameScene {
     this.aboutItem = new TextMenuItem('ABOUT');
     this.aboutItem.selected.addListener(this.handleAboutSelected);
 
+    this.logoutItem = new TextMenuItem('LOGOUT');
+    this.logoutItem.selected.addListener(this.handleLogoutSelected);
+
     const menuItems = [this.singlePlayerItem];
 
     if (config.IS_DEV) {
@@ -130,7 +134,12 @@ export class MainMenuScene extends GameScene {
       );
     }
 
-    menuItems.push(this.shopItem, this.settingsItem, this.aboutItem);
+    menuItems.push(
+      this.shopItem,
+      this.settingsItem,
+      this.aboutItem,
+      this.logoutItem,
+    );
 
     this.menu = new Menu();
     this.menu.setItems(menuItems);
@@ -290,6 +299,18 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainAbout);
+  };
+
+  private handleLogoutSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+
+    fetch('/api/session', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    }).finally(() => {
+      window.location.replace('/');
+    });
   };
 
   private ensureMobileGamepadQrElement(inputManager: InputManager): void {

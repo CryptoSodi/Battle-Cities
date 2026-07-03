@@ -78,6 +78,22 @@ export async function PUT(request: Request): Promise<Response> {
   return json(challenge, 201);
 }
 
+export async function DELETE(request: Request): Promise<Response> {
+  const sessionId = sessionIdentity.resolveSession(
+    request.headers.get('cookie') || '',
+  );
+
+  if (sessionId !== null) {
+    await sessionStore.deleteSession(sessionId);
+  }
+
+  return json(
+    { authenticated: false },
+    200,
+    sessionIdentity.createClearedSessionCookie(),
+  );
+}
+
 function json(body: any, status = 200, setCookie: string | null = null): Response {
   const headers = new Headers({
     'content-type': 'application/json',

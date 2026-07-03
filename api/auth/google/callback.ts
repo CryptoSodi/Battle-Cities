@@ -1,0 +1,29 @@
+declare const require: any;
+
+const googleAuth = require('../../../server/googleAuth');
+const sessionIdentity = require('../../../server/sessionIdentity');
+const sessionStore = require('../../../server/sessionStore');
+
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+
+  if (code === null || state === null) {
+    return googleAuth.redirectResponse('/?authError=google');
+  }
+
+  try {
+    const login = await googleAuth.completeLogin({ code, state });
+    const session = await sessionStore.createGoogleSession(login.profile);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: '/',
+        'set-cookie': sessionIdentity.createSessionCookie(session.id),
+      },
+    });
+  } catch {
+    return googleAuth.redirectResponse('/?authError=google');
+  }
+}

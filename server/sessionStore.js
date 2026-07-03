@@ -49,11 +49,23 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL,
       last_seen_at TIMESTAMPTZ NOT NULL,
       player_id TEXT NULL,
-      wallet_address TEXT NULL
+      wallet_address TEXT NULL,
+      google_subject TEXT NULL,
+      google_email TEXT NULL,
+      google_name TEXT NULL,
+      google_picture TEXT NULL
     );
 
     ALTER TABLE ${TABLE_NAME}
       ADD COLUMN IF NOT EXISTS wallet_address TEXT NULL;
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS google_subject TEXT NULL;
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS google_email TEXT NULL;
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS google_name TEXT NULL;
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS google_picture TEXT NULL;
 
     CREATE INDEX IF NOT EXISTS battlecity_sessions_provider_created_idx
       ON ${TABLE_NAME} (provider, created_at DESC);
@@ -80,15 +92,32 @@ async function createWalletSession(walletAddress) {
   return createSession('wallet', walletAddress);
 }
 
-async function createSession(provider, walletAddress) {
+async function createGoogleSession(profile) {
+  if (!isValidGoogleProfile(profile)) {
+    throw new Error('Invalid Google profile');
+  }
+
+  return createSession('google', null, profile);
+}
+
+async function createSession(provider, walletAddress, googleProfile = null) {
   const now = new Date().toISOString();
   const session = {
     id: createSessionId(),
     provider,
     createdAt: now,
     lastSeenAt: now,
-    playerId: walletAddress === null ? null : `wallet:${walletAddress}`,
+    playerId:
+      googleProfile !== null
+        ? `google:${googleProfile.sub}`
+        : walletAddress === null
+          ? null
+          : `wallet:${walletAddress}`,
     walletAddress,
+    googleSubject: googleProfile?.sub || null,
+    googleEmail: googleProfile?.email || null,
+    googleName: googleProfile?.name || null,
+    googlePicture: googleProfile?.picture || null,
   };
 
   if (hasPersistentConfig()) {
@@ -96,8 +125,19 @@ async function createSession(provider, walletAddress) {
     await getPgPool().query(
       `
         INSERT INTO ${TABLE_NAME}
-          (id, provider, created_at, last_seen_at, player_id, wallet_address)
-        VALUES ($1, $2, $3, $4, $5, $6)
+          (
+            id,
+            provider,
+            created_at,
+            last_seen_at,
+            player_id,
+            wallet_address,
+            google_subject,
+            google_email,
+            google_name,
+            google_picture
+          )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         session.id,
@@ -106,6 +146,10 @@ async function createSession(provider, walletAddress) {
         session.lastSeenAt,
         session.playerId,
         session.walletAddress,
+        session.googleSubject,
+        session.googleEmail,
+        session.googleName,
+        session.googlePicture,
       ],
     );
     return session;
@@ -127,7 +171,8 @@ async function readSession(id) {
     const result = await getPgPool().query(
       `
         SELECT id, provider, created_at, last_seen_at, player_id
-          , wallet_address
+          , wallet_address, google_subject, google_email, google_name
+          , google_picture
         FROM ${TABLE_NAME}
         WHERE id = $1
         LIMIT 1
@@ -147,6 +192,10 @@ async function readSession(id) {
       lastSeenAt: new Date(row.last_seen_at).toISOString(),
       playerId: row.player_id,
       walletAddress: row.wallet_address,
+      googleSubject: row.google_subject,
+      googleEmail: row.google_email,
+      googleName: row.google_name,
+      googlePicture: row.google_picture,
     };
     await touchSession(session.id);
     return session;
@@ -162,6 +211,24 @@ async function readSession(id) {
     return session;
   } catch {
     return null;
+  }
+}
+
+async function deleteSession(id) {
+  if (!isValidSessionId(id)) {
+    return;
+  }
+
+  if (hasPersistentConfig()) {
+    await ensureSchema();
+    await getPgPool().query(`DELETE FROM ${TABLE_NAME} WHERE id = $1`, [id]);
+    return;
+  }
+
+  try {
+    await fs.unlink(getSessionPath(id));
+  } catch {
+    // Session is already gone.
   }
 }
 
@@ -192,6 +259,9 @@ function toPublicSession(session) {
     provider: session.provider,
     playerId: session.playerId,
     walletAddress: session.walletAddress || null,
+    googleEmail: session.googleEmail || null,
+    googleName: session.googleName || null,
+    googlePicture: session.googlePicture || null,
     createdAt: session.createdAt,
   };
 }
@@ -211,12 +281,26 @@ function isValidSession(value) {
     typeof value === 'object' &&
     value !== null &&
     isValidSessionId(value.id) &&
-    (value.provider === 'guest' || value.provider === 'wallet') &&
+    (value.provider === 'guest' ||
+      value.provider === 'wallet' ||
+      value.provider === 'google') &&
     typeof value.createdAt === 'string' &&
     typeof value.lastSeenAt === 'string' &&
     (value.walletAddress === null ||
       typeof value.walletAddress === 'undefined' ||
       isValidWalletAddress(value.walletAddress))
+  );
+}
+
+function isValidGoogleProfile(value) {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof value.sub === 'string' &&
+    value.sub.length > 0 &&
+    (typeof value.email === 'string' || typeof value.email === 'undefined') &&
+    (typeof value.name === 'string' || typeof value.name === 'undefined') &&
+    (typeof value.picture === 'string' || typeof value.picture === 'undefined')
   );
 }
 
@@ -231,7 +315,9 @@ function isValidWalletAddress(value) {
 
 module.exports = {
   createGuestSession,
+  createGoogleSession,
   createWalletSession,
+  deleteSession,
   isPersistentStoreConfigured: hasPersistentConfig,
   isValidWalletAddress,
   readSession,
