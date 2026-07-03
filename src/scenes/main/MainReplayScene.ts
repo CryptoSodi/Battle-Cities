@@ -35,7 +35,9 @@ export class MainReplayScene extends GameScene {
   }
 
   private async loadReplayList(): Promise<void> {
-    this.replaySummaries = await listReplaySummaries(this.gameStorage);
+    this.replaySummaries = (await listReplaySummaries(this.gameStorage)).sort(
+      (a, b) => this.getReplayTimestamp(b) - this.getReplayTimestamp(a),
+    );
     this.pageIndex = 0;
     this.renderReplayList();
   }
@@ -163,7 +165,7 @@ export class MainReplayScene extends GameScene {
     const level = summary.levelNumber.toString().padStart(2, '0');
     const savedAt = this.getSavedAtLabel(summary.createdAt);
 
-    return `REC ${slot} L${level} ${savedAt}`;
+    return `REC ${slot} ${savedAt} L${level}`;
   }
 
   private renderStatus(text: string): void {
@@ -192,5 +194,11 @@ export class MainReplayScene extends GameScene {
     const minute = date.getMinutes().toString().padStart(2, '0');
 
     return `${month}${day} ${hour}${minute}`;
+  }
+
+  private getReplayTimestamp(summary: SavedReplaySummary): number {
+    const timestamp = new Date(summary.createdAt).getTime();
+
+    return Number.isNaN(timestamp) ? 0 : timestamp;
   }
 }
