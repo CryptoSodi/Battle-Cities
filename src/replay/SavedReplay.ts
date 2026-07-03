@@ -36,6 +36,11 @@ export interface SavedReplayRecord extends SavedReplaySummary {
   replay: SavedReplay;
 }
 
+const REPLAY_SUMMARY_CACHE_TTL_MS = 30 * 1000;
+
+let replaySummaryCache: SavedReplaySummary[] = null;
+let replaySummaryCacheTime = 0;
+
 export async function saveReplay(
   _gameStorage: GameStorage,
   replay: SavedReplay,
@@ -53,11 +58,21 @@ export async function saveReplay(
   if (!response.ok) {
     throw new Error('Replay could not be saved.');
   }
+
+  replaySummaryCache = null;
+  replaySummaryCacheTime = 0;
 }
 
 export async function listReplaySummaries(
   _gameStorage: GameStorage,
 ): Promise<SavedReplaySummary[]> {
+  if (
+    replaySummaryCache !== null &&
+    Date.now() - replaySummaryCacheTime < REPLAY_SUMMARY_CACHE_TTL_MS
+  ) {
+    return replaySummaryCache.slice();
+  }
+
   try {
     const response = await fetch('/api/replays');
     if (!response.ok) {
@@ -66,10 +81,12 @@ export async function listReplaySummaries(
 
     const body = await response.json();
     if (Array.isArray(body.items)) {
-      return body.items.filter(isValidReplaySummary);
+      replaySummaryCache = body.items.filter(isValidReplaySummary);
+      replaySummaryCacheTime = Date.now();
+      return replaySummaryCache.slice();
     }
   } catch {
-    return [];
+    return replaySummaryCache === null ? [] : replaySummaryCache.slice();
   }
 }
 
