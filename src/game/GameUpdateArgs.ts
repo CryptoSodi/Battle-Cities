@@ -14,6 +14,7 @@ import {
 import { InputHintSettings, InputManager } from '../input';
 import { MapLoader } from '../map';
 import { PointsHighscoreManager } from '../points';
+import { PlayerIdentity } from '../auth';
 
 import { AudioManager } from './AudioManager';
 import { GameState } from './GameState';
@@ -35,6 +36,7 @@ export interface GameUpdateArgs {
   gameStorage: GameStorage;
   mapLoader: MapLoader;
   particles: ParticleSystem;
+  playerIdentity: PlayerIdentity;
   pointsHighscoreManager: PointsHighscoreManager;
   pointerClick?: Vector;
   rng: Prng;

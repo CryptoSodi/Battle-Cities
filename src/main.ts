@@ -29,6 +29,7 @@ import { InputHintSettings, InputManager } from './input';
 import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
+import { PlayerIdentity } from './auth';
 
 import * as config from './config';
 
@@ -443,6 +444,7 @@ const audioManager = new AudioManager(audioLoader, gameStorage);
 audioManager.loadSettings();
 
 const session = new Session();
+const playerIdentity = new PlayerIdentity();
 
 const inputHintSettings = new InputHintSettings(gameStorage);
 
@@ -496,6 +498,7 @@ const updateArgs: GameUpdateArgs = {
   gameState,
   mapLoader,
   particles,
+  playerIdentity,
   pointsHighscoreManager,
   pointerClick: null,
   rng,
@@ -543,9 +546,17 @@ function waitForLogin(): Promise<void> {
       return provider?.isPhantom === true ? provider : null;
     };
 
+    const refreshPlayerIdentity = async (): Promise<void> => {
+      const hasPlayer = await playerIdentity.refresh();
+      if (!hasPlayer) {
+        throw new Error('Player profile failed.');
+      }
+    };
+
     const startServerSession = async (body: object): Promise<void> => {
       const response = await fetch('/api/session', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'content-type': 'application/json',
         },
@@ -594,6 +605,7 @@ function waitForLogin(): Promise<void> {
 
       try {
         await startServerSession({ provider: 'guest' });
+        await refreshPlayerIdentity();
         setStatus('Guest session ready.');
         resolve();
       } catch {
@@ -639,6 +651,7 @@ function waitForLogin(): Promise<void> {
           message: challenge.message,
           signature: signatureToBase64(signature),
         });
+        await refreshPlayerIdentity();
         setStatus('Phantom wallet connected.');
         resolve();
       } catch {
@@ -667,20 +680,31 @@ function waitForLogin(): Promise<void> {
       setStatus('Google login failed. Try again.');
     }
 
-    fetch('/api/session')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((session) => {
-        if (session?.authenticated === true) {
+    playerIdentity
+      .refresh()
+      .then((hasPlayer) => {
+        if (hasPlayer) {
           loginStarted = true;
           setStatus(
-            session.provider === 'wallet'
-              ? 'Wallet session is already active.'
-              : session.provider === 'google'
-                ? 'Google session is already active.'
-                : 'Guest session is already active.',
+            `${playerIdentity.getProviderLabel()} session is already active.`,
           );
           resolve();
+          return;
         }
+
+        fetch('/api/session', { credentials: 'same-origin' })
+          .then((response) => (response.ok ? response.json() : null))
+          .then((session) => {
+            if (session?.authenticated === true) {
+              fetch('/api/session', {
+                method: 'DELETE',
+                credentials: 'same-origin',
+              }).finally(() => {
+                setStatus('Please sign in again to finish account setup.');
+              });
+            }
+          })
+          .catch(() => undefined);
       })
       .catch(() => undefined);
 

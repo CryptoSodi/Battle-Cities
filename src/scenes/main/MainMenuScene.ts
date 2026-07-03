@@ -5,6 +5,7 @@ import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
 import { ShopManager } from '../../shop';
+import { PlayerIdentity } from '../../auth';
 import * as config from '../../config';
 
 import { GameScene } from '../GameScene';
@@ -23,6 +24,7 @@ export class MainMenuScene extends GameScene {
   private primaryPoints: SpriteText;
   private secondaryPoints: SpriteText;
   private commonHighscore: SpriteText;
+  private playerStatus: SpriteText;
   private menu: Menu;
   private singlePlayerItem: TextMenuItem;
   private multiPlayerItem: TextMenuItem;
@@ -39,6 +41,7 @@ export class MainMenuScene extends GameScene {
   private gameStorage: GameStorage;
   private pointsHighscoreManager: PointsHighscoreManager;
   private shopManager: ShopManager;
+  private playerIdentity: PlayerIdentity;
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mobileGamepadQrEnabled = false;
@@ -47,6 +50,7 @@ export class MainMenuScene extends GameScene {
     inputManager,
     mapLoader,
     pointsHighscoreManager,
+    playerIdentity,
     session,
     spriteLoader,
     gameStorage,
@@ -56,6 +60,7 @@ export class MainMenuScene extends GameScene {
     this.gameStorage = gameStorage;
     this.pointsHighscoreManager = pointsHighscoreManager;
     this.shopManager = new ShopManager(gameStorage);
+    this.playerIdentity = playerIdentity;
 
     // Restore source for maps to default
     mapLoader.restoreDefaultReader();
@@ -93,6 +98,12 @@ export class MainMenuScene extends GameScene {
     });
     this.commonHighscore.position.set(380, 64);
     this.group.add(this.commonHighscore);
+
+    this.playerStatus = new SpriteText(this.getPlayerStatusText(), {
+      color: config.COLOR_GRAY,
+    });
+    this.playerStatus.position.set(92, 112);
+    this.group.add(this.playerStatus);
 
     this.singlePlayerItem = new TextMenuItem('START');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
@@ -229,6 +240,22 @@ export class MainMenuScene extends GameScene {
     return text;
   }
 
+  private getPlayerStatusText(): string {
+    const player = this.playerIdentity.getPlayer();
+    if (player === null) {
+      return 'PLAYER: UNKNOWN';
+    }
+
+    return `${this.playerIdentity.getProviderLabel().toUpperCase()}: ${this.getSafePlayerName(
+      player.displayName,
+    )}`;
+  }
+
+  private getSafePlayerName(name: string): string {
+    const safeName = name.trim() || 'PLAYER';
+    return safeName.length > 18 ? `${safeName.slice(0, 15)}...` : safeName;
+  }
+
   private handleSinglePlayerSelected = (): void => {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
@@ -309,6 +336,7 @@ export class MainMenuScene extends GameScene {
       method: 'DELETE',
       credentials: 'same-origin',
     }).finally(() => {
+      this.playerIdentity.clear();
       window.location.replace('/');
     });
   };
