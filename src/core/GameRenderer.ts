@@ -25,6 +25,10 @@ export class GameRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly options: GameRendererOptions;
   private readonly context: RenderContext;
+  // Per-frame working collections, reused across frames so a full-frame redraw
+  // does not allocate (GC pauses read as frame drops).
+  private readonly frameObjects: RenderObject[] = [];
+  private readonly worldObjects = new Set<RenderObject>();
 
   constructor(options: GameRendererOptions = {}) {
     this.options = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -92,12 +96,14 @@ export class GameRenderer {
     // cheap. A later batched WebGL renderer keeps this same full-frame model.
     this.context.clear();
 
-    const objects: RenderObject[] = [];
+    const objects = this.frameObjects;
+    objects.length = 0;
     // Objects within a camera-zoomed subtree (the field). Tracked during the
     // pre-order traversal: a node is "world" if it is the zoom root or its
     // parent already is. They get the view transform; everything else (HUD,
     // menus) renders at scale 1.
-    const worldObjects = new Set<RenderObject>();
+    const worldObjects = this.worldObjects;
+    worldObjects.clear();
     let viewScale = 1;
     let viewOffsetX = 0;
     let viewOffsetY = 0;
@@ -145,6 +151,9 @@ export class GameRenderer {
     });
 
     this.context.setView(1, 0, 0);
+
+    // Submit whatever the batching backend is still holding for this frame.
+    this.context.flush();
 
     // Undo the interpolation so the next sim step reads real positions.
     if (interpolating) {

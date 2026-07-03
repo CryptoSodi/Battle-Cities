@@ -51,7 +51,9 @@ export class SmallExplosion extends GameObject {
     }
 
     this.animation.update(updateArgs.deltaTime);
-    this.painter.sprite = this.animation.getCurrentFrame();
+    this.painter.sprite = config.SHOW_EXPLOSION_SPRITE
+      ? this.animation.getCurrentFrame()
+      : null;
     this.setNeedsPaint();
   }
 }

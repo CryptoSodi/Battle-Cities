@@ -85,6 +85,15 @@ function syncCanvasCssSize(width: number, height: number): void {
   document.documentElement.style.setProperty('--game-height', height.toString());
 }
 
+function logCanvasSize(label: string, canvas: HTMLCanvasElement): void {
+  const bounds = canvas.getBoundingClientRect();
+  log.info(`${label} canvas size`, {
+    backing: `${canvas.width}x${canvas.height}`,
+    css: `${Math.round(bounds.width)}x${Math.round(bounds.height)}`,
+    devicePixelRatio: window.devicePixelRatio || 1,
+  });
+}
+
 syncCanvasCssSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
 
 let resizeTimeoutId: number = null;
@@ -841,9 +850,13 @@ async function main(): Promise<void> {
   log.timeEnd('Input bindings load');
 
   document.body.removeChild(loadingElement);
-  document.body.appendChild(gameRenderer.getDomElement());
+  const gameCanvas = gameRenderer.getDomElement();
+  document.body.appendChild(gameCanvas);
+  logCanvasSize('Game', gameCanvas);
   // Particle overlay sits directly above the game canvas.
-  document.body.appendChild(particles.getDomElement());
+  const particleCanvas = particles.getDomElement();
+  document.body.appendChild(particleCanvas);
+  logCanvasSize('Particle', particleCanvas);
 
   gameLoop.start();
   // gameLoop.next();

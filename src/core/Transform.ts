@@ -262,17 +262,83 @@ export class Transform extends Node {
   }
 
   public updateMatrix(childrenNeedUpdate = false): void {
-    const transformMatrix = this.composeTransformMatrix(
-      this.getPivotOffset(),
-      this.getOriginOffset(),
-      this.rotation,
-      this.position,
-    );
-    this.matrix.copyFrom(transformMatrix);
+    // Inlined composeTransformMatrix + corner-based bounding box. This runs
+    // for every mover on every sim tick AND every rendered frame (render
+    // interpolation), so it must not allocate — temporary matrices/vectors
+    // here used to be the game's main source of GC pauses (felt as frame
+    // drops). The arithmetic is kept operation-for-operation identical to the
+    // compose/getPoints path so simulation results (and replays) are
+    // unchanged.
+    const width = this.size.width;
+    const height = this.size.height;
 
-    this.boundingBox.fromPoints(this.getPoints());
+    const pivX = -this.pivot.x * width;
+    const pivY = -this.pivot.y * height;
+    const orgX = -this.origin.x * width;
+    const orgY = -this.origin.y * height;
+
+    const cos = MathUtils.cosDegrees(this.rotation);
+    const sin = MathUtils.sinDegrees(this.rotation);
+
+    const tx = pivX * cos - pivY * sin - pivX + orgX + this.position.x;
+    const ty = pivX * sin + pivY * cos - pivY + orgY + this.position.y;
+
+    this.matrix.set(cos, sin, 0, -sin, cos, 0, tx, ty, 1);
+
+    this.writeTransformedBox(this.boundingBox, this.matrix, width, height);
 
     this.setWorldMatrixNeedsUpdate(childrenNeedUpdate);
+  }
+
+  // Writes the axis-aligned bounding box of this transform's local rect
+  // (0,0,width,height) under the given matrix, corner by corner, without
+  // allocating point vectors (allocation-free twin of
+  // boundingBox.fromPoints(getPoints())).
+  private writeTransformedBox(
+    box: BoundingBox,
+    m: Matrix3,
+    width: number,
+    height: number,
+  ): void {
+    const e = m.elements;
+    const e0 = e[0];
+    const e1 = e[1];
+    const e3 = e[3];
+    const e4 = e[4];
+    const e6 = e[6];
+    const e7 = e[7];
+
+    // Corners in the same order getSelfPoints() produced them:
+    // (0,0), (width,0), (width,height), (0,height).
+    const x0 = e6;
+    const y0 = e7;
+    const x1 = width * e0 + e6;
+    const y1 = width * e1 + e7;
+    const x2 = width * e0 + height * e3 + e6;
+    const y2 = width * e1 + height * e4 + e7;
+    const x3 = height * e3 + e6;
+    const y3 = height * e4 + e7;
+
+    let minX = x0;
+    let maxX = x0;
+    let minY = y0;
+    let maxY = y0;
+
+    if (x1 < minX) minX = x1;
+    if (x1 > maxX) maxX = x1;
+    if (y1 < minY) minY = y1;
+    if (y1 > maxY) maxY = y1;
+    if (x2 < minX) minX = x2;
+    if (x2 > maxX) maxX = x2;
+    if (y2 < minY) minY = y2;
+    if (y2 > maxY) maxY = y2;
+    if (x3 < minX) minX = x3;
+    if (x3 > maxX) maxX = x3;
+    if (y3 < minY) minY = y3;
+    if (y3 > maxY) maxY = y3;
+
+    box.min.set(minX, minY);
+    box.max.set(maxX, maxY);
   }
 
   public setWorldMatrixNeedsUpdate(updateChildren = false): void {
@@ -309,7 +375,12 @@ export class Transform extends Node {
         this.worldMatrix.multiplyMatrices(this.matrix, this.parent.worldMatrix);
       }
 
-      this.worldBoundingBox.fromPoints(this.getWorldPoints());
+      this.writeTransformedBox(
+        this.worldBoundingBox,
+        this.worldMatrix,
+        this.size.width,
+        this.size.height,
+      );
 
       this.worldMatrixNeedsUpdate = false;
     }

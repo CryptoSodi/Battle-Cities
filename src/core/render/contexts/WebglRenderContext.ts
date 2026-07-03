@@ -6,68 +6,85 @@ import { Vector } from '../../Vector';
 
 import { RenderContext } from '../RenderContext';
 
-// A batched-style immediate WebGL2 renderer that implements the full
-// RenderContext API (textured quads, solid fills, alpha, lines) at parity with
-// the Canvas2D backend. Pixel art uses NEAREST filtering; transparency uses
-// straight-alpha blending. World/camera transforms are already baked into each
-// object's destination rect by the scene's matrix pass, so this only needs an
-// orthographic pixel->clip projection (with a y-flip).
+// A batched WebGL renderer that implements the full RenderContext API
+// (textured quads, solid fills, alpha, lines) at parity with the Canvas2D
+// backend. Pixel art uses NEAREST filtering; transparency uses straight-alpha
+// blending.
 //
-// One unit-quad (0..1) is reused for every sprite/fill; per-draw model and
-// texture matrices place and sample it. This is the foundation for the later
-// additive-glow and lighting passes.
+// Quads are NOT drawn immediately: drawImage/fillRect/drawText append vertices
+// (position, uv, color, flash) to a shared CPU-side buffer, and the whole run
+// is submitted as ONE drawArrays call when the batch flushes — on a texture
+// switch, on buffer overflow, before any non-quad draw (lines, scissor clear),
+// and at end of frame via flush(). Since nearly every sprite comes from the
+// single atlas and solid fills all use a shared 1x1 white texture, a typical
+// gameplay frame collapses from ~1500 draw calls into a handful. Everything
+// (color tint, per-sprite alpha, hit flash) rides along as vertex attributes,
+// so no per-quad uniform changes or matrix math are needed — the view
+// transform is folded into the vertex positions on the CPU (pure scale +
+// translate; destination rects are always axis-aligned).
 
 const vertexShaderSource = `
 attribute vec2 a_position;
 attribute vec2 a_texcoord;
-uniform mat4 u_matrix;
-uniform mat4 u_textureMatrix;
+attribute vec4 a_color;
+attribute float a_flash;
+uniform mat4 u_projection;
 varying vec2 v_texcoord;
+varying vec4 v_color;
+varying float v_flash;
 void main() {
-  gl_Position = u_matrix * vec4(a_position, 0.0, 1.0);
-  v_texcoord = (u_textureMatrix * vec4(a_texcoord, 0.0, 1.0)).xy;
+  gl_Position = u_projection * vec4(a_position, 0.0, 1.0);
+  v_texcoord = a_texcoord;
+  v_color = a_color;
+  v_flash = a_flash;
 }
 `;
 
 const fragmentShaderSource = `
 precision mediump float;
 uniform sampler2D u_texture;
-uniform bool u_useTexture;
-uniform vec4 u_color;
-uniform float u_alpha;
-uniform float u_flash;
 varying vec2 v_texcoord;
+varying vec4 v_color;
+varying float v_flash;
 void main() {
-  vec4 color = u_useTexture ? texture2D(u_texture, v_texcoord) : u_color;
+  vec4 texel = texture2D(u_texture, v_texcoord);
   // Tint toward white for the hit flash; alpha is left untouched so
   // transparent texels stay transparent (white silhouette, not a box).
-  color.rgb = mix(color.rgb, vec3(1.0), u_flash);
-  color.a *= u_alpha;
-  gl_FragColor = color;
+  // Solid fills sample the 1x1 white texture, so their color comes entirely
+  // from v_color.
+  gl_FragColor = vec4(
+    mix(texel.rgb * v_color.rgb, vec3(1.0), v_flash),
+    texel.a * v_color.a
+  );
 }
 `;
 
-const IDENTITY = new Matrix4();
+// x, y, u, v, r, g, b, a, flash
+const FLOATS_PER_VERTEX = 9;
+const VERTICES_PER_QUAD = 6;
+const FLOATS_PER_QUAD = FLOATS_PER_VERTEX * VERTICES_PER_QUAD;
+const MAX_QUADS = 2048;
 
 export class WebglRenderContext extends RenderContext {
   private gl: WebGLRenderingContext;
   private program: WebGLProgram;
   private aPosition: number;
   private aTexcoord: number;
-  private uMatrix: WebGLUniformLocation;
-  private uTextureMatrix: WebGLUniformLocation;
+  private aColor: number;
+  private aFlash: number;
+  private uProjection: WebGLUniformLocation;
   private uTexture: WebGLUniformLocation;
-  private uUseTexture: WebGLUniformLocation;
-  private uColor: WebGLUniformLocation;
-  private uAlpha: WebGLUniformLocation;
-  private uFlash: WebGLUniformLocation;
-  private quadBuffer: WebGLBuffer;
+  private batchBuffer: WebGLBuffer;
   private lineBuffer: WebGLBuffer;
-  private projection: Matrix4;
+  private batchData = new Float32Array(MAX_QUADS * FLOATS_PER_QUAD);
+  private quadCount = 0;
+  private batchTexture: WebGLTexture = null;
+  private whiteTexture: WebGLTexture;
   private globalAlpha = 1;
   private viewScale = 1;
   private viewOffsetX = 0;
   private viewOffsetY = 0;
+  private backingScale = 1;
   private textureMap = new Map<TexImageSource, WebGLTexture>();
   private textCanvasMap = new Map<string, HTMLCanvasElement>();
   private colorCache = new Map<string, [number, number, number, number]>();
@@ -98,10 +115,20 @@ export class WebglRenderContext extends RenderContext {
     const maxDim = Math.min(4096, (maxViewport && maxViewport[0]) || 4096);
     const maxScale = Math.min(maxDim / logicalWidth, maxDim / logicalHeight);
     const scale = Math.max(1, Math.min(this.renderScale, maxScale));
+    this.backingScale = scale;
     this.canvas.width = Math.round(logicalWidth * scale);
     this.canvas.height = Math.round(logicalHeight * scale);
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    // eslint-disable-next-line no-console
+    console.info('[renderer] WebGL backing canvas', {
+      logical: `${logicalWidth}x${logicalHeight}`,
+      backing: `${this.canvas.width}x${this.canvas.height}`,
+      requestedScale: this.renderScale,
+      effectiveScale: scale,
+      devicePixelRatio:
+        typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
+    });
     gl.clearColor(0, 0, 0, 0);
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -113,43 +140,97 @@ export class WebglRenderContext extends RenderContext {
 
     this.aPosition = gl.getAttribLocation(this.program, 'a_position');
     this.aTexcoord = gl.getAttribLocation(this.program, 'a_texcoord');
-    this.uMatrix = gl.getUniformLocation(this.program, 'u_matrix');
-    this.uTextureMatrix = gl.getUniformLocation(this.program, 'u_textureMatrix');
+    this.aColor = gl.getAttribLocation(this.program, 'a_color');
+    this.aFlash = gl.getAttribLocation(this.program, 'a_flash');
+    this.uProjection = gl.getUniformLocation(this.program, 'u_projection');
     this.uTexture = gl.getUniformLocation(this.program, 'u_texture');
-    this.uUseTexture = gl.getUniformLocation(this.program, 'u_useTexture');
-    this.uColor = gl.getUniformLocation(this.program, 'u_color');
-    this.uAlpha = gl.getUniformLocation(this.program, 'u_alpha');
-    this.uFlash = gl.getUniformLocation(this.program, 'u_flash');
 
-    // Unit quad shared by every sprite/fill (two triangles covering 0..1).
-    this.quadBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    // prettier-ignore
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      0, 0, 0, 1, 1, 0,
-      1, 0, 0, 1, 1, 1,
-    ]), gl.STATIC_DRAW);
+    this.batchBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.batchBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.batchData.byteLength, gl.DYNAMIC_DRAW);
 
     this.lineBuffer = gl.createBuffer();
 
-    this.projection = Matrix4.createProjection(logicalWidth, logicalHeight, 1);
+    // Shared texel for solid fills and lines, so they batch together with
+    // sprites under the one shader (color rides in as a vertex attribute).
+    this.whiteTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.whiteTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array([255, 255, 255, 255]),
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
+    // Projection never changes (logical-pixel top-left space -> clip space),
+    // so it is uploaded exactly once.
+    const projection = Matrix4.createProjection(logicalWidth, logicalHeight, 1);
+    gl.uniformMatrix4fv(
+      this.uProjection,
+      false,
+      new Float32Array(projection.elements),
+    );
     gl.uniform1i(this.uTexture, 0);
   }
 
+  // Submit all batched quads in a single draw call. Public so the frame driver
+  // (GameRenderer) can end the frame; also called internally before any state
+  // change that would break draw ordering (texture switch, lines, clears).
+  public flush(): void {
+    if (this.quadCount === 0) {
+      return;
+    }
+
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.batchBuffer);
+    gl.bufferSubData(
+      gl.ARRAY_BUFFER,
+      0,
+      this.batchData.subarray(0, this.quadCount * FLOATS_PER_QUAD),
+    );
+
+    const stride = FLOATS_PER_VERTEX * 4;
+    gl.enableVertexAttribArray(this.aPosition);
+    gl.vertexAttribPointer(this.aPosition, 2, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(this.aTexcoord);
+    gl.vertexAttribPointer(this.aTexcoord, 2, gl.FLOAT, false, stride, 8);
+    gl.enableVertexAttribArray(this.aColor);
+    gl.vertexAttribPointer(this.aColor, 4, gl.FLOAT, false, stride, 16);
+    gl.enableVertexAttribArray(this.aFlash);
+    gl.vertexAttribPointer(this.aFlash, 1, gl.FLOAT, false, stride, 32);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.batchTexture);
+    gl.drawArrays(gl.TRIANGLES, 0, this.quadCount * VERTICES_PER_QUAD);
+
+    this.quadCount = 0;
+  }
+
   public clear(): void {
+    this.flush();
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 
   public clearRect(x: number, y: number, width: number, height: number): void {
+    this.flush();
     const gl = this.gl;
+    const s = this.backingScale;
     gl.enable(gl.SCISSOR_TEST);
     // Scissor origin is bottom-left, so flip y from our top-left space.
     gl.scissor(
-      Math.round(x),
-      Math.round(this.canvas.height - y - height),
-      Math.round(width),
-      Math.round(height),
+      Math.round(x * s),
+      Math.round(this.canvas.height - (y + height) * s),
+      Math.round(width * s),
+      Math.round(height * s),
     );
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.SCISSOR_TEST);
@@ -161,38 +242,32 @@ export class WebglRenderContext extends RenderContext {
     destinationRect: Rect,
     flash = 0,
   ): void {
-    const gl = this.gl;
     const element = image.getElement() as TexImageSource;
     const texture = this.getTexture(element);
 
-    const iw = (element as HTMLImageElement).naturalWidth || (element as HTMLCanvasElement).width;
-    const ih = (element as HTMLImageElement).naturalHeight || (element as HTMLCanvasElement).height;
+    const iw =
+      (element as HTMLImageElement).naturalWidth ||
+      (element as HTMLCanvasElement).width;
+    const ih =
+      (element as HTMLImageElement).naturalHeight ||
+      (element as HTMLCanvasElement).height;
 
-    // Row-vector convention (v' = v·M): build S·T·P via premultiplying
-    // translate() then scale() onto the projection. The view transform
-    // (camera zoom) is folded into the dest coords here — pure numbers, so the
-    // matrix convention is unchanged.
-    const s = this.viewScale;
-    const matrix = this.projection.clone();
-    matrix.translate(
-      destinationRect.x * s + this.viewOffsetX,
-      destinationRect.y * s + this.viewOffsetY,
-      0,
+    this.pushQuad(
+      texture,
+      destinationRect.x,
+      destinationRect.y,
+      destinationRect.width,
+      destinationRect.height,
+      sourceRect.x / iw,
+      sourceRect.y / ih,
+      (sourceRect.x + sourceRect.width) / iw,
+      (sourceRect.y + sourceRect.height) / ih,
+      1,
+      1,
+      1,
+      this.globalAlpha,
+      flash,
     );
-    matrix.scale(destinationRect.width * s, destinationRect.height * s, 1);
-
-    const textureMatrix = Matrix4.createTranslation(sourceRect.x / iw, sourceRect.y / ih, 0);
-    textureMatrix.scale(sourceRect.width / iw, sourceRect.height / ih, 1);
-
-    this.bindQuad();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(this.uUseTexture, 1);
-    gl.uniform1f(this.uAlpha, this.globalAlpha);
-    gl.uniform1f(this.uFlash, flash);
-    gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
-    gl.uniformMatrix4fv(this.uTextureMatrix, false, textureMatrix.elements);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
   public fillRect(
@@ -202,20 +277,23 @@ export class WebglRenderContext extends RenderContext {
     height: number,
     color = '#000',
   ): void {
-    const gl = this.gl;
-    const s = this.viewScale;
-    const matrix = this.projection.clone();
-    matrix.translate(x * s + this.viewOffsetX, y * s + this.viewOffsetY, 0);
-    matrix.scale(width * s, height * s, 1);
-
-    this.bindQuad();
-    gl.uniform1i(this.uUseTexture, 0);
-    gl.uniform4fv(this.uColor, this.parseColor(color));
-    gl.uniform1f(this.uAlpha, this.globalAlpha);
-    gl.uniform1f(this.uFlash, 0);
-    gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
-    gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    const rgba = this.parseColor(color);
+    this.pushQuad(
+      this.whiteTexture,
+      x,
+      y,
+      width,
+      height,
+      0,
+      0,
+      1,
+      1,
+      rgba[0],
+      rgba[1],
+      rgba[2],
+      rgba[3] * this.globalAlpha,
+      0,
+    );
   }
 
   public drawText(
@@ -239,21 +317,22 @@ export class WebglRenderContext extends RenderContext {
       align,
     );
     const texture = this.getTexture(canvas);
-    const gl = this.gl;
-    const s = this.viewScale;
-    const matrix = this.projection.clone();
-    matrix.translate(x * s + this.viewOffsetX, y * s + this.viewOffsetY, 0);
-    matrix.scale(canvas.width * s, canvas.height * s, 1);
-
-    this.bindQuad();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(this.uUseTexture, 1);
-    gl.uniform1f(this.uAlpha, this.globalAlpha);
-    gl.uniform1f(this.uFlash, 0);
-    gl.uniformMatrix4fv(this.uMatrix, false, matrix.elements);
-    gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.pushQuad(
+      texture,
+      x,
+      y,
+      canvas.width,
+      canvas.height,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      this.globalAlpha,
+      0,
+    );
   }
 
   public getGlobalAlpha(): number {
@@ -300,7 +379,79 @@ export class WebglRenderContext extends RenderContext {
     );
   }
 
+  // Append one axis-aligned quad to the batch. Flushes first if the texture
+  // differs from the current run's or the buffer is full. The view transform
+  // (camera zoom) is applied here on the CPU — pure scale + translate.
+  private pushQuad(
+    texture: WebGLTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    u0: number,
+    v0: number,
+    u1: number,
+    v1: number,
+    r: number,
+    g: number,
+    b: number,
+    a: number,
+    flash: number,
+  ): void {
+    if (texture !== this.batchTexture || this.quadCount >= MAX_QUADS) {
+      this.flush();
+      this.batchTexture = texture;
+    }
+
+    const s = this.viewScale;
+    const x0 = x * s + this.viewOffsetX;
+    const y0 = y * s + this.viewOffsetY;
+    const x1 = x0 + width * s;
+    const y1 = y0 + height * s;
+
+    const data = this.batchData;
+    const offset = this.quadCount * FLOATS_PER_QUAD;
+    this.quadCount += 1;
+
+    // Two triangles: (x0,y0) (x0,y1) (x1,y0) / (x1,y0) (x0,y1) (x1,y1).
+    // Written out flat (no temporaries) — this runs for every quad on screen.
+    this.writeVertex(data, offset, x0, y0, u0, v0, r, g, b, a, flash);
+    this.writeVertex(data, offset + 9, x0, y1, u0, v1, r, g, b, a, flash);
+    this.writeVertex(data, offset + 18, x1, y0, u1, v0, r, g, b, a, flash);
+    this.writeVertex(data, offset + 27, x1, y0, u1, v0, r, g, b, a, flash);
+    this.writeVertex(data, offset + 36, x0, y1, u0, v1, r, g, b, a, flash);
+    this.writeVertex(data, offset + 45, x1, y1, u1, v1, r, g, b, a, flash);
+  }
+
+  private writeVertex(
+    data: Float32Array,
+    offset: number,
+    x: number,
+    y: number,
+    u: number,
+    v: number,
+    r: number,
+    g: number,
+    b: number,
+    a: number,
+    flash: number,
+  ): void {
+    data[offset] = x;
+    data[offset + 1] = y;
+    data[offset + 2] = u;
+    data[offset + 3] = v;
+    data[offset + 4] = r;
+    data[offset + 5] = g;
+    data[offset + 6] = b;
+    data[offset + 7] = a;
+    data[offset + 8] = flash;
+  }
+
   private drawLines(positions: Vector[], color: string, mode: number): void {
+    // Lines use a different vertex layout, so the pending quads must be
+    // submitted first to keep draw ordering intact.
+    this.flush();
+
     const gl = this.gl;
     const s = this.viewScale;
     const data = new Float32Array(positions.length * 2);
@@ -313,25 +464,26 @@ export class WebglRenderContext extends RenderContext {
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
     gl.enableVertexAttribArray(this.aPosition);
     gl.vertexAttribPointer(this.aPosition, 2, gl.FLOAT, false, 0, 0);
+
+    // Constant attributes: sample the white texture at a fixed texel and put
+    // the whole color into a_color, matching the fill path.
+    const rgba = this.parseColor(color);
     gl.disableVertexAttribArray(this.aTexcoord);
-    gl.vertexAttrib2f(this.aTexcoord, 0, 0);
+    gl.vertexAttrib2f(this.aTexcoord, 0.5, 0.5);
+    gl.disableVertexAttribArray(this.aColor);
+    gl.vertexAttrib4f(
+      this.aColor,
+      rgba[0],
+      rgba[1],
+      rgba[2],
+      rgba[3] * this.globalAlpha,
+    );
+    gl.disableVertexAttribArray(this.aFlash);
+    gl.vertexAttrib1f(this.aFlash, 0);
 
-    gl.uniform1i(this.uUseTexture, 0);
-    gl.uniform4fv(this.uColor, this.parseColor(color));
-    gl.uniform1f(this.uAlpha, this.globalAlpha);
-    gl.uniform1f(this.uFlash, 0);
-    gl.uniformMatrix4fv(this.uMatrix, false, this.projection.elements);
-    gl.uniformMatrix4fv(this.uTextureMatrix, false, IDENTITY.elements);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.whiteTexture);
     gl.drawArrays(mode, 0, positions.length);
-  }
-
-  private bindQuad(): void {
-    const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    gl.enableVertexAttribArray(this.aPosition);
-    gl.vertexAttribPointer(this.aPosition, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(this.aTexcoord);
-    gl.vertexAttribPointer(this.aTexcoord, 2, gl.FLOAT, false, 0, 0);
   }
 
   private getTexture(element: TexImageSource): WebGLTexture {

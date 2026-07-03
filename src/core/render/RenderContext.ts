@@ -14,6 +14,11 @@ export abstract class RenderContext {
 
   abstract init(): void;
   abstract clear(): void;
+  // Submit any pending batched work to the GPU. Called by the frame driver at
+  // the end of each frame. No-op for backends that draw immediately.
+  public flush(): void {
+    return undefined;
+  }
   abstract clearRect(x: number, y: number, width: number, height: number): void;
   // `flash` in [0..1] tints the sprite toward white (per-sprite hit flash);
   // 0 (default) draws the image unmodified.

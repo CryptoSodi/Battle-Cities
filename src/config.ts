@@ -201,6 +201,9 @@ export const FLASH_BASE_DIED = 0.55;
 // scaled by CAMERA_SHAKE_INTENSITY so reduced-motion disables it.
 export const SPRITE_FLASH_HIT = 0.85;
 export const SPRITE_FLASH_DECAY_SECONDS = 0.11;
+// Toggle only the sprite-sheet explosion animation from data/graphics/explosion.png.
+// Procedural explosion particles, sounds, and gameplay events still run.
+export const SHOW_EXPLOSION_SPRITE = true;
 
 // LevelJuiceScript ambient FX (cosmetic overlay, Math.random only, gated by
 // PARTICLE_INTENSITY). Tread dust puffs behind moving tanks; spark bursts when
@@ -212,7 +215,7 @@ export const HIT_SPARK_COUNT = 8; // sparks when a tank survives a hit
 // the logical size, so HD art (authored at 4x) resolves to full detail on
 // screen instead of being sampled down to the gameplay tile size. Gameplay and
 // world coordinates are unaffected. Lower to 2 for weaker GPUs.
-export const RENDER_SCALE = 4;
+export const RENDER_SCALE = 1;
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;
@@ -373,4 +376,4 @@ export const MODAL_Z_INDEX = 11;
 export const DEBUG_COLLISION_RECT_Z_INDEX = 20;
 export const DEBUG_GRID_Z_INDEX = 21;
 
-export const GITHUB_URL = 'https://github.com/dogballs/cattle-bity';
+export const GITHUB_URL = 'https://github.com/CryptoSodi/Battle-Cities';
