@@ -122,11 +122,10 @@ async function listPersistentSummaries(guestId) {
     `
       SELECT id, created_at, level_number, validation_status
       FROM ${TABLE_NAME}
-      WHERE guest_id = $1
       ORDER BY created_at DESC
-      LIMIT $2
+      LIMIT $1
     `,
-    [guestId, MAX_REPLAYS_PER_GUEST],
+    [MAX_REPLAYS_PER_GUEST],
   );
 
   return result.rows.map((row) => ({
@@ -145,10 +144,10 @@ async function readPersistentRecord(id, guestId) {
       SELECT id, guest_id, created_at, level_number, replay_blob_path,
         validation_status
       FROM ${TABLE_NAME}
-      WHERE id = $1 AND guest_id = $2
+      WHERE id = $1
       LIMIT 1
     `,
-    [id, guestId],
+    [id],
   );
 
   if (result.rowCount === 0) {
@@ -271,7 +270,6 @@ async function listFileSummaries(guestId) {
   const records = await listFileRecords();
 
   return records
-    .filter((record) => record.guestId === guestId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, MAX_REPLAYS_PER_GUEST)
     .map(toSummary);
@@ -281,7 +279,7 @@ async function readFileRecord(id, guestId) {
   try {
     const raw = await fs.readFile(getRecordPath(id), 'utf8');
     const record = JSON.parse(raw);
-    if (!isValidRecord(record) || record.guestId !== guestId) {
+    if (!isValidRecord(record)) {
       return null;
     }
 
