@@ -13,6 +13,8 @@ export class SpritePainter extends Painter {
   // White-tint amount [0..1] for a hit flash. 0 = draw unmodified. Render-only;
   // set by the owning object (e.g. Tank on hit) and never read by the sim.
   public flash = 0;
+  private readonly objectRect = new Rect();
+  private readonly destinationRect = new Rect();
 
   constructor(sprite: Sprite = null, alignment = SpriteAlignment.MiddleCenter) {
     super();
@@ -32,29 +34,34 @@ export class SpritePainter extends Painter {
       return;
     }
 
-    const objectRect = renderObject.getWorldBoundingBox().toRect();
+    const box = renderObject.getWorldBoundingBox();
+    const objectRect = this.objectRect;
+    objectRect.x = box.min.x;
+    objectRect.y = box.min.y;
+    objectRect.width = box.max.x - box.min.x;
+    objectRect.height = box.max.y - box.min.y;
 
     let destinationRect = objectRect;
     if (this.alignment === SpriteAlignment.Stretch) {
       destinationRect = objectRect;
     } else if (this.alignment === SpriteAlignment.TopLeft) {
-      destinationRect = new Rect(
-        objectRect.x,
-        objectRect.y,
-        this.sprite.destinationRect.width,
-        this.sprite.destinationRect.height,
-      );
+      destinationRect = this.destinationRect;
+      destinationRect.x = objectRect.x;
+      destinationRect.y = objectRect.y;
+      destinationRect.width = this.sprite.destinationRect.width;
+      destinationRect.height = this.sprite.destinationRect.height;
     } else if (this.alignment === SpriteAlignment.MiddleCenter) {
-      destinationRect = new Rect(
+      destinationRect = this.destinationRect;
+      destinationRect.x =
         objectRect.x +
-          objectRect.width / 2 -
-          this.sprite.destinationRect.width / 2,
+        objectRect.width / 2 -
+        this.sprite.destinationRect.width / 2;
+      destinationRect.y =
         objectRect.y +
-          objectRect.height / 2 -
-          this.sprite.destinationRect.height / 2,
-        this.sprite.destinationRect.width,
-        this.sprite.destinationRect.height,
-      );
+        objectRect.height / 2 -
+        this.sprite.destinationRect.height / 2;
+      destinationRect.width = this.sprite.destinationRect.width;
+      destinationRect.height = this.sprite.destinationRect.height;
     }
 
     const tmpGlobalAlpha = context.getGlobalAlpha();
