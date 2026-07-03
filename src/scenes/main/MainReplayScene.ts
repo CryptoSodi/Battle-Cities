@@ -18,6 +18,7 @@ export class MainReplayScene extends GameScene {
   private gameStorage: GameStorage;
   private mapLoader: MapLoader;
   private replaySummaries: SavedReplaySummary[] = [];
+  private pageIndex = 0;
   private isLoadingReplay = false;
 
   protected setup({ gameStorage, mapLoader }: GameUpdateArgs): void {
@@ -35,6 +36,7 @@ export class MainReplayScene extends GameScene {
 
   private async loadReplayList(): Promise<void> {
     this.replaySummaries = await listReplaySummaries(this.gameStorage);
+    this.pageIndex = 0;
     this.renderReplayList();
   }
 
@@ -49,10 +51,18 @@ export class MainReplayScene extends GameScene {
   }
 
   private renderReplayList(): void {
+    const pageCount = Math.max(
+      1,
+      Math.ceil(this.replaySummaries.length / MAX_VISIBLE_REPLAYS),
+    );
+    this.pageIndex = Math.max(0, Math.min(this.pageIndex, pageCount - 1));
+    const pageStart = this.pageIndex * MAX_VISIBLE_REPLAYS;
     const items = this.replaySummaries
-      .slice(0, MAX_VISIBLE_REPLAYS)
+      .slice(pageStart, pageStart + MAX_VISIBLE_REPLAYS)
       .map((summary, index) => {
-        const item = new TextMenuItem(this.getReplayLabel(summary, index));
+        const item = new TextMenuItem(
+          this.getReplayLabel(summary, pageStart + index),
+        );
         item.selected.addListener(() => {
           this.handleReplaySelected(summary);
         });
@@ -63,6 +73,22 @@ export class MainReplayScene extends GameScene {
       const emptyItem = new TextMenuItem('NO REPLAYS');
       emptyItem.setFocusable(false);
       items.push(emptyItem);
+    }
+
+    if (pageCount > 1) {
+      const pageItem = new TextMenuItem(
+        `PAGE ${this.pageIndex + 1}/${pageCount}`,
+      );
+      pageItem.setFocusable(false);
+      items.push(pageItem);
+
+      const prevItem = new TextMenuItem('PREV');
+      prevItem.selected.addListener(this.handlePreviousPageSelected);
+      items.push(prevItem);
+
+      const nextItem = new TextMenuItem('NEXT');
+      nextItem.selected.addListener(this.handleNextPageSelected);
+      items.push(nextItem);
     }
 
     const backItem = new TextMenuItem('BACK');
@@ -114,12 +140,30 @@ export class MainReplayScene extends GameScene {
     this.navigator.back();
   };
 
+  private handlePreviousPageSelected = (): void => {
+    const pageCount = Math.max(
+      1,
+      Math.ceil(this.replaySummaries.length / MAX_VISIBLE_REPLAYS),
+    );
+    this.pageIndex = this.pageIndex === 0 ? pageCount - 1 : this.pageIndex - 1;
+    this.renderReplayList();
+  };
+
+  private handleNextPageSelected = (): void => {
+    const pageCount = Math.max(
+      1,
+      Math.ceil(this.replaySummaries.length / MAX_VISIBLE_REPLAYS),
+    );
+    this.pageIndex = this.pageIndex + 1 >= pageCount ? 0 : this.pageIndex + 1;
+    this.renderReplayList();
+  };
+
   private getReplayLabel(summary: SavedReplaySummary, index: number): string {
     const slot = (index + 1).toString().padStart(2, '0');
     const level = summary.levelNumber.toString().padStart(2, '0');
-    const time = this.getTimeLabel(summary.createdAt);
+    const savedAt = this.getSavedAtLabel(summary.createdAt);
 
-    return `REPLAY ${slot} L${level} ${time}`;
+    return `REC ${slot} L${level} ${savedAt}`;
   }
 
   private renderStatus(text: string): void {
@@ -132,7 +176,7 @@ export class MainReplayScene extends GameScene {
     this.menu.setItems([statusItem, backItem]);
   }
 
-  private getTimeLabel(createdAt: string): string {
+  private getSavedAtLabel(createdAt: string): string {
     if (createdAt === '') {
       return 'LOCAL';
     }
@@ -147,6 +191,6 @@ export class MainReplayScene extends GameScene {
     const hour = date.getHours().toString().padStart(2, '0');
     const minute = date.getMinutes().toString().padStart(2, '0');
 
-    return `${month}${day} ${hour}${minute}`;
+    return `${month}/${day} ${hour}:${minute}`;
   }
 }
