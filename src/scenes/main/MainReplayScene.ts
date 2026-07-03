@@ -77,7 +77,7 @@ export class MainReplayScene extends GameScene {
 
     if (pageCount > 1) {
       const pageItem = new TextMenuItem(
-        `PAGE ${this.pageIndex + 1}/${pageCount}`,
+        `PAGE ${this.pageIndex + 1} OF ${pageCount}`,
       );
       pageItem.setFocusable(false);
       items.push(pageItem);
@@ -191,6 +191,6 @@ export class MainReplayScene extends GameScene {
     const hour = date.getHours().toString().padStart(2, '0');
     const minute = date.getMinutes().toString().padStart(2, '0');
 
-    return `${month}/${day} ${hour}:${minute}`;
+    return `${month}${day} ${hour}${minute}`;
   }
 }

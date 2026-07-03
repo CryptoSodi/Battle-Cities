@@ -64,25 +64,63 @@ export class TerrainTileDestroyer extends GameObject {
 
     if (rotation === Rotation.Up) {
       const frontY = Math.max(...contacts.map((contact) => contact.box.max.y));
-      return contacts.filter((contact) => contact.box.max.y === frontY);
+      return this.limitContactsToImpactWidth(
+        contacts.filter((contact) => contact.box.max.y === frontY),
+      );
     }
 
     if (rotation === Rotation.Down) {
       const frontY = Math.min(...contacts.map((contact) => contact.box.min.y));
-      return contacts.filter((contact) => contact.box.min.y === frontY);
+      return this.limitContactsToImpactWidth(
+        contacts.filter((contact) => contact.box.min.y === frontY),
+      );
     }
 
     if (rotation === Rotation.Left) {
       const frontX = Math.max(...contacts.map((contact) => contact.box.max.x));
-      return contacts.filter((contact) => contact.box.max.x === frontX);
+      return this.limitContactsToImpactWidth(
+        contacts.filter((contact) => contact.box.max.x === frontX),
+      );
     }
 
     if (rotation === Rotation.Right) {
       const frontX = Math.min(...contacts.map((contact) => contact.box.min.x));
-      return contacts.filter((contact) => contact.box.min.x === frontX);
+      return this.limitContactsToImpactWidth(
+        contacts.filter((contact) => contact.box.min.x === frontX),
+      );
     }
 
     return contacts;
+  }
+
+  private limitContactsToImpactWidth(
+    contacts: Collision['contacts'],
+  ): Collision['contacts'] {
+    const maxContacts = this.damage * 4;
+
+    if (contacts.length <= maxContacts) {
+      return contacts;
+    }
+
+    const rotation = this.getWorldRotation();
+    const center = this.getWorldBoundingBox().getCenter();
+    const isVerticalHit = rotation === Rotation.Up || rotation === Rotation.Down;
+
+    return contacts
+      .slice()
+      .sort((a, b) => {
+        const aCenter = a.box.getCenter();
+        const bCenter = b.box.getCenter();
+        const aDistance = isVerticalHit
+          ? Math.abs(aCenter.x - center.x)
+          : Math.abs(aCenter.y - center.y);
+        const bDistance = isVerticalHit
+          ? Math.abs(bCenter.x - center.x)
+          : Math.abs(bCenter.y - center.y);
+
+        return aDistance - bDistance;
+      })
+      .slice(0, maxContacts);
   }
 
   private destroy(): void {
