@@ -33,6 +33,9 @@ const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
 const QR_CODE_URL = 'https://unpkg.com/qrcode@1.5.1/build/qrcode.js';
 const MOBILE_GAMEPAD_PATH = '/mobile-gamepad/';
 const MOBILE_GAMEPAD_VERSION = '2026-06-27-transport-logs';
+const LOCAL_MOBILE_GAMEPAD_ORIGIN = 'https://192.168.1.15:8080';
+const MOBILE_GAMEPAD_ORIGIN_PARAM = 'mobileGamepadOrigin';
+const MOBILE_GAMEPAD_ORIGIN_STORAGE_KEY = 'battlecity.mobileGamepadOrigin';
 const ROOM_CODE_LETTERS = 'BCDFGHJKLMNPQRSTVWXZ';
 
 function log(message: string, data?: any): void {
@@ -71,6 +74,41 @@ async function createPeerId(roomCode: string): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map((value) => value.toString(16).padStart(2, '0'))
     .join('');
+}
+
+function getMobileGamepadOrigin(): string {
+  const searchParams = new URLSearchParams(window.location.search);
+  const queryOrigin = searchParams.get(MOBILE_GAMEPAD_ORIGIN_PARAM);
+  const storedOrigin = window.localStorage?.getItem(
+    MOBILE_GAMEPAD_ORIGIN_STORAGE_KEY,
+  );
+  const overrideOrigin = getValidOrigin(queryOrigin || storedOrigin);
+
+  if (overrideOrigin !== null) {
+    return overrideOrigin;
+  }
+
+  if (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  ) {
+    return LOCAL_MOBILE_GAMEPAD_ORIGIN;
+  }
+
+  return window.location.origin;
+}
+
+function getValidOrigin(value: string): string {
+  if (value === null || value.trim() === '') {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.origin;
+  } catch {
+    return null;
+  }
 }
 
 export class MobileGamepadHost {
@@ -142,7 +180,7 @@ export class MobileGamepadHost {
 
     this.roomCode = Array.from({ length: 4 }, getRoomCodeLetter).join('');
 
-    const playerUrl = new URL(MOBILE_GAMEPAD_PATH, window.location.href);
+    const playerUrl = new URL(MOBILE_GAMEPAD_PATH, getMobileGamepadOrigin());
     playerUrl.searchParams.set('v', MOBILE_GAMEPAD_VERSION);
     playerUrl.searchParams.set('rc', this.roomCode);
     playerUrl.hash = `?rc=${this.roomCode}`;

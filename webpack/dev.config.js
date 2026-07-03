@@ -257,7 +257,7 @@ module.exports = merge(baseConfig, {
 
   devServer: {
     contentBase: './dist',
-    host: 'localhost',
+    host: '0.0.0.0',
     https: true,
     public: 'localhost:8080',
     before: attachReplayApi,

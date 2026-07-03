@@ -63,3 +63,23 @@ Add the same vars to `.env.local`. The dev server loads `.env.local` through
 
 After setup, `GET /api/auth/google/start` should redirect to
 `accounts.google.com` instead of `/?authError=google_config`.
+
+Run the game from localhost for Google OAuth:
+
+```text
+https://localhost:8080
+```
+
+The mobile gamepad QR still points phones to the LAN URL:
+
+```text
+https://192.168.1.15:8080/mobile-gamepad/
+```
+
+If the machine IP changes, open the game with:
+
+```text
+https://localhost:8080/?mobileGamepadOrigin=https://YOUR-IP:8080
+```
+
+or set `localStorage.battlecity.mobileGamepadOrigin` to the same origin.
