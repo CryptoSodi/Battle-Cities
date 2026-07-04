@@ -96,6 +96,7 @@ class NativeTextPainter extends Painter {
   public fontSize: number;
   public fontWeight: string;
   public maxWidth: number;
+  public align: CanvasTextAlign;
 
   constructor(
     text: string,
@@ -103,6 +104,7 @@ class NativeTextPainter extends Painter {
     fontSize: number,
     fontWeight: string,
     maxWidth: number,
+    align: CanvasTextAlign = 'left',
   ) {
     super();
     this.text = text;
@@ -110,6 +112,7 @@ class NativeTextPainter extends Painter {
     this.fontSize = fontSize;
     this.fontWeight = fontWeight;
     this.maxWidth = maxWidth;
+    this.align = align;
   }
 
   public paint(context: RenderContext, renderObject: GameObject): void {
@@ -123,6 +126,7 @@ class NativeTextPainter extends Painter {
       SHOP_FONT,
       this.fontWeight,
       this.color,
+      this.align,
     );
   }
 }
@@ -136,10 +140,11 @@ class ShopText extends GameObject {
     fontSize = 24,
     fontWeight = '700',
     maxWidth: number = null,
+    align: CanvasTextAlign = 'left',
   ) {
     const width = maxWidth ?? Math.max(24, Math.ceil(text.length * fontSize * 0.62));
     super(width, Math.ceil(fontSize * 1.35));
-    this.painter = new NativeTextPainter(text, color, fontSize, fontWeight, width);
+    this.painter = new NativeTextPainter(text, color, fontSize, fontWeight, width, align);
   }
 
   public setText(text: string): void {
@@ -809,7 +814,7 @@ export class MainShopScene extends GameScene {
     y: number,
     itemId: ShopInventoryItemId,
   ): void {
-    const tile = new ShopPanel(118, 68, COLOR_PANEL_ALT, '#2c2a22');
+    const tile = new ShopPanel(122, 68, COLOR_PANEL_ALT, '#2c2a22');
     tile.position.set(x, y);
     this.root.add(tile);
 
@@ -817,8 +822,15 @@ export class MainShopScene extends GameScene {
     icon.position.set(x + 6, y + 3);
     this.root.add(icon);
 
-    const count = new ShopText(this.getInventoryCountText(itemId), COLOR_YELLOW);
-    count.position.set(x + 78, y + 18);
+    const count = new ShopText(
+      this.getInventoryCountText(itemId),
+      COLOR_YELLOW,
+      24,
+      '900',
+      42,
+      'center',
+    );
+    count.position.set(x + 72, y + 18);
     this.root.add(count);
   }
 
