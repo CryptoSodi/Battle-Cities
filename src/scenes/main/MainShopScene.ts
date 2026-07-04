@@ -81,6 +81,9 @@ const CARD_WIDTH = 260;
 const CARD_HEIGHT = 176;
 const CARD_GAP_X = 24;
 const CARD_GAP_Y = 22;
+const LOADOUT_SLOT_WIDTH = 192;
+const LOADOUT_SLOT_HEIGHT = 132;
+const LOADOUT_SLOT_GAP_X = 22;
 const ICON_SIZE = 82;
 const BUTTON_LABEL_INSET = 10;
 const SHOP_FONT = 'Inter, Segoe UI, Arial, sans-serif';
@@ -399,6 +402,10 @@ export class MainShopScene extends GameScene {
       'shop.fuel',
     );
 
+    if (this.view === ShopView.Loadout) {
+      return;
+    }
+
     const inventoryY = y + 324;
     const inventoryTitle = new ShopText('Owned', COLOR_MUTED, 24, '800', SIDE_WIDTH - 56);
     inventoryTitle.position.set(x + 28, inventoryY);
@@ -409,17 +416,6 @@ export class MainShopScene extends GameScene {
     this.addInventoryTile(x + 28, inventoryY + 114, ShopInventoryItemId.Freeze);
     this.addInventoryTile(x + 160, inventoryY + 114, ShopInventoryItemId.Wipeout);
     this.addInventoryTile(x + 28, inventoryY + 186, ShopInventoryItemId.ExtraLife);
-
-    const loadoutY = y + 520;
-    const loadoutTitle = new ShopText('Equipped', COLOR_MUTED, 24, '800', SIDE_WIDTH - 56);
-    loadoutTitle.position.set(x + 28, loadoutY);
-    this.root.add(loadoutTitle);
-
-    this.addLoadoutRow(x + 28, loadoutY + 38, 'A1', this.getSlotLabel(ShopLoadoutSlot.ActiveOne));
-    this.addLoadoutRow(x + 28, loadoutY + 76, 'A2', this.getSlotLabel(ShopLoadoutSlot.ActiveTwo));
-    this.addLoadoutRow(x + 28, loadoutY + 114, 'A3', this.getSlotLabel(ShopLoadoutSlot.ActiveThree));
-    this.addLoadoutRow(x + 28, loadoutY + 152, 'A4', this.getSlotLabel(ShopLoadoutSlot.ActiveFour));
-
   }
 
   private renderContent(x: number, y: number): void {
@@ -534,42 +530,46 @@ export class MainShopScene extends GameScene {
     helper.position.set(x, y + 34);
     this.root.add(helper);
 
-    this.addSlotCard(x, y + 90, ShopLoadoutSlot.ActiveOne, 'SLOT 1', 0, 0);
-    this.addSlotCard(
-      x + CARD_WIDTH + CARD_GAP_X,
-      y + 90,
+    const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
+    ownedTitle.position.set(x, y + 88);
+    this.root.add(ownedTitle);
+
+    this.addOwnedConsumableTile(x, y + 132, ShopInventoryItemId.Shield);
+    this.addOwnedConsumableTile(x + 250, y + 132, ShopInventoryItemId.BaseDefence);
+    this.addOwnedConsumableTile(x + 500, y + 132, ShopInventoryItemId.Freeze);
+    this.addOwnedConsumableTile(x, y + 234, ShopInventoryItemId.Wipeout);
+    this.addOwnedConsumableTile(x + 250, y + 234, ShopInventoryItemId.ExtraLife);
+
+    const slotsY = y + 370;
+    const slotsTitle = new ShopText('Equipped Slots', config.COLOR_WHITE, 28, '900', 420);
+    slotsTitle.position.set(x, slotsY);
+    this.root.add(slotsTitle);
+
+    this.addCompactSlotCard(x, slotsY + 44, ShopLoadoutSlot.ActiveOne, 'SLOT 1', 0, 0);
+    this.addCompactSlotCard(
+      x + LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X,
+      slotsY + 44,
       ShopLoadoutSlot.ActiveTwo,
       'SLOT 2',
       0,
       1,
     );
-    this.addSlotCard(
-      x,
-      y + 90 + CARD_HEIGHT + CARD_GAP_Y,
+    this.addCompactSlotCard(
+      x + (LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X) * 2,
+      slotsY + 44,
       ShopLoadoutSlot.ActiveThree,
       'SLOT 3',
-      1,
       0,
+      2,
     );
-    this.addSlotCard(
-      x + CARD_WIDTH + CARD_GAP_X,
-      y + 90 + CARD_HEIGHT + CARD_GAP_Y,
+    this.addCompactSlotCard(
+      x + (LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X) * 3,
+      slotsY + 44,
       ShopLoadoutSlot.ActiveFour,
       'SLOT 4',
-      1,
-      1,
+      0,
+      3,
     );
-
-    const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
-    ownedTitle.position.set(x + (CARD_WIDTH + CARD_GAP_X) * 2, y + 90);
-    this.root.add(ownedTitle);
-
-    const ownedX = x + (CARD_WIDTH + CARD_GAP_X) * 2;
-    this.addOwnedConsumableTile(ownedX, y + 134, ShopInventoryItemId.Shield);
-    this.addOwnedConsumableTile(ownedX + 250, y + 134, ShopInventoryItemId.BaseDefence);
-    this.addOwnedConsumableTile(ownedX, y + 236, ShopInventoryItemId.Freeze);
-    this.addOwnedConsumableTile(ownedX + 250, y + 236, ShopInventoryItemId.Wipeout);
-    this.addOwnedConsumableTile(ownedX, y + 338, ShopInventoryItemId.ExtraLife);
 
     const note = new ShopText(
       'Use 1-4 in game to consume equipped powers',
@@ -578,7 +578,7 @@ export class MainShopScene extends GameScene {
       '700',
       620,
     );
-    note.position.set(x, y + 490);
+    note.position.set(x, slotsY + 194);
     this.root.add(note);
   }
 
@@ -661,6 +661,39 @@ export class MainShopScene extends GameScene {
     const card = new ShopCard(
       CARD_WIDTH,
       CARD_HEIGHT,
+      itemId === null ? 'shop.bundle' : this.getInventoryIconId(itemId),
+    );
+    card.position.set(x, y);
+    card.setContent(
+      title,
+      this.getCompactSlotLabel(this.getSlotLabel(slot)),
+      'EQUIP',
+    );
+    this.root.add(card);
+
+    this.actions.push({
+      key: `slot:${slot}`,
+      kind: 'slot',
+      slot,
+      target: card,
+      navLayer: 'items',
+      navRow: row,
+      navCol: col,
+    });
+  }
+
+  private addCompactSlotCard(
+    x: number,
+    y: number,
+    slot: ShopLoadoutSlot,
+    title: string,
+    row: number,
+    col: number,
+  ): void {
+    const itemId = this.shopManager.getEquipped(slot);
+    const card = new ShopCard(
+      LOADOUT_SLOT_WIDTH,
+      LOADOUT_SLOT_HEIGHT,
       itemId === null ? 'shop.bundle' : this.getInventoryIconId(itemId),
     );
     card.position.set(x, y);
