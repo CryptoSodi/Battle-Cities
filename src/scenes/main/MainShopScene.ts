@@ -813,12 +813,12 @@ export class MainShopScene extends GameScene {
     tile.position.set(x, y);
     this.root.add(tile);
 
-    const icon = new ShopIcon(this.getInventoryIconId(itemId), 54);
-    icon.position.set(x + 8, y + 7);
+    const icon = new ShopIcon(this.getInventoryIconId(itemId), 62);
+    icon.position.set(x + 6, y + 3);
     this.root.add(icon);
 
     const count = new ShopText(this.getInventoryCountText(itemId), COLOR_YELLOW);
-    count.position.set(x + 72, y + 18);
+    count.position.set(x + 78, y + 18);
     this.root.add(count);
   }
 
