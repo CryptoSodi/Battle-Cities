@@ -59,6 +59,27 @@ const CATALOG: ShopCatalogItem[] = [
     reward: { inventory: { [ShopInventoryItemId.Freeze]: 1 } },
   },
   {
+    id: ShopItemId.Speed,
+    name: 'SPEED',
+    price: 35,
+    solPrice: 0.03,
+    reward: { inventory: { [ShopInventoryItemId.Speed]: 1 } },
+  },
+  {
+    id: ShopItemId.Upgrade,
+    name: 'STAR',
+    price: 50,
+    solPrice: 0.045,
+    reward: { inventory: { [ShopInventoryItemId.Upgrade]: 1 } },
+  },
+  {
+    id: ShopItemId.ZoomOut,
+    name: 'ZOOM OUT',
+    price: 30,
+    solPrice: 0.025,
+    reward: { inventory: { [ShopInventoryItemId.ZoomOut]: 1 } },
+  },
+  {
     id: ShopItemId.Wipeout,
     name: 'WIPEOUT',
     price: 45,
@@ -91,6 +112,9 @@ const ACTIVE_ITEMS = [
   ShopInventoryItemId.Shield,
   ShopInventoryItemId.BaseDefence,
   ShopInventoryItemId.Freeze,
+  ShopInventoryItemId.Speed,
+  ShopInventoryItemId.Upgrade,
+  ShopInventoryItemId.ZoomOut,
   ShopInventoryItemId.Wipeout,
   ShopInventoryItemId.ExtraLife,
 ];

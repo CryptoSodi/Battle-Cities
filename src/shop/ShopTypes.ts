@@ -7,6 +7,9 @@ export enum ShopItemId {
   Shield = 'shield',
   BaseDefence = 'base-defence',
   Freeze = 'freeze',
+  Speed = 'speed',
+  Upgrade = 'upgrade',
+  ZoomOut = 'zoom-out',
   Wipeout = 'wipeout',
   ExtraLife = 'extra-life',
   StarterPack = 'starter-pack',
@@ -16,6 +19,9 @@ export enum ShopInventoryItemId {
   Shield = 'shield',
   BaseDefence = 'base-defence',
   Freeze = 'freeze',
+  Speed = 'speed',
+  Upgrade = 'upgrade',
+  ZoomOut = 'zoom-out',
   Wipeout = 'wipeout',
   ExtraLife = 'extra-life',
 }
@@ -69,6 +75,12 @@ export function getPowerupTypeForInventoryItem(
       return PowerupType.BaseDefence;
     case ShopInventoryItemId.Freeze:
       return PowerupType.Freeze;
+    case ShopInventoryItemId.Speed:
+      return PowerupType.Speed;
+    case ShopInventoryItemId.Upgrade:
+      return PowerupType.Upgrade;
+    case ShopInventoryItemId.ZoomOut:
+      return PowerupType.ZoomOut;
     case ShopInventoryItemId.Wipeout:
       return PowerupType.Wipeout;
     case ShopInventoryItemId.ExtraLife:

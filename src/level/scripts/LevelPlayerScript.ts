@@ -79,6 +79,12 @@ class PowerHotbarSlot extends GameObject {
         return 'powerup.shovel';
       case ShopInventoryItemId.Freeze:
         return 'powerup.clock';
+      case ShopInventoryItemId.Speed:
+        return 'powerup.speed';
+      case ShopInventoryItemId.Upgrade:
+        return 'powerup.star';
+      case ShopInventoryItemId.ZoomOut:
+        return 'powerup.zoomout';
       case ShopInventoryItemId.Wipeout:
         return 'powerup.grenade';
       case ShopInventoryItemId.ExtraLife:

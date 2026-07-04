@@ -84,6 +84,8 @@ const CARD_GAP_Y = 22;
 const LOADOUT_SLOT_WIDTH = 192;
 const LOADOUT_SLOT_HEIGHT = 132;
 const LOADOUT_SLOT_GAP_X = 22;
+const LOADOUT_OWNED_TILE_WIDTH = 192;
+const LOADOUT_OWNED_TILE_GAP_X = 22;
 const ICON_SIZE = 82;
 const BUTTON_LABEL_INSET = 10;
 const SHOP_FONT = 'Inter, Segoe UI, Arial, sans-serif';
@@ -414,8 +416,11 @@ export class MainShopScene extends GameScene {
     this.addInventoryTile(x + 28, inventoryY + 42, ShopInventoryItemId.Shield);
     this.addInventoryTile(x + 160, inventoryY + 42, ShopInventoryItemId.BaseDefence);
     this.addInventoryTile(x + 28, inventoryY + 114, ShopInventoryItemId.Freeze);
-    this.addInventoryTile(x + 160, inventoryY + 114, ShopInventoryItemId.Wipeout);
-    this.addInventoryTile(x + 28, inventoryY + 186, ShopInventoryItemId.ExtraLife);
+    this.addInventoryTile(x + 160, inventoryY + 114, ShopInventoryItemId.Speed);
+    this.addInventoryTile(x + 28, inventoryY + 186, ShopInventoryItemId.Upgrade);
+    this.addInventoryTile(x + 160, inventoryY + 186, ShopInventoryItemId.ZoomOut);
+    this.addInventoryTile(x + 28, inventoryY + 258, ShopInventoryItemId.Wipeout);
+    this.addInventoryTile(x + 160, inventoryY + 258, ShopInventoryItemId.ExtraLife);
   }
 
   private renderContent(x: number, y: number): void {
@@ -535,10 +540,37 @@ export class MainShopScene extends GameScene {
     this.root.add(ownedTitle);
 
     this.addOwnedConsumableTile(x, y + 132, ShopInventoryItemId.Shield);
-    this.addOwnedConsumableTile(x + 250, y + 132, ShopInventoryItemId.BaseDefence);
-    this.addOwnedConsumableTile(x + 500, y + 132, ShopInventoryItemId.Freeze);
-    this.addOwnedConsumableTile(x, y + 234, ShopInventoryItemId.Wipeout);
-    this.addOwnedConsumableTile(x + 250, y + 234, ShopInventoryItemId.ExtraLife);
+    this.addOwnedConsumableTile(
+      x + LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X,
+      y + 132,
+      ShopInventoryItemId.BaseDefence,
+    );
+    this.addOwnedConsumableTile(
+      x + (LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X) * 2,
+      y + 132,
+      ShopInventoryItemId.Freeze,
+    );
+    this.addOwnedConsumableTile(
+      x + (LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X) * 3,
+      y + 132,
+      ShopInventoryItemId.Speed,
+    );
+    this.addOwnedConsumableTile(x, y + 234, ShopInventoryItemId.Upgrade);
+    this.addOwnedConsumableTile(
+      x + LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X,
+      y + 234,
+      ShopInventoryItemId.ZoomOut,
+    );
+    this.addOwnedConsumableTile(
+      x + (LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X) * 2,
+      y + 234,
+      ShopInventoryItemId.Wipeout,
+    );
+    this.addOwnedConsumableTile(
+      x + (LOADOUT_OWNED_TILE_WIDTH + LOADOUT_OWNED_TILE_GAP_X) * 3,
+      y + 234,
+      ShopInventoryItemId.ExtraLife,
+    );
 
     const slotsY = y + 370;
     const slotsTitle = new ShopText('Equipped Slots', config.COLOR_WHITE, 28, '900', 420);
@@ -720,7 +752,7 @@ export class MainShopScene extends GameScene {
     y: number,
     itemId: ShopInventoryItemId,
   ): void {
-    const tile = new ShopPanel(224, 82, COLOR_PANEL_ALT, '#2c2a22');
+    const tile = new ShopPanel(LOADOUT_OWNED_TILE_WIDTH, 82, COLOR_PANEL_ALT, '#2c2a22');
     tile.position.set(x, y);
     this.root.add(tile);
 
@@ -728,11 +760,11 @@ export class MainShopScene extends GameScene {
     icon.position.set(x + 14, y + 16);
     this.root.add(icon);
 
-    const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 18, '900', 136);
+    const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 16, '900', 112);
     label.position.set(x + 76, y + 14);
     this.root.add(label);
 
-    const count = new ShopText(`${this.getInventoryCountText(itemId)} OWNED`, COLOR_YELLOW, 18, '900', 136);
+    const count = new ShopText(`${this.getInventoryCountText(itemId)} OWNED`, COLOR_YELLOW, 16, '900', 112);
     count.position.set(x + 76, y + 44);
     this.root.add(count);
   }
@@ -1209,6 +1241,12 @@ export class MainShopScene extends GameScene {
         return 'powerup.shovel';
       case ShopItemId.Freeze:
         return 'powerup.clock';
+      case ShopItemId.Speed:
+        return 'powerup.speed';
+      case ShopItemId.Upgrade:
+        return 'powerup.star';
+      case ShopItemId.ZoomOut:
+        return 'powerup.zoomout';
       case ShopItemId.Wipeout:
         return 'powerup.grenade';
       case ShopItemId.ExtraLife:
@@ -1286,6 +1324,12 @@ export class MainShopScene extends GameScene {
         return 'powerup.shovel';
       case ShopInventoryItemId.Freeze:
         return 'powerup.clock';
+      case ShopInventoryItemId.Speed:
+        return 'powerup.speed';
+      case ShopInventoryItemId.Upgrade:
+        return 'powerup.star';
+      case ShopInventoryItemId.ZoomOut:
+        return 'powerup.zoomout';
       case ShopInventoryItemId.Wipeout:
         return 'powerup.grenade';
       case ShopInventoryItemId.ExtraLife:
@@ -1317,6 +1361,8 @@ export class MainShopScene extends GameScene {
         return `WIPE${suffix}`;
       case 'EXTRA LIFE':
         return `LIFE${suffix}`;
+      case 'ZOOM OUT':
+        return `ZOOM${suffix}`;
       default:
         return label;
     }
@@ -1330,6 +1376,12 @@ export class MainShopScene extends GameScene {
         return 'BASE DEF';
       case ShopInventoryItemId.Freeze:
         return 'FREEZE';
+      case ShopInventoryItemId.Speed:
+        return 'SPEED';
+      case ShopInventoryItemId.Upgrade:
+        return 'STAR';
+      case ShopInventoryItemId.ZoomOut:
+        return 'ZOOM OUT';
       case ShopInventoryItemId.Wipeout:
         return 'WIPEOUT';
       case ShopInventoryItemId.ExtraLife:
@@ -1345,6 +1397,8 @@ export class MainShopScene extends GameScene {
         return 'BASE';
       case ShopInventoryItemId.Wipeout:
         return 'WIPE';
+      case ShopInventoryItemId.ZoomOut:
+        return 'ZOOM';
       case ShopInventoryItemId.ExtraLife:
         return 'LIFE';
       default:
