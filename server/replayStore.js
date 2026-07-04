@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const storageConfig = require('./storageConfig');
 
 const MAX_REPLAYS_PER_GUEST = 50;
 const TABLE_NAME = 'battlecity_replays';
@@ -15,17 +16,14 @@ function getDataDir() {
 }
 
 function getDatabaseUrl() {
-  return (
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    ''
-  );
+  return storageConfig.getDatabaseUrl();
 }
 
 function hasPersistentConfig() {
-  return getDatabaseUrl() !== '' && process.env.BLOB_READ_WRITE_TOKEN !== '';
+  return (
+    storageConfig.hasDatabaseConfig() &&
+    process.env.BLOB_READ_WRITE_TOKEN !== ''
+  );
 }
 
 function getPgPool() {

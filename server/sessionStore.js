@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 const playerStore = require('./playerStore');
+const storageConfig = require('./storageConfig');
 
 const TABLE_NAME = 'battlecity_sessions';
 
@@ -15,17 +16,11 @@ function getDataDir() {
 }
 
 function getDatabaseUrl() {
-  return (
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    ''
-  );
+  return storageConfig.getDatabaseUrl();
 }
 
 function hasPersistentConfig() {
-  return getDatabaseUrl() !== '';
+  return storageConfig.hasDatabaseConfig();
 }
 
 function getPgPool() {

@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const storageConfig = require('./storageConfig');
 
 const TABLE_NAME = 'battlecity_wallet_challenges';
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
@@ -17,17 +18,11 @@ function getDataDir() {
 }
 
 function getDatabaseUrl() {
-  return (
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    ''
-  );
+  return storageConfig.getDatabaseUrl();
 }
 
 function hasPersistentConfig() {
-  return getDatabaseUrl() !== '';
+  return storageConfig.hasDatabaseConfig();
 }
 
 function getPgPool() {

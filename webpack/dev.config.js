@@ -1,6 +1,7 @@
 const merge = require('webpack-merge');
 
 require('../server/loadLocalEnv').loadLocalEnv();
+process.env.BATTLECITY_STORAGE_MODE = 'local';
 
 const baseConfig = require('./base.config');
 const replayIdentity = require('../server/replayIdentity');
