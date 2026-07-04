@@ -178,9 +178,11 @@ class ShopButton extends GameObject {
   private label: ShopText;
   private active = false;
   private focused = false;
+  private readonly variant: 'normal' | 'back';
 
-  constructor(width: number, height: number, text: string) {
+  constructor(width: number, height: number, text: string, variant: 'normal' | 'back' = 'normal') {
     super(width, height);
+    this.variant = variant;
 
     this.background = new RectPainter(COLOR_PANEL_ALT, COLOR_YELLOW_DARK);
     this.background.lineWidth = 2;
@@ -213,10 +215,11 @@ class ShopButton extends GameObject {
   }
 
   private refreshStyle(): void {
-    this.background.fillColor = this.active ? COLOR_YELLOW : COLOR_PANEL_ALT;
-    this.background.strokeColor = this.focused ? config.COLOR_WHITE : COLOR_YELLOW_DARK;
+    const focusedBack = this.focused && this.variant === 'back';
+    this.background.fillColor = this.active ? COLOR_YELLOW : focusedBack ? config.COLOR_RED : COLOR_PANEL_ALT;
+    this.background.strokeColor = this.focused ? (focusedBack ? config.COLOR_RED : config.COLOR_WHITE) : COLOR_YELLOW_DARK;
     this.background.lineWidth = this.focused ? 4 : 2;
-    this.label.setColor(this.active ? config.COLOR_BLACK : config.COLOR_WHITE);
+    this.label.setColor(this.active ? config.COLOR_BLACK : focusedBack ? config.COLOR_WHITE : config.COLOR_WHITE);
     this.setNeedsPaint();
   }
 }
@@ -841,7 +844,7 @@ export class MainShopScene extends GameScene {
     action: Omit<ShopAction, 'target'>,
     active = false,
   ): ShopButton {
-    const button = new ShopButton(width, height, text);
+    const button = new ShopButton(width, height, text, action.kind === 'back' ? 'back' : 'normal');
     button.position.set(x, y);
     button.setActive(active);
     this.root.add(button);
