@@ -420,7 +420,7 @@ export class MainShopScene extends GameScene {
 
     const ownedTileX = x + 28;
     const ownedTileGap = 18;
-    const ownedTileWidth = 120;
+    const ownedTileWidth = 121;
     this.addInventoryTile(ownedTileX, inventoryY + 42, ShopInventoryItemId.Shield, ownedTileWidth);
     this.addInventoryTile(
       ownedTileX + ownedTileWidth + ownedTileGap,
@@ -854,7 +854,7 @@ export class MainShopScene extends GameScene {
       42,
       'center',
     );
-    count.position.set(x + width - 24, y + 18);
+    count.position.set(x + width - 23, y + 22);
     this.root.add(count);
   }
 
