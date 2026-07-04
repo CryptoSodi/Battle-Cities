@@ -854,7 +854,7 @@ export class MainShopScene extends GameScene {
       42,
       'center',
     );
-    count.position.set(x + width - 23, y + 22);
+    count.position.set(x + width - 26, y + 18);
     this.root.add(count);
   }
 
