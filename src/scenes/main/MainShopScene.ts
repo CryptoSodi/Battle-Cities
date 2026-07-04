@@ -1008,6 +1008,10 @@ export class MainShopScene extends GameScene {
 
   private focusChildLayer(currentAction: ShopAction, layer: ShopNavLayer): void {
     this.verticalParentKeys[layer] = currentAction.key;
+    if (layer === 'category' && this.focusActionByKey(`category:${this.category}`)) {
+      return;
+    }
+
     this.focusFirstInLayer(layer);
   }
 
