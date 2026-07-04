@@ -418,14 +418,37 @@ export class MainShopScene extends GameScene {
     inventoryTitle.position.set(x + 28, inventoryY);
     this.root.add(inventoryTitle);
 
-    this.addInventoryTile(x + 28, inventoryY + 42, ShopInventoryItemId.Shield);
-    this.addInventoryTile(x + 160, inventoryY + 42, ShopInventoryItemId.BaseDefence);
-    this.addInventoryTile(x + 28, inventoryY + 114, ShopInventoryItemId.Freeze);
-    this.addInventoryTile(x + 160, inventoryY + 114, ShopInventoryItemId.Speed);
-    this.addInventoryTile(x + 28, inventoryY + 186, ShopInventoryItemId.Upgrade);
-    this.addInventoryTile(x + 160, inventoryY + 186, ShopInventoryItemId.ZoomOut);
-    this.addInventoryTile(x + 28, inventoryY + 258, ShopInventoryItemId.Wipeout);
-    this.addInventoryTile(x + 160, inventoryY + 258, ShopInventoryItemId.ExtraLife);
+    const ownedTileX = x + 28;
+    const ownedTileGap = 18;
+    const ownedTileWidth = 120;
+    this.addInventoryTile(ownedTileX, inventoryY + 42, ShopInventoryItemId.Shield, ownedTileWidth);
+    this.addInventoryTile(
+      ownedTileX + ownedTileWidth + ownedTileGap,
+      inventoryY + 42,
+      ShopInventoryItemId.BaseDefence,
+      ownedTileWidth,
+    );
+    this.addInventoryTile(ownedTileX, inventoryY + 114, ShopInventoryItemId.Freeze, ownedTileWidth);
+    this.addInventoryTile(
+      ownedTileX + ownedTileWidth + ownedTileGap,
+      inventoryY + 114,
+      ShopInventoryItemId.Speed,
+      ownedTileWidth,
+    );
+    this.addInventoryTile(ownedTileX, inventoryY + 186, ShopInventoryItemId.Upgrade, ownedTileWidth);
+    this.addInventoryTile(
+      ownedTileX + ownedTileWidth + ownedTileGap,
+      inventoryY + 186,
+      ShopInventoryItemId.ZoomOut,
+      ownedTileWidth,
+    );
+    this.addInventoryTile(ownedTileX, inventoryY + 258, ShopInventoryItemId.Wipeout, ownedTileWidth);
+    this.addInventoryTile(
+      ownedTileX + ownedTileWidth + ownedTileGap,
+      inventoryY + 258,
+      ShopInventoryItemId.ExtraLife,
+      ownedTileWidth,
+    );
   }
 
   private renderContent(x: number, y: number): void {
@@ -813,8 +836,9 @@ export class MainShopScene extends GameScene {
     x: number,
     y: number,
     itemId: ShopInventoryItemId,
+    width = 120,
   ): void {
-    const tile = new ShopPanel(122, 68, COLOR_PANEL_ALT, '#2c2a22');
+    const tile = new ShopPanel(width, 68, COLOR_PANEL_ALT, '#2c2a22');
     tile.position.set(x, y);
     this.root.add(tile);
 
@@ -830,7 +854,7 @@ export class MainShopScene extends GameScene {
       42,
       'center',
     );
-    count.position.set(x + 72, y + 18);
+    count.position.set(x + width - 24, y + 18);
     this.root.add(count);
   }
 
