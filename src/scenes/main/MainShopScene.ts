@@ -294,6 +294,7 @@ export class MainShopScene extends GameScene {
   private actions: ShopAction[] = [];
   private focusedActionIndex = 0;
   private pendingActionIndex: number = null;
+  private verticalParentKeys: { [layer: string]: string } = {};
 
   protected setup({ gameStorage }: GameUpdateArgs): void {
     this.shopManager = new ShopManager(gameStorage);
@@ -862,12 +863,13 @@ export class MainShopScene extends GameScene {
     }
   }
 
-  private focusActionByKey(preferredFocusKey: string): void {
+  private focusActionByKey(preferredFocusKey: string): boolean {
     const index = this.actions.findIndex((action) => {
       return action.key === preferredFocusKey;
     });
 
     this.setFocusedAction(index === -1 ? 0 : index);
+    return index !== -1;
   }
 
   private setFocusedAction(nextIndex: number): void {
@@ -972,15 +974,15 @@ export class MainShopScene extends GameScene {
 
   private focusVertical(currentAction: ShopAction, dy: number): void {
     if (currentAction.navLayer === 'top' && dy > 0) {
-      this.focusFirstInLayer(this.view === ShopView.Shop ? 'category' : 'items');
+      this.focusChildLayer(currentAction, this.view === ShopView.Shop ? 'category' : 'items');
       return;
     }
 
     if (currentAction.navLayer === 'category') {
       if (dy < 0) {
-        this.focusNearestColumn('top', currentAction.navCol);
+        this.focusParentLayer('category', 'top', currentAction.navCol);
       } else {
-        this.focusNearestColumn('items', currentAction.navCol);
+        this.focusChildLayer(currentAction, 'items');
       }
       return;
     }
@@ -988,7 +990,8 @@ export class MainShopScene extends GameScene {
     if (currentAction.navLayer === 'items') {
       const nextRow = currentAction.navRow + dy;
       if (nextRow < 0) {
-        this.focusNearestColumn(
+        this.focusParentLayer(
+          'items',
           this.view === ShopView.Shop ? 'category' : 'top',
           currentAction.navCol,
         );
@@ -1001,6 +1004,24 @@ export class MainShopScene extends GameScene {
         this.setFocusedAction(this.actions.indexOf(nextAction));
       }
     }
+  }
+
+  private focusChildLayer(currentAction: ShopAction, layer: ShopNavLayer): void {
+    this.verticalParentKeys[layer] = currentAction.key;
+    this.focusFirstInLayer(layer);
+  }
+
+  private focusParentLayer(
+    childLayer: ShopNavLayer,
+    parentLayer: ShopNavLayer,
+    fallbackColumn: number,
+  ): void {
+    const parentKey = this.verticalParentKeys[childLayer];
+    if (parentKey !== undefined && this.focusActionByKey(parentKey)) {
+      return;
+    }
+
+    this.focusNearestColumn(parentLayer, fallbackColumn);
   }
 
   private focusFirstInLayer(layer: ShopNavLayer): void {
