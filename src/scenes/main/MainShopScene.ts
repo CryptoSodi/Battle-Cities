@@ -51,8 +51,8 @@ interface ShopAction {
   view?: ShopView;
   market?: ShopMarket;
   category?: ShopCategory;
-  pageDelta?: number;
   itemId?: ShopItemId;
+  itemIndex?: number;
   slot?: ShopLoadoutSlot;
 }
 
@@ -76,7 +76,7 @@ const TOP_Y = 96;
 const TAB_HEIGHT = 52;
 const FILTER_HEIGHT = 48;
 const CARD_COLUMNS = 3;
-const CARD_PAGE_SIZE = 6;
+const CATALOG_VISIBLE_ROWS = 2;
 const CARD_WIDTH = 260;
 const CARD_HEIGHT = 176;
 const CARD_GAP_X = 24;
@@ -294,7 +294,7 @@ export class MainShopScene extends GameScene {
   private view = ShopView.Shop;
   private market = ShopMarket.Token;
   private category = ShopCategory.All;
-  private catalogPage = 0;
+  private catalogScrollRow = 0;
   private statusText = 'CONNECT WALLET';
   private actions: ShopAction[] = [];
   private focusedActionIndex = 0;
@@ -443,25 +443,15 @@ export class MainShopScene extends GameScene {
     this.root.add(line);
 
     const allItems = this.getVisibleCatalogItems();
-    const pageCount = Math.max(1, Math.ceil(allItems.length / CARD_PAGE_SIZE));
-    this.catalogPage = Math.max(0, Math.min(this.catalogPage, pageCount - 1));
+    const visibleItemCount = CARD_COLUMNS * CATALOG_VISIBLE_ROWS;
+    const totalRows = Math.max(1, Math.ceil(allItems.length / CARD_COLUMNS));
+    const maxScrollRow = Math.max(0, totalRows - CATALOG_VISIBLE_ROWS);
+    this.catalogScrollRow = Math.max(0, Math.min(this.catalogScrollRow, maxScrollRow));
+    const firstVisibleIndex = this.catalogScrollRow * CARD_COLUMNS;
     const items = allItems.slice(
-      this.catalogPage * CARD_PAGE_SIZE,
-      this.catalogPage * CARD_PAGE_SIZE + CARD_PAGE_SIZE,
+      firstVisibleIndex,
+      firstVisibleIndex + visibleItemCount,
     );
-
-    if (pageCount > 1) {
-      this.addButton(x + 704, y, 72, FILTER_HEIGHT, 'P-', {
-        key: 'page:prev',
-        kind: 'page',
-        pageDelta: -1,
-      }, false);
-      this.addButton(x + 790, y, 72, FILTER_HEIGHT, 'P+', {
-        key: 'page:next',
-        kind: 'page',
-        pageDelta: 1,
-      }, false);
-    }
 
     if (items.length === 0) {
       const empty = new ShopText('No items in this category', COLOR_MUTED, 26, '700', 520);
@@ -471,11 +461,18 @@ export class MainShopScene extends GameScene {
     }
 
     if (this.category === ShopCategory.All) {
-      const sectionText = new ShopText(`All Items ${this.catalogPage + 1}/${pageCount}`, config.COLOR_WHITE, 30, '900', 360);
+      const sectionText = new ShopText(
+        `All Items ${firstVisibleIndex + 1}-${firstVisibleIndex + items.length}/${allItems.length}`,
+        config.COLOR_WHITE,
+        30,
+        '900',
+        520,
+      );
       sectionText.position.set(x, y + 84);
       this.root.add(sectionText);
 
       items.forEach((item, index) => {
+        const itemIndex = firstVisibleIndex + index;
         const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
         const cardY =
           y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
@@ -483,46 +480,36 @@ export class MainShopScene extends GameScene {
           cardX,
           cardY,
           item,
-          Math.floor(index / CARD_COLUMNS),
+          Math.floor(itemIndex / CARD_COLUMNS),
           index % CARD_COLUMNS,
+          itemIndex,
         );
       });
       return;
     }
 
-    let currentSection = null;
-    let sectionY = y + 84;
-    let cardIndex = 0;
-    let visibleCardIndex = 0;
+    const sectionText = new ShopText(
+      `${this.getCategoryTitle()} ${firstVisibleIndex + 1}-${firstVisibleIndex + items.length}/${allItems.length}`,
+      config.COLOR_WHITE,
+      28,
+      '900',
+      520,
+    );
+    sectionText.position.set(x, y + 84);
+    this.root.add(sectionText);
 
-    items.forEach((item) => {
-      const section = this.getItemSection(item.id);
-      if (section !== currentSection) {
-        currentSection = section;
-        const sectionText = new ShopText(section, config.COLOR_WHITE, 28, '900', 360);
-        sectionText.position.set(x, sectionY);
-        this.root.add(sectionText);
-        sectionY += 44;
-        cardIndex = 0;
-      }
-
-      const cardX = x + (cardIndex % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
-      const cardY = sectionY + Math.floor(cardIndex / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
+    items.forEach((item, index) => {
+      const itemIndex = firstVisibleIndex + index;
+      const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
+      const cardY = y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
       this.addCatalogCard(
         cardX,
         cardY,
         item,
-        Math.floor(visibleCardIndex / CARD_COLUMNS),
-        visibleCardIndex % CARD_COLUMNS,
+        Math.floor(itemIndex / CARD_COLUMNS),
+        index % CARD_COLUMNS,
+        itemIndex,
       );
-      cardIndex += 1;
-      visibleCardIndex += 1;
-
-      if (cardIndex % CARD_COLUMNS === 0 || item === items[items.length - 1]) {
-        const rows = Math.ceil(cardIndex / CARD_COLUMNS);
-        sectionY += rows * (CARD_HEIGHT + CARD_GAP_Y) + 32;
-        cardIndex = 0;
-      }
     });
   }
 
@@ -660,6 +647,7 @@ export class MainShopScene extends GameScene {
     item: ShopCatalogItem,
     row: number,
     col: number,
+    itemIndex: number,
   ): void {
     const card = new ShopCard(CARD_WIDTH, CARD_HEIGHT, this.getItemIconId(item.id));
     card.position.set(x, y);
@@ -674,6 +662,7 @@ export class MainShopScene extends GameScene {
       key: `catalog:${item.id}`,
       kind: 'catalog',
       itemId: item.id,
+      itemIndex,
       target: card,
       navLayer: 'items',
       navRow: row,
@@ -907,27 +896,14 @@ export class MainShopScene extends GameScene {
     if (action.kind === 'market') {
       this.view = ShopView.Shop;
       this.market = action.market;
-      this.catalogPage = 0;
+      this.catalogScrollRow = 0;
       this.renderShop(action.key);
       return;
     }
 
     if (action.kind === 'category') {
       this.category = action.category;
-      this.catalogPage = 0;
-      this.renderShop(action.key);
-      return;
-    }
-
-    if (action.kind === 'page') {
-      const items = this.getVisibleCatalogItems();
-      const pageCount = Math.max(1, Math.ceil(items.length / CARD_PAGE_SIZE));
-      this.catalogPage += action.pageDelta;
-      if (this.catalogPage < 0) {
-        this.catalogPage = pageCount - 1;
-      } else if (this.catalogPage >= pageCount) {
-        this.catalogPage = 0;
-      }
+      this.catalogScrollRow = 0;
       this.renderShop(action.key);
       return;
     }
@@ -1097,12 +1073,39 @@ export class MainShopScene extends GameScene {
         return;
       }
 
+      if (this.view === ShopView.Shop && this.scrollCatalogToRow(nextRow, currentAction.navCol)) {
+        return;
+      }
+
       const rowActions = this.getNavActions('items', nextRow);
       const nextAction = this.findClosestNavColumn(rowActions, currentAction.navCol);
       if (nextAction !== null) {
         this.setFocusedAction(this.actions.indexOf(nextAction));
       }
     }
+  }
+
+  private scrollCatalogToRow(row: number, navCol: number): boolean {
+    const allItems = this.getVisibleCatalogItems();
+    const totalRows = Math.max(1, Math.ceil(allItems.length / CARD_COLUMNS));
+    const maxScrollRow = Math.max(0, totalRows - CATALOG_VISIBLE_ROWS);
+    let nextScrollRow = this.catalogScrollRow;
+
+    if (row < this.catalogScrollRow) {
+      nextScrollRow = row;
+    } else if (row >= this.catalogScrollRow + CATALOG_VISIBLE_ROWS) {
+      nextScrollRow = row - CATALOG_VISIBLE_ROWS + 1;
+    }
+
+    nextScrollRow = Math.max(0, Math.min(nextScrollRow, maxScrollRow));
+    if (nextScrollRow === this.catalogScrollRow) {
+      return false;
+    }
+
+    const itemIndex = Math.min(allItems.length - 1, row * CARD_COLUMNS + navCol);
+    this.catalogScrollRow = nextScrollRow;
+    this.renderShop(`catalog:${allItems[itemIndex].id}`);
+    return true;
   }
 
   private focusChildLayer(currentAction: ShopAction, layer: ShopNavLayer): void {
@@ -1178,7 +1181,7 @@ export class MainShopScene extends GameScene {
     if (kind === 'market' || kind === 'view' || kind === 'back') {
       return 'top';
     }
-    if (kind === 'category' || kind === 'page') {
+    if (kind === 'category') {
       return 'category';
     }
     if (kind === 'wallet') {
@@ -1212,6 +1215,19 @@ export class MainShopScene extends GameScene {
         return 'BUNDLES';
       default:
         return 'POWERUPS';
+    }
+  }
+
+  private getCategoryTitle(): string {
+    switch (this.category) {
+      case ShopCategory.Fuel:
+        return 'Fuel';
+      case ShopCategory.Powerups:
+        return 'Powerups';
+      case ShopCategory.Packs:
+        return 'Packs';
+      default:
+        return 'All Items';
     }
   }
 
