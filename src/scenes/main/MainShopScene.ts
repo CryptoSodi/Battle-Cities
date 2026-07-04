@@ -39,11 +39,15 @@ enum ShopMarket {
 }
 
 type ShopActionKind = 'view' | 'market' | 'category' | 'page' | 'catalog' | 'slot' | 'wallet' | 'back';
+type ShopNavLayer = 'top' | 'category' | 'items' | 'side';
 
 interface ShopAction {
   key: string;
   kind: ShopActionKind;
   target: ShopButton | ShopCard;
+  navLayer?: ShopNavLayer;
+  navRow?: number;
+  navCol?: number;
   view?: ShopView;
   market?: ShopMarket;
   category?: ShopCategory;
@@ -286,7 +290,7 @@ export class MainShopScene extends GameScene {
   private market = ShopMarket.Token;
   private category = ShopCategory.All;
   private catalogPage = 0;
-  private statusText = 'CONNECT WALLET TO BUY WITH BCT OR SOL';
+  private statusText = 'CONNECT WALLET';
   private actions: ShopAction[] = [];
   private focusedActionIndex = 0;
   private pendingActionIndex: number = null;
@@ -333,10 +337,6 @@ export class MainShopScene extends GameScene {
     const title = new ShopText('Game Shop', COLOR_YELLOW, 54, '900', 360);
     title.position.set(originX + 16, originY - 70);
     this.root.add(title);
-
-    const helper = new ShopText('Buy with BCT token or SOL', COLOR_MUTED, 18, '700', 360);
-    helper.position.set(originX + 18, originY - 18);
-    this.root.add(helper);
 
     this.addMarketTab(originX + 16, originY, 'TOKEN SHOP', ShopMarket.Token);
     this.addMarketTab(originX + 246, originY, 'SOL SHOP', ShopMarket.Sol);
@@ -476,7 +476,13 @@ export class MainShopScene extends GameScene {
         const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
         const cardY =
           y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
-        this.addCatalogCard(cardX, cardY, item);
+        this.addCatalogCard(
+          cardX,
+          cardY,
+          item,
+          Math.floor(index / CARD_COLUMNS),
+          index % CARD_COLUMNS,
+        );
       });
       return;
     }
@@ -484,6 +490,7 @@ export class MainShopScene extends GameScene {
     let currentSection = null;
     let sectionY = y + 84;
     let cardIndex = 0;
+    let visibleCardIndex = 0;
 
     items.forEach((item) => {
       const section = this.getItemSection(item.id);
@@ -498,8 +505,15 @@ export class MainShopScene extends GameScene {
 
       const cardX = x + (cardIndex % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
       const cardY = sectionY + Math.floor(cardIndex / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
-      this.addCatalogCard(cardX, cardY, item);
+      this.addCatalogCard(
+        cardX,
+        cardY,
+        item,
+        Math.floor(visibleCardIndex / CARD_COLUMNS),
+        visibleCardIndex % CARD_COLUMNS,
+      );
       cardIndex += 1;
+      visibleCardIndex += 1;
 
       if (cardIndex % CARD_COLUMNS === 0 || item === items[items.length - 1]) {
         const rows = Math.ceil(cardIndex / CARD_COLUMNS);
@@ -518,9 +532,21 @@ export class MainShopScene extends GameScene {
     helper.position.set(x, y + 34);
     this.root.add(helper);
 
-    this.addSlotCard(x, y + 90, ShopLoadoutSlot.ActiveOne, 'ACTIVE 1');
-    this.addSlotCard(x + CARD_WIDTH + CARD_GAP_X, y + 90, ShopLoadoutSlot.ActiveTwo, 'ACTIVE 2');
-    this.addSlotCard(x + (CARD_WIDTH + CARD_GAP_X) * 2, y + 90, ShopLoadoutSlot.Passive, 'PASSIVE');
+    this.addSlotCard(x, y + 90, ShopLoadoutSlot.ActiveOne, 'ACTIVE 1', 0);
+    this.addSlotCard(
+      x + CARD_WIDTH + CARD_GAP_X,
+      y + 90,
+      ShopLoadoutSlot.ActiveTwo,
+      'ACTIVE 2',
+      1,
+    );
+    this.addSlotCard(
+      x + (CARD_WIDTH + CARD_GAP_X) * 2,
+      y + 90,
+      ShopLoadoutSlot.Passive,
+      'PASSIVE',
+      2,
+    );
 
     const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
     ownedTitle.position.set(x, y + 288);
@@ -585,7 +611,13 @@ export class MainShopScene extends GameScene {
     }, this.category === category);
   }
 
-  private addCatalogCard(x: number, y: number, item: ShopCatalogItem): void {
+  private addCatalogCard(
+    x: number,
+    y: number,
+    item: ShopCatalogItem,
+    row: number,
+    col: number,
+  ): void {
     const card = new ShopCard(CARD_WIDTH, CARD_HEIGHT, this.getItemIconId(item.id));
     card.position.set(x, y);
     card.setContent(
@@ -600,6 +632,9 @@ export class MainShopScene extends GameScene {
       kind: 'catalog',
       itemId: item.id,
       target: card,
+      navLayer: 'items',
+      navRow: row,
+      navCol: col,
     });
   }
 
@@ -608,6 +643,7 @@ export class MainShopScene extends GameScene {
     y: number,
     slot: ShopLoadoutSlot,
     title: string,
+    col: number,
   ): void {
     const card = new ShopCard(
       CARD_WIDTH,
@@ -627,6 +663,9 @@ export class MainShopScene extends GameScene {
       kind: 'slot',
       slot,
       target: card,
+      navLayer: 'items',
+      navRow: 0,
+      navCol: col,
     });
   }
 
@@ -644,7 +683,14 @@ export class MainShopScene extends GameScene {
     button.setActive(active);
     this.root.add(button);
 
-    this.actions.push(Object.assign({}, action, { target: button }));
+    this.actions.push(
+      Object.assign({}, action, {
+        target: button,
+        navLayer: this.getActionNavLayer(action.kind),
+        navRow: 0,
+        navCol: x,
+      }),
+    );
 
     return button;
   }
@@ -748,6 +794,10 @@ export class MainShopScene extends GameScene {
       return;
     }
 
+    this.activateAction(action);
+  }
+
+  private activateAction(action: ShopAction): void {
     if (action.kind === 'view') {
       this.view = action.view;
       this.renderShop(action.key);
@@ -843,6 +893,11 @@ export class MainShopScene extends GameScene {
       return;
     }
 
+    if (currentAction.navLayer !== undefined) {
+      this.focusLayerDirection(currentAction, dx, dy);
+      return;
+    }
+
     const currentCenter = currentAction.target.getWorldBoundingBox().getCenter();
     let bestIndex = -1;
     let bestScore = null;
@@ -876,6 +931,136 @@ export class MainShopScene extends GameScene {
     if (bestIndex !== -1) {
       this.setFocusedAction(bestIndex);
     }
+  }
+
+  private focusLayerDirection(
+    currentAction: ShopAction,
+    dx: number,
+    dy: number,
+  ): void {
+    if (dx !== 0) {
+      this.focusHorizontal(currentAction, dx);
+      return;
+    }
+
+    if (dy !== 0) {
+      this.focusVertical(currentAction, dy);
+    }
+  }
+
+  private focusHorizontal(currentAction: ShopAction, dx: number): void {
+    const actions = this.getNavActions(currentAction.navLayer, currentAction.navRow);
+    const currentIndex = actions.indexOf(currentAction);
+    const nextAction = actions[currentIndex + dx];
+
+    if (nextAction === undefined) {
+      return;
+    }
+
+    const nextIndex = this.actions.indexOf(nextAction);
+    this.setFocusedAction(nextIndex);
+
+    if (
+      nextAction.kind === 'market' ||
+      nextAction.kind === 'view' ||
+      nextAction.kind === 'category'
+    ) {
+      this.pendingActionIndex = nextIndex;
+      this.activatePendingAction();
+    }
+  }
+
+  private focusVertical(currentAction: ShopAction, dy: number): void {
+    if (currentAction.navLayer === 'top' && dy > 0) {
+      this.focusFirstInLayer(this.view === ShopView.Shop ? 'category' : 'items');
+      return;
+    }
+
+    if (currentAction.navLayer === 'category') {
+      if (dy < 0) {
+        this.focusNearestColumn('top', currentAction.navCol);
+      } else {
+        this.focusNearestColumn('items', currentAction.navCol);
+      }
+      return;
+    }
+
+    if (currentAction.navLayer === 'items') {
+      const nextRow = currentAction.navRow + dy;
+      if (nextRow < 0) {
+        this.focusNearestColumn(
+          this.view === ShopView.Shop ? 'category' : 'top',
+          currentAction.navCol,
+        );
+        return;
+      }
+
+      const rowActions = this.getNavActions('items', nextRow);
+      const nextAction = this.findClosestNavColumn(rowActions, currentAction.navCol);
+      if (nextAction !== null) {
+        this.setFocusedAction(this.actions.indexOf(nextAction));
+      }
+    }
+  }
+
+  private focusFirstInLayer(layer: ShopNavLayer): void {
+    const actions = this.getNavActions(layer);
+    if (actions.length > 0) {
+      this.setFocusedAction(this.actions.indexOf(actions[0]));
+    }
+  }
+
+  private focusNearestColumn(layer: ShopNavLayer, navCol: number): void {
+    const actions = this.getNavActions(layer);
+    const nextAction = this.findClosestNavColumn(actions, navCol);
+    if (nextAction !== null) {
+      this.setFocusedAction(this.actions.indexOf(nextAction));
+    }
+  }
+
+  private findClosestNavColumn(
+    actions: ShopAction[],
+    navCol: number,
+  ): ShopAction {
+    let closestAction: ShopAction = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    actions.forEach((action) => {
+      const distance = Math.abs(action.navCol - navCol);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestAction = action;
+      }
+    });
+
+    return closestAction;
+  }
+
+  private getNavActions(
+    layer: ShopNavLayer,
+    row: number = null,
+  ): ShopAction[] {
+    return this.actions
+      .filter((action) => {
+        return (
+          action.navLayer === layer &&
+          (row === null || action.navRow === row)
+        );
+      })
+      .sort((a, b) => a.navCol - b.navCol);
+  }
+
+  private getActionNavLayer(kind: ShopActionKind): ShopNavLayer {
+    if (kind === 'market' || kind === 'view' || kind === 'back') {
+      return 'top';
+    }
+    if (kind === 'category' || kind === 'page') {
+      return 'category';
+    }
+    if (kind === 'wallet') {
+      return 'side';
+    }
+    return null;
   }
 
   private getVisibleCatalogItems(): ShopCatalogItem[] {
