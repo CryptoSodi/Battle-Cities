@@ -75,10 +75,16 @@ const SIDE_WIDTH = 314;
 const TOP_Y = 96;
 const TAB_HEIGHT = 52;
 const FILTER_HEIGHT = 48;
+const FILTER_TAB_COLUMNS = 4;
+const FILTER_TAB_GAP = 20;
+const FILTER_TAB_WIDTH = Math.floor(
+  (SHOP_WIDTH - SIDE_WIDTH - 92 - FILTER_TAB_GAP * (FILTER_TAB_COLUMNS - 1)) /
+    FILTER_TAB_COLUMNS,
+);
 const CARD_COLUMNS = 4;
 const CATALOG_VISIBLE_ROWS = 3;
 const CARD_WIDTH = 192;
-const CARD_HEIGHT = 132;
+const CARD_HEIGHT = 166;
 const CARD_GAP_X = 22;
 const CARD_GAP_Y = 22;
 const LOADOUT_SLOT_WIDTH = 192;
@@ -87,7 +93,6 @@ const LOADOUT_SLOT_GAP_X = 22;
 const LOADOUT_OWNED_TILE_WIDTH = 192;
 const LOADOUT_OWNED_TILE_GAP_X = 22;
 const ICON_SIZE = 82;
-const BUTTON_LABEL_INSET = 10;
 const SHOP_FONT = 'Inter, Segoe UI, Arial, sans-serif';
 
 class NativeTextPainter extends Painter {
@@ -186,9 +191,10 @@ class ShopButton extends GameObject {
       config.COLOR_WHITE,
       26,
       '800',
-      width - BUTTON_LABEL_INSET * 2,
+      width - 4,
+      'center',
     );
-    this.label.position.set(BUTTON_LABEL_INSET, Math.max(8, Math.round((height - 34) / 2)));
+    this.label.position.set(2, Math.max(8, Math.round((height - 26) / 2)));
     this.add(this.label);
   }
 
@@ -241,8 +247,23 @@ class ShopCard extends GameObject {
   private icon: ShopIcon;
   private focused = false;
 
-  constructor(width: number, height: number, iconId: string) {
+  constructor(
+    width: number,
+    height: number,
+    iconId: string,
+    detailFontSizeOverride: number = null,
+    detailMaxWidthOverride: number = null,
+  ) {
     super(width, height);
+    const compact = height <= LOADOUT_SLOT_HEIGHT;
+    const titleFontSize = compact ? 22 : 24;
+    const detailFontSize = detailFontSizeOverride ?? (compact ? 18 : 26);
+    const priceFontSize = compact ? 20 : 24;
+    const iconY = compact ? 34 : 42;
+    const titleY = compact ? 12 : 16;
+    const detailY = compact ? 46 : 78;
+    const priceY = compact ? height - 32 : height - 34;
+    const detailMaxWidth = detailMaxWidthOverride ?? width - ICON_SIZE - 58;
 
     this.background = new RectPainter(COLOR_CARD, COLOR_YELLOW_DARK);
     this.background.lineWidth = 2;
@@ -253,24 +274,24 @@ class ShopCard extends GameObject {
     glow.setZIndex(-1);
     this.add(glow);
 
-    this.footer = new ShopPanel(width, 40, COLOR_YELLOW, null);
-    this.footer.position.set(0, height - 40);
+    this.footer = new ShopPanel(width, 42, COLOR_YELLOW, null);
+    this.footer.position.set(0, height - 42);
     this.add(this.footer);
 
     this.icon = new ShopIcon(iconId);
-    this.icon.position.set(width - ICON_SIZE - 16, 48);
+    this.icon.position.set(width - ICON_SIZE - 10, iconY);
     this.add(this.icon);
 
-    this.title = new ShopText('', COLOR_YELLOW, 24, '800', width - 36);
-    this.title.position.set(18, 16);
+    this.title = new ShopText('', COLOR_YELLOW, titleFontSize, '800', width - 36);
+    this.title.position.set(18, titleY);
     this.add(this.title);
 
-    this.detail = new ShopText('', config.COLOR_WHITE, 28, '800', width - ICON_SIZE - 50);
-    this.detail.position.set(20, 84);
+    this.detail = new ShopText('', config.COLOR_WHITE, detailFontSize, '800', detailMaxWidth);
+    this.detail.position.set(20, detailY);
     this.add(this.detail);
 
-    this.price = new ShopText('', config.COLOR_BLACK, 26, '900', width - 36);
-    this.price.position.set(18, height - 34);
+    this.price = new ShopText('', config.COLOR_BLACK, priceFontSize, '900', width - 36);
+    this.price.position.set(18, priceY);
     this.add(this.price);
   }
 
@@ -420,7 +441,7 @@ export class MainShopScene extends GameScene {
 
     const ownedTileX = x + 28;
     const ownedTileGap = 18;
-    const ownedTileWidth = 121;
+    const ownedTileWidth = 122;
     this.addInventoryTile(ownedTileX, inventoryY + 42, ShopInventoryItemId.Shield, ownedTileWidth);
     this.addInventoryTile(
       ownedTileX + ownedTileWidth + ownedTileGap,
@@ -461,10 +482,28 @@ export class MainShopScene extends GameScene {
   }
 
   private renderShopContent(x: number, y: number): void {
-    this.addCategoryButton(x, y, 'ALL', ShopCategory.All);
-    this.addCategoryButton(x + 160, y, 'FUEL', ShopCategory.Fuel);
-    this.addCategoryButton(x + 340, y, 'POWER', ShopCategory.Powerups);
-    this.addCategoryButton(x + 560, y, 'PACKS', ShopCategory.Packs);
+    this.addCategoryButton(x, y, 'ALL', ShopCategory.All, FILTER_TAB_WIDTH);
+    this.addCategoryButton(
+      x + FILTER_TAB_WIDTH + FILTER_TAB_GAP,
+      y,
+      'FUEL',
+      ShopCategory.Fuel,
+      FILTER_TAB_WIDTH,
+    );
+    this.addCategoryButton(
+      x + (FILTER_TAB_WIDTH + FILTER_TAB_GAP) * 2,
+      y,
+      'POWER',
+      ShopCategory.Powerups,
+      FILTER_TAB_WIDTH,
+    );
+    this.addCategoryButton(
+      x + (FILTER_TAB_WIDTH + FILTER_TAB_GAP) * 3,
+      y,
+      'PACKS',
+      ShopCategory.Packs,
+      FILTER_TAB_WIDTH,
+    );
 
     const line = new ShopPanel(SHOP_WIDTH - SIDE_WIDTH - 92, 2, '#2c2a22');
     line.position.set(x, y + FILTER_HEIGHT + 14);
@@ -660,8 +699,8 @@ export class MainShopScene extends GameScene {
     y: number,
     text: string,
     category: ShopCategory,
+    width = 140,
   ): void {
-    const width = text === 'POWER' || text === 'PACKS' ? 186 : 140;
     this.addButton(x, y, width, FILTER_HEIGHT, text, {
       key: `category:${category}`,
       kind: 'category',
@@ -677,7 +716,14 @@ export class MainShopScene extends GameScene {
     col: number,
     itemIndex: number,
   ): void {
-    const card = new ShopCard(CARD_WIDTH, CARD_HEIGHT, this.getItemIconId(item.id));
+    const isStarterPack = item.id === ShopItemId.StarterPack;
+    const card = new ShopCard(
+      CARD_WIDTH,
+      CARD_HEIGHT,
+      this.getItemIconId(item.id),
+      isStarterPack ? 22 : null,
+      isStarterPack ? 80 : null,
+    );
     card.position.set(x, y);
     card.setContent(
       this.getItemTitle(item.id),
@@ -773,8 +819,8 @@ export class MainShopScene extends GameScene {
     tile.position.set(x, y);
     this.root.add(tile);
 
-    const icon = new ShopIcon(this.getInventoryIconId(itemId), 48);
-    icon.position.set(x + 14, y + 16);
+    const icon = new ShopIcon(this.getInventoryIconId(itemId), 60);
+    icon.position.set(x + 8, y + 10);
     this.root.add(icon);
 
     const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 16, '900', 112);
@@ -850,11 +896,11 @@ export class MainShopScene extends GameScene {
       this.getInventoryCountText(itemId),
       COLOR_YELLOW,
       24,
-      '900',
+      '700',
       42,
       'center',
     );
-    count.position.set(x + width - 26, y + 18);
+    count.position.set(x + 74, y + 21);
     this.root.add(count);
   }
 
