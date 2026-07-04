@@ -92,6 +92,7 @@ const ACTIVE_ITEMS = [
   ShopInventoryItemId.BaseDefence,
   ShopInventoryItemId.Freeze,
   ShopInventoryItemId.Wipeout,
+  ShopInventoryItemId.ExtraLife,
 ];
 
 const PASSIVE_ITEMS = [ShopInventoryItemId.ExtraLife];
@@ -403,6 +404,14 @@ export class ShopManager {
 
   private normalizeLoadout(loadout: ShopLoadout): ShopLoadout {
     const equippedItems = new Set<ShopInventoryItemId>();
+
+    if (
+      loadout[ShopLoadoutSlot.Passive] !== undefined &&
+      loadout[ShopLoadoutSlot.ActiveFour] === undefined
+    ) {
+      loadout[ShopLoadoutSlot.ActiveFour] = loadout[ShopLoadoutSlot.Passive];
+    }
+    delete loadout[ShopLoadoutSlot.Passive];
 
     Object.keys(loadout).forEach((slotKey) => {
       const slot = slotKey as ShopLoadoutSlot;

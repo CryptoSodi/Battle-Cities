@@ -23,6 +23,8 @@ export enum ShopInventoryItemId {
 export enum ShopLoadoutSlot {
   ActiveOne = 'active-one',
   ActiveTwo = 'active-two',
+  ActiveThree = 'active-three',
+  ActiveFour = 'active-four',
   Passive = 'passive',
 }
 

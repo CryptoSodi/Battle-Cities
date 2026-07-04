@@ -417,7 +417,8 @@ export class MainShopScene extends GameScene {
 
     this.addLoadoutRow(x + 28, loadoutY + 38, 'A1', this.getSlotLabel(ShopLoadoutSlot.ActiveOne));
     this.addLoadoutRow(x + 28, loadoutY + 76, 'A2', this.getSlotLabel(ShopLoadoutSlot.ActiveTwo));
-    this.addLoadoutRow(x + 28, loadoutY + 114, 'P', this.getSlotLabel(ShopLoadoutSlot.Passive));
+    this.addLoadoutRow(x + 28, loadoutY + 114, 'A3', this.getSlotLabel(ShopLoadoutSlot.ActiveThree));
+    this.addLoadoutRow(x + 28, loadoutY + 152, 'A4', this.getSlotLabel(ShopLoadoutSlot.ActiveFour));
 
   }
 
@@ -533,42 +534,47 @@ export class MainShopScene extends GameScene {
     helper.position.set(x, y + 34);
     this.root.add(helper);
 
-    this.addSlotCard(x, y + 90, ShopLoadoutSlot.ActiveOne, 'ACTIVE 1', 0);
+    this.addSlotCard(x, y + 90, ShopLoadoutSlot.ActiveOne, 'SLOT 1', 0);
     this.addSlotCard(
       x + CARD_WIDTH + CARD_GAP_X,
       y + 90,
       ShopLoadoutSlot.ActiveTwo,
-      'ACTIVE 2',
+      'SLOT 2',
       1,
     );
     this.addSlotCard(
       x + (CARD_WIDTH + CARD_GAP_X) * 2,
       y + 90,
-      ShopLoadoutSlot.Passive,
-      'PASSIVE',
+      ShopLoadoutSlot.ActiveThree,
+      'SLOT 3',
       2,
+    );
+    this.addSlotCard(
+      x + (CARD_WIDTH + CARD_GAP_X) * 3,
+      y + 90,
+      ShopLoadoutSlot.ActiveFour,
+      'SLOT 4',
+      3,
     );
 
     const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
     ownedTitle.position.set(x, y + 288);
     this.root.add(ownedTitle);
 
-    this.addTextBlock(x, y + 328, [
-      ['SHIELD', `${this.getInventoryCountText(ShopInventoryItemId.Shield)} READY`, COLOR_GREEN],
-      ['BASE DEF', `${this.getInventoryCountText(ShopInventoryItemId.BaseDefence)} READY`, COLOR_GREEN],
-      ['FREEZE', `${this.getInventoryCountText(ShopInventoryItemId.Freeze)} READY`, COLOR_PURPLE],
-      ['WIPEOUT', `${this.getInventoryCountText(ShopInventoryItemId.Wipeout)} READY`, COLOR_ORANGE],
-      ['EXTRA LIFE', `${this.getInventoryCountText(ShopInventoryItemId.ExtraLife)} READY`, COLOR_YELLOW],
-    ]);
+    this.addOwnedConsumableTile(x, y + 328, ShopInventoryItemId.Shield);
+    this.addOwnedConsumableTile(x + 250, y + 328, ShopInventoryItemId.BaseDefence);
+    this.addOwnedConsumableTile(x + 500, y + 328, ShopInventoryItemId.Freeze);
+    this.addOwnedConsumableTile(x, y + 430, ShopInventoryItemId.Wipeout);
+    this.addOwnedConsumableTile(x + 250, y + 430, ShopInventoryItemId.ExtraLife);
 
     const note = new ShopText(
-      'Bought items are consumed when a run starts',
+      'Use 1-4 in game to consume equipped powers',
       COLOR_MUTED,
       20,
       '700',
       620,
     );
-    note.position.set(x, y + 532);
+    note.position.set(x, y + 552);
     this.root.add(note);
   }
 
@@ -646,10 +652,11 @@ export class MainShopScene extends GameScene {
     title: string,
     col: number,
   ): void {
+    const itemId = this.shopManager.getEquipped(slot);
     const card = new ShopCard(
       CARD_WIDTH,
       CARD_HEIGHT,
-      slot === ShopLoadoutSlot.Passive ? 'powerup.tank' : 'powerup.helmet',
+      itemId === null ? 'shop.bundle' : this.getInventoryIconId(itemId),
     );
     card.position.set(x, y);
     card.setContent(
@@ -668,6 +675,28 @@ export class MainShopScene extends GameScene {
       navRow: 0,
       navCol: col,
     });
+  }
+
+  private addOwnedConsumableTile(
+    x: number,
+    y: number,
+    itemId: ShopInventoryItemId,
+  ): void {
+    const tile = new ShopPanel(224, 82, COLOR_PANEL_ALT, '#2c2a22');
+    tile.position.set(x, y);
+    this.root.add(tile);
+
+    const icon = new ShopIcon(this.getInventoryIconId(itemId), 48);
+    icon.position.set(x + 14, y + 16);
+    this.root.add(icon);
+
+    const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 18, '900', 136);
+    label.position.set(x + 76, y + 14);
+    this.root.add(label);
+
+    const count = new ShopText(`${this.getInventoryCountText(itemId)} OWNED`, COLOR_YELLOW, 18, '900', 136);
+    count.position.set(x + 76, y + 44);
+    this.root.add(count);
   }
 
   private addButton(
