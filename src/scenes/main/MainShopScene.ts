@@ -257,13 +257,13 @@ class ShopCard extends GameObject {
     super(width, height);
     const compact = height <= LOADOUT_SLOT_HEIGHT;
     const titleFontSize = compact ? 22 : 24;
-    const detailFontSize = detailFontSizeOverride ?? (compact ? 18 : 26);
+    const detailFontSize = detailFontSizeOverride ?? (compact ? 17 : 26);
     const priceFontSize = compact ? 20 : 24;
     const iconY = compact ? 34 : 42;
     const titleY = compact ? 12 : 16;
-    const detailY = compact ? 46 : 78;
+    const detailY = compact ? 42 : 78;
     const priceY = compact ? height - 32 : height - 34;
-    const detailMaxWidth = detailMaxWidthOverride ?? width - ICON_SIZE - 58;
+    const detailMaxWidth = detailMaxWidthOverride ?? width - ICON_SIZE - 48;
 
     this.background = new RectPainter(COLOR_CARD, COLOR_YELLOW_DARK);
     this.background.lineWidth = 2;
@@ -631,8 +631,8 @@ export class MainShopScene extends GameScene {
     slotsTitle.position.set(x, slotsY);
     this.root.add(slotsTitle);
 
-    this.addCompactSlotCard(x, slotsY + 44, ShopLoadoutSlot.ActiveOne, 'SLOT 1', 0, 0);
-    this.addCompactSlotCard(
+    this.addSlotCard(x, slotsY + 44, ShopLoadoutSlot.ActiveOne, 'SLOT 1', 0, 0);
+    this.addSlotCard(
       x + LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X,
       slotsY + 44,
       ShopLoadoutSlot.ActiveTwo,
@@ -640,7 +640,7 @@ export class MainShopScene extends GameScene {
       0,
       1,
     );
-    this.addCompactSlotCard(
+    this.addSlotCard(
       x + (LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X) * 2,
       slotsY + 44,
       ShopLoadoutSlot.ActiveThree,
@@ -648,7 +648,7 @@ export class MainShopScene extends GameScene {
       0,
       2,
     );
-    this.addCompactSlotCard(
+    this.addSlotCard(
       x + (LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X) * 3,
       slotsY + 44,
       ShopLoadoutSlot.ActiveFour,
@@ -664,7 +664,7 @@ export class MainShopScene extends GameScene {
       '700',
       620,
     );
-    note.position.set(x, slotsY + 194);
+    note.position.set(x, slotsY + 232);
     this.root.add(note);
   }
 
@@ -1443,24 +1443,19 @@ export class MainShopScene extends GameScene {
       return 'EMPTY';
     }
 
-    const stackCount = this.shopManager.getEquippedStackCount(slot);
-    const stackLabel = stackCount > 1 ? ` x${stackCount}` : '';
-    return `${this.getInventoryLabel(itemId)}${stackLabel}`;
+    return this.getInventoryLabel(itemId);
   }
 
   private getCompactSlotLabel(label: string): string {
-    const [name, stackLabel = ''] = label.split(' x');
-    const suffix = stackLabel === '' ? '' : ` x${stackLabel}`;
-
-    switch (name) {
+    switch (label) {
       case 'BASE DEF':
-        return `BASE${suffix}`;
+        return 'BASE';
       case 'WIPEOUT':
-        return `WIPE${suffix}`;
+        return 'WIPE';
       case 'EXTRA LIFE':
-        return `LIFE${suffix}`;
+        return 'LIFE';
       case 'ZOOM OUT':
-        return `ZOOM${suffix}`;
+        return 'ZOOM';
       default:
         return label;
     }
