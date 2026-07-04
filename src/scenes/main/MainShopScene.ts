@@ -75,11 +75,11 @@ const SIDE_WIDTH = 314;
 const TOP_Y = 96;
 const TAB_HEIGHT = 52;
 const FILTER_HEIGHT = 48;
-const CARD_COLUMNS = 3;
-const CATALOG_VISIBLE_ROWS = 2;
-const CARD_WIDTH = 260;
-const CARD_HEIGHT = 176;
-const CARD_GAP_X = 24;
+const CARD_COLUMNS = 4;
+const CATALOG_VISIBLE_ROWS = 3;
+const CARD_WIDTH = 192;
+const CARD_HEIGHT = 132;
+const CARD_GAP_X = 22;
 const CARD_GAP_Y = 22;
 const LOADOUT_SLOT_WIDTH = 192;
 const LOADOUT_SLOT_HEIGHT = 132;
@@ -813,12 +813,12 @@ export class MainShopScene extends GameScene {
     tile.position.set(x, y);
     this.root.add(tile);
 
-    const icon = new ShopIcon(this.getInventoryIconId(itemId), 42);
-    icon.position.set(x + 10, y + 12);
+    const icon = new ShopIcon(this.getInventoryIconId(itemId), 54);
+    icon.position.set(x + 8, y + 7);
     this.root.add(icon);
 
     const count = new ShopText(this.getInventoryCountText(itemId), COLOR_YELLOW);
-    count.position.set(x + 64, y + 18);
+    count.position.set(x + 72, y + 18);
     this.root.add(count);
   }
 
