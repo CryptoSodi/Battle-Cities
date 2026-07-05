@@ -303,6 +303,7 @@ export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
 
 export const SHOP_STARTING_TOKEN_BALANCE = 1000;
 export const SHOP_STARTING_SOL_BALANCE = 1.25;
+export const SHOP_GUEST_FUEL_BALANCE = 9999;
 export const SHOP_RUN_FUEL_COST = 1;
 
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [

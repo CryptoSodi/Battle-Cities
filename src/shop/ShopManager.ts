@@ -180,6 +180,10 @@ export class ShopManager {
   }
 
   public getFuelBalance(): number {
+    if (!this.isWalletConnected()) {
+      return config.SHOP_GUEST_FUEL_BALANCE;
+    }
+
     return this.storage.getNumber(config.STORAGE_KEY_SHOP_FUEL_BALANCE, 0);
   }
 
@@ -283,12 +287,16 @@ export class ShopManager {
   }
 
   public canStartRun(): boolean {
-    return this.isWalletConnected() && this.getFuelBalance() >= config.SHOP_RUN_FUEL_COST;
+    return this.getFuelBalance() >= config.SHOP_RUN_FUEL_COST;
   }
 
   public consumeFuelForRun(): boolean {
     if (!this.canStartRun()) {
       return false;
+    }
+
+    if (!this.isWalletConnected()) {
+      return true;
     }
 
     this.storage.setNumber(
