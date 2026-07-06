@@ -4,6 +4,8 @@ import { Rotation } from '../../game';
 import { TankAnimationFrame } from '../TankAnimationFrame';
 import { TankColor } from '../TankColor';
 import { TankParty } from '../TankParty';
+import { TankSpriteId } from '../TankSpriteId';
+import { TankTier } from '../TankTier';
 import { TankType } from '../TankType';
 
 export class TankMoveAnimation extends Animation<TankAnimationFrame> {
@@ -21,12 +23,12 @@ export class TankMoveAnimation extends Animation<TankAnimationFrame> {
 
     this.type = type;
 
-    this.regularFrames = [
-      new TankAnimationFrame(spriteLoader, type, colors, rotation, 1),
-      new TankAnimationFrame(spriteLoader, type, colors, rotation, 2),
-      new TankAnimationFrame(spriteLoader, type, colors, rotation, 1),
-      new TankAnimationFrame(spriteLoader, type, colors, rotation, 2),
-    ];
+    this.regularFrames = this.createRegularFrames(
+      spriteLoader,
+      type,
+      colors,
+      rotation,
+    );
 
     // Only enemy has drop now
     if (type.party === TankParty.Enemy) {
@@ -51,5 +53,49 @@ export class TankMoveAnimation extends Animation<TankAnimationFrame> {
     }
 
     this.resetWithFrames(frames);
+  }
+
+  private createRegularFrames(
+    spriteLoader: SpriteLoader,
+    type: TankType,
+    colors: TankColor[],
+    rotation: Rotation,
+  ): TankAnimationFrame[] {
+    if (type.party === TankParty.Player && type.tier === TankTier.A) {
+      const frames: TankAnimationFrame[] = [];
+
+      for (let frameNumber = 2; ; frameNumber += 1) {
+        const spriteId = TankSpriteId.create(
+          type,
+          colors[0],
+          rotation,
+          frameNumber,
+        );
+        if (!spriteLoader.has(spriteId)) {
+          break;
+        }
+
+        frames.push(
+          new TankAnimationFrame(
+            spriteLoader,
+            type,
+            colors,
+            rotation,
+            frameNumber,
+          ),
+        );
+      }
+
+      if (frames.length > 0) {
+        return frames;
+      }
+    }
+
+    return [
+      new TankAnimationFrame(spriteLoader, type, colors, rotation, 1),
+      new TankAnimationFrame(spriteLoader, type, colors, rotation, 2),
+      new TankAnimationFrame(spriteLoader, type, colors, rotation, 1),
+      new TankAnimationFrame(spriteLoader, type, colors, rotation, 2),
+    ];
   }
 }

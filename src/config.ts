@@ -250,7 +250,6 @@ export const FREEZE_POWERUP_DURATION = 10;
 
 export const FRIENDLY_FIRE_STUN_DURATION = 5;
 export const ICE_SLIDE_DURATION = 0.5;
-export const PLAYER_TANK_VISUAL_PADDING = 8;
 
 export const POINTS_POWERUP_DURATION = 0.8;
 export const POINTS_ENEMY_TANK_DURATION = 0.16;

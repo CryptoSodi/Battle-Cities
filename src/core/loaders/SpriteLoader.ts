@@ -93,6 +93,10 @@ export class SpriteLoader {
     return sprites;
   }
 
+  public has(id: string): boolean {
+    return this.manifest[id] !== undefined;
+  }
+
   // Loads a numbered animation sequence "<prefix>.1", "<prefix>.2", ... up to
   // however many consecutive frames exist in the manifest. This makes frame
   // count data-driven by the art: dropping in "<prefix>.3" extends the
