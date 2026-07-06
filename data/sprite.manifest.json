@@ -288,42 +288,262 @@
   },
   "tank.enemy.default.a.up.1": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [16, 0, 208, 240],
+    "rect": [0, 0, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.up.2": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [256, 0, 208, 240],
+    "rect": [0, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.3": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.4": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.5": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.6": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.7": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.8": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.9": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.10": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.11": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.12": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.up.13": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [0, 3072, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.down.1": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [496, 0, 208, 240],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.down.2": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [736, 0, 208, 240],
+    "rect": [256, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.3": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.4": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.5": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.6": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.7": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.8": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.9": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.10": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.11": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.12": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.down.13": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [256, 3072, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.left.1": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [960, 16, 240, 208],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.left.2": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [1200, 16, 240, 208],
+    "rect": [512, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.3": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.4": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.5": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.6": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.7": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.8": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.9": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.10": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.11": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.12": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.left.13": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [512, 3072, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.right.1": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [1440, 16, 240, 208],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.a.right.2": {
     "file": "data/graphics/TANKS/enemy-basic.png",
-    "rect": [1680, 16, 240, 208],
+    "rect": [768, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.3": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.4": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.5": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.6": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.7": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.8": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.9": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.10": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.11": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.12": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.enemy.default.a.right.13": {
+    "file": "data/graphics/TANKS/enemy-basic.png",
+    "rect": [768, 3072, 256, 256],
     "scale": 4
   },
   "tank.enemy.default.b.up.1": {
