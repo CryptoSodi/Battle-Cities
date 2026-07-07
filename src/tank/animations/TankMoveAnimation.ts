@@ -3,14 +3,11 @@ import { Rotation } from '../../game';
 
 import { TankAnimationFrame } from '../TankAnimationFrame';
 import { TankColor } from '../TankColor';
-import { TankParty } from '../TankParty';
 import { TankSpriteId } from '../TankSpriteId';
 import { TankType } from '../TankType';
 
 export class TankMoveAnimation extends Animation<TankAnimationFrame> {
-  private type: TankType;
   private regularFrames: TankAnimationFrame[] = [];
-  private dropFrames: TankAnimationFrame[] = [];
 
   constructor(
     spriteLoader: SpriteLoader,
@@ -20,8 +17,6 @@ export class TankMoveAnimation extends Animation<TankAnimationFrame> {
   ) {
     super([], { delay: 0.02, loop: true });
 
-    this.type = type;
-
     this.regularFrames = this.createRegularFrames(
       spriteLoader,
       type,
@@ -29,29 +24,12 @@ export class TankMoveAnimation extends Animation<TankAnimationFrame> {
       rotation,
     );
 
-    // Only enemy has drop now
-    if (type.party === TankParty.Enemy) {
-      const dropColors = [TankColor.Danger];
-
-      this.dropFrames = [
-        new TankAnimationFrame(spriteLoader, type, dropColors, rotation, 1),
-        new TankAnimationFrame(spriteLoader, type, dropColors, rotation, 2),
-        new TankAnimationFrame(spriteLoader, type, dropColors, rotation, 1),
-        new TankAnimationFrame(spriteLoader, type, dropColors, rotation, 2),
-      ];
-    }
-
     this.updateFrames();
   }
 
-  // Tank might lose his drop, use it remove drop animation frames
+  // Kept for callers that refresh tank skin state after gameplay flags change.
   public updateFrames(): void {
-    const frames = [...this.regularFrames];
-    if (this.type.hasDrop) {
-      frames.push(...this.dropFrames);
-    }
-
-    this.resetWithFrames(frames);
+    this.resetWithFrames(this.regularFrames);
   }
 
   private createRegularFrames(

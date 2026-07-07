@@ -41,6 +41,8 @@ export abstract class RenderContext {
     sourceRect: Rect,
     destinationRect: Rect,
     flash?: number,
+    tintColor?: string,
+    tintAlpha?: number,
   );
   abstract fillRect(
     x: number,

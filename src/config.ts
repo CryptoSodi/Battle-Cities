@@ -201,6 +201,9 @@ export const FLASH_BASE_DIED = 0.55;
 // scaled by CAMERA_SHAKE_INTENSITY so reduced-motion disables it.
 export const SPRITE_FLASH_HIT = 0.85;
 export const SPRITE_FLASH_DECAY_SECONDS = 0.11;
+export const ENEMY_DROP_BLINK_INTERVAL = 0.12;
+export const ENEMY_DROP_BLINK_COLOR = '#5a0505';
+export const ENEMY_DROP_BLINK_ALPHA = 0.5;
 // Toggle only the sprite-sheet explosion animation from data/graphics/explosion.png.
 // Procedural explosion particles, sounds, and gameplay events still run.
 export const SHOW_EXPLOSION_SPRITE = true;

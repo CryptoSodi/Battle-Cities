@@ -13,6 +13,8 @@ export class SpritePainter extends Painter {
   // White-tint amount [0..1] for a hit flash. 0 = draw unmodified. Render-only;
   // set by the owning object (e.g. Tank on hit) and never read by the sim.
   public flash = 0;
+  public tintColor: string = null;
+  public tintAlpha = 0;
   private readonly objectRect = new Rect();
   private readonly destinationRect = new Rect();
 
@@ -75,6 +77,8 @@ export class SpritePainter extends Painter {
       this.sprite.sourceRect,
       destinationRect,
       this.flash,
+      this.tintColor,
+      this.tintAlpha,
     );
 
     if (this.opacity !== 1) {

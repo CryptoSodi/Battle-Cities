@@ -27,15 +27,18 @@ const vertexShaderSource = `
 attribute vec2 a_position;
 attribute vec2 a_texcoord;
 attribute vec4 a_color;
+attribute vec4 a_tint;
 attribute float a_flash;
 uniform mat4 u_projection;
 varying vec2 v_texcoord;
 varying vec4 v_color;
+varying vec4 v_tint;
 varying float v_flash;
 void main() {
   gl_Position = u_projection * vec4(a_position, 0.0, 1.0);
   v_texcoord = a_texcoord;
   v_color = a_color;
+  v_tint = a_tint;
   v_flash = a_flash;
 }
 `;
@@ -45,6 +48,7 @@ precision mediump float;
 uniform sampler2D u_texture;
 varying vec2 v_texcoord;
 varying vec4 v_color;
+varying vec4 v_tint;
 varying float v_flash;
 void main() {
   vec4 texel = texture2D(u_texture, v_texcoord);
@@ -52,15 +56,16 @@ void main() {
   // transparent texels stay transparent (white silhouette, not a box).
   // Solid fills sample the 1x1 white texture, so their color comes entirely
   // from v_color.
+  vec3 tinted = mix(texel.rgb * v_color.rgb, v_tint.rgb, v_tint.a);
   gl_FragColor = vec4(
-    mix(texel.rgb * v_color.rgb, vec3(1.0), v_flash),
+    mix(tinted, vec3(1.0), v_flash),
     texel.a * v_color.a
   );
 }
 `;
 
-// x, y, u, v, r, g, b, a, flash
-const FLOATS_PER_VERTEX = 9;
+// x, y, u, v, r, g, b, a, tintR, tintG, tintB, tintA, flash
+const FLOATS_PER_VERTEX = 13;
 const VERTICES_PER_QUAD = 6;
 const FLOATS_PER_QUAD = FLOATS_PER_VERTEX * VERTICES_PER_QUAD;
 const MAX_QUADS = 2048;
@@ -71,6 +76,7 @@ export class WebglRenderContext extends RenderContext {
   private aPosition: number;
   private aTexcoord: number;
   private aColor: number;
+  private aTint: number;
   private aFlash: number;
   private uProjection: WebGLUniformLocation;
   private uTexture: WebGLUniformLocation;
@@ -141,6 +147,7 @@ export class WebglRenderContext extends RenderContext {
     this.aPosition = gl.getAttribLocation(this.program, 'a_position');
     this.aTexcoord = gl.getAttribLocation(this.program, 'a_texcoord');
     this.aColor = gl.getAttribLocation(this.program, 'a_color');
+    this.aTint = gl.getAttribLocation(this.program, 'a_tint');
     this.aFlash = gl.getAttribLocation(this.program, 'a_flash');
     this.uProjection = gl.getUniformLocation(this.program, 'u_projection');
     this.uTexture = gl.getUniformLocation(this.program, 'u_texture');
@@ -205,8 +212,10 @@ export class WebglRenderContext extends RenderContext {
     gl.vertexAttribPointer(this.aTexcoord, 2, gl.FLOAT, false, stride, 8);
     gl.enableVertexAttribArray(this.aColor);
     gl.vertexAttribPointer(this.aColor, 4, gl.FLOAT, false, stride, 16);
+    gl.enableVertexAttribArray(this.aTint);
+    gl.vertexAttribPointer(this.aTint, 4, gl.FLOAT, false, stride, 32);
     gl.enableVertexAttribArray(this.aFlash);
-    gl.vertexAttribPointer(this.aFlash, 1, gl.FLOAT, false, stride, 32);
+    gl.vertexAttribPointer(this.aFlash, 1, gl.FLOAT, false, stride, 48);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.batchTexture);
@@ -241,6 +250,8 @@ export class WebglRenderContext extends RenderContext {
     sourceRect: Rect,
     destinationRect: Rect,
     flash = 0,
+    tintColor: string = null,
+    tintAlpha = 0,
   ): void {
     const element = image.getElement() as TexImageSource;
     const texture = this.getTexture(element);
@@ -266,6 +277,10 @@ export class WebglRenderContext extends RenderContext {
       1,
       1,
       this.globalAlpha,
+      tintColor === null ? 0 : this.parseColor(tintColor)[0],
+      tintColor === null ? 0 : this.parseColor(tintColor)[1],
+      tintColor === null ? 0 : this.parseColor(tintColor)[2],
+      tintColor === null ? 0 : Math.min(1, tintAlpha) * this.parseColor(tintColor)[3],
       flash,
     );
   }
@@ -292,6 +307,10 @@ export class WebglRenderContext extends RenderContext {
       rgba[1],
       rgba[2],
       rgba[3] * this.globalAlpha,
+      0,
+      0,
+      0,
+      0,
       0,
     );
   }
@@ -331,6 +350,10 @@ export class WebglRenderContext extends RenderContext {
       1,
       1,
       this.globalAlpha,
+      0,
+      0,
+      0,
+      0,
       0,
     );
   }
@@ -396,6 +419,10 @@ export class WebglRenderContext extends RenderContext {
     g: number,
     b: number,
     a: number,
+    tintR: number,
+    tintG: number,
+    tintB: number,
+    tintA: number,
     flash: number,
   ): void {
     if (texture !== this.batchTexture || this.quadCount >= MAX_QUADS) {
@@ -415,12 +442,12 @@ export class WebglRenderContext extends RenderContext {
 
     // Two triangles: (x0,y0) (x0,y1) (x1,y0) / (x1,y0) (x0,y1) (x1,y1).
     // Written out flat (no temporaries) — this runs for every quad on screen.
-    this.writeVertex(data, offset, x0, y0, u0, v0, r, g, b, a, flash);
-    this.writeVertex(data, offset + 9, x0, y1, u0, v1, r, g, b, a, flash);
-    this.writeVertex(data, offset + 18, x1, y0, u1, v0, r, g, b, a, flash);
-    this.writeVertex(data, offset + 27, x1, y0, u1, v0, r, g, b, a, flash);
-    this.writeVertex(data, offset + 36, x0, y1, u0, v1, r, g, b, a, flash);
-    this.writeVertex(data, offset + 45, x1, y1, u1, v1, r, g, b, a, flash);
+    this.writeVertex(data, offset, x0, y0, u0, v0, r, g, b, a, tintR, tintG, tintB, tintA, flash);
+    this.writeVertex(data, offset + 13, x0, y1, u0, v1, r, g, b, a, tintR, tintG, tintB, tintA, flash);
+    this.writeVertex(data, offset + 26, x1, y0, u1, v0, r, g, b, a, tintR, tintG, tintB, tintA, flash);
+    this.writeVertex(data, offset + 39, x1, y0, u1, v0, r, g, b, a, tintR, tintG, tintB, tintA, flash);
+    this.writeVertex(data, offset + 52, x0, y1, u0, v1, r, g, b, a, tintR, tintG, tintB, tintA, flash);
+    this.writeVertex(data, offset + 65, x1, y1, u1, v1, r, g, b, a, tintR, tintG, tintB, tintA, flash);
   }
 
   private writeVertex(
@@ -434,6 +461,10 @@ export class WebglRenderContext extends RenderContext {
     g: number,
     b: number,
     a: number,
+    tintR: number,
+    tintG: number,
+    tintB: number,
+    tintA: number,
     flash: number,
   ): void {
     data[offset] = x;
@@ -444,7 +475,11 @@ export class WebglRenderContext extends RenderContext {
     data[offset + 5] = g;
     data[offset + 6] = b;
     data[offset + 7] = a;
-    data[offset + 8] = flash;
+    data[offset + 8] = tintR;
+    data[offset + 9] = tintG;
+    data[offset + 10] = tintB;
+    data[offset + 11] = tintA;
+    data[offset + 12] = flash;
   }
 
   private drawLines(positions: Vector[], color: string, mode: number): void {
@@ -478,6 +513,8 @@ export class WebglRenderContext extends RenderContext {
       rgba[2],
       rgba[3] * this.globalAlpha,
     );
+    gl.disableVertexAttribArray(this.aTint);
+    gl.vertexAttrib4f(this.aTint, 0, 0, 0, 0);
     gl.disableVertexAttribArray(this.aFlash);
     gl.vertexAttrib1f(this.aFlash, 0);
 

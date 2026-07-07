@@ -1,4 +1,5 @@
 import { Sound } from '../core';
+import { SpritePainter } from '../core';
 import { GameUpdateArgs, GameState, Tag } from '../game';
 import { TankColor, TankSkinAnimation, TankTier } from '../tank';
 import * as config from '../config';
@@ -10,6 +11,7 @@ export class EnemyTank extends Tank {
   public zIndex = config.ENEMY_TANK_Z_INDEX;
   private healthSkinAnimations = new Map<number, TankSkinAnimation>();
   private hitSound: Sound;
+  private dropBlinkElapsed = 0;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { audioLoader, spriteLoader } = updateArgs;
@@ -111,12 +113,40 @@ export class EnemyTank extends Tank {
   public discardDrop(): this {
     this.type.hasDrop = false;
     this.ignorePause = false;
+    this.dropBlinkElapsed = 0;
 
-    // Remove drop animation frames
+    // Refresh animation state after the drop marker is removed.
     this.healthSkinAnimations.forEach((animation) => {
       animation.updateFrames();
     });
 
     return this;
+  }
+
+  protected updateAnimation(deltaTime: number): void {
+    super.updateAnimation(deltaTime);
+
+    const shouldTint = this.type.hasDrop && this.isDropBlinkVisible(deltaTime);
+
+    this.skinLayers.forEach((layer) => {
+      const painter = layer.painter as SpritePainter;
+      painter.tintColor = shouldTint ? config.ENEMY_DROP_BLINK_COLOR : null;
+      painter.tintAlpha = shouldTint ? config.ENEMY_DROP_BLINK_ALPHA : 0;
+    });
+  }
+
+  private isDropBlinkVisible(deltaTime: number): boolean {
+    if (!this.type.hasDrop) {
+      this.dropBlinkElapsed = 0;
+      return false;
+    }
+
+    this.dropBlinkElapsed += deltaTime;
+
+    return (
+      Math.floor(this.dropBlinkElapsed / config.ENEMY_DROP_BLINK_INTERVAL) %
+        2 ===
+      1
+    );
   }
 }
