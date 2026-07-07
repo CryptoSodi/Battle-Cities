@@ -58,12 +58,14 @@ export class TankSkinAnimation {
     this.currentAnimationMap = this.idleAnimationMap;
   }
 
-  public update(tank: Tank, deltaTime: number): void {
+  public update(tank: Tank, deltaTime: number, advanceFrames = true): void {
     this.rotation = tank.rotation;
 
     if (tank.state === this.tankState) {
       const animation = this.currentAnimationMap.get(this.rotation);
-      animation.update(deltaTime);
+      if (advanceFrames) {
+        animation.update(deltaTime);
+      }
       return;
     }
 

@@ -57,6 +57,7 @@ const SKIN_LAYER_DESCRIPTIONS = [{ opacity: 1 }, { opacity: 0.5 }];
 const SNAP_SIZE = config.TILE_SIZE_MEDIUM;
 
 const STUN_BLINK_DELAY = 0.1;
+const MOVE_ANIMATION_MIN_DISTANCE = 0.25;
 
 export class Tank extends GameObject {
   public collider: SweptBoxCollider = new SweptBoxCollider(this, true);
@@ -105,6 +106,7 @@ export class Tank extends GameObject {
     TankCollisionResolution.Unknown;
   protected isCollisionAbusedByPlayer = false;
   protected collisionSystem: CollisionSystem;
+  private lastSettledAnimationPosition: Vector = null;
 
   constructor(type: TankType, behavior: TankBehavior, partyIndex: number) {
     super(64, 64);
@@ -129,6 +131,7 @@ export class Tank extends GameObject {
     collisionSystem.register(this.collider);
 
     this.behavior.setup(this, updateArgs);
+    this.lastSettledAnimationPosition = this.position.clone();
 
     SKIN_LAYER_DESCRIPTIONS.forEach(() => {
       const layer = new GameObject();
@@ -147,6 +150,7 @@ export class Tank extends GameObject {
 
   protected update(updateArgs: GameUpdateArgs): void {
     const { deltaTime, gameState } = updateArgs;
+    const didMoveLastTick = this.consumeSettledMovementForAnimation();
 
     this.updateCollisionStates();
 
@@ -205,7 +209,7 @@ export class Tank extends GameObject {
 
     this.lastFireTimer.update(deltaTime);
 
-    this.updateAnimation(deltaTime);
+    this.updateAnimation(deltaTime, didMoveLastTick);
 
     this.collider.update();
 
@@ -242,8 +246,11 @@ export class Tank extends GameObject {
     }
   }
 
-  protected updateAnimation(deltaTime: number): void {
-    this.skinAnimation.update(this, deltaTime);
+  protected updateAnimation(
+    deltaTime: number,
+    advanceFrames = true,
+  ): void {
+    this.skinAnimation.update(this, deltaTime, advanceFrames);
     const frame = this.skinAnimation.getCurrentFrame();
 
     if (this.hitFlash > 0) {
@@ -263,6 +270,18 @@ export class Tank extends GameObject {
       painter.sprite = sprite;
       painter.flash = this.hitFlash;
     });
+  }
+
+  private consumeSettledMovementForAnimation(): boolean {
+    if (this.lastSettledAnimationPosition === null) {
+      this.lastSettledAnimationPosition = this.position.clone();
+      return false;
+    }
+
+    const distance = this.position.distanceTo(this.lastSettledAnimationPosition);
+    this.lastSettledAnimationPosition.copyFrom(this.position);
+
+    return distance >= MOVE_ANIMATION_MIN_DISTANCE;
   }
 
   protected collide(collision: Collision): void {

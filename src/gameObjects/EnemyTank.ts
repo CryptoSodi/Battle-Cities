@@ -123,8 +123,11 @@ export class EnemyTank extends Tank {
     return this;
   }
 
-  protected updateAnimation(deltaTime: number): void {
-    super.updateAnimation(deltaTime);
+  protected updateAnimation(
+    deltaTime: number,
+    advanceFrames = true,
+  ): void {
+    super.updateAnimation(deltaTime, advanceFrames);
 
     const shouldTint = this.type.hasDrop && this.isDropBlinkVisible(deltaTime);
 
