@@ -95,6 +95,13 @@ export class CollisionSystem {
     return this.collisions;
   }
 
+  // Read-only access to the registered static colliders, for queries that
+  // need to look at world geometry beyond a collision's own contact list
+  // (e.g. line-of-sight / cover checks).
+  public getStaticColliders(): Collider[] {
+    return this.staticColliders;
+  }
+
   public reset(): void {
     this.dynamicColliders = [];
     this.staticColliders = [];

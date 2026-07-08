@@ -306,6 +306,9 @@ export const STORAGE_KEY_SHOP_TX_INDEX = 'shop.tx-index';
 export const SHOP_STARTING_TOKEN_BALANCE = 1000;
 export const SHOP_STARTING_SOL_BALANCE = 1.25;
 export const SHOP_GUEST_FUEL_BALANCE = 9999;
+// Guest (temp) accounts get a full inventory of every shop item, and their
+// items never deplete — guests exist to try the full game, not to grind it.
+export const SHOP_GUEST_INVENTORY_COUNT = 99;
 export const SHOP_RUN_FUEL_COST = 1;
 
 export const PLAYER_DEFAULT_SPAWN_POSITIONS = [

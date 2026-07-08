@@ -39,6 +39,7 @@ function fireAndCollectDestroyed(
   regions: { x: number; y: number; width: number; height: number }[],
   bulletCenter: Vector,
   rotation: Rotation,
+  prepare: (field: GameObject) => void = () => undefined,
 ): string[] {
   const collisionSystem = new CollisionSystem();
   const updateArgs = makeUpdateArgs(collisionSystem);
@@ -57,6 +58,11 @@ function fireAndCollectDestroyed(
   // first invokeUpdate() (lazy setup()) -- prime that once, with no bullet
   // present yet, before hooking the destroyed signal on the sub-tiles.
   step(field, collisionSystem, updateArgs);
+
+  // Lets a test pre-damage the wall (e.g. carve a crater from an earlier hit)
+  // after the sub-bricks exist but before the destroyed listeners are hooked,
+  // so the preparation damage doesn't pollute the collected results.
+  prepare(field);
 
   const destroyed: string[] = [];
   field.traverse((node) => {
@@ -110,6 +116,50 @@ test('a shot on one of two nearby separate pillars does not clip bricks in the o
   destroyed.forEach((label) => {
     const x = Number(label.split(',')[0]);
     t.true(x < 128, `destroyed brick at (${label}) belongs to the separate right pillar, not the one hit`);
+  });
+});
+
+// Reproduces the "brick behind the front wall also gets destroyed" report:
+// one 64px-wide wall, two brick rows deep (y 0-32). The front row of the LEFT
+// half (x 96-128) was already destroyed by an earlier hit, leaving a crater.
+// A bullet fired down into the crater hits the left half's SECOND row -- so
+// the destroyer's tank-width band sits at that depth, where it also overlaps
+// the right half's second-row bricks... which are still COVERED by the right
+// half's intact front row. Those covered bricks must survive: the blast can't
+// reach through an intact wall surface.
+test('a shot into a crater does not destroy bricks covered by an intact front row', (t) => {
+  const destroyed = fireAndCollectDestroyed(
+    [{ x: 96, y: 0, width: 64, height: 32 }], // wall: x 96-160, rows y 0-16, 16-32
+    new Vector(104, -20), // inside the crater column (x 96-112)
+    Rotation.Down,
+    (field) => {
+      // Carve the crater: remove the front-row sub-bricks of the left half.
+      // Collect first -- destroy() splices nodes out of the tree, and mutating
+      // children mid-traversal makes traverse() skip siblings.
+      const craterBricks: BrickTerrainTile[] = [];
+      field.traverse((node) => {
+        if (node instanceof BrickTerrainTile) {
+          const box = node.getWorldBoundingBox();
+          if (box.min.y === 0 && box.min.x >= 96 && box.min.x < 128) {
+            craterBricks.push(node);
+          }
+        }
+      });
+      craterBricks.forEach((brick) => brick.destroy());
+    },
+  );
+
+  t.true(destroyed.length > 0, 'nothing was destroyed at all');
+  t.true(
+    destroyed.includes('96,16'),
+    'the recessed brick actually hit was not destroyed',
+  );
+  destroyed.forEach((label) => {
+    const x = Number(label.split(',')[0]);
+    t.true(
+      x < 128,
+      `destroyed brick at (${label}) was covered by the intact front row of the right half`,
+    );
   });
 });
 

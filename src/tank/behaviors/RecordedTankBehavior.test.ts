@@ -17,7 +17,9 @@ function makeUpdateArgs(collisionSystem: CollisionSystem): GameUpdateArgs {
     gameState: new State<GameState>(GameState.Playing),
     hitStop: () => undefined,
     particles: { spawn: () => undefined, flash: () => undefined } as any,
-    spriteLoader: { load: () => null, loadList: () => [] } as any,
+    // has() must exist (and return false) so TankMoveAnimation's numbered-
+    // frame probe loop terminates instead of crashing on the stub.
+    spriteLoader: { has: () => false, load: () => null, loadList: () => [] } as any,
   } as unknown as GameUpdateArgs;
 }
 

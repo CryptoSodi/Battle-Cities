@@ -1,13 +1,19 @@
-import { BoxCollider, Collision, GameObject } from '../core';
+import { BoxCollider, Collision, CollisionSystem, GameObject } from '../core';
 import { GameUpdateArgs, Rotation, Tag } from '../game';
 import { TankBulletWallDamage } from '../tank';
 import * as config from '../config';
 
 import { TerrainTile } from './TerrainTile';
 
+// How far in front of a candidate tile (toward the shooter) another wall tile
+// still counts as covering it. One tank-width keeps the cover rule local to
+// the impact surface, so far-away structures can't suppress destruction.
+const COVER_WINDOW = config.TILE_SIZE_LARGE;
+
 export class TerrainTileDestroyer extends GameObject {
   public readonly collider: BoxCollider;
   public readonly damage: number;
+  private collisionSystem: CollisionSystem;
 
   constructor(argDamage: number) {
     const damage = Math.min(argDamage, TankBulletWallDamage.High);
@@ -19,9 +25,11 @@ export class TerrainTileDestroyer extends GameObject {
 
     this.damage = damage;
     this.collider = new BoxCollider(this, true);
+    this.collisionSystem = null;
   }
 
   protected setup({ collisionSystem }: GameUpdateArgs): void {
+    this.collisionSystem = collisionSystem;
     collisionSystem.register(this.collider);
   }
 
@@ -98,6 +106,18 @@ export class TerrainTileDestroyer extends GameObject {
   ): Collision['contacts'] {
     const maxContacts = this.damage * 4;
 
+    // A tile at the impact depth may still be COVERED: when the bullet flew
+    // into a crater in a partially destroyed wall, the destroyer's band sits
+    // one or more rows deep -- where, in neighboring columns, it overlaps
+    // bricks that are hiding behind their still-intact front bricks. Those
+    // covering bricks are outside the band entirely, so no front-row or
+    // contiguity filtering can see them; check the actual world geometry and
+    // drop every candidate that has a wall tile directly in front of it
+    // (toward the shooter). The blast can't reach through an intact surface.
+    const exposed = contacts.filter(
+      (contact) => !this.isCoveredFromFront(contact),
+    );
+
     // Being at the same front-facing distance only means two tiles are
     // equally close along the travel axis -- it says nothing about whether
     // they belong to the same wall. A separate structure (e.g. the far side
@@ -106,8 +126,9 @@ export class TerrainTileDestroyer extends GameObject {
     // in an unrelated neighboring one. Restrict to the physically-touching
     // (zero-gap) group containing the tile closest to the destroyer's own
     // center -- i.e. the tile actually struck -- before applying the count
-    // cap below.
-    const contiguous = this.filterToContiguousGroup(contacts);
+    // cap below. Running this AFTER the cover filter also stops destruction
+    // from spreading past a covered brick to exposed ones beyond it.
+    const contiguous = this.filterToContiguousGroup(exposed);
 
     if (contiguous.length <= maxContacts) {
       return contiguous;
@@ -132,6 +153,80 @@ export class TerrainTileDestroyer extends GameObject {
         return aDistance - bDistance;
       })
       .slice(0, maxContacts);
+  }
+
+  // True when another wall tile sits directly in front of this contact
+  // (between it and the shooter), overlapping it on the axis perpendicular to
+  // travel and within COVER_WINDOW along the travel axis. Border walls are
+  // ignored: they surround the field, so a candidate can never legitimately
+  // hide behind one from an in-field shooter, and their huge boxes would
+  // otherwise "cover" everything. One linear scan of the static colliders per
+  // candidate -- destroyers are one-shot objects, so this is not a hot path.
+  private isCoveredFromFront(
+    contact: Collision['contacts'][number],
+  ): boolean {
+    if (this.collisionSystem === null) {
+      return false;
+    }
+
+    const rotation = this.getWorldRotation();
+    const box = contact.box;
+
+    for (const collider of this.collisionSystem.getStaticColliders()) {
+      const object = collider.object;
+      if (object === contact.collider.object) {
+        continue;
+      }
+      if (!object.tags.includes(Tag.Wall) || object.tags.includes(Tag.Border)) {
+        continue;
+      }
+
+      const other = collider.getBox();
+
+      if (rotation === Rotation.Up) {
+        // Shooter is below; the candidate's exposed face is box.max.y.
+        if (
+          other.min.x < box.max.x &&
+          other.max.x > box.min.x &&
+          other.min.y >= box.max.y &&
+          other.min.y < box.max.y + COVER_WINDOW
+        ) {
+          return true;
+        }
+      } else if (rotation === Rotation.Down) {
+        // Shooter is above; the candidate's exposed face is box.min.y.
+        if (
+          other.min.x < box.max.x &&
+          other.max.x > box.min.x &&
+          other.max.y <= box.min.y &&
+          other.max.y > box.min.y - COVER_WINDOW
+        ) {
+          return true;
+        }
+      } else if (rotation === Rotation.Left) {
+        // Shooter is to the right; the candidate's exposed face is box.max.x.
+        if (
+          other.min.y < box.max.y &&
+          other.max.y > box.min.y &&
+          other.min.x >= box.max.x &&
+          other.min.x < box.max.x + COVER_WINDOW
+        ) {
+          return true;
+        }
+      } else if (rotation === Rotation.Right) {
+        // Shooter is to the left; the candidate's exposed face is box.min.x.
+        if (
+          other.min.y < box.max.y &&
+          other.max.y > box.min.y &&
+          other.max.x <= box.min.x &&
+          other.max.x > box.min.x - COVER_WINDOW
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   // Flood-fills outward (along the axis perpendicular to travel, since every

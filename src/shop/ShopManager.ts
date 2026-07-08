@@ -188,6 +188,18 @@ export class ShopManager {
   }
 
   public getInventory(): ShopInventory {
+    // Guest (temp) accounts play with everything unlocked: a full stack of
+    // every item, mirroring the unlimited-fuel rule in getFuelBalance().
+    // Built fresh on every call so callers that mutate the returned object
+    // (the consume paths) can't corrupt a shared copy.
+    if (!this.isWalletConnected()) {
+      const inventory: ShopInventory = {};
+      for (const itemId of ACTIVE_ITEMS) {
+        inventory[itemId] = config.SHOP_GUEST_INVENTORY_COUNT;
+      }
+      return inventory;
+    }
+
     return this.getJson<ShopInventory>(config.STORAGE_KEY_SHOP_INVENTORY, {});
   }
 
@@ -344,6 +356,12 @@ export class ShopManager {
   }
 
   public consumeInventoryItem(itemId: ShopInventoryItemId): boolean {
+    // Guest items never deplete (see getInventory) — report success without
+    // persisting a decrement, like consumeFuelForRun does for guest fuel.
+    if (!this.isWalletConnected()) {
+      return true;
+    }
+
     const inventory = this.getInventory();
     if ((inventory[itemId] || 0) <= 0) {
       return false;
@@ -377,6 +395,11 @@ export class ShopManager {
       extraLives: 0,
     };
 
+    // Guest items never deplete: hand out the equipped consumables but leave
+    // both the inventory and the loadout untouched, so the guest's slots stay
+    // equipped run after run.
+    const isGuest = !this.isWalletConnected();
+
     Object.keys(loadout).forEach((slotKey) => {
       const slot = slotKey as ShopLoadoutSlot;
       const itemId = loadout[slot];
@@ -385,8 +408,10 @@ export class ShopManager {
         return;
       }
 
-      inventory[itemId] -= 1;
-      delete loadout[slot];
+      if (!isGuest) {
+        inventory[itemId] -= 1;
+        delete loadout[slot];
+      }
 
       if (itemId === ShopInventoryItemId.ExtraLife) {
         consumables.extraLives += 1;
@@ -401,9 +426,11 @@ export class ShopManager {
       }
     });
 
-    this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
-    this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
-    this.storage.save();
+    if (!isGuest) {
+      this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
+      this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
+      this.storage.save();
+    }
 
     return consumables;
   }
