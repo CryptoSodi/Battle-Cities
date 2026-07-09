@@ -1,79 +1,31 @@
-import { GameObject } from '../../core';
-import { GameUpdateArgs } from '../../game';
-import { SceneMenu, SceneMenuTitle, SpriteText, TextMenuItem } from '../../gameObjects';
 import { RankingClient, RankingResponse, RankingScope } from '../../ranking';
-import * as config from '../../config';
 
-import { GameScene } from '../GameScene';
+import { PanelScene, UI } from './panelUi';
 
-// Hall of Fame (Milestone 2 of the infrastructure plan): Gaming and Trading
-// tabs, a season scope toggle, the player's own rank summary, and the ranked
-// rows (Rank / Player / Points). Trading rows stay empty until Milestone 5.
-export class MainRankingScene extends GameScene {
+// Hall of Fame, shop-styled after the Mattle reference: yellow banner title
+// plate, your-rank summary card, Gaming/Trading tabs, season selector, and a
+// header-bar table with Rank / Player / Perks / Total Points.
+export class MainRankingScene extends PanelScene {
   private rankingClient = new RankingClient();
-  private title: SceneMenuTitle;
-  private menu: SceneMenu;
-  private scopeItem: TextMenuItem;
-  private seasonItem: TextMenuItem;
-  private backItem: TextMenuItem;
-  private board: GameObject;
-
   private scope: RankingScope = 'gaming';
-  // null => all-time; otherwise a season id ('' means "current", resolved by
-  // the server).
+  // null => all-time; '' => current season (resolved server-side).
   private seasonScope: string | null = '';
-  // Cycle order for the season item: current, all-time, then every stored
-  // season (newest first). Filled from the first successful response.
   private seasonOptions: { id: string | null; label: string }[] = null;
   private data: RankingResponse = null;
   private isLoading = false;
-  private needsRender = false;
 
-  protected setup(): void {
-    this.title = new SceneMenuTitle('HALL OF FAME');
-    this.root.add(this.title);
-
-    this.board = new GameObject();
-    this.board.size.copyFrom(this.root.size);
-    this.root.add(this.board);
-
-    this.scopeItem = new TextMenuItem('VIEW: GAMING');
-    this.scopeItem.selected.addListener(this.handleScopeSelected);
-
-    this.seasonItem = new TextMenuItem('SEASON: CURRENT');
-    this.seasonItem.selected.addListener(this.handleSeasonSelected);
-
-    this.backItem = new TextMenuItem('BACK');
-    this.backItem.selected.addListener(this.handleBackSelected);
-
-    this.menu = new SceneMenu();
-    this.menu.position.addY(420);
-    this.menu.setItems([this.scopeItem, this.seasonItem, this.backItem]);
-    this.root.add(this.menu);
-
-    this.load();
+  protected getTitle(): string {
+    return '';
   }
 
-  protected update(updateArgs: GameUpdateArgs): void {
-    if (this.needsRender) {
-      this.needsRender = false;
-      this.renderBoard();
-    }
-
-    super.update(updateArgs);
-  }
-
-  private load(): void {
+  protected load(): void {
     this.isLoading = true;
-    this.data = null;
-    this.needsRender = true;
 
     this.rankingClient
       .getRankings(this.scope, this.seasonScope === '' ? null : this.seasonScope)
       .then((data) => {
         this.data = data;
         this.isLoading = false;
-        this.needsRender = true;
 
         if (data !== null && this.seasonOptions === null) {
           this.seasonOptions = [
@@ -87,110 +39,156 @@ export class MainRankingScene extends GameScene {
               })),
           ];
         }
+
+        this.refresh();
       });
   }
 
-  // Rebuilds the board text objects from the latest response. Scene objects
-  // are cheap SpriteTexts, so a full clear-and-rebuild keeps the logic simple.
-  private renderBoard(): void {
-    this.board.removeAllChildren();
+  protected renderContent(): void {
+    const x = this.pageX;
+    const y = this.pageY;
+
+    // Banner plate: yellow slab with dark text, like the reference.
+    this.addPanel(x, y - 64, 560, 96, UI.YELLOW, UI.YELLOW_DARK);
+    this.addText('HALL OF FAME', x + 34, y - 42, UI.BLACK, 44, '900', 500);
+
+    // Your-rank summary card under the banner.
+    this.addPanel(x, y + 44, 560, 96, UI.PANEL, UI.YELLOW_DARK);
+    const seasonTag =
+      this.data !== null ? `S${this.data.currentSeason.number}` : 'S-';
+    this.addText(`GAMING RANK (${seasonTag}):`, x + 24, y + 58, UI.MUTED, 20, '800', 260);
+    this.addText('TRADING RANK (ALL):', x + 300, y + 58, UI.MUTED, 20, '800', 240);
+
+    const me = this.data?.me ?? null;
+    const gamingRank =
+      me === null || me.rank === null ? '--' : `#${me.rank}`;
+    const gamingPoints = me === null ? '' : `  ${me.totalPoints}`;
+    this.addText(
+      `${gamingRank}${this.scope === 'gaming' ? gamingPoints : ''}`,
+      x + 24,
+      y + 88,
+      UI.YELLOW,
+      30,
+      '900',
+      260,
+    );
+    this.addText('--', x + 300, y + 88, UI.MUTED_LIGHT, 30, '900', 240);
+
+    // Tabs + season selector row.
+    const tabsY = y + 168;
+    this.addButton(x, tabsY, 190, 48, 'GAMING', 'tab-gaming', () => {
+      this.switchScope('gaming');
+    }, this.scope === 'gaming');
+    this.addButton(x + 210, tabsY, 190, 48, 'TRADING', 'tab-trading', () => {
+      this.switchScope('trading');
+    }, this.scope === 'trading');
+
+    const seasonLabel = this.getSeasonLabel();
+    this.addButton(x + UI.WIDTH - 320, tabsY, 320, 48, `SEASON: ${seasonLabel}`, 'season', () => {
+      this.cycleSeason();
+    });
+
+    // Leaderboard table.
+    const tableY = tabsY + 72;
+    this.addTableHeader(x, tableY, UI.WIDTH, [
+      { label: 'RANK', offset: 24, width: 100 },
+      { label: 'PLAYER', offset: 140, width: 360 },
+      { label: 'PERKS', offset: 620, width: 200 },
+      { label: 'TOTAL POINTS', offset: UI.WIDTH - 264, width: 240, align: 'right' },
+    ]);
 
     if (this.isLoading) {
-      this.addLine('LOADING...', 120, config.COLOR_GRAY_LIGHT);
+      this.addText('LOADING...', x + 24, tableY + 72, UI.MUTED_LIGHT, 24, '800', 400);
       return;
     }
 
     if (this.data === null) {
-      this.addLine('RANKINGS UNAVAILABLE', 120, config.COLOR_GRAY_LIGHT);
-      this.addLine('CHECK CONNECTION OR LOGIN', 156, config.COLOR_GRAY_LIGHT);
+      this.addText('RANKINGS UNAVAILABLE', x + 24, tableY + 72, UI.MUTED_LIGHT, 24, '800', 500);
+      this.addText('CHECK CONNECTION OR LOGIN', x + 24, tableY + 108, UI.MUTED, 20, '700', 500);
       return;
-    }
-
-    const selectedSeason = this.data.seasons.find(
-      (season) => season.id === this.data.seasonId,
-    );
-    const seasonLabel =
-      this.seasonScope === null
-        ? 'ALL TIME'
-        : (selectedSeason || this.data.currentSeason).name.toUpperCase();
-    this.addLine(
-      `${this.scope.toUpperCase()} - ${seasonLabel}`,
-      120,
-      config.COLOR_YELLOW,
-    );
-
-    if (this.data.me !== null) {
-      const rankText = this.data.me.rank === null ? '--' : `#${this.data.me.rank}`;
-      this.addLine(
-        `YOUR RANK ${rankText}  ${this.data.me.totalPoints} PTS`,
-        156,
-        config.COLOR_WHITE,
-      );
     }
 
     if (this.data.rows.length === 0) {
       const emptyText =
         this.scope === 'trading'
-          ? 'TRADING RANKS COMING SOON'
+          ? 'TRADING RANKS ARRIVE WITH LIVE SWAP VOLUME'
           : 'NO RESULTS YET - PLAY A MATCH';
-      this.addLine(emptyText, 220, config.COLOR_GRAY_LIGHT);
+      this.addText(emptyText, x + 24, tableY + 72, UI.MUTED_LIGHT, 24, '800', 700);
       return;
     }
 
-    this.data.rows.slice(0, 10).forEach((row, index) => {
-      const y = 220 + index * 36;
-      const color = row.rank <= 3 ? config.COLOR_YELLOW : config.COLOR_WHITE;
-      const rank = `${row.rank}`.padStart(2, ' ');
-      const name = normalizeName(row.displayName).padEnd(16, ' ');
-      const points = `${row.totalPoints}`.padStart(7, ' ');
+    this.data.rows.slice(0, 12).forEach((row, index) => {
+      const rowY = tableY + 56 + index * 46;
+      if (index % 2 === 1) {
+        this.addPanel(x, rowY - 8, UI.WIDTH, 44, '#0f0e0a', null);
+      }
 
-      this.addLine(`${rank}. ${name}${points}`, y, color);
+      const rankColor = row.rank === 1 ? UI.GREEN : row.rank <= 3 ? UI.YELLOW : UI.WHITE;
+      this.addText(`${row.rank}`, x + 24, rowY, rankColor, 26, '900', 100);
+      this.addText(
+        row.displayName.toUpperCase().slice(0, 24),
+        x + 140,
+        rowY,
+        row.rank === 1 ? UI.GREEN : UI.WHITE,
+        24,
+        '800',
+        440,
+      );
+      this.addText(
+        row.perks.length > 0 ? row.perks.join(' ') : '-',
+        x + 620,
+        rowY,
+        UI.MUTED,
+        22,
+        '700',
+        220,
+      );
+      this.addText(
+        `${row.totalPoints}`,
+        x + UI.WIDTH - 264,
+        rowY,
+        row.rank === 1 ? UI.GREEN : UI.YELLOW,
+        26,
+        '900',
+        240,
+        'right',
+      );
     });
   }
 
-  private addLine(text: string, y: number, color: string): void {
-    const line = new SpriteText(text, { color });
-    line.position.set(112, y);
-    this.board.add(line);
+  private getSeasonLabel(): string {
+    if (this.seasonScope === null) {
+      return 'ALL TIME';
+    }
+    if (this.seasonScope === '') {
+      return 'CURRENT';
+    }
+    const option = (this.seasonOptions || []).find(
+      (candidate) => candidate.id === this.seasonScope,
+    );
+    return option === undefined ? 'CURRENT' : option.label;
   }
 
-  private handleScopeSelected = (): void => {
-    this.scope = this.scope === 'gaming' ? 'trading' : 'gaming';
-    this.scopeItem.setText(`VIEW: ${this.scope.toUpperCase()}`);
-    this.load();
-  };
-
-  private handleSeasonSelected = (): void => {
-    // Before the first response arrives only current/all-time can toggle.
-    if (this.seasonOptions === null) {
-      this.seasonScope = this.seasonScope === null ? '' : null;
-      this.seasonItem.setText(
-        this.seasonScope === null ? 'SEASON: ALL TIME' : 'SEASON: CURRENT',
-      );
-      this.load();
+  private switchScope(scope: RankingScope): void {
+    if (this.scope === scope) {
       return;
     }
-
-    const currentIndex = this.seasonOptions.findIndex(
-      (option) => option.id === this.seasonScope,
-    );
-    const next = this.seasonOptions[
-      (currentIndex + 1) % this.seasonOptions.length
-    ];
-
-    this.seasonScope = next.id;
-    this.seasonItem.setText(`SEASON: ${next.label}`);
+    this.scope = scope;
     this.load();
-  };
+    this.refresh(scope === 'gaming' ? 'tab-gaming' : 'tab-trading');
+  }
 
-  private handleBackSelected = (): void => {
-    this.navigator.back();
-  };
-}
-
-// The sprite font covers a limited glyph set; keep names to safe uppercase
-// characters and a sane length for column alignment.
-function normalizeName(value: string): string {
-  const name = (value || 'PLAYER').toUpperCase().replace(/[^A-Z0-9 .\-_]/g, '');
-  return name.length > 16 ? name.slice(0, 16) : name;
+  private cycleSeason(): void {
+    if (this.seasonOptions === null) {
+      this.seasonScope = this.seasonScope === null ? '' : null;
+    } else {
+      const currentIndex = this.seasonOptions.findIndex(
+        (option) => option.id === this.seasonScope,
+      );
+      this.seasonScope =
+        this.seasonOptions[(currentIndex + 1) % this.seasonOptions.length].id;
+    }
+    this.load();
+    this.refresh('season');
+  }
 }

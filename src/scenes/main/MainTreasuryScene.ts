@@ -1,9 +1,7 @@
-import { TextMenuItem } from '../../gameObjects';
 import { apiFetch } from '../../network/api';
 import { StakingClient, StakingSummary } from '../../staking';
-import * as config from '../../config';
 
-import { BoardScene } from './BoardScene';
+import { PanelScene, UI } from './panelUi';
 
 interface LedgerEntry {
   currency: string;
@@ -12,37 +10,22 @@ interface LedgerEntry {
   createdAt: string;
 }
 
-// The player's treasury: everything they hold in one place — BACT/SOL/fuel
-// balances, owned items, locked stake with cooldowns, and the recent ledger
-// history behind it all.
-export class MainTreasuryScene extends BoardScene {
+// The player's treasury, shop-styled: balance stat cards on top, owned item
+// tiles in the middle (shop side-panel look), and the ledger history table.
+export class MainTreasuryScene extends PanelScene {
   private stakingClient = new StakingClient();
   private account: any = null;
   private staking: StakingSummary = null;
   private entries: LedgerEntry[] = [];
   private showLedger = false;
-  private viewItem: TextMenuItem;
+  private isLoading = false;
 
   protected getTitle(): string {
-    return 'TREASURY';
-  }
-
-  protected createMenuItems(): TextMenuItem[] {
-    this.viewItem = new TextMenuItem('HISTORY');
-    this.viewItem.selected.addListener(this.handleToggleView);
-
-    const refreshItem = new TextMenuItem('REFRESH');
-    refreshItem.selected.addListener(this.handleRefresh);
-
-    const backItem = new TextMenuItem('BACK');
-    backItem.selected.addListener(this.handleBackSelected);
-
-    return [this.viewItem, refreshItem, backItem];
+    return 'Treasury';
   }
 
   protected load(): void {
     this.isLoading = true;
-    this.requestRender();
 
     Promise.all([
       this.fetchAccount(),
@@ -53,68 +36,156 @@ export class MainTreasuryScene extends BoardScene {
       this.staking = staking;
       this.entries = entries;
       this.isLoading = false;
-      this.requestRender();
+      this.refresh();
     });
   }
 
-  protected renderBoard(): void {
-    if (this.account === null) {
-      this.addLine('LOGIN TO SEE YOUR TREASURY', 140, config.COLOR_GRAY_LIGHT);
+  protected renderContent(): void {
+    const x = this.pageX;
+    const y = this.pageY;
+
+    if (this.isLoading) {
+      this.addText('LOADING...', x + 16, y + 40, UI.MUTED_LIGHT, 26, '800', 400);
       return;
     }
+
+    if (this.account === null) {
+      this.addText('LOGIN TO SEE YOUR TREASURY', x + 16, y + 40, UI.MUTED_LIGHT, 26, '800', 600);
+      return;
+    }
+
+    // Balance stat cards.
+    const cardWidth = 232;
+    const cardGap = 24;
+    const staked = this.staking === null ? 0 : this.staking.me.staked;
+    const cooldown =
+      this.staking === null
+        ? 0
+        : this.staking.unstakes.reduce((sum, position) => sum + position.amount, 0);
+
+    this.addStatCard(x, y, cardWidth, 96, 'BACT', `${this.account.tokenBalance}`, UI.YELLOW, 'shop.coin');
+    this.addStatCard(x + (cardWidth + cardGap), y, cardWidth, 96, 'SOL', `${this.account.solBalance}`);
+    this.addStatCard(x + (cardWidth + cardGap) * 2, y, cardWidth, 96, 'FUEL', `${this.account.fuelBalance}`, UI.WHITE, 'shop.fuel');
+    this.addStatCard(
+      x + (cardWidth + cardGap) * 3,
+      y,
+      cardWidth,
+      96,
+      'STAKED',
+      cooldown > 0 ? `${staked} (+${cooldown})` : `${staked}`,
+    );
+
+    // View toggle.
+    this.addButton(x + UI.WIDTH - 200, y + 24, 176, 48, this.showLedger ? 'HOLDINGS' : 'HISTORY', 'toggle', () => {
+      this.showLedger = !this.showLedger;
+      this.refresh('toggle');
+    });
 
     if (this.showLedger) {
-      this.renderLedger();
+      this.renderLedger(x, y + 132);
       return;
     }
 
-    this.addLine('BALANCES', 120, config.COLOR_YELLOW);
-    this.addLine(`BACT ${this.account.tokenBalance}   SOL ${this.account.solBalance}`, 152);
-    this.addLine(`FUEL ${this.account.fuelBalance}`, 184);
+    this.renderItems(x, y + 132);
+  }
 
-    if (this.staking !== null) {
-      const pendingUnstake = this.staking.unstakes.reduce(
-        (sum, position) => sum + position.amount,
-        0,
-      );
-      this.addLine(
-        `STAKED ${this.staking.me.staked}` +
-          (pendingUnstake > 0 ? `   IN COOLDOWN ${pendingUnstake}` : ''),
-        216,
-      );
-    }
+  private renderItems(x: number, y: number): void {
+    this.addText('ITEMS', x + 4, y, UI.MUTED, 24, '800', 300);
 
-    this.addLine('ITEMS', 264, config.COLOR_YELLOW);
     const inventory = this.account.inventory || {};
     const owned = Object.keys(inventory).filter((key) => inventory[key] > 0);
+
     if (owned.length === 0) {
-      this.addLine('NO ITEMS OWNED - VISIT THE SHOP', 296, config.COLOR_GRAY_LIGHT);
+      this.addPanel(x, y + 40, UI.WIDTH, 96, UI.PANEL, UI.PANEL_LINE);
+      this.addText(
+        'NO ITEMS OWNED - VISIT THE SHOP',
+        x,
+        y + 74,
+        UI.MUTED_LIGHT,
+        22,
+        '800',
+        UI.WIDTH,
+        'center',
+      );
       return;
     }
 
+    const tileWidth = 292;
+    const tileGap = 24;
     owned.slice(0, 8).forEach((itemId, index) => {
-      this.addLine(
-        `${itemId.replace(/-/g, ' ').toUpperCase().padEnd(16, ' ')}X${inventory[itemId]}`,
-        296 + index * 32,
+      const tileX = x + (index % 4) * (tileWidth + tileGap);
+      const tileY = y + 40 + Math.floor(index / 4) * 92;
+      this.addPanel(tileX, tileY, tileWidth, 72, UI.PANEL_ALT, UI.PANEL_LINE);
+      this.addText(
+        itemId.replace(/-/g, ' ').toUpperCase(),
+        tileX + 18,
+        tileY + 24,
+        UI.WHITE,
+        22,
+        '800',
+        tileWidth - 110,
+      );
+      this.addText(
+        `X${this.account.inventory[itemId]}`,
+        tileX + tileWidth - 82,
+        tileY + 22,
+        UI.YELLOW,
+        26,
+        '900',
+        64,
+        'right',
       );
     });
   }
 
-  private renderLedger(): void {
-    this.addLine('RECENT ACTIVITY', 120, config.COLOR_YELLOW);
+  private renderLedger(x: number, y: number): void {
+    this.addText('RECENT ACTIVITY', x + 4, y, UI.MUTED, 24, '800', 300);
+
+    this.addTableHeader(x, y + 40, UI.WIDTH, [
+      { label: 'ACTION', offset: 24, width: 360 },
+      { label: 'AMOUNT', offset: 620, width: 240 },
+      { label: 'DATE', offset: UI.WIDTH - 224, width: 200, align: 'right' },
+    ]);
+
     if (this.entries.length === 0) {
-      this.addLine('NO ACTIVITY YET', 160, config.COLOR_GRAY_LIGHT);
+      this.addText('NO ACTIVITY YET', x + 24, y + 112, UI.MUTED_LIGHT, 24, '800', 400);
       return;
     }
 
-    this.entries.slice(0, 12).forEach((entry, index) => {
+    this.entries.slice(0, 8).forEach((entry, index) => {
+      const rowY = y + 96 + index * 46;
+      if (index % 2 === 1) {
+        this.addPanel(x, rowY - 8, UI.WIDTH, 44, '#0f0e0a', null);
+      }
+
+      this.addText(
+        entry.reason.replace(/-/g, ' ').toUpperCase(),
+        x + 24,
+        rowY,
+        UI.WHITE,
+        22,
+        '800',
+        420,
+      );
       const sign = entry.amount > 0 ? '+' : '';
-      const color = entry.amount > 0 ? config.COLOR_YELLOW : config.COLOR_WHITE;
-      this.addLine(
-        `${entry.reason.replace(/-/g, ' ').toUpperCase().slice(0, 16).padEnd(17, ' ')}` +
-          `${sign}${entry.amount} ${entry.currency.replace('item:', '').toUpperCase()}`,
-        160 + index * 32,
-        color,
+      this.addText(
+        `${sign}${entry.amount} ${entry.currency.replace('item:', '').toUpperCase()}`,
+        x + 620,
+        rowY,
+        entry.amount > 0 ? UI.GREEN : UI.MUTED_LIGHT,
+        22,
+        '800',
+        280,
+      );
+      this.addText(
+        entry.createdAt.slice(0, 10),
+        x + UI.WIDTH - 224,
+        rowY,
+        UI.MUTED,
+        20,
+        '700',
+        200,
+        'right',
       );
     });
   }
@@ -144,14 +215,4 @@ export class MainTreasuryScene extends BoardScene {
       return [];
     }
   }
-
-  private handleToggleView = (): void => {
-    this.showLedger = !this.showLedger;
-    this.viewItem.setText(this.showLedger ? 'HOLDINGS' : 'HISTORY');
-    this.requestRender();
-  };
-
-  private handleRefresh = (): void => {
-    this.load();
-  };
 }

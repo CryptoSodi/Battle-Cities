@@ -1,78 +1,94 @@
-import { TextMenuItem } from '../../gameObjects';
 import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../../wiki';
-import * as config from '../../config';
 
-import { BoardScene } from './BoardScene';
+import { PanelScene, UI } from './panelUi';
 
-const ENTRIES_PER_PAGE = 3;
+const ENTRIES_PER_PAGE = 4;
 
-// In-game knowledge base (Milestone 5.5): Our Tanks, Weapons & Modules,
-// Powerups, Enemy Tanks — our lore, card-detail layout.
-export class MainWikiScene extends BoardScene {
+// Field Manual, shop-styled after the Mattle wiki: category tabs on top,
+// card grid of entries with role/lore/effect/source detail lines.
+export class MainWikiScene extends PanelScene {
   private categoryIndex = 0;
   private page = 0;
-  private tabItem: TextMenuItem;
-  private pageItem: TextMenuItem;
 
   protected getTitle(): string {
-    return 'FIELD MANUAL';
-  }
-
-  protected createMenuItems(): TextMenuItem[] {
-    this.tabItem = new TextMenuItem(`TAB: ${WIKI_CATEGORIES[0].label}`);
-    this.tabItem.selected.addListener(this.handleNextCategory);
-
-    this.pageItem = new TextMenuItem('PAGE 1');
-    this.pageItem.selected.addListener(this.handleNextPage);
-
-    const backItem = new TextMenuItem('BACK');
-    backItem.selected.addListener(this.handleBackSelected);
-
-    return [this.tabItem, this.pageItem, backItem];
+    return 'Field Manual';
   }
 
   protected load(): void {
     // Static content — nothing async to fetch.
-    this.requestRender();
   }
 
-  protected renderBoard(): void {
-    const category = this.getCategory();
-    const entries = WIKI_ENTRIES[category.id];
+  protected renderContent(): void {
+    const x = this.pageX;
+    const y = this.pageY;
+
+    // Category tabs.
+    const tabWidth = 232;
+    WIKI_CATEGORIES.forEach((category, index) => {
+      this.addButton(
+        x + index * (tabWidth + 20),
+        y,
+        tabWidth,
+        48,
+        category.label,
+        `tab-${category.id}`,
+        () => {
+          this.categoryIndex = index;
+          this.page = 0;
+          this.refresh(`tab-${category.id}`);
+        },
+        index === this.categoryIndex,
+        'normal',
+        22,
+      );
+    });
+
+    const category = WIKI_CATEGORIES[this.categoryIndex];
+    const entries = WIKI_ENTRIES[category.id as WikiCategory];
     const pageCount = Math.max(1, Math.ceil(entries.length / ENTRIES_PER_PAGE));
     const page = Math.min(this.page, pageCount - 1);
-    const visible = entries.slice(
-      page * ENTRIES_PER_PAGE,
-      (page + 1) * ENTRIES_PER_PAGE,
-    );
+    const visible = entries.slice(page * ENTRIES_PER_PAGE, (page + 1) * ENTRIES_PER_PAGE);
 
+    // Entry cards, 2x2 grid.
+    const cardWidth = Math.floor((UI.WIDTH - 24) / 2);
+    const cardHeight = 200;
     visible.forEach((entry, index) => {
-      const y = 120 + index * 150;
-      this.addLine(entry.name, y, config.COLOR_YELLOW);
-      this.addLine(entry.role, y + 30, config.COLOR_GRAY_LIGHT);
-      this.addLine(entry.lore, y + 60, config.COLOR_GRAY_LIGHT);
-      this.addLine(entry.effect, y + 90);
-      this.addLine(`SOURCE: ${entry.source}`, y + 120, config.COLOR_GRAY_LIGHT);
+      const cardX = x + (index % 2) * (cardWidth + 24);
+      const cardY = y + 76 + Math.floor(index / 2) * (cardHeight + 24);
+
+      this.addPanel(cardX, cardY, cardWidth, cardHeight, UI.PANEL, UI.PANEL_LINE);
+      this.addText(entry.name, cardX + 22, cardY + 16, UI.YELLOW, 28, '900', cardWidth - 44);
+      this.addText(entry.role, cardX + 22, cardY + 54, UI.MUTED, 18, '800', cardWidth - 44);
+      this.addText(entry.lore, cardX + 22, cardY + 88, UI.MUTED_LIGHT, 18, '700', cardWidth - 44);
+      this.addText(entry.effect, cardX + 22, cardY + 122, UI.WHITE, 20, '800', cardWidth - 44);
+
+      const footer = this.addPanel(cardX, cardY + cardHeight - 40, cardWidth, 40, UI.PANEL_ALT, null);
+      footer.setZIndex(1);
+      this.addText(
+        `SOURCE: ${entry.source}`,
+        cardX + 22,
+        cardY + cardHeight - 30,
+        UI.MUTED_LIGHT,
+        16,
+        '800',
+        cardWidth - 44,
+      ).setZIndex(2);
     });
+
+    // Pager.
+    if (pageCount > 1) {
+      this.addButton(
+        x + UI.WIDTH - 200,
+        y + 76 + (cardHeight + 24) * 2 + 8,
+        176,
+        44,
+        `PAGE ${page + 1}/${pageCount}`,
+        'pager',
+        () => {
+          this.page = (this.page + 1) % pageCount;
+          this.refresh('pager');
+        },
+      );
+    }
   }
-
-  private getCategory(): { id: WikiCategory; label: string } {
-    return WIKI_CATEGORIES[this.categoryIndex];
-  }
-
-  private handleNextCategory = (): void => {
-    this.categoryIndex = (this.categoryIndex + 1) % WIKI_CATEGORIES.length;
-    this.page = 0;
-    this.tabItem.setText(`TAB: ${this.getCategory().label}`);
-    this.pageItem.setText('PAGE 1');
-    this.requestRender();
-  };
-
-  private handleNextPage = (): void => {
-    const entries = WIKI_ENTRIES[this.getCategory().id];
-    const pageCount = Math.max(1, Math.ceil(entries.length / ENTRIES_PER_PAGE));
-    this.page = (this.page + 1) % pageCount;
-    this.pageItem.setText(`PAGE ${this.page + 1}`);
-    this.requestRender();
-  };
 }

@@ -1,40 +1,55 @@
-import { SceneMenu, SceneMenuTitle, TextMenuItem } from '../../gameObjects';
-
-import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
-// Hub for the economy/meta screens (the plan's "More" nav group), so the
-// main menu stays a tank menu and not a nav bar.
-export class MainMoreScene extends GameScene {
-  protected setup(): void {
-    this.root.add(new SceneMenuTitle('HEADQUARTERS'));
+import { PanelScene, UI } from './panelUi';
 
-    const entries: [string, GameSceneType][] = [
-      ['TREASURY', GameSceneType.MainTreasury],
-      ['CAMPAIGNS', GameSceneType.MainEvents],
-      ['STAKING', GameSceneType.MainStaking],
-      ['TRADING', GameSceneType.MainTrading],
-      ['BOOST', GameSceneType.MainBoost],
-      ['AIRDROP', GameSceneType.MainAirdrop],
-      ['FIELD MANUAL', GameSceneType.MainWiki],
+// Headquarters hub, shop-styled: a card grid of the economy/meta screens
+// (the plan's "More" nav group), so the main menu stays a tank menu.
+export class MainMoreScene extends PanelScene {
+  protected getTitle(): string {
+    return 'Headquarters';
+  }
+
+  protected load(): void {
+    // Static content.
+  }
+
+  protected renderContent(): void {
+    const x = this.pageX;
+    const y = this.pageY;
+
+    const entries: [string, string, GameSceneType][] = [
+      ['TREASURY', 'YOUR BALANCES, ITEMS AND HISTORY', GameSceneType.MainTreasury],
+      ['CAMPAIGNS', 'EVENTS, OPERATIONS AND PHASE REWARDS', GameSceneType.MainEvents],
+      ['STAKING', 'LOCK BACT, EARN SP AND PERKS', GameSceneType.MainStaking],
+      ['TRADING', 'SWAP TOKENS ON RAYDIUM FOR BOOSTS', GameSceneType.MainTrading],
+      ['BOOST', 'YOUR ACTIVE TRAIT BOOSTS AND PERKS', GameSceneType.MainBoost],
+      ['AIRDROP', 'BACT ALLOCATION AND CLAIMS', GameSceneType.MainAirdrop],
+      ['FIELD MANUAL', 'TANKS, WEAPONS, POWERUPS, ENEMIES', GameSceneType.MainWiki],
     ];
 
-    const items = entries.map(([label, sceneType]) => {
-      const item = new TextMenuItem(label);
-      item.selected.addListener(() => {
-        this.navigator.push(sceneType);
-      });
-      return item;
-    });
+    const cardWidth = Math.floor((UI.WIDTH - 24) / 2);
+    const cardHeight = 116;
 
-    const backItem = new TextMenuItem('BACK');
-    backItem.selected.addListener(() => {
-      this.navigator.back();
-    });
-    items.push(backItem);
+    entries.forEach(([label, detail, sceneType], index) => {
+      const cardX = x + (index % 2) * (cardWidth + 24);
+      const cardY = y + Math.floor(index / 2) * (cardHeight + 24);
 
-    const menu = new SceneMenu();
-    menu.setItems(items);
-    this.root.add(menu);
+      this.addPanel(cardX, cardY, cardWidth, cardHeight, UI.PANEL, UI.PANEL_LINE);
+      this.addText(detail, cardX + 24, cardY + 64, UI.MUTED_LIGHT, 17, '700', cardWidth - 48);
+      this.addButton(
+        cardX + 12,
+        cardY + 12,
+        cardWidth - 24,
+        44,
+        label,
+        `hub-${label}`,
+        () => {
+          this.navigator.push(sceneType);
+        },
+        false,
+        'normal',
+        24,
+      );
+    });
   }
 }
