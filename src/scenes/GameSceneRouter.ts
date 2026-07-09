@@ -27,6 +27,7 @@ import {
   MainShopScene,
   MainStakingScene,
   MainTradingScene,
+  MainTreasuryScene,
   MainVictoryScene,
   MainWikiScene,
 } from './main';
@@ -64,6 +65,7 @@ export class GameSceneRouter extends SceneRouter<GameScene> {
     this.register(GameSceneType.MainShop, MainShopScene);
     this.register(GameSceneType.MainStaking, MainStakingScene);
     this.register(GameSceneType.MainTrading, MainTradingScene);
+    this.register(GameSceneType.MainTreasury, MainTreasuryScene);
     this.register(GameSceneType.MainVictory, MainVictoryScene);
     this.register(GameSceneType.MainWiki, MainWikiScene);
     this.register(GameSceneType.ModesMenu, ModesMenuScene);

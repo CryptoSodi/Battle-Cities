@@ -1,5 +1,6 @@
 const economyStore = require('./economyStore');
 const eventStore = require('./eventStore');
+const ledgerStore = require('./ledgerStore');
 const phaseStore = require('./phaseStore');
 const airdropStore = require('./airdropStore');
 const matchResultStore = require('./matchResultStore');
@@ -91,6 +92,17 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
       ...result,
       account: account === null ? null : economyStore.toPublicAccount(account),
     });
+  });
+
+  app.get('/api/economy/ledger', async (request, response) => {
+    const player = await resolveSessionPlayer(request);
+    if (player === null) {
+      sendJson(response, 401, { authenticated: false });
+      return;
+    }
+
+    const entries = await ledgerStore.listEntriesForPlayer(player.id, 20);
+    sendJson(response, 200, { authenticated: true, entries });
   });
 
   // ---------- staking (Milestone 4) ----------
@@ -246,8 +258,8 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
 
     sendJson(response, 200, {
       authenticated: true,
-      appliesTo: ['events', 'arcade'],
-      rankedAffected: false,
+      appliesTo: ['ranked', 'events', 'arcade'],
+      rankedAffected: true,
       trading,
       staking: {
         tier: stakingSummary.me.perkTier,

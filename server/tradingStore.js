@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const storageConfig = require('./storageConfig');
+const solanaRpc = require('./solanaRpc');
 
 // Trading volume + boost status (Milestone 5). The token catalog maps listed
 // tokens to traits (our tank language: Hull/Armor/Engine/Salvage); the native
@@ -8,13 +9,16 @@ const storageConfig = require('./storageConfig');
 // exactly the plan's grouping rules. Every accepted swap is idempotent by
 // transaction signature.
 //
-// VERIFICATION MODE: real Solana RPC verification is an open decision (RPC
-// provider + treasury are unpicked), so verify-swap runs in 'mock' mode by
-// default: it trusts the submitted summary but still enforces signature
-// idempotency, catalog rules, and eligible-pair rules. Set
-// BATTLECITY_SWAP_VERIFY_MODE=rpc once RPC verification is implemented —
-// until then that mode rejects, so nobody can silently ship trust-the-client
-// to production. Boosts NEVER apply to ranked play (see /api/boost/status).
+// VERIFICATION MODES:
+//   'mock' (default) — dev only: trusts the submitted summary but still
+//     enforces signature idempotency, catalog rules, and eligible-pair rules.
+//   'rpc' — trustless: fetches the confirmed transaction from Solana
+//     (BATTLECITY_SOLANA_RPC_URL, testnet by default) and derives BOTH the
+//     swapped mint and the stable-side USD volume from on-chain balance
+//     changes; the client-declared mints/amounts are ignored. Swaps happen on
+//     Raydium, but verification is venue-agnostic. Set
+//     BATTLECITY_SWAP_VERIFY_MODE=rpc once the BACT testnet token exists.
+// SOL is priced via BATTLECITY_SOL_PRICE_USD until a price oracle is wired.
 
 const TABLE_NAME = 'battlecity_trading_volume';
 const VOLUME_WINDOW_DAYS = 30;
@@ -30,10 +34,19 @@ const STABLE_MINTS = {
   USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
 };
 
-// Listed tokens -> traits. Native BCT boosts everything. Mints are
-// placeholders until the token launches (open decision in the plan doc).
+// Native token mint. BACT launches on testnet first — set BATTLECITY_BACT_MINT
+// to the real mint address once the token exists; the placeholder keeps dev
+// working until then.
+function getNativeMint() {
+  return (
+    process.env.BATTLECITY_BACT_MINT ||
+    'BACT1111111111111111111111111111111111111111'
+  );
+}
+
+// Listed tokens -> traits. Native BACT boosts everything.
 const TOKEN_CATALOG = [
-  { mint: 'BCT111111111111111111111111111111111111111', symbol: 'BCT', name: 'BATTLE CITY TOKEN', group: 'native', trait: 'all', featured: true },
+  { mint: getNativeMint(), symbol: 'BACT', name: 'BATTLE CITY TOKEN', group: 'native', trait: 'all', featured: true },
   { mint: STABLE_MINTS.SOL, symbol: 'SOL', name: 'SOLANA', group: 'stable', trait: null, featured: true },
   { mint: STABLE_MINTS.USDC, symbol: 'USDC', name: 'USD COIN', group: 'stable', trait: null, featured: false },
   { mint: STABLE_MINTS.USDT, symbol: 'USDT', name: 'TETHER', group: 'stable', trait: null, featured: false },
@@ -111,16 +124,9 @@ function isStable(mint) {
   return token !== null && token.group === 'stable';
 }
 
-// Eligible pairs are Listed/Stable, Native/Stable, or Unlisted/Stable — the
-// non-stable side decides the trait. Returns null when ineligible.
-function resolveBoostTarget(fromMint, toMint) {
-  const fromStable = isStable(fromMint);
-  const toStable = isStable(toMint);
-  if (fromStable === toStable) {
-    return null; // stable/stable or token/token: no boost volume
-  }
-
-  const boostMint = fromStable ? toMint : fromMint;
+// Classifies the non-stable side of a swap. Returns null when the mint can't
+// earn boosts (it's a stable itself).
+function classifyBoostMint(boostMint) {
   const token = findToken(boostMint);
 
   if (token === null) {
@@ -134,34 +140,81 @@ function resolveBoostTarget(fromMint, toMint) {
     return { mint: boostMint, trait: token.trait, group: 'listed' };
   }
 
-  return null; // hidden/stable on the non-stable side: excluded
+  return null; // stable on the non-stable side: excluded
+}
+
+// Eligible pairs are Listed/Stable, Native/Stable, or Unlisted/Stable — the
+// non-stable side decides the trait. Returns null when ineligible.
+function resolveBoostTarget(fromMint, toMint) {
+  const fromStable = isStable(fromMint);
+  const toStable = isStable(toMint);
+  if (fromStable === toStable) {
+    return null; // stable/stable or token/token: no boost volume
+  }
+
+  return classifyBoostMint(fromStable ? toMint : fromMint);
+}
+
+function getSolPriceUsd() {
+  const parsed = Number(process.env.BATTLECITY_SOL_PRICE_USD);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 150;
 }
 
 // Verifies and records one swap. Idempotent by signature: replays return
 // { ok: false, error: 'Already recorded' } and change nothing.
 async function recordSwap(player, input) {
-  if (getVerifyMode() === 'rpc') {
-    return {
-      ok: false,
-      error: 'RPC verification not implemented; set BATTLECITY_SWAP_VERIFY_MODE=mock for dev',
-    };
-  }
-
   const signature = typeof input?.signature === 'string' ? input.signature.trim() : '';
   if (!/^[1-9A-HJ-NP-Za-km-z]{20,128}$/.test(signature)) {
     return { ok: false, error: 'Invalid signature' };
   }
 
-  const volumeUsd = Number(input?.volumeUsd);
-  if (!Number.isFinite(volumeUsd) || volumeUsd <= 0 || volumeUsd > MAX_VOLUME_USD_PER_SWAP) {
-    return { ok: false, error: 'Invalid volume' };
+  let target;
+  let volumeUsd;
+  let fromMint = String(input?.fromMint || '');
+  let toMint = String(input?.toMint || '');
+
+  if (getVerifyMode() === 'rpc') {
+    // Trustless path: everything is derived from the confirmed on-chain
+    // transaction; the client-declared mints/amounts are ignored.
+    if (typeof player.walletAddress !== 'string' || player.walletAddress === '') {
+      return { ok: false, error: 'Wallet login required' };
+    }
+
+    let tx;
+    try {
+      tx = await solanaRpc.getTransaction(signature);
+    } catch {
+      return { ok: false, error: 'RPC unavailable, try again' };
+    }
+    if (tx === null) {
+      return { ok: false, error: 'Transaction not found or not confirmed' };
+    }
+
+    const facts = solanaRpc.deriveSwapFromTransaction(tx, player.walletAddress, {
+      stableMints: Object.values(STABLE_MINTS),
+      solPriceUsd: getSolPriceUsd(),
+    });
+    if (!facts.ok) {
+      return { ok: false, error: facts.error };
+    }
+
+    target = classifyBoostMint(facts.boostMint);
+    if (target === null) {
+      return { ok: false, error: 'Pair not eligible for boosts' };
+    }
+    volumeUsd = facts.volumeUsd;
+    fromMint = 'onchain';
+    toMint = facts.boostMint;
+  } else {
+    volumeUsd = Number(input?.volumeUsd);
+    target = resolveBoostTarget(fromMint, toMint);
+    if (target === null) {
+      return { ok: false, error: 'Pair not eligible for boosts' };
+    }
   }
 
-  const fromMint = String(input?.fromMint || '');
-  const toMint = String(input?.toMint || '');
-  const target = resolveBoostTarget(fromMint, toMint);
-  if (target === null) {
-    return { ok: false, error: 'Pair not eligible for boosts' };
+  if (!Number.isFinite(volumeUsd) || volumeUsd <= 0 || volumeUsd > MAX_VOLUME_USD_PER_SWAP) {
+    return { ok: false, error: 'Invalid volume' };
   }
 
   const record = {

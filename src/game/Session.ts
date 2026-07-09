@@ -9,6 +9,21 @@ export interface SessionRunConsumables {
   extraLives: number;
 }
 
+// Trait boost percentages (trading volume + staking perks) captured at run
+// start. They AFFECT the simulation (player health/speed, powerup duration),
+// so they are recorded into replays like runConsumables — a replay must
+// re-enact the boosts the run was played with, not the viewer's own.
+export interface SessionRunBoosts {
+  hull: number;
+  armor: number;
+  engine: number;
+  salvage: number;
+}
+
+export function createEmptyRunBoosts(): SessionRunBoosts {
+  return { hull: 0, armor: 0, engine: 0, salvage: 0 };
+}
+
 enum State {
   Idle,
   Playing,
@@ -27,6 +42,7 @@ export class Session {
   private seenIntro: boolean;
   private state: State;
   private runConsumables: SessionRunConsumables;
+  private runBoosts: SessionRunBoosts;
 
   constructor() {
     this.reset();
@@ -59,6 +75,7 @@ export class Session {
       powerupCounts: [],
       extraLives: 0,
     };
+    this.runBoosts = createEmptyRunBoosts();
 
     this.primaryPlayer.reset();
     this.secondaryPlayer.reset();
@@ -192,4 +209,27 @@ export class Session {
       extraLives: 0,
     };
   }
+
+  public setRunBoosts(runBoosts: SessionRunBoosts): void {
+    this.runBoosts = {
+      hull: clampBoostPercent(runBoosts?.hull),
+      armor: clampBoostPercent(runBoosts?.armor),
+      engine: clampBoostPercent(runBoosts?.engine),
+      salvage: clampBoostPercent(runBoosts?.salvage),
+    };
+  }
+
+  public getRunBoosts(): SessionRunBoosts {
+    return this.runBoosts;
+  }
+}
+
+// Boost effects feed the simulation, so keep inputs sane regardless of what
+// the server (or an old replay file) hands over.
+function clampBoostPercent(value: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(60, Math.floor(parsed)));
 }

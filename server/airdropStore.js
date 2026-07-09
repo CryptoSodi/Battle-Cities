@@ -17,7 +17,7 @@ const CAMPAIGN_DEFINITIONS = [
     name: 'FOUNDING COMMANDERS',
     startsAt: '2026-07-01T00:00:00.000Z',
     endsAt: '2026-10-01T00:00:00.000Z',
-    allocationPool: 1000000, // BCT
+    allocationPool: 1000000, // BACT
     rules: {
       gamePointsWeight: 1, // 1 weight per game point
       stakingSpWeight: 0.1, // 1 weight per 10 SP

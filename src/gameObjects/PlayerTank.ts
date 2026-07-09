@@ -1,5 +1,5 @@
 import { Subject, Timer } from '../core';
-import { GameUpdateArgs, Tag } from '../game';
+import { GameUpdateArgs, SessionRunBoosts, Tag } from '../game';
 import {
   TankAttributesFactory,
   TankColor,
@@ -21,6 +21,12 @@ export class PlayerTank extends Tank {
   private colors: TankColor[] = [];
   private speedBoostTimer = new Timer();
   private speedBoostMultiplier = 1;
+  // Run-long trait boosts (trading/staking), applied deterministically:
+  // hull/armor add flat bonus health, engine multiplies move speed for the
+  // whole run (unlike the temporary powerup speedBoostMultiplier). Values
+  // come from the session at spawn (or from the replay being re-enacted).
+  private runBoostBonusHealth = 0;
+  private runBoostSpeedMultiplier = 1;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { spriteLoader } = updateArgs;
@@ -82,6 +88,17 @@ export class PlayerTank extends Tank {
     this.speedBoostTimer.reset(duration);
   }
 
+  // Call right after creation (before the first update). Every +10% hull and
+  // every +15% armor grant one bonus hit; engine % maps directly to speed.
+  public setRunBoosts(boosts: SessionRunBoosts): void {
+    this.runBoostBonusHealth =
+      Math.floor((boosts?.hull || 0) / 10) + Math.floor((boosts?.armor || 0) / 15);
+    this.runBoostSpeedMultiplier = 1 + (boosts?.engine || 0) / 100;
+
+    this.attributes.health += this.runBoostBonusHealth;
+    this.applySpeedBoost();
+  }
+
   protected receiveHit(damage: number, hitterPartyIndex: number): void {
     const wasMaxTier = this.type.isMaxTier();
 
@@ -103,6 +120,7 @@ export class PlayerTank extends Tank {
 
   private applyTier(notify: boolean): void {
     this.attributes = TankAttributesFactory.create(this.type);
+    this.attributes.health += this.runBoostBonusHealth;
     this.applySpeedBoost();
     this.skinAnimation = this.tierSkinAnimations.get(this.type.tier);
 
@@ -114,7 +132,9 @@ export class PlayerTank extends Tank {
   private applySpeedBoost(): void {
     const baseAttributes = TankAttributesFactory.create(this.type);
     this.attributes.moveSpeed =
-      baseAttributes.moveSpeed * this.speedBoostMultiplier;
+      baseAttributes.moveSpeed *
+      this.speedBoostMultiplier *
+      this.runBoostSpeedMultiplier;
   }
 
   private handleSpeedBoostTimer = (): void => {

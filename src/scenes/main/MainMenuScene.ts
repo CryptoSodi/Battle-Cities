@@ -5,6 +5,7 @@ import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
 import { ShopManager } from '../../shop';
+import { TradingClient } from '../../trading';
 import { PlayerIdentity } from '../../auth';
 import * as config from '../../config';
 
@@ -62,6 +63,13 @@ export class MainMenuScene extends GameScene {
     this.gameStorage = gameStorage;
     this.pointsHighscoreManager = pointsHighscoreManager;
     this.shopManager = new ShopManager(gameStorage);
+
+    // Trait boosts apply to ALL matches including ranked (user decision).
+    // Fetched once per menu visit and parked on the session, so run start
+    // (which is synchronous) picks up whatever has arrived; recording stores
+    // them in the replay for exact re-enactment. Best effort — offline play
+    // simply runs unboosted.
+    this.refreshRunBoosts();
     this.playerIdentity = playerIdentity;
 
     // Restore source for maps to default
@@ -335,6 +343,22 @@ export class MainMenuScene extends GameScene {
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainMore);
   };
+
+  private refreshRunBoosts(): void {
+    new TradingClient().getBoostStatus().then((status) => {
+      if (status === null || status.authenticated !== true) {
+        return;
+      }
+
+      // Trading boosts and the staking perk tier stack additively per trait.
+      this.session.setRunBoosts({
+        hull: status.trading.boosts.hull + status.staking.tier.hull,
+        armor: status.trading.boosts.armor + status.staking.tier.armor,
+        engine: status.trading.boosts.engine + status.staking.tier.engine,
+        salvage: status.trading.boosts.salvage + status.staking.tier.salvage,
+      });
+    });
+  }
 
   // Dev-only: list recorded matches, then launch the selected replay.
   private handleReplaySelected = (): void => {

@@ -222,6 +222,10 @@ export class LevelPlayerScript extends LevelScript {
     tank.setCenter(event.centerPosition);
     tank.updateMatrix();
     tank.activateShield(config.SHIELD_SPAWN_DURATION);
+    // Run-long trait boosts (trading/staking). Deterministic and replay-safe:
+    // the session holds either the live boosts captured at run start or the
+    // ones stored in the replay being watched.
+    tank.setRunBoosts(this.session.getRunBoosts());
 
     const playerSession = this.session.getPlayer(partyIndex);
 

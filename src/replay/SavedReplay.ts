@@ -1,5 +1,10 @@
 import { DeviceInputFrame } from '../core';
-import { GameStorage, SessionRunConsumables } from '../game';
+import {
+  createEmptyRunBoosts,
+  GameStorage,
+  SessionRunBoosts,
+  SessionRunConsumables,
+} from '../game';
 import { InputDeviceType } from '../input';
 import { apiFetch } from '../network/api';
 
@@ -35,6 +40,9 @@ export interface SavedReplay {
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
   runConsumables: SessionRunConsumables;
+  // Trait boosts the run was played with — they alter the sim (player
+  // health/speed, powerup duration), so replays must re-enact them.
+  runBoosts: SessionRunBoosts;
   enemyTraces: Record<number, EnemyMovementFrame[]>;
   powerupSpawns: PowerupSpawnFrame[];
 }
@@ -207,6 +215,11 @@ function isValidReplay(value): boolean {
 
   if (value.runConsumables === undefined) {
     value.runConsumables = createEmptyRunConsumables();
+  }
+
+  // Replays recorded before trait boosts existed re-enact with zeros.
+  if (value.runBoosts === undefined) {
+    value.runBoosts = createEmptyRunBoosts();
   }
 
   if (value.metadata === undefined) {

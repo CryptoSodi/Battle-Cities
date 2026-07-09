@@ -10,6 +10,7 @@ export class MainMoreScene extends GameScene {
     this.root.add(new SceneMenuTitle('HEADQUARTERS'));
 
     const entries: [string, GameSceneType][] = [
+      ['TREASURY', GameSceneType.MainTreasury],
       ['CAMPAIGNS', GameSceneType.MainEvents],
       ['STAKING', GameSceneType.MainStaking],
       ['TRADING', GameSceneType.MainTrading],

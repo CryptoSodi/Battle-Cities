@@ -209,7 +209,11 @@ export class LevelPowerupScript extends LevelScript {
       });
     });
 
-    this.timer.reset(config.POWERUP_DURATION);
+    // Salvage boost: dropped powerups stay on the field longer. Deterministic
+    // (a plain multiplier on the despawn timer) and replay-safe (the session
+    // holds the recorded run's boosts during playback).
+    const salvage = this.session.getRunBoosts().salvage;
+    this.timer.reset(config.POWERUP_DURATION * (1 + salvage / 100));
 
     this.activePowerup = powerup;
 

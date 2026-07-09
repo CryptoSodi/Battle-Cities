@@ -33,7 +33,7 @@ const EVENT_DEFINITIONS = [
     description: 'COMPLETE OPERATIONS. COLLECT MEDALS. CLIMB THE RANKS.',
     startsAt: '2026-07-01T00:00:00.000Z',
     endsAt: '2026-08-15T00:00:00.000Z',
-    prizePool: '10000 BCT',
+    prizePool: '10000 BACT',
     currency: 'medals',
     quests: [
       {

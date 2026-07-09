@@ -21,6 +21,7 @@ export enum GameSceneType {
   MainShop,
   MainStaking,
   MainTrading,
+  MainTreasury,
   MainVictory,
   MainWiki,
   ModesMenu,

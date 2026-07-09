@@ -248,7 +248,7 @@ export class ShopManager {
     } else {
       const tokenBalance = this.getTokenBalance();
       if (tokenBalance < item.price) {
-        return { ok: false, statusText: 'NEED MORE BCT' };
+        return { ok: false, statusText: 'NEED MORE BACT' };
       }
       this.storage.setNumber(
         config.STORAGE_KEY_SHOP_TOKEN_BALANCE,

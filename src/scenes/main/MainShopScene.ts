@@ -414,7 +414,7 @@ export class MainShopScene extends GameScene {
     this.addResourceChip(
       x + 28,
       y + 124,
-      'BCT',
+      'BACT',
       this.shopManager.getTokenBalance().toString(),
       'shop.coin',
     );
@@ -876,7 +876,7 @@ export class MainShopScene extends GameScene {
     icon.position.set(x + 12, y + 8);
     this.root.add(icon);
 
-    const text = new ShopText(`${label} ${value}`, label === 'BCT' ? COLOR_YELLOW : config.COLOR_WHITE);
+    const text = new ShopText(`${label} ${value}`, label === 'BACT' ? COLOR_YELLOW : config.COLOR_WHITE);
     text.position.set(x + 68, y + 18);
     this.root.add(text);
   }
@@ -1381,7 +1381,7 @@ export class MainShopScene extends GameScene {
     if (this.market === ShopMarket.Sol) {
       return `${this.formatSol(item.solPrice)} SOL`;
     }
-    return `${item.price} BCT`;
+    return `${item.price} BACT`;
   }
 
   private formatSol(value: number): string {

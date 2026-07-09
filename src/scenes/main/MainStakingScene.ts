@@ -72,12 +72,12 @@ export class MainStakingScene extends BoardScene {
       config.COLOR_YELLOW,
     );
     this.addLine(`LOCKED ${community.lockedTokens}   TOTAL SP ${epoch.totalSp}`, 152);
-    this.addLine(`EPOCH REWARD ${epoch.rewardPool} BCT`, 184);
+    this.addLine(`EPOCH REWARD ${epoch.rewardPool} BACT`, 184);
 
     this.addLine('YOUR STATS', 232, config.COLOR_YELLOW);
     this.addLine(`YOUR STAKE ${me.staked}`, 264);
     this.addLine(`LATEST SP ${me.latestSp}   TOTAL SP ${me.totalSp}`, 296);
-    this.addLine(`EST REWARD ${me.estimatedReward} BCT`, 328);
+    this.addLine(`EST REWARD ${me.estimatedReward} BACT`, 328);
     this.addLine(
       `PERK TIER ${me.perkTier.level}: +${me.perkTier.hull}% HULL +${me.perkTier.armor}% ARMOR`,
       360,
@@ -147,7 +147,7 @@ export class MainStakingScene extends BoardScene {
     this.stakingClient.claimUnstaked().then((result) => {
       this.setStatus(
         result.ok && result.amount > 0
-          ? `CLAIMED ${result.amount} BCT`
+          ? `CLAIMED ${result.amount} BACT`
           : 'NOTHING CLAIMABLE YET',
       );
       if (result.ok && result.amount > 0) {

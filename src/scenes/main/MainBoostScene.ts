@@ -80,7 +80,7 @@ export class MainBoostScene extends BoardScene {
       520,
     );
 
-    this.addLine('APPLIES TO EVENTS/ARCADE. NEVER RANKED.', 560, config.COLOR_GRAY_LIGHT);
+    this.addLine('APPLIES TO ALL MATCHES INCLUDING RANKED.', 560, config.COLOR_GRAY_LIGHT);
   }
 
   private handleRefresh = (): void => {

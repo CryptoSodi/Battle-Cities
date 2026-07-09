@@ -200,7 +200,7 @@ async function purchaseItemForPlayer(player, itemId, currency) {
 
     account.solBalance = Number((account.solBalance - item.solPrice).toFixed(4));
   } else if (account.tokenBalance < item.price) {
-    return { ok: false, statusText: 'NEED MORE BCT' };
+    return { ok: false, statusText: 'NEED MORE BACT' };
   } else {
     account.tokenBalance -= item.price;
   }

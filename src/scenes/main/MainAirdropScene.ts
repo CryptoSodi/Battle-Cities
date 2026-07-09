@@ -57,7 +57,7 @@ export class MainAirdropScene extends BoardScene {
     const campaign = this.campaigns[0];
     this.addLine(campaign.name, 120, config.COLOR_YELLOW);
     this.addLine(`STATUS ${campaign.status.toUpperCase()}`, 152);
-    this.addLine(`POOL ${campaign.allocationPool} BCT`, 184);
+    this.addLine(`POOL ${campaign.allocationPool} BACT`, 184);
 
     if (this.eligibility === null) {
       this.addLine('LOGIN TO SEE YOUR ELIGIBILITY', 248, config.COLOR_GRAY_LIGHT);
@@ -82,7 +82,7 @@ export class MainAirdropScene extends BoardScene {
       return;
     }
 
-    this.addLine(`ALLOCATION ${eligibility.allocation} BCT`, 312, config.COLOR_YELLOW);
+    this.addLine(`ALLOCATION ${eligibility.allocation} BACT`, 312, config.COLOR_YELLOW);
     this.addLine(
       eligibility.claimedAt !== null
         ? `CLAIMED ${eligibility.claimedAt.slice(0, 10)}`
@@ -100,7 +100,7 @@ export class MainAirdropScene extends BoardScene {
     this.airdropClient.claim(this.campaigns[0].slug).then((result) => {
       this.setStatus(
         result.ok
-          ? `CLAIMED ${result.allocation} BCT`
+          ? `CLAIMED ${result.allocation} BACT`
           : (result.error || 'CLAIM FAILED').toUpperCase(),
       );
       if (result.ok) {

@@ -15,8 +15,9 @@ export function OPTIONS(request: Request): Response {
 
 // The Boost dashboard: 30-day trading boosts, staking perk tier, shop perks
 // (empty until the shop sells perk items), and where each perk applies.
-// Per the plan's ranked-fairness rule, boosts NEVER apply to Ranked — only
-// to Events/Arcade — and the response says so explicitly.
+// Boosts apply EVERYWHERE including ranked matches (user decision overriding
+// the plan's original ranked-fairness split) — the response says so
+// explicitly so the client can label perks honestly.
 export async function GET(request: Request): Promise<Response> {
   const player = await resolveSessionPlayer(request);
 
@@ -31,8 +32,8 @@ export async function GET(request: Request): Promise<Response> {
 
   return createJsonResponse(request, {
     authenticated: true,
-    appliesTo: ['events', 'arcade'],
-    rankedAffected: false,
+    appliesTo: ['ranked', 'events', 'arcade'],
+    rankedAffected: true,
     trading,
     staking: {
       tier: stakingSummary.me.perkTier,

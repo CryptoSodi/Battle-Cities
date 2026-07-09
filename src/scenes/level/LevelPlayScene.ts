@@ -1,9 +1,11 @@
 import { DebugCameraMenu, DebugCollisionMenu } from '../../debug';
 import {
+  createEmptyRunBoosts,
   GameUpdateArgs,
   GameState,
   GameStorage,
   Session,
+  SessionRunBoosts,
   SessionRunConsumables,
 } from '../../game';
 import {
@@ -71,6 +73,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // replay contains the 1/2/3/4 presses, but those presses only work if the
   // same run consumables are loaded before playback starts.
   private recordedRunConsumables: SessionRunConsumables;
+  // Trait boosts as they were at recording start (see SavedReplay.runBoosts).
+  private recordedRunBoosts: SessionRunBoosts = createEmptyRunBoosts();
   private recordedTickCount = 0;
   // Whether this run is recording (false while replaying or off; see setup()).
   private isRecordingReplay = false;
@@ -165,6 +169,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // replay could read player input from the wrong device.
       inputManager.setActiveDeviceType(replay.activeDeviceType);
       session.setRunConsumables(this.cloneRunConsumables(replay.runConsumables));
+      // Trait boosts alter the sim (player health/speed, powerup duration),
+      // so the replay re-enacts the boosts the run was recorded with.
+      session.setRunBoosts({ ...replay.runBoosts });
     } else {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
@@ -173,6 +180,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.recordedRunConsumables = this.cloneRunConsumables(
         session.getRunConsumables(),
       );
+      this.recordedRunBoosts = { ...session.getRunBoosts() };
       this.recordedTickCount = 0;
       this.isRecordingReplay = true;
     }
@@ -842,6 +850,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         deviceFrames,
         activeDeviceType: this.recordedActiveDeviceType,
         runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
+        runBoosts: { ...this.recordedRunBoosts },
         enemyTraces: this.recordedEnemyTraces,
         powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
       }).catch(() => undefined);

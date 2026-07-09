@@ -12,7 +12,7 @@ const PHASE_DEFINITIONS = [
     name: 'PHASE 1',
     startsAt: '2026-07-01T00:00:00.000Z',
     endsAt: '2026-12-31T00:00:00.000Z',
-    rewardPool: '1M BCT',
+    rewardPool: '1M BACT',
   },
 ];
 
