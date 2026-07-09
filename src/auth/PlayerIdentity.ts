@@ -1,3 +1,5 @@
+import { apiFetch } from '../network/api';
+
 export interface CurrentPlayer {
   id: string;
   provider: 'guest' | 'wallet' | 'google';
@@ -19,9 +21,7 @@ export class PlayerIdentity {
   private player: CurrentPlayer = null;
 
   public async refresh(): Promise<boolean> {
-    const response = await fetch('/api/player', {
-      credentials: 'same-origin',
-    });
+    const response = await apiFetch('/api/player');
 
     if (!response.ok) {
       this.player = null;

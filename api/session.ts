@@ -1,8 +1,14 @@
 declare const require: any;
 
+import { createJsonResponse, createOptionsResponse } from './_helpers';
+
 const sessionIdentity = require('../server/sessionIdentity');
 const sessionStore = require('../server/sessionStore');
 const walletAuth = require('../server/walletAuth');
+
+export function OPTIONS(request: Request): Response {
+  return createOptionsResponse(request);
+}
 
 export async function GET(request: Request): Promise<Response> {
   const sessionId = sessionIdentity.resolveSession(
@@ -10,19 +16,20 @@ export async function GET(request: Request): Promise<Response> {
   );
 
   if (sessionId === null) {
-    return json({ authenticated: false });
+    return json(request, { authenticated: false });
   }
 
   const session = await sessionStore.readSession(sessionId);
   if (session === null) {
     return json(
+      request,
       { authenticated: false },
       200,
       sessionIdentity.createClearedSessionCookie(),
     );
   }
 
-  return json(sessionStore.toPublicSession(session));
+  return json(request, sessionStore.toPublicSession(session));
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -30,11 +37,11 @@ export async function POST(request: Request): Promise<Response> {
   try {
     body = await request.json();
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json(request, { error: 'Invalid JSON' }, 400);
   }
 
   if (body?.provider !== 'guest' && body?.provider !== 'wallet') {
-    return json({ error: 'Unsupported login provider' }, 400);
+    return json(request, { error: 'Unsupported login provider' }, 400);
   }
 
   if (
@@ -46,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
       signature: body.signature,
     }))
   ) {
-    return json({ error: 'Invalid wallet signature' }, 401);
+    return json(request, { error: 'Invalid wallet signature' }, 401);
   }
 
   const session =
@@ -55,6 +62,7 @@ export async function POST(request: Request): Promise<Response> {
       : await sessionStore.createGuestSession();
 
   return json(
+    request,
     sessionStore.toPublicSession(session),
     201,
     sessionIdentity.createSessionCookie(session.id),
@@ -66,16 +74,16 @@ export async function PUT(request: Request): Promise<Response> {
   try {
     body = await request.json();
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json(request, { error: 'Invalid JSON' }, 400);
   }
 
   if (!walletAuth.isValidWalletAddress(body?.walletAddress)) {
-    return json({ error: 'Invalid wallet address' }, 400);
+    return json(request, { error: 'Invalid wallet address' }, 400);
   }
 
   const challenge = await walletAuth.createChallenge(body.walletAddress);
 
-  return json(challenge, 201);
+  return json(request, challenge, 201);
 }
 
 export async function DELETE(request: Request): Promise<Response> {
@@ -88,22 +96,18 @@ export async function DELETE(request: Request): Promise<Response> {
   }
 
   return json(
+    request,
     { authenticated: false },
     200,
     sessionIdentity.createClearedSessionCookie(),
   );
 }
 
-function json(body: any, status = 200, setCookie: string | null = null): Response {
-  const headers = new Headers({
-    'content-type': 'application/json',
-  });
-  if (setCookie !== null) {
-    headers.set('set-cookie', setCookie);
-  }
-
-  return new Response(JSON.stringify(body), {
-    status,
-    headers,
-  });
+function json(
+  request: Request,
+  body: any,
+  status = 200,
+  setCookie: string | null = null,
+): Response {
+  return createJsonResponse(request, body, status, setCookie);
 }

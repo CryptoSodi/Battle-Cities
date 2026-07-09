@@ -1,8 +1,14 @@
 declare const require: any;
 
+import { createJsonResponse, createOptionsResponse } from './_helpers';
+
 const playerStore = require('../server/playerStore');
 const sessionIdentity = require('../server/sessionIdentity');
 const sessionStore = require('../server/sessionStore');
+
+export function OPTIONS(request: Request): Response {
+  return createOptionsResponse(request);
+}
 
 export async function GET(request: Request): Promise<Response> {
   const sessionId = sessionIdentity.resolveSession(
@@ -10,30 +16,25 @@ export async function GET(request: Request): Promise<Response> {
   );
 
   if (sessionId === null) {
-    return json({ authenticated: false });
+    return json(request, { authenticated: false });
   }
 
   const session = await sessionStore.readSession(sessionId);
   if (session === null || session.playerId === null) {
-    return json({ authenticated: false });
+    return json(request, { authenticated: false });
   }
 
   const player = await playerStore.readPlayer(session.playerId);
   if (player === null) {
-    return json({ authenticated: false });
+    return json(request, { authenticated: false });
   }
 
-  return json({
+  return json(request, {
     authenticated: true,
     player: playerStore.toPublicPlayer(player),
   });
 }
 
-function json(body: any, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json',
-    },
-  });
+function json(request: Request, body: any, status = 200): Response {
+  return createJsonResponse(request, body, status);
 }

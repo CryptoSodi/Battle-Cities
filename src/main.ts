@@ -30,6 +30,7 @@ import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
 import { PlayerIdentity } from './auth';
+import { apiFetch, getApiUrl } from './network/api';
 
 import * as config from './config';
 
@@ -563,9 +564,8 @@ function waitForLogin(): Promise<void> {
     };
 
     const startServerSession = async (body: object): Promise<void> => {
-      const response = await fetch('/api/session', {
+      const response = await apiFetch('/api/session', {
         method: 'POST',
-        credentials: 'same-origin',
         headers: {
           'content-type': 'application/json',
         },
@@ -580,7 +580,7 @@ function waitForLogin(): Promise<void> {
     const createWalletChallenge = async (
       walletAddress: string,
     ): Promise<{ nonce: string; message: string }> => {
-      const response = await fetch('/api/session', {
+      const response = await apiFetch('/api/session', {
         method: 'PUT',
         headers: {
           'content-type': 'application/json',
@@ -677,7 +677,7 @@ function waitForLogin(): Promise<void> {
 
       loginStarted = true;
       setStatus('Opening Google login...');
-      window.location.assign('/api/auth/google/start');
+      window.location.assign(getApiUrl('/api/auth/google/start'));
     };
 
     const authError = new URLSearchParams(window.location.search).get(
@@ -701,13 +701,12 @@ function waitForLogin(): Promise<void> {
           return;
         }
 
-        fetch('/api/session', { credentials: 'same-origin' })
+        apiFetch('/api/session')
           .then((response) => (response.ok ? response.json() : null))
           .then((session) => {
             if (session?.authenticated === true) {
-              fetch('/api/session', {
+              apiFetch('/api/session', {
                 method: 'DELETE',
-                credentials: 'same-origin',
               }).finally(() => {
                 setStatus('Please sign in again to finish account setup.');
               });
@@ -744,6 +743,53 @@ function enterGameView(): void {
 
   if (config.IS_DEV) {
     document.body.appendChild(stats.dom);
+  }
+}
+
+async function hydrateShopCacheFromServer(): Promise<void> {
+  try {
+    const response = await apiFetch('/api/economy/account');
+    if (!response.ok) {
+      return;
+    }
+
+    const body = await response.json();
+    if (body?.authenticated !== true || body?.account === undefined) {
+      return;
+    }
+
+    const account = body.account;
+    gameStorage.setBoolean(
+      config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
+      account.provider !== 'guest',
+    );
+    gameStorage.set(
+      config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
+      account.walletAddress || '',
+    );
+    gameStorage.setNumber(
+      config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+      Number(account.tokenBalance ?? config.SHOP_STARTING_TOKEN_BALANCE),
+    );
+    gameStorage.setNumber(
+      config.STORAGE_KEY_SHOP_SOL_BALANCE,
+      Number(account.solBalance ?? config.SHOP_STARTING_SOL_BALANCE),
+    );
+    gameStorage.setNumber(
+      config.STORAGE_KEY_SHOP_FUEL_BALANCE,
+      Number(account.fuelBalance ?? 0),
+    );
+    gameStorage.set(
+      config.STORAGE_KEY_SHOP_INVENTORY,
+      JSON.stringify(account.inventory || {}),
+    );
+    gameStorage.set(
+      config.STORAGE_KEY_SHOP_LOADOUT,
+      JSON.stringify(account.loadout || {}),
+    );
+    gameStorage.save();
+  } catch {
+    // Best effort only.
   }
 }
 
@@ -802,6 +848,7 @@ gameLoop.render.addListener((event) => {
 
 async function main(): Promise<void> {
   await waitForLogin();
+  await hydrateShopCacheFromServer();
   enterGameView();
 
   log.time('Audio preload');

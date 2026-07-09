@@ -1,9 +1,21 @@
 import { DeviceInputFrame } from '../core';
 import { GameStorage, SessionRunConsumables } from '../game';
 import { InputDeviceType } from '../input';
+import { apiFetch } from '../network/api';
 
 import { EnemyMovementFrame } from './EnemyMovementFrame';
 import { PowerupSpawnFrame } from './PowerupSpawnFrame';
+
+export type SavedReplayMatchStatus = 'pending' | 'verified' | 'rejected';
+export type SavedReplayResult = 'win' | 'loss';
+
+export interface SavedReplayMetadata {
+  matchStatus: SavedReplayMatchStatus;
+  score: number;
+  kills: number;
+  gameResult: SavedReplayResult;
+  durationTicks: number;
+}
 
 // Everything needed to reproduce a match: the level it was played on, the
 // Prng seed the simulation started with, every input device's per-tick log
@@ -19,6 +31,7 @@ import { PowerupSpawnFrame } from './PowerupSpawnFrame';
 export interface SavedReplay {
   seed: number;
   levelNumber: number;
+  metadata: SavedReplayMetadata;
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
   runConsumables: SessionRunConsumables;
@@ -30,6 +43,11 @@ export interface SavedReplaySummary {
   id: string;
   createdAt: string;
   levelNumber: number;
+  matchStatus: SavedReplayMatchStatus;
+  score: number;
+  kills: number;
+  gameResult: SavedReplayResult;
+  durationTicks: number;
 }
 
 export interface SavedReplayRecord extends SavedReplaySummary {
@@ -41,22 +59,42 @@ const REPLAY_SUMMARY_CACHE_TTL_MS = 30 * 1000;
 let replaySummaryCache: SavedReplaySummary[] = null;
 let replaySummaryCacheTime = 0;
 
+// Id of the most recently uploaded replay this session, so the match-result
+// submission can reference the artifact a validation worker would re-simulate
+// (see docs/mattle-inspired-infrastructure-plan.md, Milestones 2/7). Best
+// effort: null when no replay was recorded or the upload hasn't finished.
+let lastSavedReplayId: string = null;
+
+export function getLastSavedReplayId(): string {
+  return lastSavedReplayId;
+}
+
 export async function saveReplay(
   _gameStorage: GameStorage,
   replay: SavedReplay,
 ): Promise<void> {
-  const response = await fetch('/api/replays', {
+  const response = await apiFetch('/api/replays', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
       replay,
+      metadata: replay.metadata,
     }),
   });
 
   if (!response.ok) {
     throw new Error('Replay could not be saved.');
+  }
+
+  try {
+    const body = await response.json();
+    if (typeof body?.item?.id === 'string') {
+      lastSavedReplayId = body.item.id;
+    }
+  } catch {
+    // Response body is informational only; the save itself succeeded.
   }
 
   replaySummaryCache = null;
@@ -74,7 +112,7 @@ export async function listReplaySummaries(
   }
 
   try {
-    const response = await fetch('/api/replays');
+    const response = await apiFetch('/api/replays');
     if (!response.ok) {
       throw new Error(response.statusText);
     }
@@ -95,7 +133,7 @@ export async function loadReplayRecord(
   id: string,
 ): Promise<SavedReplay | null> {
   try {
-    const response = await fetch(`/api/replays?id=${encodeURIComponent(id)}`);
+    const response = await apiFetch(`/api/replays?id=${encodeURIComponent(id)}`);
     if (!response.ok) {
       throw new Error(response.statusText);
     }
@@ -104,7 +142,7 @@ export async function loadReplayRecord(
     const record = body.item;
     if (
       record !== undefined &&
-      isValidReplaySummary(record) &&
+      isValidReplayRecord(record) &&
       isValidReplay(record.replay)
     ) {
       return record.replay as SavedReplay;
@@ -122,7 +160,32 @@ function isValidReplaySummary(value): boolean {
     value !== null &&
     typeof value.id === 'string' &&
     typeof value.createdAt === 'string' &&
-    typeof value.levelNumber === 'number'
+    typeof value.levelNumber === 'number' &&
+    isValidMatchStatus(value.matchStatus) &&
+    typeof value.score === 'number' &&
+    typeof value.kills === 'number' &&
+    isValidReplayResult(value.gameResult) &&
+    typeof value.durationTicks === 'number'
+  );
+}
+
+function isValidReplayRecord(value): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const matchStatus = value.validationStatus ?? value.matchStatus;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.createdAt === 'string' &&
+    typeof value.levelNumber === 'number' &&
+    isValidMatchStatus(matchStatus) &&
+    typeof value.score === 'number' &&
+    typeof value.kills === 'number' &&
+    isValidReplayResult(value.gameResult) &&
+    typeof value.durationTicks === 'number' &&
+    typeof value.replay === 'object' &&
+    value.replay !== null
   );
 }
 
@@ -146,7 +209,20 @@ function isValidReplay(value): boolean {
     value.runConsumables = createEmptyRunConsumables();
   }
 
-  return isValidRunConsumables(value.runConsumables);
+  if (value.metadata === undefined) {
+    value.metadata = {
+      matchStatus: 'pending',
+      score: 0,
+      kills: 0,
+      gameResult: 'loss',
+      durationTicks: 0,
+    };
+  }
+
+  return (
+    isValidRunConsumables(value.runConsumables) &&
+    isValidReplayMetadata(value.metadata)
+  );
 }
 
 function createEmptyRunConsumables(): SessionRunConsumables {
@@ -174,4 +250,24 @@ function isValidRunConsumables(value: any): boolean {
   }
 
   return Array.isArray(value.powerupCounts);
+}
+
+function isValidReplayMetadata(value: any): value is SavedReplayMetadata {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    isValidMatchStatus(value.matchStatus) &&
+    typeof value.score === 'number' &&
+    typeof value.kills === 'number' &&
+    isValidReplayResult(value.gameResult) &&
+    typeof value.durationTicks === 'number'
+  );
+}
+
+function isValidMatchStatus(value: any): value is SavedReplayMatchStatus {
+  return value === 'pending' || value === 'verified' || value === 'rejected';
+}
+
+function isValidReplayResult(value: any): value is SavedReplayResult {
+  return value === 'win' || value === 'loss';
 }

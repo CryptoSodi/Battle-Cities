@@ -32,6 +32,8 @@ export class MainMenuScene extends GameScene {
   private editorItem: TextMenuItem;
   private replayItem: TextMenuItem;
   private shopItem: TextMenuItem;
+  private rankingItem: TextMenuItem;
+  private moreItem: TextMenuItem;
   private settingsItem: TextMenuItem;
   private aboutItem: TextMenuItem;
   private logoutItem: TextMenuItem;
@@ -125,6 +127,12 @@ export class MainMenuScene extends GameScene {
     this.shopItem = new TextMenuItem('SHOP');
     this.shopItem.selected.addListener(this.handleShopSelected);
 
+    this.rankingItem = new TextMenuItem('RANKING');
+    this.rankingItem.selected.addListener(this.handleRankingSelected);
+
+    this.moreItem = new TextMenuItem('HEADQUARTERS');
+    this.moreItem.selected.addListener(this.handleMoreSelected);
+
     this.settingsItem = new TextMenuItem('SETTINGS');
     this.settingsItem.selected.addListener(this.handleSettingsSelected);
 
@@ -147,6 +155,8 @@ export class MainMenuScene extends GameScene {
 
     menuItems.push(
       this.shopItem,
+      this.rankingItem,
+      this.moreItem,
       this.settingsItem,
       this.aboutItem,
       this.logoutItem,
@@ -312,6 +322,18 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainShop);
+  };
+
+  private handleRankingSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+    this.navigator.push(GameSceneType.MainRanking);
+  };
+
+  private handleMoreSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+    this.navigator.push(GameSceneType.MainMore);
   };
 
   // Dev-only: list recorded matches, then launch the selected replay.

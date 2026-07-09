@@ -1,6 +1,8 @@
 import { AudioManager, GameUpdateArgs } from '../../game';
 import { HighscoreHeading } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
+import { RankingClient } from '../../ranking';
+import { getLastSavedReplayId } from '../../replay';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
@@ -8,6 +10,7 @@ import { GameSceneType } from '../GameSceneType';
 export class MainHighscoreScene extends GameScene {
   private heading: HighscoreHeading;
   private audioManager: AudioManager;
+  private rankingClient = new RankingClient();
 
   protected setup({
     audioManager,
@@ -26,6 +29,21 @@ export class MainHighscoreScene extends GameScene {
     const maxHighscore = pointsHighscoreManager.getOverallMaxPoints();
 
     const wasMultiplayer = session.isMultiplayer();
+
+    // Both game-over and victory funnel through this scene, so this is the
+    // single submission point for server-side match results (Milestone 2 of
+    // the infrastructure plan). Raw facts only — the server derives Game
+    // Points itself. Fire-and-forget: rankings must never block the flow.
+    // Playtests (editor runs) don't count.
+    if (!session.isPlaytest()) {
+      this.rankingClient.submitMatchResult({
+        mode: wasMultiplayer ? 'multi' : 'single',
+        levelNumber: session.getLevelNumber(),
+        score: primaryGamePoints,
+        won: !session.isGameOver(),
+        replayId: getLastSavedReplayId(),
+      });
+    }
 
     // Reset all previous game session data
     session.reset();

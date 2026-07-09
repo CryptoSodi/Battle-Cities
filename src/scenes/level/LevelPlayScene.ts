@@ -17,6 +17,7 @@ import {
 import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame, saveReplay } from '../../replay';
+import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
 import { TankDeathReason } from '../../tank';
 import { TerrainFactory, TerrainType } from '../../terrain';
 import { ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
@@ -70,6 +71,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // replay contains the 1/2/3/4 presses, but those presses only work if the
   // same run consumables are loaded before playback starts.
   private recordedRunConsumables: SessionRunConsumables;
+  private recordedTickCount = 0;
   // Whether this run is recording (false while replaying or off; see setup()).
   private isRecordingReplay = false;
   // Enemies are replayed by re-enacting recorded movement rather than by
@@ -171,6 +173,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.recordedRunConsumables = this.cloneRunConsumables(
         session.getRunConsumables(),
       );
+      this.recordedTickCount = 0;
       this.isRecordingReplay = true;
     }
 
@@ -483,6 +486,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // collision resolution above, so replay re-enacts exactly what was drawn,
     // not a pre-collision intermediate position.
     if (this.isRecordingReplay) {
+      this.recordedTickCount += 1;
       this.enemyScript.getAliveTanks().forEach((tank) => {
         const trace = this.recordedEnemyTraces[tank.partyIndex];
         if (trace === undefined) {
@@ -803,7 +807,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // Restore input
     this.inputManager.listen();
 
-    this.finishInputCapture();
+    this.finishInputCapture('loss');
 
     if (this.session.isPlaytest()) {
       this.navigator.replace(GameSceneType.EditorMenu);
@@ -814,7 +818,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   };
 
   private handleLevelWinCompleted = (): void => {
-    this.finishInputCapture();
+    this.finishInputCapture('win');
 
     if (this.session.isPlaytest()) {
       this.navigator.replace(GameSceneType.EditorMenu);
@@ -827,12 +831,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // Wraps up whichever input capture mode this level started in: saves a
   // completed recording as the next "last replay" (dev-only REPLAY menu
   // item), or just restores live devices after a replay finished playing.
-  private finishInputCapture(): void {
+  private finishInputCapture(result: SavedReplayResult): void {
     if (this.inputManager.isRecording()) {
       const deviceFrames = this.inputManager.stopRecording();
+      const metadata = this.createReplayMetadata(result);
       saveReplay(this.gameStorage, {
         seed: this.recordedSeed,
         levelNumber: this.session.getLevelNumber(),
+        metadata,
         deviceFrames,
         activeDeviceType: this.recordedActiveDeviceType,
         runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
@@ -856,5 +862,23 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       powerupCounts: (runConsumables.powerupCounts || []).slice(),
       extraLives: runConsumables.extraLives,
     };
+  }
+
+  private createReplayMetadata(result: SavedReplayResult): SavedReplayMetadata {
+    return {
+      matchStatus: 'pending',
+      score: this.session.getMaxGamePoints(),
+      kills: this.getRecordedKillCount(),
+      gameResult: result,
+      durationTicks: this.recordedTickCount,
+    };
+  }
+
+  private getRecordedKillCount(): number {
+    return this.session
+      .getPlayers()
+      .reduce((total, player) => {
+        return total + player.getLevelPointsRecord().getKillTotalCount();
+      }, 0);
   }
 }

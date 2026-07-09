@@ -1,6 +1,6 @@
 # Mattle-Inspired Infrastructure Plan
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 ## Goal
 
@@ -16,6 +16,25 @@ Battle City codebase:
 This should not become a second app beside the game. The economy/ranking layer
 should grow out of the current wallet auth, player store, replay store, shop, and
 match flow.
+
+## Completed So Far
+
+- [x] Separate website and API routing groundwork, including local/dev API
+      parity.
+- [x] Server-owned economy foundation:
+  - [x] `server/economyStore.js`
+  - [x] `api/economy/account.ts`
+  - [x] `api/economy/purchase.ts`
+  - [x] `src/shop/ShopManager.ts` server hydration and sync
+- [x] Replay persistence now stores match metadata:
+  - [x] score
+  - [x] kills
+  - [x] game result
+  - [x] duration ticks
+  - [x] match status
+- [x] Replay list now shows newest-first with visible match status.
+- [x] Replay validation endpoint wired for pending/verified/rejected status
+      updates.
 
 ## Source Study
 
@@ -50,7 +69,7 @@ tracked volume, boost status, and in-game traits.
 
 Observed/confirmed ideas:
 
-- Trading terminal is integrated with Jupiter for token swaps.
+- Trading terminal is integrated with Raydium paths for token swaps.
 - Trading volume maps into Boost Levels/status.
 - Token groups:
   - Stable tokens: SOL, USDC, USDT. Volume does not create boosts.
@@ -465,6 +484,10 @@ Important current limitation:
 
 ## Architecture Rules
 
+- Keep the website and API deployable separately:
+  - website on `battlecities.com`
+  - API on `api.battlecities.com`
+  - database only reachable by the API
 - Server owns account state, balances, rewards, seasons, rankings, claims, and
   transaction ingestion.
 - Client owns UI, wallet signing, rendering, and local responsiveness.
@@ -624,7 +647,8 @@ Add server stores/tables incrementally.
 
 ## API Plan
 
-Add endpoints in the existing Vercel handler style.
+Add endpoints in the API deployment (`api.battlecities.com`) using the
+existing Vercel handler style.
 
 - `GET /api/economy/account`
   - Current server balance, fuel, inventory, loadout, boost status.
@@ -856,7 +880,7 @@ Tasks:
   - Asset/Type/Perks/Volume table.
   - Shop Perks side panel.
   - Staking Perks level/progress table.
-- Add Jupiter quote/swap UI after backend verification contract is clear.
+- Add Raydium quote/swap UI after backend verification contract is clear.
 - Add swap signature verification against Solana RPC.
 - Add `MainTradingScene` and `MainBoostScene`.
 

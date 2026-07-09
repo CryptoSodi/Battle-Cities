@@ -1,5 +1,6 @@
 import { GameStorage } from '../game';
 import * as config from '../config';
+import { apiFetch } from '../network/api';
 
 import {
   getPowerupTypeForInventoryItem,
@@ -260,6 +261,7 @@ export class ShopManager {
 
     const txHash = this.createMockTransactionHash();
     this.storage.save();
+    void this.syncPurchase(itemId, currency);
 
     return { ok: true, statusText: `BOUGHT ${item.name}`, txHash };
   }
@@ -294,6 +296,7 @@ export class ShopManager {
 
     this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
     this.storage.save();
+    void this.syncAccountSnapshot();
 
     return nextItem;
   }
@@ -316,6 +319,7 @@ export class ShopManager {
       this.getFuelBalance() - config.SHOP_RUN_FUEL_COST,
     );
     this.storage.save();
+    void this.syncAccountSnapshot();
 
     return true;
   }
@@ -380,6 +384,7 @@ export class ShopManager {
     });
     this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
     this.storage.save();
+    void this.syncAccountSnapshot();
 
     return true;
   }
@@ -430,6 +435,7 @@ export class ShopManager {
       this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
       this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
       this.storage.save();
+      void this.syncAccountSnapshot();
     }
 
     return consumables;
@@ -455,6 +461,113 @@ export class ShopManager {
     });
 
     this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
+  }
+
+  private getAccountSnapshot(): {
+    tokenBalance: number;
+    solBalance: number;
+    fuelBalance: number;
+    inventory: ShopInventory;
+    loadout: ShopLoadout;
+  } {
+    const loadout = this.getLoadout();
+    this.normalizeLoadout(loadout);
+
+    return {
+      tokenBalance: this.getTokenBalance(),
+      solBalance: this.getSolBalance(),
+      fuelBalance: this.getFuelBalance(),
+      inventory: this.getInventory(),
+      loadout,
+    };
+  }
+
+  private applyAccountSnapshot(account: {
+    tokenBalance?: number;
+    solBalance?: number;
+    fuelBalance?: number;
+    inventory?: ShopInventory;
+    loadout?: ShopLoadout;
+  }): void {
+    if (typeof account !== 'object' || account === null) {
+      return;
+    }
+
+    if (typeof account.tokenBalance === 'number') {
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+        account.tokenBalance,
+      );
+    }
+    if (typeof account.solBalance === 'number') {
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_SOL_BALANCE,
+        account.solBalance,
+      );
+    }
+    if (typeof account.fuelBalance === 'number') {
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_FUEL_BALANCE,
+        account.fuelBalance,
+      );
+    }
+    if (account.inventory !== undefined) {
+      this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, account.inventory);
+    }
+    if (account.loadout !== undefined) {
+      this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, account.loadout);
+    }
+
+    this.storage.save();
+  }
+
+  private async syncAccountSnapshot(): Promise<void> {
+    try {
+      const response = await apiFetch('/api/economy/account', {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ account: this.getAccountSnapshot() }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const body = await response.json();
+      if (body?.authenticated === true && body?.account !== undefined) {
+        this.applyAccountSnapshot(body.account);
+      }
+    } catch {
+      // Best-effort sync only.
+    }
+  }
+
+  private async syncPurchase(
+    itemId: ShopItemId,
+    currency: ShopCurrency,
+  ): Promise<void> {
+    try {
+      const response = await apiFetch('/api/economy/purchase', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ itemId, currency }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const body = await response.json();
+      if (body?.ok === true && body?.account !== undefined) {
+        this.applyAccountSnapshot(body.account);
+      }
+    } catch {
+      // Best-effort sync only.
+    }
   }
 
   private getLoadout(): ShopLoadout {

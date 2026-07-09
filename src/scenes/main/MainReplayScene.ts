@@ -164,8 +164,9 @@ export class MainReplayScene extends GameScene {
     const slot = (index + 1).toString().padStart(2, '0');
     const level = summary.levelNumber.toString().padStart(2, '0');
     const savedAt = this.getSavedAtLabel(summary.createdAt);
+    const status = this.getReplayStatusLabel(summary.matchStatus);
 
-    return `REC ${slot} ${savedAt} L${level}`;
+    return `REC ${slot} ${status} ${savedAt} L${level}`;
   }
 
   private renderStatus(text: string): void {
@@ -200,5 +201,17 @@ export class MainReplayScene extends GameScene {
     const timestamp = new Date(summary.createdAt).getTime();
 
     return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+
+  private getReplayStatusLabel(status: SavedReplaySummary['matchStatus']): string {
+    if (status === 'verified') {
+      return 'VER';
+    }
+
+    if (status === 'rejected') {
+      return 'REJ';
+    }
+
+    return 'PND';
   }
 }
