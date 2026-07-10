@@ -3,6 +3,12 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/((?!router$).*)",
+      "destination": "/api/router?__route=$1"
+    }
+  ],
   "headers": [
     {
       "source": "/mobile-gamepad",
