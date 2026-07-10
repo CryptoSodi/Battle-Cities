@@ -203,7 +203,14 @@ interface UiAction {
   key: string;
   target: UiButton;
   onSelect: () => void;
+  // Tab-style buttons activate as focus slides onto them horizontally, the
+  // way the shop's market/view/category tabs do.
+  autoActivate: boolean;
 }
+
+// Buttons whose vertical centers are within this many pixels of a row's
+// first button belong to the same navigation row.
+const NAV_ROW_TOLERANCE = 24;
 
 // Base for panel-style pages: dark full-screen background, big yellow title,
 // BACK button, focusable buttons with pointer + arrow-key navigation, and a
@@ -222,6 +229,11 @@ export abstract class PanelScene extends GameScene {
   protected abstract renderContent(): void;
   // First data load; called once from setup. Static pages just call refresh().
   protected abstract load(): void;
+
+  // Optional sprite drawn left of the page title (see data/graphics/ui/).
+  protected getTitleIcon(): string {
+    return null;
+  }
 
   protected setup(): void {
     this.pageX = Math.max(24, Math.round((this.root.size.width - UI.WIDTH) / 2));
@@ -270,8 +282,15 @@ export abstract class PanelScene extends GameScene {
     background.setZIndex(-10);
     this.root.add(background);
 
+    let titleX = this.pageX + 16;
+    const titleIconId = this.getTitleIcon();
+    if (titleIconId !== null) {
+      this.addIcon(titleIconId, titleX, this.pageY - 72, 56);
+      titleX += 76;
+    }
+
     const title = new UiText(this.getTitle(), UI.YELLOW, 54, '900', 620);
-    title.position.set(this.pageX + 16, this.pageY - 70);
+    title.position.set(titleX, this.pageY - 70);
     this.root.add(title);
 
     this.addButton(this.pageX + UI.WIDTH - 142, this.pageY - 56, 120, 44, 'BACK', 'back', () => {
@@ -342,13 +361,21 @@ export abstract class PanelScene extends GameScene {
     active = false,
     variant: 'normal' | 'back' = 'normal',
     fontSize = 26,
+    autoActivate = false,
   ): UiButton {
     const button = new UiButton(width, height, text, variant, fontSize);
     button.position.set(x, y);
     button.setActive(active);
     this.root.add(button);
-    this.actions.push({ key, target: button, onSelect });
+    this.actions.push({ key, target: button, onSelect, autoActivate });
     return button;
+  }
+
+  protected addIcon(spriteId: string, x: number, y: number, size = 34): UiIcon {
+    const icon = new UiIcon(spriteId, size);
+    icon.position.set(x, y);
+    this.root.add(icon);
+    return icon;
   }
 
   // Mattle-style stat box: muted label top-left, big value bottom-right.
@@ -442,46 +469,98 @@ export abstract class PanelScene extends GameScene {
     this.focusedActionIndex = Math.max(0, index);
   }
 
-  // Spatial navigation: move focus to the nearest button in the pressed
-  // direction (the shop's generic fallback strategy).
+  // Same movement model as the shop: buttons form ROWS (derived from their
+  // on-screen vertical position). Left/right steps through the current row
+  // and stops at its ends — and slides ACTIVATE tab-style buttons, exactly
+  // like the shop's market/view/category tabs. Up/down jumps to the adjacent
+  // row and lands on the button whose column is closest to the current one.
   private focusDirection(dx: number, dy: number): void {
     const currentAction = this.actions[this.focusedActionIndex];
     if (currentAction === undefined) {
       return;
     }
 
-    const currentCenter = currentAction.target.getWorldBoundingBox().getCenter();
-    let bestIndex = -1;
-    let bestScore: number = null;
+    const rows = this.buildNavRows();
+    const rowIndex = rows.findIndex((row) => row.includes(currentAction));
+    if (rowIndex === -1) {
+      return;
+    }
 
-    this.actions.forEach((action, index) => {
-      if (index === this.focusedActionIndex) {
-        return;
+    if (dx !== 0) {
+      const row = rows[rowIndex];
+      const nextAction = row[row.indexOf(currentAction) + dx];
+      if (nextAction === undefined) {
+        return; // row ends don't wrap, like the shop
       }
 
-      const center = action.target.getWorldBoundingBox().getCenter();
-      const deltaX = center.x - currentCenter.x;
-      const deltaY = center.y - currentCenter.y;
-
-      if ((dx < 0 && deltaX >= 0) || (dx > 0 && deltaX <= 0)) {
-        return;
+      const nextIndex = this.actions.indexOf(nextAction);
+      this.setFocusedAction(nextIndex);
+      if (nextAction.autoActivate) {
+        this.pendingActionIndex = nextIndex;
       }
-      if ((dy < 0 && deltaY >= 0) || (dy > 0 && deltaY <= 0)) {
-        return;
-      }
+      return;
+    }
 
-      const primary = dx !== 0 ? Math.abs(deltaX) : Math.abs(deltaY);
-      const secondary = dx !== 0 ? Math.abs(deltaY) : Math.abs(deltaX);
-      const score = primary * 4 + secondary;
+    const nextRow = rows[rowIndex + dy];
+    if (nextRow === undefined) {
+      return;
+    }
 
-      if (bestScore === null || score < bestScore) {
-        bestScore = score;
-        bestIndex = index;
+    const currentCenterX = currentAction.target
+      .getWorldBoundingBox()
+      .getCenter().x;
+    let closest: UiAction = null;
+    let closestDistance: number = null;
+    nextRow.forEach((action) => {
+      const distance = Math.abs(
+        action.target.getWorldBoundingBox().getCenter().x - currentCenterX,
+      );
+      if (closestDistance === null || distance < closestDistance) {
+        closestDistance = distance;
+        closest = action;
       }
     });
 
-    if (bestIndex !== -1) {
-      this.setFocusedAction(bestIndex);
+    if (closest !== null) {
+      // Vertical moves never auto-activate (matches the shop).
+      this.setFocusedAction(this.actions.indexOf(closest));
     }
+  }
+
+  // Groups the actions into navigation rows by vertical position: sorted top
+  // to bottom, a button joins the current row when its center is within
+  // NAV_ROW_TOLERANCE of the row's first button; rows are ordered left to
+  // right. Rebuilt on demand so it always matches the latest refresh().
+  private buildNavRows(): UiAction[][] {
+    const sorted = this.actions
+      .slice()
+      .sort(
+        (a, b) =>
+          a.target.getWorldBoundingBox().getCenter().y -
+          b.target.getWorldBoundingBox().getCenter().y,
+      );
+
+    const rows: UiAction[][] = [];
+    let rowStartY: number = null;
+
+    for (const action of sorted) {
+      const centerY = action.target.getWorldBoundingBox().getCenter().y;
+      if (rowStartY === null || centerY - rowStartY > NAV_ROW_TOLERANCE) {
+        rows.push([action]);
+        rowStartY = centerY;
+      } else {
+        rows[rows.length - 1].push(action);
+      }
+    }
+
+    rows.forEach((row) => {
+      row.sort(
+        (a, b) =>
+          a.target.getWorldBoundingBox().getCenter().x -
+          b.target.getWorldBoundingBox().getCenter().x,
+      );
+    });
+
+    return rows;
   }
 }

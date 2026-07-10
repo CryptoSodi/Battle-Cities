@@ -4,6 +4,7 @@ import { createJsonResponse, createOptionsResponse } from './_helpers';
 
 const leaderboardSnapshotStore = require('../server/leaderboardSnapshotStore');
 const matchResultStore = require('../server/matchResultStore');
+const perkBadges = require('../server/perkBadges');
 const playerStore = require('../server/playerStore');
 const seasonStore = require('../server/seasonStore');
 const sessionIdentity = require('../server/sessionIdentity');
@@ -32,17 +33,27 @@ export async function GET(request: Request): Promise<Response> {
         : currentSeason.id
       : requestedSeasonId;
 
-  // A closed season serves its immutable snapshot; live scopes compute fresh.
+  // A closed season serves its immutable snapshot (with the perks frozen at
+  // close time); live scopes compute fresh and resolve badges now.
   let rows = [];
   if (scope === 'gaming') {
     const snapshot =
       seasonId === null
         ? null
         : await leaderboardSnapshotStore.readSnapshot('gaming', seasonId);
-    rows =
-      snapshot !== null
-        ? snapshot
-        : await matchResultStore.getLeaderboard(seasonId, 20);
+
+    if (snapshot !== null) {
+      rows = snapshot;
+    } else {
+      rows = await matchResultStore.getLeaderboard(seasonId, 20);
+      const badges = await perkBadges.getPerkBadges(
+        rows.map((row: any) => row.playerId),
+      );
+      rows = rows.map((row: any) => ({
+        ...row,
+        perks: badges[row.playerId] || [],
+      }));
+    }
   }
 
   const me = await resolveMe(request, scope, seasonId);
@@ -99,7 +110,6 @@ function toPublicRow(row: any): any {
     walletAddress: row.walletAddress,
     totalPoints: row.totalPoints,
     matches: row.matches,
-    // Perk badges arrive with staking/trading/event systems (Milestones 4-5).
-    perks: [],
+    perks: Array.isArray(row.perks) ? row.perks : [],
   };
 }

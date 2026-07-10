@@ -50,7 +50,8 @@ export class MainRankingScene extends PanelScene {
 
     // Banner plate: yellow slab with dark text, like the reference.
     this.addPanel(x, y - 64, 560, 96, UI.YELLOW, UI.YELLOW_DARK);
-    this.addText('HALL OF FAME', x + 34, y - 42, UI.BLACK, 44, '900', 500);
+    this.addIcon('ui.icon.trophy', x + 28, y - 46, 56);
+    this.addText('HALL OF FAME', x + 104, y - 42, UI.BLACK, 44, '900', 440);
 
     // Your-rank summary card under the banner.
     this.addPanel(x, y + 44, 560, 96, UI.PANEL, UI.YELLOW_DARK);
@@ -78,10 +79,10 @@ export class MainRankingScene extends PanelScene {
     const tabsY = y + 168;
     this.addButton(x, tabsY, 190, 48, 'GAMING', 'tab-gaming', () => {
       this.switchScope('gaming');
-    }, this.scope === 'gaming');
+    }, this.scope === 'gaming', 'normal', 26, true);
     this.addButton(x + 210, tabsY, 190, 48, 'TRADING', 'tab-trading', () => {
       this.switchScope('trading');
-    }, this.scope === 'trading');
+    }, this.scope === 'trading', 'normal', 26, true);
 
     const seasonLabel = this.getSeasonLabel();
     this.addButton(x + UI.WIDTH - 320, tabsY, 320, 48, `SEASON: ${seasonLabel}`, 'season', () => {

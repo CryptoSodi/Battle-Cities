@@ -14,6 +14,10 @@ export class MainWikiScene extends PanelScene {
     return 'Field Manual';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.book';
+  }
+
   protected load(): void {
     // Static content — nothing async to fetch.
   }
@@ -40,6 +44,7 @@ export class MainWikiScene extends PanelScene {
         index === this.categoryIndex,
         'normal',
         22,
+        true,
       );
     });
 

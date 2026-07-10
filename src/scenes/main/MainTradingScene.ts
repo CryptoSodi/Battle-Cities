@@ -15,6 +15,10 @@ export class MainTradingScene extends PanelScene {
     return 'Trade and Boost';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.swap';
+  }
+
   protected load(): void {
     this.isLoading = true;
 

@@ -15,6 +15,10 @@ export class MainAirdropScene extends PanelScene {
     return 'Airdrop';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.chute';
+  }
+
   protected load(): void {
     this.isLoading = true;
 

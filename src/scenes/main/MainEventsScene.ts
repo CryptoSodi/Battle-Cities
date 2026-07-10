@@ -26,6 +26,10 @@ export class MainEventsScene extends PanelScene {
     return this.view === View.Campaigns ? 'Campaigns' : this.detail?.name ?? 'Campaigns';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.medal';
+  }
+
   protected load(): void {
     this.isLoading = true;
 
@@ -140,9 +144,10 @@ export class MainEventsScene extends PanelScene {
       '800',
       620,
     );
+    this.addIcon('ui.icon.medal', x + 660, y + 6, 30);
     this.addText(
       `${event.currency.toUpperCase()}: ${event.currencyBalance}`,
-      x + 660,
+      x + 700,
       y + 6,
       UI.YELLOW,
       22,

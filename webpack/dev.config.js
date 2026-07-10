@@ -14,6 +14,7 @@ const seasonStore = require('../server/seasonStore');
 const matchResultStore = require('../server/matchResultStore');
 const eventStore = require('../server/eventStore');
 const leaderboardSnapshotStore = require('../server/leaderboardSnapshotStore');
+const perkBadges = require('../server/perkBadges');
 const rateLimiter = require('../server/rateLimiter');
 const { attachDevApiExtras } = require('../server/devApiExtras');
 const walletAuth = require('../server/walletAuth');
@@ -390,17 +391,27 @@ function attachReplayApi(app) {
         : requestedSeasonId;
 
     // Trading rows stay empty until Milestone 5 lands trading volume. A
-    // closed season serves its immutable snapshot; live scopes compute fresh.
+    // closed season serves its immutable snapshot (frozen perks included);
+    // live scopes compute fresh and resolve perk badges now.
     let rows = [];
     if (scope === 'gaming') {
       const snapshot =
         seasonId === null
           ? null
           : await leaderboardSnapshotStore.readSnapshot('gaming', seasonId);
-      rows =
-        snapshot !== null
-          ? snapshot
-          : await matchResultStore.getLeaderboard(seasonId, 20);
+
+      if (snapshot !== null) {
+        rows = snapshot;
+      } else {
+        rows = await matchResultStore.getLeaderboard(seasonId, 20);
+        const badges = await perkBadges.getPerkBadges(
+          rows.map((row) => row.playerId),
+        );
+        rows = rows.map((row) => ({
+          ...row,
+          perks: badges[row.playerId] || [],
+        }));
+      }
     }
 
     let me = null;

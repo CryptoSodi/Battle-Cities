@@ -18,6 +18,10 @@ export class MainStakingScene extends PanelScene {
     return 'Staking';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.lock';
+  }
+
   protected load(): void {
     this.isLoading = true;
 

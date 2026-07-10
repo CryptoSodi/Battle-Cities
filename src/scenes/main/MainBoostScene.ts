@@ -14,6 +14,10 @@ export class MainBoostScene extends PanelScene {
     return 'Boost';
   }
 
+  protected getTitleIcon(): string {
+    return 'ui.icon.badge.boost';
+  }
+
   protected load(): void {
     this.isLoading = true;
 

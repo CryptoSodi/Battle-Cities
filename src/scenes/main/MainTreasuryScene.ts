@@ -10,6 +10,18 @@ interface LedgerEntry {
   createdAt: string;
 }
 
+// Owned items reuse the in-game powerup art from the main atlas.
+const ITEM_ICONS: Record<string, string> = {
+  shield: 'powerup.helmet',
+  'base-defence': 'powerup.shovel',
+  freeze: 'powerup.clock',
+  speed: 'powerup.speed',
+  upgrade: 'powerup.star',
+  'zoom-out': 'powerup.zoomout',
+  wipeout: 'powerup.grenade',
+  'extra-life': 'powerup.tank',
+};
+
 // The player's treasury, shop-styled: balance stat cards on top, owned item
 // tiles in the middle (shop side-panel look), and the ledger history table.
 export class MainTreasuryScene extends PanelScene {
@@ -22,6 +34,10 @@ export class MainTreasuryScene extends PanelScene {
 
   protected getTitle(): string {
     return 'Treasury';
+  }
+
+  protected getTitleIcon(): string {
+    return 'ui.icon.vault';
   }
 
   protected load(): void {
@@ -116,14 +132,21 @@ export class MainTreasuryScene extends PanelScene {
       const tileX = x + (index % 4) * (tileWidth + tileGap);
       const tileY = y + 40 + Math.floor(index / 4) * 92;
       this.addPanel(tileX, tileY, tileWidth, 72, UI.PANEL_ALT, UI.PANEL_LINE);
+
+      // In-game powerup art on the tile, like the shop's item cards.
+      const iconId = ITEM_ICONS[itemId];
+      if (iconId !== undefined) {
+        this.addIcon(iconId, tileX + 14, tileY + 16, 40);
+      }
+
       this.addText(
         itemId.replace(/-/g, ' ').toUpperCase(),
-        tileX + 18,
+        tileX + (iconId !== undefined ? 66 : 18),
         tileY + 24,
         UI.WHITE,
         22,
         '800',
-        tileWidth - 110,
+        tileWidth - (iconId !== undefined ? 150 : 110),
       );
       this.addText(
         `X${this.account.inventory[itemId]}`,
