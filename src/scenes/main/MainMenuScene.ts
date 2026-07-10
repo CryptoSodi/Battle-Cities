@@ -8,6 +8,7 @@ import { ShopManager } from '../../shop';
 import { TradingClient } from '../../trading';
 import { PlayerIdentity } from '../../auth';
 import * as config from '../../config';
+import { apiFetch } from '../../network/api';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
@@ -383,9 +384,8 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
 
-    fetch('/api/session', {
+    apiFetch('/api/session', {
       method: 'DELETE',
-      credentials: 'same-origin',
     }).finally(() => {
       this.playerIdentity.clear();
       window.location.replace('/');

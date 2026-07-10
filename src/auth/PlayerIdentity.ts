@@ -8,6 +8,8 @@ export interface CurrentPlayer {
   googleEmail: string | null;
   googleName: string | null;
   googlePicture: string | null;
+  highscorePrimary: number;
+  highscoreSecondary: number;
   createdAt: string;
   lastSeenAt: string;
 }

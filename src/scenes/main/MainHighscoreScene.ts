@@ -55,11 +55,17 @@ export class MainHighscoreScene extends GameScene {
     }
 
     // Save player highscore
+    let highscoreChanged = false;
     if (primaryGamePoints > primaryHighscore) {
       pointsHighscoreManager.savePrimaryPoints(primaryGamePoints);
+      highscoreChanged = true;
     }
     if (secondaryGamePoints > secondaryHighscore) {
       pointsHighscoreManager.saveSecondaryPoints(secondaryGamePoints);
+      highscoreChanged = true;
+    }
+    if (highscoreChanged) {
+      void pointsHighscoreManager.syncWithServer();
     }
 
     // If user did not reach common highscore, simply skip this page

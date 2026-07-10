@@ -49,8 +49,15 @@ async function ensureSchema() {
       google_subject TEXT NULL UNIQUE,
       google_email TEXT NULL,
       google_name TEXT NULL,
-      google_picture TEXT NULL
+      google_picture TEXT NULL,
+      highscore_primary BIGINT NOT NULL DEFAULT 0,
+      highscore_secondary BIGINT NOT NULL DEFAULT 0
     );
+
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS highscore_primary BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS highscore_secondary BIGINT NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS battlecity_players_provider_created_idx
       ON ${TABLE_NAME} (provider, created_at DESC);
@@ -129,7 +136,7 @@ async function readPlayer(id) {
       `
         SELECT id, provider, display_name, created_at, updated_at,
           last_seen_at, wallet_address, google_subject, google_email,
-          google_name, google_picture
+          google_name, google_picture, highscore_primary, highscore_secondary
         FROM ${TABLE_NAME}
         WHERE id = $1
         LIMIT 1
@@ -147,7 +154,7 @@ async function readPlayer(id) {
   try {
     const raw = await fs.readFile(getPlayerPath(id), 'utf8');
     const player = JSON.parse(raw);
-    return isValidPlayer(player) ? player : null;
+    return isValidPlayer(player) ? normalizePlayer(player) : null;
   } catch {
     return null;
   }
@@ -167,6 +174,8 @@ async function createPlayer(input) {
     googleEmail: input.googleEmail || null,
     googleName: input.googleName || null,
     googlePicture: input.googlePicture || null,
+    highscorePrimary: 0,
+    highscoreSecondary: 0,
   };
 
   if (hasPersistentConfig()) {
@@ -224,7 +233,7 @@ async function findByIdentity(field, value) {
       `
         SELECT id, provider, display_name, created_at, updated_at,
           last_seen_at, wallet_address, google_subject, google_email,
-          google_name, google_picture
+          google_name, google_picture, highscore_primary, highscore_secondary
         FROM ${TABLE_NAME}
         WHERE ${column} = $1
         LIMIT 1
@@ -246,7 +255,7 @@ async function findByIdentity(field, value) {
       const raw = await fs.readFile(path.join(getDataDir(), file), 'utf8');
       const player = JSON.parse(raw);
       if (isValidPlayer(player) && player[field] === value) {
-        return player;
+        return normalizePlayer(player);
       }
     } catch {
       // Ignore malformed player files.
@@ -303,6 +312,49 @@ async function touchPlayer(id) {
   await updatePlayer(player);
 }
 
+async function mergeHighscores(id, primary, secondary) {
+  if (!isValidPlayerId(id)) {
+    return null;
+  }
+
+  const highscorePrimary = normalizeHighscore(primary);
+  const highscoreSecondary = normalizeHighscore(secondary);
+
+  if (hasPersistentConfig()) {
+    await ensureSchema();
+    const result = await getPgPool().query(
+      `
+        UPDATE ${TABLE_NAME}
+        SET highscore_primary = GREATEST(highscore_primary, $1),
+          highscore_secondary = GREATEST(highscore_secondary, $2),
+          updated_at = $3,
+          last_seen_at = $3
+        WHERE id = $4
+        RETURNING id, provider, display_name, created_at, updated_at,
+          last_seen_at, wallet_address, google_subject, google_email,
+          google_name, google_picture, highscore_primary, highscore_secondary
+      `,
+      [highscorePrimary, highscoreSecondary, new Date().toISOString(), id],
+    );
+
+    return result.rowCount === 0 ? null : fromRow(result.rows[0]);
+  }
+
+  const player = await readPlayer(id);
+  if (player === null) {
+    return null;
+  }
+
+  return updatePlayer({
+    ...player,
+    highscorePrimary: Math.max(player.highscorePrimary, highscorePrimary),
+    highscoreSecondary: Math.max(
+      player.highscoreSecondary,
+      highscoreSecondary,
+    ),
+  });
+}
+
 function toPublicPlayer(player) {
   return {
     id: player.id,
@@ -312,6 +364,8 @@ function toPublicPlayer(player) {
     googleEmail: player.googleEmail,
     googleName: player.googleName,
     googlePicture: player.googlePicture,
+    highscorePrimary: normalizeHighscore(player.highscorePrimary),
+    highscoreSecondary: normalizeHighscore(player.highscoreSecondary),
     createdAt: player.createdAt,
     lastSeenAt: player.lastSeenAt,
   };
@@ -330,7 +384,22 @@ function fromRow(row) {
     googleEmail: row.google_email,
     googleName: row.google_name,
     googlePicture: row.google_picture,
+    highscorePrimary: normalizeHighscore(row.highscore_primary),
+    highscoreSecondary: normalizeHighscore(row.highscore_secondary),
   };
+}
+
+function normalizePlayer(player) {
+  return {
+    ...player,
+    highscorePrimary: normalizeHighscore(player.highscorePrimary),
+    highscoreSecondary: normalizeHighscore(player.highscoreSecondary),
+  };
+}
+
+function normalizeHighscore(value) {
+  const score = Number(value);
+  return Number.isFinite(score) && score >= 0 ? Math.floor(score) : 0;
 }
 
 function createPlayerId() {
@@ -388,6 +457,7 @@ module.exports = {
   findOrCreateGooglePlayer,
   findOrCreateWalletPlayer,
   isPersistentStoreConfigured: hasPersistentConfig,
+  mergeHighscores,
   readPlayer,
   toPublicPlayer,
 };

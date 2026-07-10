@@ -561,6 +561,7 @@ function waitForLogin(): Promise<void> {
       if (!hasPlayer) {
         throw new Error('Player profile failed.');
       }
+      await pointsHighscoreManager.syncWithServer();
     };
 
     const startServerSession = async (body: object): Promise<void> => {

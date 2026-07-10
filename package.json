@@ -7,7 +7,7 @@
     "build:dev": "webpack --config webpack/dev.config.js",
     "lint": "eslint 'src/**' --max-warnings=0 --ext .js,.ts",
     "start": "webpack-dev-server --open --config webpack/dev.config.js",
-    "start:prod": "webpack-dev-server --open --config webpack/prod.config.js",
+    "start:prod": "webpack-dev-server --open --config webpack/local-prod.config.js",
     "start:prod2": "webpack-dev-server --open --config webpack/prod2.config.js",
     "test": "ava --verbose",
     "test:watch": "ava --verbose --watch"

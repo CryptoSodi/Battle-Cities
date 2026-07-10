@@ -1,4 +1,5 @@
 import { GameStorage } from '../game';
+import { apiFetch } from '../network/api';
 import * as config from '../config';
 
 export class PointsHighscoreManager {
@@ -46,5 +47,45 @@ export class PointsHighscoreManager {
     const maxPoints = Math.max(...points);
 
     return maxPoints;
+  }
+
+  public async syncWithServer(): Promise<void> {
+    try {
+      const response = await apiFetch('/api/player', {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          highscorePrimary: this.getPrimaryPoints(),
+          highscoreSecondary: this.getSecondaryPoints(),
+        }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const body = await response.json();
+      const player = body?.player;
+      if (
+        typeof player?.highscorePrimary !== 'number' ||
+        typeof player?.highscoreSecondary !== 'number'
+      ) {
+        return;
+      }
+
+      this.storage.setNumber(
+        config.STORAGE_KEY_POINTS_HIGHSCORE_PRIMARY,
+        Math.max(this.getPrimaryPoints(), player.highscorePrimary),
+      );
+      this.storage.setNumber(
+        config.STORAGE_KEY_POINTS_HIGHSCORE_SECONDARY,
+        Math.max(this.getSecondaryPoints(), player.highscoreSecondary),
+      );
+      this.storage.save();
+    } catch {
+      // Highscore sync is best-effort; local play must remain available.
+    }
   }
 }

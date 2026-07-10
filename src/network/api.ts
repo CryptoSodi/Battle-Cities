@@ -3,16 +3,22 @@ export function getApiBaseUrl(): string {
     return 'http://localhost';
   }
 
-  const host = window.location.hostname.toLowerCase();
-  if (
-    host === 'battlecities.com' ||
-    host === 'www.battlecities.com' ||
-    host.endsWith('.battlecities.com')
-  ) {
-    return 'https://api.battlecities.com';
+  if (isLocalDevelopmentHost(window.location.hostname.toLowerCase())) {
+    return 'https://www.battlecities.com';
   }
 
   return window.location.origin;
+}
+
+function isLocalDevelopmentHost(host: string): boolean {
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  );
 }
 
 export function getApiUrl(path: string): string {

@@ -25,7 +25,9 @@ export async function GET(request: Request): Promise<Response> {
       request,
       { authenticated: false },
       200,
-      sessionIdentity.createClearedSessionCookie(),
+      sessionIdentity.createClearedSessionCookie(
+        request.headers.get('origin'),
+      ),
     );
   }
 
@@ -65,7 +67,10 @@ export async function POST(request: Request): Promise<Response> {
     request,
     sessionStore.toPublicSession(session),
     201,
-    sessionIdentity.createSessionCookie(session.id),
+    sessionIdentity.createSessionCookie(
+      session.id,
+      request.headers.get('origin'),
+    ),
   );
 }
 
@@ -99,7 +104,7 @@ export async function DELETE(request: Request): Promise<Response> {
     request,
     { authenticated: false },
     200,
-    sessionIdentity.createClearedSessionCookie(),
+    sessionIdentity.createClearedSessionCookie(request.headers.get('origin')),
   );
 }
 

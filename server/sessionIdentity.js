@@ -8,34 +8,58 @@ function resolveSession(cookieHeader) {
   return isValidSessionId(sessionId) ? sessionId : null;
 }
 
-function createSessionCookie(sessionId) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-
+function createSessionCookie(sessionId, origin = null) {
   return [
     `${COOKIE_NAME}=${encodeURIComponent(sessionId)}`,
     'Path=/',
     `Max-Age=${COOKIE_MAX_AGE_SECONDS}`,
-    'SameSite=Lax',
     'HttpOnly',
-    secure,
+    ...getCookieSecurityAttributes(origin),
   ]
-    .filter(Boolean)
     .join('; ');
 }
 
-function createClearedSessionCookie() {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-
+function createClearedSessionCookie(origin = null) {
   return [
     `${COOKIE_NAME}=`,
     'Path=/',
     'Max-Age=0',
-    'SameSite=Lax',
     'HttpOnly',
-    secure,
+    ...getCookieSecurityAttributes(origin),
   ]
-    .filter(Boolean)
     .join('; ');
+}
+
+function getCookieSecurityAttributes(origin) {
+  if (process.env.NODE_ENV !== 'production') {
+    return ['SameSite=Lax'];
+  }
+
+  if (isLocalDevelopmentOrigin(origin)) {
+    return ['SameSite=None', 'Secure', 'Partitioned'];
+  }
+
+  return ['SameSite=Lax', 'Secure'];
+}
+
+function isLocalDevelopmentOrigin(origin) {
+  if (typeof origin !== 'string' || origin === '') {
+    return false;
+  }
+
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function parseCookies(cookieHeader) {
