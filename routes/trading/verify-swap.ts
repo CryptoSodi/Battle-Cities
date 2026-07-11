@@ -6,6 +6,7 @@ import {
   resolveSessionPlayer,
 } from '../_helpers';
 
+const playerPolicy = require('../../server/playerPolicy');
 const rateLimiter = require('../../server/rateLimiter');
 const tradingStore = require('../../server/tradingStore');
 
@@ -21,6 +22,15 @@ export async function POST(request: Request): Promise<Response> {
   if (player === null) {
     return createJsonResponse(request, { ok: false, error: 'Not logged in' }, 401);
   }
+
+  if (playerPolicy.isVirtualPlayer(player)) {
+    return createJsonResponse(
+      request,
+      { ok: false, error: playerPolicy.VIRTUAL_PLAYER_MESSAGE },
+      403,
+    );
+  }
+
 
   if (!rateLimiter.allow('swap-verify', player.id)) {
     return createJsonResponse(request, { ok: false, error: 'Too many requests' }, 429);

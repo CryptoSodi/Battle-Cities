@@ -54,8 +54,15 @@ async function main() {
 
   const playerIds = await listAllPlayerIds();
   const weights = {};
+  const playerStore = require('../server/playerStore');
+  const playerPolicy = require('../server/playerPolicy');
 
   for (const playerId of playerIds) {
+    // Guests are virtual players — never eligible for allocations.
+    const player = await playerStore.readPlayer(playerId);
+    if (player === null || playerPolicy.isVirtualPlayer(player)) {
+      continue;
+    }
     const { weight } = await airdropStore.computeWeight(campaign, playerId, {
       getAllTimeGamePoints: async (id) => {
         const rank = await matchResultStore.getPlayerRank(id, null);

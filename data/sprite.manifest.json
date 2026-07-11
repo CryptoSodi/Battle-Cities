@@ -1393,37 +1393,257 @@
   },
   "tank.player.primary.b.up.2": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [256, 0, 256, 256],
+    "rect": [0, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.3": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.4": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.5": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.6": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.7": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.8": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.9": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.10": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.11": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.12": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.up.13": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [0, 3072, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.down.1": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [512, 0, 256, 256],
+    "rect": [256, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.down.2": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [768, 0, 256, 256],
+    "rect": [256, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.3": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.4": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.5": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.6": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.7": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.8": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.9": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.10": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.11": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.12": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.down.13": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [256, 3072, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.left.1": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [1024, 0, 256, 256],
+    "rect": [512, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.left.2": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [1280, 0, 256, 256],
+    "rect": [512, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.3": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.4": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.5": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.6": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.7": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.8": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.9": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.10": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.11": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.12": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.left.13": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [512, 3072, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.right.1": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [1536, 0, 256, 256],
+    "rect": [768, 0, 256, 256],
     "scale": 4
   },
   "tank.player.primary.b.right.2": {
     "file": "data/graphics/TANKS/player-tank-primary-star2.png",
-    "rect": [1792, 0, 256, 256],
+    "rect": [768, 256, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.3": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 512, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.4": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 768, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.5": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 1024, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.6": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 1280, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.7": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 1536, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.8": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 1792, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.9": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 2048, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.10": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 2304, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.11": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 2560, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.12": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 2816, 256, 256],
+    "scale": 4
+  },
+  "tank.player.primary.b.right.13": {
+    "file": "data/graphics/TANKS/player-tank-primary-star2.png",
+    "rect": [768, 3072, 256, 256],
     "scale": 4
   },
   "tank.player.primary.c.up.1": {

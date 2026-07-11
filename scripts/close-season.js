@@ -12,6 +12,7 @@ require('../server/loadLocalEnv').loadLocalEnv();
 const seasonStore = require('../server/seasonStore');
 const matchResultStore = require('../server/matchResultStore');
 const leaderboardSnapshotStore = require('../server/leaderboardSnapshotStore');
+const perkBadges = require('../server/perkBadges');
 
 async function main() {
   const seasonId = process.argv[2];
@@ -33,11 +34,19 @@ async function main() {
     process.exit(1);
   }
 
+  // Resolve perk badges NOW so they freeze with the board — a closed season
+  // shows the perks players held when it closed, not their current ones.
   const rows = await matchResultStore.getLeaderboard(seasonId, 100);
+  const badges = await perkBadges.getPerkBadges(rows.map((row) => row.playerId));
+  const rowsWithPerks = rows.map((row) => ({
+    ...row,
+    perks: badges[row.playerId] || [],
+  }));
+
   const result = await leaderboardSnapshotStore.writeSnapshot(
     'gaming',
     seasonId,
-    rows,
+    rowsWithPerks,
   );
 
   if (!result.ok) {

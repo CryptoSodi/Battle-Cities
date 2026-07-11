@@ -15,7 +15,10 @@ export class CanvasRenderContext extends RenderContext {
   private maskCache = new Map<CanvasImageSource, Map<string, HTMLCanvasElement>>();
 
   public init(): void {
-    this.context = this.canvas.getContext('2d');
+    // TS 4.9's lib types widen getContext('2d') on the HTMLCanvasElement |
+    // OffscreenCanvas union to include ImageBitmapRenderingContext; '2d'
+    // always yields a 2D context at runtime, so narrow explicitly.
+    this.context = this.canvas.getContext('2d') as NativeContext;
   }
 
   public setView(scale: number, offsetX: number, offsetY: number): void {

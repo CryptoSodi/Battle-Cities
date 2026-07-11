@@ -28,6 +28,8 @@ export interface RankingMe {
   rank: number | null;
   totalPoints: number;
   matches?: number;
+  // True for guest accounts: virtual players, permanently unranked.
+  guest?: boolean;
 }
 
 export interface RankingResponse {

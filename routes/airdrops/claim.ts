@@ -6,6 +6,7 @@ import {
   resolveSessionPlayer,
 } from '../_helpers';
 
+const playerPolicy = require('../../server/playerPolicy');
 const airdropStore = require('../../server/airdropStore');
 
 export function OPTIONS(request: Request): Response {
@@ -20,6 +21,15 @@ export async function POST(request: Request): Promise<Response> {
   if (player === null) {
     return createJsonResponse(request, { ok: false, error: 'Not logged in' }, 401);
   }
+
+  if (playerPolicy.isVirtualPlayer(player)) {
+    return createJsonResponse(
+      request,
+      { ok: false, error: playerPolicy.VIRTUAL_PLAYER_MESSAGE },
+      403,
+    );
+  }
+
 
   let body: any;
   try {

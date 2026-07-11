@@ -8,6 +8,7 @@ import {
 
 const airdropStore = require('../../server/airdropStore');
 const matchResultStore = require('../../server/matchResultStore');
+const playerPolicy = require('../../server/playerPolicy');
 const stakingStore = require('../../server/stakingStore');
 const tradingStore = require('../../server/tradingStore');
 
@@ -27,6 +28,16 @@ export async function GET(request: Request): Promise<Response> {
   const player = await resolveSessionPlayer(request);
   if (player === null) {
     return createJsonResponse(request, { authenticated: false }, 401);
+  }
+
+  // Guests are virtual players — no airdrop weight, ever.
+  if (playerPolicy.isVirtualPlayer(player)) {
+    return createJsonResponse(request, {
+      authenticated: true,
+      guest: true,
+      error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      eligibility: null,
+    });
   }
 
   const eligibility = await airdropStore.getEligibility(slug, player.id, {

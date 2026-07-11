@@ -6,6 +6,7 @@ import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
 import { ShopManager } from '../../shop';
 import { TradingClient } from '../../trading';
+import { EventClient } from '../../events';
 import { PlayerIdentity } from '../../auth';
 import * as config from '../../config';
 import { apiFetch } from '../../network/api';
@@ -37,6 +38,7 @@ export class MainMenuScene extends GameScene {
   private rankingItem: TextMenuItem;
   private moreItem: TextMenuItem;
   private settingsItem: TextMenuItem;
+  private eventTicker: SpriteText;
   private aboutItem: TextMenuItem;
   private logoutItem: TextMenuItem;
   private state: State = State.Ready;
@@ -71,6 +73,11 @@ export class MainMenuScene extends GameScene {
     // them in the replay for exact re-enactment. Best effort — offline play
     // simply runs unboosted.
     this.refreshRunBoosts();
+
+    // Live-event ticker (plan: "top promotional ticker can point users into
+    // the live event"). Filled in asynchronously; empty text when no event is
+    // live or the backend is unreachable.
+    this.loadEventTicker();
     this.playerIdentity = playerIdentity;
 
     // Restore source for maps to default
@@ -115,6 +122,11 @@ export class MainMenuScene extends GameScene {
     });
     this.playerStatus.position.set(92, 112);
     this.group.add(this.playerStatus);
+
+    // Live-event ticker strip; text arrives async (see loadEventTicker).
+    this.eventTicker = new SpriteText('', { color: config.COLOR_YELLOW });
+    this.eventTicker.position.set(92, 152);
+    this.group.add(this.eventTicker);
 
     this.singlePlayerItem = new TextMenuItem('START');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
@@ -344,6 +356,21 @@ export class MainMenuScene extends GameScene {
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainMore);
   };
+
+  private loadEventTicker(): void {
+    new EventClient().listEvents().then((events) => {
+      const live = events.find((event) => event.status === 'live');
+      if (live === undefined || this.eventTicker === undefined) {
+        return;
+      }
+
+      // The bitmap font's character set has no ':' or '>' — see
+      // data/fonts/sprite-font.json.
+      this.eventTicker.setText(
+        `→ LIVE! ${live.name} - ENDS ${live.endsAt.slice(0, 10)}`,
+      );
+    });
+  }
 
   private refreshRunBoosts(): void {
     new TradingClient().getBoostStatus().then((status) => {

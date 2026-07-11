@@ -168,6 +168,56 @@ async function listPersistentSummaries(guestId) {
   }));
 }
 
+// Admin/worker read: fetch a replay record by id WITHOUT guest scoping. Used
+// only by server-side validation (scripts/validate-results.js) — never expose
+// through a client-facing endpoint. In Postgres mode only the metadata row is
+// returned (replay: null) — the cross-checks don't need the input blob.
+async function readRecordAdmin(id) {
+  if (!isSafeId(id)) {
+    return null;
+  }
+
+  if (hasPersistentConfig()) {
+    await ensureSchema();
+    const result = await getPgPool().query(
+      `
+        SELECT id, guest_id, created_at, level_number, score, kills,
+          game_result, duration_ticks, validation_status
+        FROM ${TABLE_NAME}
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [id],
+    );
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      guestId: row.guest_id,
+      createdAt: new Date(row.created_at).toISOString(),
+      levelNumber: row.level_number,
+      score: row.score,
+      kills: row.kills,
+      gameResult: row.game_result,
+      durationTicks: row.duration_ticks,
+      validationStatus: row.validation_status,
+      replay: null,
+    };
+  }
+
+  try {
+    const raw = await fs.readFile(getRecordPath(id), 'utf8');
+    const record = JSON.parse(raw);
+    return isValidRecord(record) ? record : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readPersistentRecord(id, guestId) {
   await ensureSchema();
 
@@ -598,6 +648,7 @@ module.exports = {
   isValidReplay,
   listSummaries,
   readRecord,
+  readRecordAdmin,
   verifyRecord,
   toSummary,
 };

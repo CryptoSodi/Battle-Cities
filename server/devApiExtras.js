@@ -1,4 +1,5 @@
 const economyStore = require('./economyStore');
+const playerPolicy = require('./playerPolicy');
 const eventStore = require('./eventStore');
 const ledgerStore = require('./ledgerStore');
 const phaseStore = require('./phaseStore');
@@ -59,6 +60,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
     const player = await resolveSessionPlayer(request);
     if (player === null) {
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
+      return;
+    }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
       return;
     }
     if (!rateLimiter.allow('quest-claim', player.id)) {
@@ -126,6 +134,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
       return;
     }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
+      return;
+    }
     if (!rateLimiter.allow('staking-action', player.id)) {
       sendJson(response, 429, { ok: false, error: 'Too many requests' });
       return;
@@ -172,6 +187,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
       return;
     }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
+      return;
+    }
     if (!rateLimiter.allow('staking-action', player.id)) {
       sendJson(response, 429, { ok: false, error: 'Too many requests' });
       return;
@@ -193,6 +215,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
     const player = await resolveSessionPlayer(request);
     if (player === null) {
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
+      return;
+    }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
       return;
     }
     if (!rateLimiter.allow('staking-action', player.id)) {
@@ -225,6 +254,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
     const player = await resolveSessionPlayer(request);
     if (player === null) {
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
+      return;
+    }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
       return;
     }
     if (!rateLimiter.allow('swap-verify', player.id)) {
@@ -316,6 +352,13 @@ function attachDevApiExtras(app, { readJsonBody, resolveSessionPlayer, sendJson 
     const player = await resolveSessionPlayer(request);
     if (player === null) {
       sendJson(response, 401, { ok: false, error: 'Not logged in' });
+      return;
+    }
+    if (playerPolicy.isVirtualPlayer(player)) {
+      sendJson(response, 403, {
+        ok: false,
+        error: playerPolicy.VIRTUAL_PLAYER_MESSAGE,
+      });
       return;
     }
 

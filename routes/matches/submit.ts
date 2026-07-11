@@ -2,6 +2,7 @@ declare const require: any;
 
 import { createJsonResponse, createOptionsResponse } from '../_helpers';
 
+const playerPolicy = require('../../server/playerPolicy');
 const eventStore = require('../../server/eventStore');
 const matchResultStore = require('../../server/matchResultStore');
 const playerStore = require('../../server/playerStore');
@@ -48,8 +49,12 @@ export async function POST(request: Request): Promise<Response> {
   const result = await matchResultStore.submitResult(player, season, body);
 
   // Feed the SERVER-derived result into live event quests (Milestone 3) —
-  // quest progress uses the same trusted facts as the leaderboard.
-  await eventStore.applyMatchResult(player, result);
+  // quest progress uses the same trusted facts as the leaderboard. Guests are
+  // virtual players: their result is stored (provider-tagged, never ranked)
+  // but they don't progress quests or touch the event economy.
+  if (!playerPolicy.isVirtualPlayer(player)) {
+    await eventStore.applyMatchResult(player, result);
+  }
 
   return json(request, {
     ok: true,

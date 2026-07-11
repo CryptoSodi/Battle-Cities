@@ -61,19 +61,35 @@ export class MainRankingScene extends PanelScene {
     this.addText('TRADING RANK (ALL):', x + 300, y + 58, UI.MUTED, 20, '800', 240);
 
     const me = this.data?.me ?? null;
-    const gamingRank =
-      me === null || me.rank === null ? '--' : `#${me.rank}`;
-    const gamingPoints = me === null ? '' : `  ${me.totalPoints}`;
-    this.addText(
-      `${gamingRank}${this.scope === 'gaming' ? gamingPoints : ''}`,
-      x + 24,
-      y + 88,
-      UI.YELLOW,
-      30,
-      '900',
-      260,
-    );
-    this.addText('--', x + 300, y + 88, UI.MUTED_LIGHT, 30, '900', 240);
+
+    // Guests are virtual players: they can play everything but never hold a
+    // rank — say so instead of showing a dash they might mistake for a bug.
+    if (me !== null && me.guest === true) {
+      this.addText('GUEST', x + 24, y + 88, UI.MUTED_LIGHT, 30, '900', 260);
+      this.addText(
+        'LOG IN WITH WALLET OR GOOGLE TO COMPETE',
+        x + 300,
+        y + 92,
+        UI.MUTED,
+        18,
+        '800',
+        240,
+      );
+    } else {
+      const gamingRank =
+        me === null || me.rank === null ? '--' : `#${me.rank}`;
+      const gamingPoints = me === null ? '' : `  ${me.totalPoints}`;
+      this.addText(
+        `${gamingRank}${this.scope === 'gaming' ? gamingPoints : ''}`,
+        x + 24,
+        y + 88,
+        UI.YELLOW,
+        30,
+        '900',
+        260,
+      );
+      this.addText('--', x + 300, y + 88, UI.MUTED_LIGHT, 30, '900', 240);
+    }
 
     // Tabs + season selector row.
     const tabsY = y + 168;
@@ -135,15 +151,7 @@ export class MainRankingScene extends PanelScene {
         '800',
         440,
       );
-      this.addText(
-        row.perks.length > 0 ? row.perks.join(' ') : '-',
-        x + 620,
-        rowY,
-        UI.MUTED,
-        22,
-        '700',
-        220,
-      );
+      this.renderPerkBadges(row.perks, x + 620, rowY);
       this.addText(
         `${row.totalPoints}`,
         x + UI.WIDTH - 264,
@@ -154,6 +162,33 @@ export class MainRankingScene extends PanelScene {
         240,
         'right',
       );
+    });
+  }
+
+  // Icon badges in the PERKS column (reference: Mattle's icon badges per
+  // leaderboard row). 'stake-N' -> padlock + tier number; 'boost' -> chevron.
+  private renderPerkBadges(perks: string[], x: number, rowY: number): void {
+    if (perks.length === 0) {
+      this.addText('-', x, rowY, UI.MUTED, 22, '700', 60);
+      return;
+    }
+
+    let offsetX = x;
+    perks.slice(0, 4).forEach((perk) => {
+      if (perk.startsWith('stake-')) {
+        this.addIcon('ui.icon.badge.stake', offsetX, rowY - 2, 28);
+        this.addText(perk.slice(6), offsetX + 30, rowY + 2, UI.YELLOW, 20, '900', 24);
+        offsetX += 62;
+        return;
+      }
+      if (perk === 'boost') {
+        this.addIcon('ui.icon.badge.boost', offsetX, rowY - 2, 28);
+        offsetX += 40;
+        return;
+      }
+      // Unknown/future badge ids degrade to text.
+      this.addText(perk.toUpperCase(), offsetX, rowY + 2, UI.MUTED, 18, '800', 90);
+      offsetX += 96;
     });
   }
 

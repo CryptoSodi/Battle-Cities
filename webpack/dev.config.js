@@ -15,6 +15,7 @@ const matchResultStore = require('../server/matchResultStore');
 const eventStore = require('../server/eventStore');
 const leaderboardSnapshotStore = require('../server/leaderboardSnapshotStore');
 const perkBadges = require('../server/perkBadges');
+const playerPolicy = require('../server/playerPolicy');
 const rateLimiter = require('../server/rateLimiter');
 const { attachDevApiExtras } = require('../server/devApiExtras');
 const walletAuth = require('../server/walletAuth');
@@ -367,8 +368,12 @@ function attachReplayApi(app) {
     const season = await seasonStore.getCurrentSeason();
     const result = await matchResultStore.submitResult(player, season, body);
 
-    // Server-derived facts drive event quest progress (Milestone 3).
-    await eventStore.applyMatchResult(player, result);
+    // Server-derived facts drive event quest progress (Milestone 3). Guests
+    // are virtual players: stored provider-tagged (never ranked), and they
+    // don't progress quests or touch the event economy.
+    if (!playerPolicy.isVirtualPlayer(player)) {
+      await eventStore.applyMatchResult(player, result);
+    }
 
     sendJson(response, 200, {
       ok: true,
@@ -417,7 +422,16 @@ function attachReplayApi(app) {
     let me = null;
     const player = await resolveSessionPlayer(request);
     if (player !== null) {
-      if (scope === 'gaming') {
+      if (playerPolicy.isVirtualPlayer(player)) {
+        // Guests are virtual players — permanently unranked.
+        me = {
+          displayName: player.displayName,
+          rank: null,
+          totalPoints: 0,
+          matches: 0,
+          guest: true,
+        };
+      } else if (scope === 'gaming') {
         const rank = await matchResultStore.getPlayerRank(player.id, seasonId);
         me = {
           displayName: player.displayName,

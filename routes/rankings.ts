@@ -2,6 +2,7 @@ declare const require: any;
 
 import { createJsonResponse, createOptionsResponse } from './_helpers';
 
+const playerPolicy = require('../server/playerPolicy');
 const leaderboardSnapshotStore = require('../server/leaderboardSnapshotStore');
 const matchResultStore = require('../server/matchResultStore');
 const perkBadges = require('../server/perkBadges');
@@ -88,6 +89,18 @@ async function resolveMe(
   const player = await playerStore.readPlayer(session.playerId);
   if (player === null) {
     return null;
+  }
+
+  // Guests are virtual players — permanently unranked; the client shows a
+  // "log in to compete" state instead of a rank.
+  if (playerPolicy.isVirtualPlayer(player)) {
+    return {
+      displayName: player.displayName,
+      rank: null,
+      totalPoints: 0,
+      matches: 0,
+      guest: true,
+    };
   }
 
   if (scope !== 'gaming') {

@@ -72,6 +72,9 @@ async function ensureSchema() {
       ON ${TABLE_NAME} (season_id, player_id);
     CREATE INDEX IF NOT EXISTS battlecity_match_results_player_idx
       ON ${TABLE_NAME} (player_id, created_at DESC);
+
+    ALTER TABLE ${TABLE_NAME}
+      ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'wallet';
   `);
 }
 
@@ -101,6 +104,10 @@ async function submitResult(player, season, input) {
   const result = {
     id: createResultId(),
     playerId: player.id,
+    // Guest results are stored (a guest can see their own numbers) but the
+    // provider tag keeps them OUT of every leaderboard/rank aggregation —
+    // guests are virtual players (see server/playerPolicy.js).
+    provider: player.provider,
     walletAddress: player.walletAddress || null,
     displayName:
       typeof player.displayName === 'string' ? player.displayName : 'Player',
@@ -121,15 +128,16 @@ async function submitResult(player, season, input) {
       `
         INSERT INTO ${TABLE_NAME}
           (
-            id, player_id, wallet_address, display_name, season_id, mode,
-            level_number, score, game_points, won, replay_id,
+            id, player_id, provider, wallet_address, display_name, season_id,
+            mode, level_number, score, game_points, won, replay_id,
             validation_status, created_at
           )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       `,
       [
         result.id,
         result.playerId,
+        result.provider,
         result.walletAddress,
         result.displayName,
         result.seasonId,
@@ -168,7 +176,8 @@ async function getLeaderboard(seasonId, limit = 20) {
   if (hasPersistentConfig()) {
     await ensureSchema();
     const params = [];
-    let where = `validation_status <> 'rejected'`;
+    // Guests are virtual players — never ranked (server/playerPolicy.js).
+    let where = `validation_status <> 'rejected' AND provider <> 'guest'`;
     if (scopeSeasonId !== null) {
       params.push(scopeSeasonId);
       where += ` AND season_id = $${params.length}`;
@@ -227,7 +236,8 @@ async function getPlayerRank(playerId, seasonId) {
   if (hasPersistentConfig()) {
     await ensureSchema();
     const params = [];
-    let where = `validation_status <> 'rejected'`;
+    // Guests are virtual players — never ranked (server/playerPolicy.js).
+    let where = `validation_status <> 'rejected' AND provider <> 'guest'`;
     if (scopeSeasonId !== null) {
       params.push(scopeSeasonId);
       where += ` AND season_id = $${params.length}`;
@@ -296,6 +306,10 @@ async function aggregateFileResults(scopeSeasonId) {
       continue;
     }
     if (result.validationStatus === 'rejected') {
+      continue;
+    }
+    // Guests are virtual players — never ranked (server/playerPolicy.js).
+    if (result.provider === 'guest') {
       continue;
     }
     if (scopeSeasonId !== null && result.seasonId !== scopeSeasonId) {
