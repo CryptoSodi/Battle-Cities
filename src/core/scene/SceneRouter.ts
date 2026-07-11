@@ -35,6 +35,10 @@ export class SceneRouter<S> implements SceneNavigator {
     return this.scene;
   }
 
+  public getCurrentType(): SceneType {
+    return this.location?.type ?? null;
+  }
+
   public push(type: SceneType, params?: SceneParams): void {
     this.assertRegistered(type);
 

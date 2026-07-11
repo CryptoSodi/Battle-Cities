@@ -195,11 +195,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const { mapConfig } = this.params;
     const fieldWidth = mapConfig.getFieldWidth();
     const fieldHeight = mapConfig.getFieldHeight();
-    const targetTilesWide =
-      mapConfig.getFieldTileWidth() === config.LEGACY_FIELD_TILE_COUNT &&
-      mapConfig.getFieldTileHeight() === config.LEGACY_FIELD_TILE_COUNT
-        ? config.CLASSIC_TARGET_TILES_WIDE
-        : config.TARGET_TILES_WIDE;
+    const targetTilesWide = config.isMobileTouchViewport()
+      ? config.MOBILE_TARGET_TILES_WIDE
+      : mapConfig.getFieldTileWidth() === config.LEGACY_FIELD_TILE_COUNT &&
+        mapConfig.getFieldTileHeight() === config.LEGACY_FIELD_TILE_COUNT
+      ? config.CLASSIC_TARGET_TILES_WIDE
+      : config.TARGET_TILES_WIDE;
     this.baseCameraZoom = config.getResponsiveZoom(targetTilesWide);
     this.cameraZoom = this.baseCameraZoom;
     this.zoomOutTimer.done.addListener(this.handleZoomOutTimer);

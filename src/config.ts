@@ -99,9 +99,7 @@ function getViewportSize(): { width: number; height: number } {
     };
   }
 
-  const mobileTouchLayout =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches;
+  const mobileTouchLayout = isMobileTouchViewport();
 
   return {
     width: Math.max(window.innerWidth, 1),
@@ -112,6 +110,14 @@ function getViewportSize(): { width: number; height: number } {
       1,
     ),
   };
+}
+
+export function isMobileTouchViewport(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches
+  );
 }
 
 export function getResponsiveCanvasSize(): { width: number; height: number } {
@@ -145,6 +151,7 @@ export const CANVAS_HEIGHT = RESPONSIVE_CANVAS_SIZE.height;
 // safety rails for extreme viewports.
 export const TARGET_TILES_WIDE = 34.5;
 export const CLASSIC_TARGET_TILES_WIDE = 27;
+export const MOBILE_TARGET_TILES_WIDE = 23;
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 6;
 

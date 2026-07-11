@@ -848,7 +848,9 @@ gameLoop.render.addListener((event) => {
 
   gameState.update();
   updateMobileGamepadDebug();
-  mobileTouchController.update();
+  mobileTouchController.update(
+    sceneRouter.getCurrentType() === GameSceneType.LevelPlay,
+  );
 
   stats.end();
 });

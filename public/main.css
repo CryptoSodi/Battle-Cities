@@ -226,7 +226,7 @@ canvas {
     bottom: 0;
     box-sizing: border-box;
     display: grid;
-    grid-template-rows: minmax(54px, 15%) 1fr;
+    grid-template-rows: 0 1fr;
     height: 50dvh;
     left: 0;
     padding: 8px max(12px, env(safe-area-inset-right))
@@ -257,6 +257,16 @@ canvas {
     gap: 8px;
     grid-template-columns: repeat(4, minmax(48px, 74px));
     justify-content: center;
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  .mobile-touch-controller.is-gameplay {
+    grid-template-rows: minmax(54px, 15%) 1fr;
+  }
+
+  .mobile-touch-controller.is-gameplay .mobile-touch-controller__powers {
+    visibility: visible;
   }
 
   .mobile-touch-power {
@@ -312,55 +322,61 @@ canvas {
     padding: 4px clamp(4px, 3vw, 28px) 0;
   }
 
-  .mobile-touch-dpad {
-    display: grid;
+  .mobile-touch-stick {
+    background: #181b15;
+    border: 2px solid var(--controller-line);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 8px rgba(255, 255, 255, 0.025);
     flex: 0 0 auto;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
     height: min(27dvh, 42vw, 210px);
+    min-height: 120px;
+    min-width: 120px;
+    padding: 0;
+    position: relative;
     width: min(27dvh, 42vw, 210px);
   }
 
-  .mobile-touch-dpad__button,
-  .mobile-touch-dpad__center {
-    background: var(--controller-panel);
-    border: 1px solid var(--controller-line);
-    box-sizing: border-box;
+  .mobile-touch-stick__cross,
+  .mobile-touch-stick__cross::after {
+    background: rgba(255, 255, 255, 0.07);
+    content: '';
+    height: 4px;
+    left: 16%;
+    pointer-events: none;
+    position: absolute;
+    top: calc(50% - 2px);
+    width: 68%;
   }
 
-  .mobile-touch-dpad__button {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0;
+  .mobile-touch-stick__cross::after {
+    left: 0;
+    top: 0;
+    transform: rotate(90deg);
+    width: 100%;
   }
 
-  .mobile-touch-dpad__button span {
-    border-color: transparent transparent #d7d2c3;
-    border-style: solid;
-    border-width: 0 10px 13px;
-    height: 0;
-    width: 0;
+  .mobile-touch-stick__knob {
+    background: linear-gradient(145deg, #3c4033, #25281f);
+    border: 2px solid #8c856b;
+    border-radius: 50%;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.42),
+      inset 0 3px 0 rgba(255, 255, 255, 0.08);
+    height: 42%;
+    left: 50%;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translate(
+      calc(-50% + var(--stick-x, 0px)),
+      calc(-50% + var(--stick-y, 0px))
+    );
+    width: 42%;
   }
 
-  .mobile-touch-dpad__button.is-pressed {
-    background: var(--controller-accent);
+  .mobile-touch-stick.is-pressed .mobile-touch-stick__knob {
+    background: linear-gradient(145deg, #ffc541, var(--controller-accent));
+    border-color: #fff2b5;
   }
-
-  .mobile-touch-dpad__button.is-pressed span {
-    border-bottom-color: #111207;
-  }
-
-  .mobile-touch-dpad__button--up { grid-column: 2; grid-row: 1; }
-  .mobile-touch-dpad__button--left { grid-column: 1; grid-row: 2; }
-  .mobile-touch-dpad__button--right { grid-column: 3; grid-row: 2; }
-  .mobile-touch-dpad__button--down { grid-column: 2; grid-row: 3; }
-  .mobile-touch-dpad__center { grid-column: 2; grid-row: 2; }
-  .mobile-touch-dpad__button--left span { transform: rotate(-90deg); }
-  .mobile-touch-dpad__button--right span { transform: rotate(90deg); }
-  .mobile-touch-dpad__button--down span { transform: rotate(180deg); }
 
   .mobile-touch-fire {
     align-items: center;

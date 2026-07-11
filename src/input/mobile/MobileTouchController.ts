@@ -29,6 +29,10 @@ const MOVEMENT_CONTROLS: ControlDefinition[] = [
   { control: InputControl.Down, label: 'Move down', className: 'down' },
 ];
 
+interface FullscreenRoot extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+}
+
 export function isMobileTouchLayout(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -54,13 +58,21 @@ export class MobileTouchController {
 
     document.body.appendChild(this.element);
     this.bindControls();
-    this.update();
+    if (isMobileTouchLayout()) {
+      document.addEventListener('pointerdown', this.handleFirstPointerDown, {
+        capture: true,
+        once: true,
+      });
+    }
+    this.update(false);
   }
 
-  public update(): void {
+  public update(isGameplay: boolean): void {
     if (!isMobileTouchLayout()) {
       return;
     }
+
+    this.element.classList.toggle('is-gameplay', isGameplay);
 
     const consumables = this.session.getRunConsumables();
     const state = consumables.powerupItems
@@ -115,16 +127,11 @@ export class MobileTouchController {
           .join('')}
       </div>
       <div class="mobile-touch-controller__main">
-        <div class="mobile-touch-dpad" aria-label="Movement pad">
-          ${MOVEMENT_CONTROLS.map(
-            ({ label, className }) => `
-              <button class="mobile-touch-dpad__button mobile-touch-dpad__button--${className}"
-                type="button" data-touch-direction="${className}" aria-label="${label}">
-                <span aria-hidden="true"></span>
-              </button>`,
-          ).join('')}
-          <div class="mobile-touch-dpad__center" aria-hidden="true"></div>
-        </div>
+        <button class="mobile-touch-stick" type="button" data-touch-stick
+          aria-label="Movement joystick">
+          <span class="mobile-touch-stick__cross" aria-hidden="true"></span>
+          <span class="mobile-touch-stick__knob" data-touch-stick-knob aria-hidden="true"></span>
+        </button>
         <div class="mobile-touch-fire" aria-label="Fire controls">
           <button class="mobile-touch-fire__button mobile-touch-fire__button--rapid"
             type="button" data-touch-control="${
@@ -144,12 +151,7 @@ export class MobileTouchController {
   }
 
   private bindControls(): void {
-    MOVEMENT_CONTROLS.forEach(({ control, className }) => {
-      const button = this.element.querySelector(
-        `[data-touch-direction="${className}"]`,
-      ) as HTMLButtonElement;
-      this.bindHoldButton(button, control);
-    });
+    this.bindMovementStick();
 
     const fireButtons = Array.from(
       this.element.querySelectorAll('[data-touch-control]'),
@@ -176,6 +178,67 @@ export class MobileTouchController {
     });
   }
 
+  private bindMovementStick(): void {
+    const stick = this.element.querySelector(
+      '[data-touch-stick]',
+    ) as HTMLButtonElement;
+    const knob = stick.querySelector('[data-touch-stick-knob]') as HTMLElement;
+    let pointerId: number = null;
+
+    const updateStick = (clientX: number, clientY: number): void => {
+      const bounds = stick.getBoundingClientRect();
+      const radius = bounds.width / 2;
+      let x = (clientX - (bounds.left + radius)) / radius;
+      let y = (clientY - (bounds.top + radius)) / radius;
+      const magnitude = Math.hypot(x, y);
+      if (magnitude > 1) {
+        x /= magnitude;
+        y /= magnitude;
+      }
+
+      const threshold = 0.24;
+      this.inputManager.setTouchControl(InputControl.Left, x < -threshold);
+      this.inputManager.setTouchControl(InputControl.Right, x > threshold);
+      this.inputManager.setTouchControl(InputControl.Up, y < -threshold);
+      this.inputManager.setTouchControl(InputControl.Down, y > threshold);
+      knob.style.setProperty('--stick-x', `${x * radius * 0.54}px`);
+      knob.style.setProperty('--stick-y', `${y * radius * 0.54}px`);
+      stick.classList.toggle('is-pressed', magnitude > threshold);
+    };
+
+    const release = (): void => {
+      pointerId = null;
+      MOVEMENT_CONTROLS.forEach(({ control }) => {
+        this.inputManager.setTouchControl(control, false);
+      });
+      knob.style.setProperty('--stick-x', '0px');
+      knob.style.setProperty('--stick-y', '0px');
+      stick.classList.remove('is-pressed');
+    };
+
+    stick.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      this.requestFullscreen();
+      pointerId = event.pointerId;
+      stick.setPointerCapture(pointerId);
+      updateStick(event.clientX, event.clientY);
+    });
+    stick.addEventListener('pointermove', (event) => {
+      if (event.pointerId === pointerId) {
+        updateStick(event.clientX, event.clientY);
+      }
+    });
+    stick.addEventListener('pointerrawupdate', (event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerId === pointerId) {
+        updateStick(pointerEvent.clientX, pointerEvent.clientY);
+      }
+    });
+    stick.addEventListener('lostpointercapture', release);
+    stick.addEventListener('pointercancel', release);
+    stick.addEventListener('contextmenu', (event) => event.preventDefault());
+  }
+
   private bindHoldButton(
     button: HTMLButtonElement,
     control: InputControl,
@@ -187,6 +250,7 @@ export class MobileTouchController {
 
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
+      this.requestFullscreen();
       button.setPointerCapture(event.pointerId);
       this.inputManager.setTouchControl(control, true);
       button.classList.add('is-pressed');
@@ -195,6 +259,22 @@ export class MobileTouchController {
     button.addEventListener('pointercancel', release);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
   }
+
+  private requestFullscreen(): void {
+    if (document.fullscreenElement !== null) {
+      return;
+    }
+
+    const root = document.documentElement as FullscreenRoot;
+    const request = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (request !== undefined) {
+      Promise.resolve(request.call(root)).catch(() => undefined);
+    }
+  }
+
+  private handleFirstPointerDown = (): void => {
+    this.requestFullscreen();
+  };
 
   private releaseAll(): void {
     const controls = [
@@ -212,5 +292,10 @@ export class MobileTouchController {
     this.element
       .querySelectorAll('.is-pressed')
       .forEach((button) => button.classList.remove('is-pressed'));
+    const knob = this.element.querySelector(
+      '[data-touch-stick-knob]',
+    ) as HTMLElement;
+    knob.style.setProperty('--stick-x', '0px');
+    knob.style.setProperty('--stick-y', '0px');
   }
 }
