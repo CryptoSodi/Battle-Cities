@@ -103,6 +103,13 @@ syncCanvasCssSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
 
 let resizeTimeoutId: number = null;
 window.addEventListener('resize', () => {
+  // Mobile browser chrome, fullscreen, and orientation changes all emit
+  // resize events. CSS owns the half-screen mobile layout, so rebuilding the
+  // scene here would only destroy the active match and its recording.
+  if (config.isMobileTouchViewport()) {
+    return;
+  }
+
   const nextCanvasSize = config.getResponsiveCanvasSize();
 
   if (
