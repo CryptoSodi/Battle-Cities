@@ -10,6 +10,7 @@ import { DebugLevelPlayerMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
 import { PlayerTank, SpriteText } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
+import { isMobileTouchLayout } from '../../input/mobile';
 import { PowerupType } from '../../powerup';
 import { ShopInventoryItemId, ShopManager } from '../../shop';
 import { TankFactory, TankParty } from '../../tank';
@@ -170,8 +171,10 @@ export class LevelPlayerScript extends LevelScript {
         14,
     );
     this.hotbar.setZIndex(500);
-    this.world.sceneRoot.add(this.hotbar);
-    this.renderHotbar();
+    if (!isMobileTouchLayout()) {
+      this.world.sceneRoot.add(this.hotbar);
+      this.renderHotbar();
+    }
   }
 
   protected update({ deltaTime, inputManager }: GameUpdateArgs): void {

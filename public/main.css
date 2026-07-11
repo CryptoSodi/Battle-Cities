@@ -186,6 +186,229 @@ canvas {
   z-index: 1;
 }
 
+.mobile-touch-controller {
+  display: none;
+}
+
+@media (pointer: coarse) and (max-width: 900px) {
+  body.game-running {
+    display: block;
+    height: 100dvh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  body.game-running canvas:not(.particle-overlay) {
+    height: 50dvh;
+    width: 100vw;
+  }
+
+  body.game-running .particle-overlay {
+    bottom: auto;
+    height: 50dvh;
+    width: 100vw;
+  }
+
+  body.game-running .mobile-gamepad-qr,
+  body.game-running .mobile-gamepad-debug {
+    display: none;
+  }
+
+  .mobile-touch-controller {
+    --controller-accent: #ffae0a;
+    --controller-bg: #11130f;
+    --controller-line: #5f5a43;
+    --controller-panel: #20231b;
+    background: linear-gradient(rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.14)),
+      var(--controller-bg);
+    border-top: 1px solid var(--controller-line);
+    bottom: 0;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: minmax(54px, 15%) 1fr;
+    height: 50dvh;
+    left: 0;
+    padding: 8px max(12px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+    position: fixed;
+    width: 100vw;
+    z-index: 30;
+  }
+
+  .mobile-touch-controller button {
+    -webkit-tap-highlight-color: transparent;
+    color: #f5f2e8;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .mobile-touch-controller button:focus-visible {
+    outline: 3px solid #fff2b5;
+    outline-offset: 2px;
+  }
+
+  .mobile-touch-controller__powers {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(4, minmax(48px, 74px));
+    justify-content: center;
+  }
+
+  .mobile-touch-power {
+    align-items: center;
+    background: #171912;
+    border: 1px solid var(--controller-line);
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    height: clamp(46px, 7dvh, 62px);
+    padding: 3px 5px;
+    position: relative;
+  }
+
+  .mobile-touch-power.is-equipped {
+    background: #292407;
+    border-color: #9c7e10;
+  }
+
+  .mobile-touch-power.is-pressed {
+    background: var(--controller-accent);
+    transform: translateY(2px);
+  }
+
+  .mobile-touch-power__key {
+    color: #aaa58f;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .mobile-touch-power__icon {
+    height: clamp(34px, 5.5dvh, 48px);
+    image-rendering: auto;
+    justify-self: center;
+    max-width: 48px;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .mobile-touch-power__count {
+    bottom: 2px;
+    color: var(--controller-accent);
+    font-size: 13px;
+    font-weight: 800;
+    position: absolute;
+    right: 4px;
+  }
+
+  .mobile-touch-controller__main {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    min-height: 0;
+    padding: 4px clamp(4px, 3vw, 28px) 0;
+  }
+
+  .mobile-touch-dpad {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    height: min(27dvh, 42vw, 210px);
+    width: min(27dvh, 42vw, 210px);
+  }
+
+  .mobile-touch-dpad__button,
+  .mobile-touch-dpad__center {
+    background: var(--controller-panel);
+    border: 1px solid var(--controller-line);
+    box-sizing: border-box;
+  }
+
+  .mobile-touch-dpad__button {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .mobile-touch-dpad__button span {
+    border-color: transparent transparent #d7d2c3;
+    border-style: solid;
+    border-width: 0 10px 13px;
+    height: 0;
+    width: 0;
+  }
+
+  .mobile-touch-dpad__button.is-pressed {
+    background: var(--controller-accent);
+  }
+
+  .mobile-touch-dpad__button.is-pressed span {
+    border-bottom-color: #111207;
+  }
+
+  .mobile-touch-dpad__button--up { grid-column: 2; grid-row: 1; }
+  .mobile-touch-dpad__button--left { grid-column: 1; grid-row: 2; }
+  .mobile-touch-dpad__button--right { grid-column: 3; grid-row: 2; }
+  .mobile-touch-dpad__button--down { grid-column: 2; grid-row: 3; }
+  .mobile-touch-dpad__center { grid-column: 2; grid-row: 2; }
+  .mobile-touch-dpad__button--left span { transform: rotate(-90deg); }
+  .mobile-touch-dpad__button--right span { transform: rotate(90deg); }
+  .mobile-touch-dpad__button--down span { transform: rotate(180deg); }
+
+  .mobile-touch-fire {
+    align-items: center;
+    display: flex;
+    gap: clamp(12px, 4vw, 28px);
+    justify-content: flex-end;
+  }
+
+  .mobile-touch-fire__button {
+    align-items: center;
+    background: #24261e;
+    border: 2px solid #827b62;
+    border-radius: 50%;
+    box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.28);
+    display: flex;
+    flex-direction: column;
+    height: min(20dvh, 27vw, 132px);
+    justify-content: center;
+    min-height: 64px;
+    min-width: 64px;
+    padding: 0;
+    width: min(20dvh, 27vw, 132px);
+  }
+
+  .mobile-touch-fire__button--normal {
+    background: #4a210e;
+    border-color: #d96822;
+    transform: translateY(-8px);
+  }
+
+  .mobile-touch-fire__button.is-pressed {
+    background: var(--controller-accent);
+    border-color: #fff2b5;
+    box-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.25);
+    color: #111207;
+  }
+
+  .mobile-touch-fire__button--normal.is-pressed {
+    transform: translateY(-6px);
+  }
+
+  .mobile-touch-fire__label {
+    font-size: clamp(11px, 3vw, 16px);
+    font-weight: 800;
+  }
+
+}
+
 @media (max-width: 560px) {
   .auth-shell {
     padding: 20px;

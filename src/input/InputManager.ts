@@ -277,6 +277,14 @@ export class InputManager {
     return this.mobileGamepadHost;
   }
 
+  public setTouchControl(control: InputControl, pressed: boolean): void {
+    const device = this.liveDeviceMap.get(InputDeviceType.Keyboard)?.[0];
+    const binding = this.getBinding(InputBindingType.PrimaryKeyboard);
+    if (device instanceof KeyboardInputDevice) {
+      device.setCodePressed(binding.get(control), pressed);
+    }
+  }
+
   public getMethodByVariant(variant: InputVariant): InputMethod {
     const device = this.getDevice(
       variant.bindingType.deviceType,

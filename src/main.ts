@@ -25,7 +25,11 @@ import {
   GameStorage,
   Session,
 } from './game';
-import { InputHintSettings, InputManager } from './input';
+import {
+  InputHintSettings,
+  InputManager,
+  MobileTouchController,
+} from './input';
 import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
@@ -454,6 +458,7 @@ const audioManager = new AudioManager(audioLoader, gameStorage);
 audioManager.loadSettings();
 
 const session = new Session();
+const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
 
 const inputHintSettings = new InputHintSettings(gameStorage);
@@ -843,6 +848,7 @@ gameLoop.render.addListener((event) => {
 
   gameState.update();
   updateMobileGamepadDebug();
+  mobileTouchController.update();
 
   stats.end();
 });

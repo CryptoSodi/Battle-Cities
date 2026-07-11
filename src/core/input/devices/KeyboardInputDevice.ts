@@ -84,6 +84,15 @@ export class KeyboardInputDevice implements InputDevice {
     return this.upCodes;
   }
 
+  public setCodePressed(code: number, pressed: boolean): void {
+    const index = this.listenedDownCodes.indexOf(code);
+    if (pressed && index === -1) {
+      this.listenedDownCodes.push(code);
+    } else if (!pressed && index !== -1) {
+      this.listenedDownCodes.splice(index, 1);
+    }
+  }
+
   private handleWindowKeyDown = (ev): void => {
     const { keyCode } = ev;
 

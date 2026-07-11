@@ -99,9 +99,18 @@ function getViewportSize(): { width: number; height: number } {
     };
   }
 
+  const mobileTouchLayout =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches;
+
   return {
     width: Math.max(window.innerWidth, 1),
-    height: Math.max(window.innerHeight, 1),
+    height: Math.max(
+      mobileTouchLayout
+        ? Math.floor(window.innerHeight * 0.5)
+        : window.innerHeight,
+      1,
+    ),
   };
 }
 
