@@ -7,6 +7,50 @@
     "file": "assets/battle-cities-menu-logo.png",
     "rect": [0, 0, 1254, 1254]
   },
+  "menu.item.start": {
+    "file": "assets/menu/start.png",
+    "rect": [0, 0, 586, 162]
+  },
+  "menu.item.2players": {
+    "file": "assets/menu/2players.png",
+    "rect": [0, 0, 588, 162]
+  },
+  "menu.item.modes": {
+    "file": "assets/menu/modes.png",
+    "rect": [0, 0, 585, 156]
+  },
+  "menu.item.construction": {
+    "file": "assets/menu/construction.png",
+    "rect": [0, 0, 588, 156]
+  },
+  "menu.item.replay": {
+    "file": "assets/menu/replay.png",
+    "rect": [0, 0, 588, 152]
+  },
+  "menu.item.shop": {
+    "file": "assets/menu/shop.png",
+    "rect": [0, 0, 588, 155]
+  },
+  "menu.item.ranking": {
+    "file": "assets/menu/ranking.png",
+    "rect": [0, 0, 588, 152]
+  },
+  "menu.item.headquarters": {
+    "file": "assets/menu/headquarters.png",
+    "rect": [0, 0, 585, 155]
+  },
+  "menu.item.settings": {
+    "file": "assets/menu/settings.png",
+    "rect": [0, 0, 585, 152]
+  },
+  "menu.item.about": {
+    "file": "assets/menu/about.png",
+    "rect": [0, 0, 584, 146]
+  },
+  "menu.item.logout": {
+    "file": "assets/menu/logout.png",
+    "rect": [0, 0, 583, 140]
+  },
   "bullet.down": {
     "file": "data/graphics/bullets.png",
     "rect": [72, 0, 48, 64],

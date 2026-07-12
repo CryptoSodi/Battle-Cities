@@ -1,6 +1,6 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, GameStorage, Session } from '../../game';
-import { Menu, SpriteText, TextMenuItem } from '../../gameObjects';
+import { Menu, SpriteMenuItem, SpriteText } from '../../gameObjects';
 import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
@@ -30,18 +30,18 @@ export class MainMenuScene extends GameScene {
   private commonHighscore: SpriteText;
   private playerStatus: SpriteText;
   private menu: Menu;
-  private singlePlayerItem: TextMenuItem;
-  private multiPlayerItem: TextMenuItem;
-  private modesItem: TextMenuItem;
-  private editorItem: TextMenuItem;
-  private replayItem: TextMenuItem;
-  private shopItem: TextMenuItem;
-  private rankingItem: TextMenuItem;
-  private moreItem: TextMenuItem;
-  private settingsItem: TextMenuItem;
+  private singlePlayerItem: SpriteMenuItem;
+  private multiPlayerItem: SpriteMenuItem;
+  private modesItem: SpriteMenuItem;
+  private editorItem: SpriteMenuItem;
+  private replayItem: SpriteMenuItem;
+  private shopItem: SpriteMenuItem;
+  private rankingItem: SpriteMenuItem;
+  private moreItem: SpriteMenuItem;
+  private settingsItem: SpriteMenuItem;
   private eventTicker: SpriteText;
-  private aboutItem: TextMenuItem;
-  private logoutItem: TextMenuItem;
+  private aboutItem: SpriteMenuItem;
+  private logoutItem: SpriteMenuItem;
   private state: State = State.Ready;
   private session: Session;
   private mapLoader: MapLoader;
@@ -95,12 +95,18 @@ export class MainMenuScene extends GameScene {
       SpriteAlignment.AspectCover,
     );
     this.background.setZIndex(-100);
-    this.group.add(this.background);
+    this.root.add(this.background);
+
+    const isMobileLayout = config.isMobileTouchViewport();
+    const menuY = isMobileLayout
+      ? Math.round(this.root.size.height * 0.5)
+      : 490;
 
     this.logo = new GameObject();
     this.logo.size.set(360, 300);
     this.logo.setCenter(this.root.getSelfCenter());
-    this.logo.position.setY(172);
+    this.logo.position.subX(232);
+    this.logo.position.setY(menuY - 318);
     this.logo.painter = new SpritePainter(
       spriteLoader.load('menu.logo'),
       SpriteAlignment.AspectFit,
@@ -138,39 +144,42 @@ export class MainMenuScene extends GameScene {
     this.eventTicker.position.set(92, 152);
     this.group.add(this.eventTicker);
 
-    this.singlePlayerItem = new TextMenuItem('START');
+    const createMenuItem = (spriteId: string): SpriteMenuItem =>
+      new SpriteMenuItem(spriteLoader.load(spriteId), 228, 56);
+
+    this.singlePlayerItem = createMenuItem('menu.item.start');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
 
-    this.multiPlayerItem = new TextMenuItem('2 PLAYERS');
+    this.multiPlayerItem = createMenuItem('menu.item.2players');
     this.multiPlayerItem.selected.addListener(this.handleMultiPlayerSelected);
 
-    this.modesItem = new TextMenuItem('MODES');
+    this.modesItem = createMenuItem('menu.item.modes');
     this.modesItem.selected.addListener(this.handleModesSelected);
 
-    this.editorItem = new TextMenuItem('CONSTRUCTION');
+    this.editorItem = createMenuItem('menu.item.construction');
     this.editorItem.selected.addListener(this.handleEditorSelected);
 
     // Dev-only: watch the last recorded match back (see src/replay). Never
     // shown outside config.IS_DEV builds -- see the menuItems assembly below.
-    this.replayItem = new TextMenuItem('REPLAY');
+    this.replayItem = createMenuItem('menu.item.replay');
     this.replayItem.selected.addListener(this.handleReplaySelected);
 
-    this.shopItem = new TextMenuItem('SHOP');
+    this.shopItem = createMenuItem('menu.item.shop');
     this.shopItem.selected.addListener(this.handleShopSelected);
 
-    this.rankingItem = new TextMenuItem('RANKING');
+    this.rankingItem = createMenuItem('menu.item.ranking');
     this.rankingItem.selected.addListener(this.handleRankingSelected);
 
-    this.moreItem = new TextMenuItem('HEADQUARTERS');
+    this.moreItem = createMenuItem('menu.item.headquarters');
     this.moreItem.selected.addListener(this.handleMoreSelected);
 
-    this.settingsItem = new TextMenuItem('SETTINGS');
+    this.settingsItem = createMenuItem('menu.item.settings');
     this.settingsItem.selected.addListener(this.handleSettingsSelected);
 
-    this.aboutItem = new TextMenuItem('ABOUT');
+    this.aboutItem = createMenuItem('menu.item.about');
     this.aboutItem.selected.addListener(this.handleAboutSelected);
 
-    this.logoutItem = new TextMenuItem('LOGOUT');
+    this.logoutItem = createMenuItem('menu.item.logout');
     this.logoutItem.selected.addListener(this.handleLogoutSelected);
 
     const menuItems = [this.singlePlayerItem];
@@ -193,10 +202,10 @@ export class MainMenuScene extends GameScene {
       this.logoutItem,
     );
 
-    this.menu = new Menu();
+    this.menu = new Menu({ itemHeight: 60 });
     this.menu.setItems(menuItems);
     this.menu.setCenter(this.root.getSelfCenter());
-    this.menu.position.setY(490);
+    this.menu.position.setY(menuY);
     this.group.add(this.menu);
 
     if (!this.session.haveSeenIntro()) {

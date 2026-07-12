@@ -77,7 +77,8 @@ export class Menu extends GameObject {
       !box.containsPoint(point) ||
       itemIndex < 0 ||
       itemIndex >= this.items.length ||
-      !this.items[itemIndex].isFocusable()
+      !this.items[itemIndex].isFocusable() ||
+      !this.items[itemIndex].getWorldBoundingBox().containsPoint(point)
     ) {
       return false;
     }
