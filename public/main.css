@@ -164,7 +164,7 @@ body.scanlines-disabled::after {
   box-sizing: border-box;
   display: block;
   margin: 20px auto 0;
-  max-width: 300px;
+  max-width: 220px;
   min-height: 40px;
   padding: 8px 12px;
   transition: border-color 100ms ease-out, transform 100ms ease-out;
@@ -213,26 +213,16 @@ body.scanlines-disabled::after {
   gap: 7px;
 }
 
-.auth-technology__solana-mark {
+.auth-technology__solana {
   display: block;
-  flex: 0 0 30px;
-  height: 27px;
-  overflow: hidden;
-  position: relative;
-  width: 30px;
-}
-
-.auth-technology__solana-mark img {
-  display: block;
-  height: 27px;
-  max-width: none;
-  width: auto;
+  height: auto;
+  width: 72px;
 }
 
 .auth-technology__magicblock {
   display: block;
   height: auto;
-  width: 86px;
+  width: 78px;
 }
 
 .auth-status {
@@ -278,6 +268,12 @@ body.scanlines-disabled::after {
   .auth-technology {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .auth-store-link {
+    display: none;
   }
 }
 
