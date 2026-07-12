@@ -3,6 +3,10 @@ html {
   height: 100%;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   align-items: stretch;
   background:
@@ -154,6 +158,83 @@ body.scanlines-disabled::after {
   width: 30px;
 }
 
+.auth-store-link {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-sizing: border-box;
+  display: block;
+  margin: 20px auto 0;
+  max-width: 300px;
+  min-height: 40px;
+  padding: 8px 12px;
+  transition: border-color 100ms ease-out, transform 100ms ease-out;
+  width: 100%;
+}
+
+.auth-store-link img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+@media (hover: hover) {
+  .auth-store-link:hover {
+    border-color: rgba(255, 176, 24, 0.72);
+    transform: translateY(-1px);
+  }
+}
+
+.auth-store-link:active {
+  transform: translateY(1px);
+}
+
+.auth-store-link:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 3px;
+}
+
+.auth-technology {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #c7c1b4;
+  display: flex;
+  flex-wrap: wrap;
+  font: 600 11px/1.4 Arial, sans-serif;
+  gap: 10px 16px;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 14px 0;
+}
+
+.auth-technology__brand {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+
+.auth-technology__solana-mark {
+  display: block;
+  flex: 0 0 30px;
+  height: 27px;
+  overflow: hidden;
+  position: relative;
+  width: 30px;
+}
+
+.auth-technology__solana-mark img {
+  display: block;
+  height: 27px;
+  max-width: none;
+  width: auto;
+}
+
+.auth-technology__magicblock {
+  display: block;
+  height: auto;
+  width: 86px;
+}
+
 .auth-status {
   color: #9f9785;
   font: 400 14px/1.45 Arial, sans-serif;
@@ -178,6 +259,32 @@ body.scanlines-disabled::after {
 .auth-legal a:focus-visible {
   outline: 2px solid #ffd166;
   outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .auth-shell {
+    padding: max(16px, env(safe-area-inset-top)) 16px
+      max(16px, env(safe-area-inset-bottom));
+  }
+
+  .auth-panel {
+    padding: 28px 24px;
+  }
+
+  .auth-panel h1 {
+    font-size: 38px;
+  }
+
+  .auth-technology {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-store-link {
+    transition: none;
+  }
 }
 
 .loading {
