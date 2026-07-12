@@ -24,6 +24,7 @@ enum State {
 export class MainMenuScene extends GameScene {
   private group: GameObject;
   private background: GameObject;
+  private logo: GameObject;
   private primaryPoints: SpriteText;
   private secondaryPoints: SpriteText;
   private commonHighscore: SpriteText;
@@ -95,6 +96,16 @@ export class MainMenuScene extends GameScene {
     );
     this.background.setZIndex(-100);
     this.group.add(this.background);
+
+    this.logo = new GameObject();
+    this.logo.size.set(360, 300);
+    this.logo.setCenter(this.root.getSelfCenter());
+    this.logo.position.setY(172);
+    this.logo.painter = new SpritePainter(
+      spriteLoader.load('menu.logo'),
+      SpriteAlignment.AspectFit,
+    );
+    this.group.add(this.logo);
 
     this.primaryPoints = new SpriteText(this.getPrimaryPointsText(), {
       color: config.COLOR_WHITE,

@@ -1,7 +1,11 @@
 {
   "menu.background": {
-    "file": "assets/main-screen-background.png",
+    "file": "assets/main-menu-battlefield.png",
     "rect": [0, 0, 1672, 941]
+  },
+  "menu.logo": {
+    "file": "assets/battle-cities-menu-logo.png",
+    "rect": [0, 0, 1254, 1254]
   },
   "bullet.down": {
     "file": "data/graphics/bullets.png",
