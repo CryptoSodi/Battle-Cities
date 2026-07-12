@@ -170,7 +170,7 @@ gameStorage.load();
 
 const showScanlines = gameStorage.getBoolean(
   config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
-  true,
+  false,
 );
 document.body.classList.toggle('scanlines-disabled', !showScanlines);
 

@@ -87,7 +87,7 @@ export class SettingsMenuScene extends GameScene {
   private isScanlinesEnabled(): boolean {
     return this.gameStorage.getBoolean(
       config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
-      true,
+      false,
     );
   }
 }
