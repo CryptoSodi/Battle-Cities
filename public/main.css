@@ -199,8 +199,10 @@ canvas {
     display: block;
     height: 100dvh;
     min-height: 100dvh;
+    overflow: hidden;
     overscroll-behavior: none;
     touch-action: none;
+    width: 100%;
   }
 
   body.game-running .game-stage {
@@ -209,7 +211,9 @@ canvas {
     height: 70dvh;
     overflow: hidden;
     position: relative;
-    width: 100vw;
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
   }
 
   body.game-running canvas:not(.particle-overlay) {
@@ -254,7 +258,8 @@ canvas {
       max(10px, env(safe-area-inset-bottom))
       max(12px, env(safe-area-inset-left));
     position: fixed;
-    width: 100vw;
+    max-width: 100%;
+    width: 100%;
     z-index: 30;
   }
 

@@ -95,8 +95,17 @@ function syncMobileCanvasCssSize(): void {
     return;
   }
 
-  const stageWidth = Math.max(window.innerWidth, 1);
-  const stageHeight = Math.max(window.innerHeight * 0.7, 1);
+  const visualViewport = (window as any).visualViewport as
+    | { width: number; height: number }
+    | undefined;
+  const viewportWidth = visualViewport
+    ? visualViewport.width
+    : document.documentElement.clientWidth;
+  const viewportHeight = visualViewport
+    ? visualViewport.height
+    : document.documentElement.clientHeight;
+  const stageWidth = Math.max(Math.floor(viewportWidth), 1);
+  const stageHeight = Math.max(Math.floor(viewportHeight * 0.7), 1);
   const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
   const stageAspect = stageWidth / stageHeight;
   const width = stageAspect > gameAspect ? stageHeight * gameAspect : stageWidth;
@@ -104,11 +113,11 @@ function syncMobileCanvasCssSize(): void {
 
   document.documentElement.style.setProperty(
     '--mobile-game-css-width',
-    `${Math.round(width)}px`,
+    `${Math.floor(width)}px`,
   );
   document.documentElement.style.setProperty(
     '--mobile-game-css-height',
-    `${Math.round(height)}px`,
+    `${Math.floor(height)}px`,
   );
 }
 
