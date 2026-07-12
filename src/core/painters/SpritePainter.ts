@@ -46,6 +46,40 @@ export class SpritePainter extends Painter {
     let destinationRect = objectRect;
     if (this.alignment === SpriteAlignment.Stretch) {
       destinationRect = objectRect;
+    } else if (this.alignment === SpriteAlignment.AspectFit) {
+      const sourceWidth =
+        this.sprite.destinationRect.width || this.sprite.sourceRect.width;
+      const sourceHeight =
+        this.sprite.destinationRect.height || this.sprite.sourceRect.height;
+      const scale = Math.min(
+        objectRect.width / sourceWidth,
+        objectRect.height / sourceHeight,
+      );
+
+      destinationRect = this.destinationRect;
+      destinationRect.width = sourceWidth * scale;
+      destinationRect.height = sourceHeight * scale;
+      destinationRect.x =
+        objectRect.x + objectRect.width / 2 - destinationRect.width / 2;
+      destinationRect.y =
+        objectRect.y + objectRect.height / 2 - destinationRect.height / 2;
+    } else if (this.alignment === SpriteAlignment.AspectCover) {
+      const sourceWidth =
+        this.sprite.destinationRect.width || this.sprite.sourceRect.width;
+      const sourceHeight =
+        this.sprite.destinationRect.height || this.sprite.sourceRect.height;
+      const scale = Math.max(
+        objectRect.width / sourceWidth,
+        objectRect.height / sourceHeight,
+      );
+
+      destinationRect = this.destinationRect;
+      destinationRect.width = sourceWidth * scale;
+      destinationRect.height = sourceHeight * scale;
+      destinationRect.x =
+        objectRect.x + objectRect.width / 2 - destinationRect.width / 2;
+      destinationRect.y =
+        objectRect.y + objectRect.height / 2 - destinationRect.height / 2;
     } else if (this.alignment === SpriteAlignment.TopLeft) {
       destinationRect = this.destinationRect;
       destinationRect.x = objectRect.x;

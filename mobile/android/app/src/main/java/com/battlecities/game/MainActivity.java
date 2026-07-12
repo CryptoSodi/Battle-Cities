@@ -2,6 +2,8 @@ package com.battlecities.game;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -25,11 +27,20 @@ public class MainActivity extends BridgeActivity {
         insetsController.setAppearanceLightStatusBars(false);
         insetsController.setAppearanceLightNavigationBars(false);
 
-        ViewCompat.setOnApplyWindowInsetsListener(getBridge().getWebView(), (view, windowInsets) -> {
+        View webView = getBridge().getWebView();
+        ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (view, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            ViewGroup.MarginLayoutParams layoutParams =
+                (ViewGroup.MarginLayoutParams) webView.getLayoutParams();
+            layoutParams.setMargins(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                systemBars.bottom
+            );
+            webView.setLayoutParams(layoutParams);
             return windowInsets;
         });
-        ViewCompat.requestApplyInsets(getBridge().getWebView());
+        ViewCompat.requestApplyInsets(getWindow().getDecorView());
     }
 }

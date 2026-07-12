@@ -86,13 +86,12 @@ export class MainMenuScene extends GameScene {
     this.group = new GameObject();
     this.group.size.copyFrom(this.root.size);
 
-    // Full-screen title-screen artwork (includes the "BATTLE CITIES" title),
-    // stretched to the menu area and sitting behind all other menu content.
+    // Title-screen artwork sits behind all other menu content.
     this.background = new GameObject();
     this.background.size.copyFrom(this.root.size);
     this.background.painter = new SpritePainter(
       spriteLoader.load('menu.background'),
-      SpriteAlignment.Stretch,
+      SpriteAlignment.AspectCover,
     );
     this.background.setZIndex(-100);
     this.group.add(this.background);
