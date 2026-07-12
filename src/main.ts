@@ -717,12 +717,35 @@ function waitForLogin(): Promise<void> {
       }
     };
 
-    const startGoogleSession = (): void => {
+    const startGoogleSession = async (): Promise<void> => {
       if (loginStarted) {
         return;
       }
 
       loginStarted = true;
+      const nativeGoogleAuth = (window as any).Capacitor?.Plugins?.GoogleAuth;
+      if (nativeGoogleAuth !== undefined) {
+        try {
+          setStatus('Choose a Google account...');
+          const result = await nativeGoogleAuth.signIn();
+          const response = await apiFetch('/api/auth/google/native', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ idToken: result.idToken }),
+          });
+          if (!response.ok) {
+            throw new Error('Native Google session failed');
+          }
+          await refreshPlayerIdentity();
+          setStatus('Google account connected.');
+          resolve();
+        } catch {
+          loginStarted = false;
+          setStatus('Could not sign in with Google. Try again.');
+        }
+        return;
+      }
+
       setStatus('Opening Google login...');
       window.location.assign(getApiUrl('/api/auth/google/start'));
     };
@@ -772,7 +795,7 @@ function waitForLogin(): Promise<void> {
     });
 
     googleLoginButton?.addEventListener('click', () => {
-      startGoogleSession();
+      void startGoogleSession();
     });
   });
 }

@@ -58,6 +58,37 @@ async function completeLogin({ code, state }) {
   };
 }
 
+async function completeNativeLogin(idToken) {
+  if (typeof idToken !== 'string' || idToken.length < 100 || idToken.length > 10000) {
+    throw new Error('Invalid Google ID token');
+  }
+
+  const config = requireConfig();
+  const { OAuth2Client } = require('google-auth-library');
+  const client = new OAuth2Client(config.clientId);
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: config.clientId,
+  });
+  const payload = ticket.getPayload();
+
+  if (
+    payload === undefined ||
+    typeof payload.sub !== 'string' ||
+    payload.sub === '' ||
+    payload.email_verified !== true
+  ) {
+    throw new Error('Invalid Google identity');
+  }
+
+  return {
+    sub: payload.sub,
+    email: typeof payload.email === 'string' ? payload.email : null,
+    name: typeof payload.name === 'string' ? payload.name : null,
+    picture: typeof payload.picture === 'string' ? payload.picture : null,
+  };
+}
+
 async function exchangeCode(code, redirectUri) {
   const config = requireConfig();
   const response = await fetch(TOKEN_URL, {
@@ -199,6 +230,7 @@ function base64UrlDecode(value) {
 module.exports = {
   CALLBACK_PATH,
   completeLogin,
+  completeNativeLogin,
   createAuthorizationUrl,
   createRedirectUri,
   getOriginFromExpressRequest,

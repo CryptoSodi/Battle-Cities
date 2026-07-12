@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+def dappStoreKeystorePath = System.getenv('BATTLE_CITIES_KEYSTORE_PATH') ?:
+    'D:/keys/battle-cities-dappstore.keystore'
+def dappStorePassword = System.getenv('BATTLE_CITIES_KEYSTORE_PASSWORD')
+def dappStoreKeyPassword = System.getenv('BATTLE_CITIES_KEY_PASSWORD')
+def hasDappStoreSigning =
+    file(dappStoreKeystorePath).exists() &&
+    dappStorePassword != null &&
+    dappStoreKeyPassword != null
+
 android {
     namespace "com.battlecities.game"
     compileSdk rootProject.ext.compileSdkVersion
@@ -17,11 +26,36 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasDappStoreSigning) {
+            dappStore {
+                storeFile file(dappStoreKeystorePath)
+                storePassword dappStorePassword
+                keyAlias 'battle-cities'
+                keyPassword dappStoreKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasDappStoreSigning) {
+                signingConfig signingConfigs.dappStore
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def buildsRelease = taskGraph.allTasks.any {
+        it.project == project && it.name.toLowerCase().contains('release')
+    }
+    if (buildsRelease && !hasDappStoreSigning) {
+        throw new GradleException(
+            'Release signing is not configured. Set BATTLE_CITIES_KEYSTORE_PASSWORD ' +
+            'and BATTLE_CITIES_KEY_PASSWORD before building the release APK.'
+        )
     }
 }
 
@@ -36,6 +70,9 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.credentials:credentials:1.7.0-alpha02"
+    implementation "androidx.credentials:credentials-play-services-auth:1.7.0-alpha02"
+    implementation "com.google.android.libraries.identity.googleid:googleid:1.2.0"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

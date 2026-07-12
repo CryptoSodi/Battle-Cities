@@ -1,6 +1,7 @@
 import * as airdropClaim from '../routes/airdrops/claim';
 import * as airdropEligibility from '../routes/airdrops/eligibility';
 import * as googleAuthCallback from '../routes/auth/google/callback';
+import * as googleAuthNative from '../routes/auth/google/native';
 import * as googleAuthStart from '../routes/auth/google/start';
 import * as boostStatus from '../routes/boost/status';
 import * as economyAccount from '../routes/economy/account';
@@ -38,6 +39,7 @@ const routes: { [path: string]: { [method: string]: RouteHandler } } = {
   'airdrops/claim': airdropClaim,
   'airdrops/eligibility': airdropEligibility,
   'auth/google/callback': googleAuthCallback,
+  'auth/google/native': googleAuthNative,
   'auth/google/start': googleAuthStart,
   'boost/status': boostStatus,
   'economy/account': economyAccount,

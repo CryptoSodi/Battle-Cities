@@ -4,4 +4,5 @@
     <string name="title_activity_main">Battle Cities</string>
     <string name="package_name">com.battlecities.game</string>
     <string name="custom_url_scheme">com.battlecities.game</string>
+    <string name="google_web_client_id">744942111577-k7892qq16qki2fe7arl7gh1ms2tn9b0h.apps.googleusercontent.com</string>
 </resources>

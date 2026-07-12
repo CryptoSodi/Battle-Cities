@@ -18,3 +18,29 @@ The wrapper loads the existing website, so guest sessions work immediately. Goog
 ## Changing the hosted URL
 
 Update `server.url` and `server.allowNavigation` in `capacitor.config.json`, then run `npm run sync`.
+
+## dApp Store release APK
+
+The release build expects the signing key at
+`D:\keys\battle-cities-dappstore.keystore`. Override this location with
+`BATTLE_CITIES_KEYSTORE_PATH` when needed.
+
+Set the signing passwords only in the current terminal session:
+
+```powershell
+$env:BATTLE_CITIES_KEYSTORE_PASSWORD = [System.Net.NetworkCredential]::new(
+  '', (Read-Host 'Keystore password' -AsSecureString)
+).Password
+$env:BATTLE_CITIES_KEY_PASSWORD = [System.Net.NetworkCredential]::new(
+  '', (Read-Host 'Key password' -AsSecureString)
+).Password
+```
+
+Then build from `mobile\android`:
+
+```powershell
+.\gradlew.bat assembleRelease
+```
+
+The signed APK is generated at
+`app\build\outputs\apk\release\app-release.apk`.
