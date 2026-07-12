@@ -96,7 +96,7 @@ function syncMobileCanvasCssSize(): void {
   }
 
   const stageWidth = Math.max(window.innerWidth, 1);
-  const stageHeight = Math.max(window.innerHeight * 0.5, 1);
+  const stageHeight = Math.max(window.innerHeight * 0.7, 1);
   const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
   const stageAspect = stageWidth / stageHeight;
   const width = stageAspect > gameAspect ? stageHeight * gameAspect : stageWidth;
