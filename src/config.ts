@@ -90,6 +90,10 @@ const BASE_CANVAS_WIDTH =
   VIEWPORT_FIELD_SIZE + BORDER_LEFT_WIDTH + BORDER_RIGHT_WIDTH;
 const BASE_CANVAS_HEIGHT =
   LEVEL_PLAY_TOP_OFFSET + VIEWPORT_FIELD_SIZE + BORDER_TOP_BOTTOM_HEIGHT * 2;
+// Shop and shared panel screens use a 1240px content width with 24px gutters.
+// Mobile scales this wider logical canvas down to the physical viewport so
+// those screens fit without changing gameplay's camera framing.
+const MOBILE_UI_CANVAS_WIDTH = 1288;
 
 function getViewportSize(): { width: number; height: number } {
   if (typeof window === 'undefined') {
@@ -124,6 +128,13 @@ export function getResponsiveCanvasSize(): { width: number; height: number } {
   const viewportSize = getViewportSize();
   const viewportAspectRatio = viewportSize.width / viewportSize.height;
   const baseAspectRatio = BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT;
+
+  if (isMobileTouchViewport()) {
+    return {
+      width: MOBILE_UI_CANVAS_WIDTH,
+      height: Math.ceil(MOBILE_UI_CANVAS_WIDTH / viewportAspectRatio),
+    };
+  }
 
   if (viewportAspectRatio >= baseAspectRatio) {
     return {

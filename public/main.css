@@ -161,6 +161,25 @@ body.scanlines-disabled::after {
   min-height: 20px;
 }
 
+.auth-legal {
+  color: #817b6c;
+  font: 400 12px/1.5 Arial, sans-serif;
+  margin: 14px 0 0;
+}
+
+.auth-legal a {
+  color: #d8c98e;
+}
+
+.auth-legal a:hover {
+  color: #ffb018;
+}
+
+.auth-legal a:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
 .loading {
   align-items: center;
   display: flex;
