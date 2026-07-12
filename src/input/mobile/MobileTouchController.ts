@@ -16,6 +16,17 @@ const POWER_ICONS: Partial<Record<ShopInventoryItemId, string>> = {
   [ShopInventoryItemId.ExtraLife]: 'data/graphics/TANKS/powerup-tank.png',
 };
 
+const POWER_TYPE_ICONS: Record<string, string> = {
+  shield: 'data/graphics/powerup-helmet.png',
+  defence: 'data/graphics/powerup-shovel.png',
+  freeze: 'data/graphics/powerup-clock.png',
+  speed: 'data/graphics/powerup-speed.png',
+  upgrade: 'data/graphics/powerup-star.png',
+  zoomout: 'data/graphics/powerup-zoomout.png',
+  wipeout: 'data/graphics/powerup-grenade.png',
+  life: 'data/graphics/TANKS/powerup-tank.png',
+};
+
 type ControlDefinition = {
   control: InputControl;
   label: string;
@@ -28,10 +39,6 @@ const MOVEMENT_CONTROLS: ControlDefinition[] = [
   { control: InputControl.Right, label: 'Move right', className: 'right' },
   { control: InputControl.Down, label: 'Move down', className: 'down' },
 ];
-
-interface FullscreenRoot extends HTMLElement {
-  webkitRequestFullscreen?: () => Promise<void> | void;
-}
 
 export function isMobileTouchLayout(): boolean {
   return (
@@ -47,6 +54,7 @@ export class MobileTouchController {
   private readonly element: HTMLElement;
   private readonly powerButtons: HTMLButtonElement[];
   private lastPowerState = '__initial__';
+  private wasGameplay = false;
 
   constructor(inputManager: InputManager, session: Session) {
     this.inputManager = inputManager;
@@ -58,12 +66,6 @@ export class MobileTouchController {
 
     document.body.appendChild(this.element);
     this.bindControls();
-    if (isMobileTouchLayout()) {
-      document.addEventListener('pointerdown', this.handleFirstPointerDown, {
-        capture: true,
-        once: true,
-      });
-    }
     this.update(false);
   }
 
@@ -75,22 +77,29 @@ export class MobileTouchController {
     this.element.classList.toggle('is-gameplay', isGameplay);
 
     const consumables = this.session.getRunConsumables();
-    const state = consumables.powerupItems
-      .map((item, index) => `${item}:${consumables.powerupCounts[index] || 0}`)
-      .join('|');
-    if (state === this.lastPowerState) {
+    const state = [
+      consumables.powerupItems.join(','),
+      consumables.powerups.join(','),
+      consumables.powerupCounts.join(','),
+    ].join('|');
+    const enteredGameplay = isGameplay && !this.wasGameplay;
+    this.wasGameplay = isGameplay;
+    if (!enteredGameplay && state === this.lastPowerState) {
       return;
     }
 
     this.lastPowerState = state;
     this.powerButtons.forEach((button, index) => {
       const itemId = consumables.powerupItems[index];
+      const powerupType = consumables.powerups[index];
       const count = consumables.powerupCounts[index] || 0;
       const icon = button.querySelector('img') as HTMLImageElement;
       const countElement = button.querySelector(
         '[data-touch-power-count]',
       ) as HTMLElement;
-      const iconPath = itemId === undefined ? undefined : POWER_ICONS[itemId];
+      const iconPath =
+        (itemId === undefined ? undefined : POWER_ICONS[itemId]) ||
+        POWER_TYPE_ICONS[powerupType];
 
       button.classList.toggle('is-equipped', iconPath !== undefined);
       button.setAttribute(
@@ -101,8 +110,10 @@ export class MobileTouchController {
       );
       icon.hidden = iconPath === undefined;
       if (iconPath !== undefined) {
-        icon.src = iconPath;
+        icon.src = new URL(`/${iconPath}`, window.location.origin).href;
         icon.alt = '';
+      } else {
+        icon.removeAttribute('src');
       }
       countElement.textContent = count > 1 ? `x${count}` : '';
     });
@@ -133,17 +144,17 @@ export class MobileTouchController {
           <span class="mobile-touch-stick__knob" data-touch-stick-knob aria-hidden="true"></span>
         </button>
         <div class="mobile-touch-fire" aria-label="Fire controls">
-          <button class="mobile-touch-fire__button mobile-touch-fire__button--rapid"
-            type="button" data-touch-control="${
-              InputControl.SecondaryAction
-            }" aria-label="Rapid fire">
-            <span class="mobile-touch-fire__label">RAPID</span>
-          </button>
           <button class="mobile-touch-fire__button mobile-touch-fire__button--normal"
             type="button" data-touch-control="${
               InputControl.PrimaryAction
             }" aria-label="Fire">
             <span class="mobile-touch-fire__label">FIRE</span>
+          </button>
+          <button class="mobile-touch-fire__button mobile-touch-fire__button--rapid"
+            type="button" data-touch-control="${
+              InputControl.SecondaryAction
+            }" aria-label="Rapid fire">
+            <span class="mobile-touch-fire__label">RAPID</span>
           </button>
         </div>
       </div>`;
@@ -218,7 +229,6 @@ export class MobileTouchController {
 
     stick.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      this.requestFullscreen();
       pointerId = event.pointerId;
       stick.setPointerCapture(pointerId);
       updateStick(event.clientX, event.clientY);
@@ -250,7 +260,6 @@ export class MobileTouchController {
 
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
-      this.requestFullscreen();
       button.setPointerCapture(event.pointerId);
       this.inputManager.setTouchControl(control, true);
       button.classList.add('is-pressed');
@@ -259,22 +268,6 @@ export class MobileTouchController {
     button.addEventListener('pointercancel', release);
     button.addEventListener('contextmenu', (event) => event.preventDefault());
   }
-
-  private requestFullscreen(): void {
-    if (document.fullscreenElement !== null) {
-      return;
-    }
-
-    const root = document.documentElement as FullscreenRoot;
-    const request = root.requestFullscreen || root.webkitRequestFullscreen;
-    if (request !== undefined) {
-      Promise.resolve(request.call(root)).catch(() => undefined);
-    }
-  }
-
-  private handleFirstPointerDown = (): void => {
-    this.requestFullscreen();
-  };
 
   private releaseAll(): void {
     const controls = [

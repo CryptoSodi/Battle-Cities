@@ -131,6 +131,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private winScript: LevelWinScript;
 
   protected setup(updateArgs: GameUpdateArgs): void {
+    document.body.classList.add('level-playing');
     const { collisionSystem, inputManager, gameStorage, rng, session } = updateArgs;
     this.gameStorage = gameStorage;
     document.querySelectorAll('.mobile-gamepad-qr').forEach((element) => {

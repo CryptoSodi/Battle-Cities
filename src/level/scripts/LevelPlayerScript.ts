@@ -107,6 +107,18 @@ export class LevelPlayerScript extends LevelScript {
   protected setup({ gameStorage, inputManager, session }: GameUpdateArgs): void {
     this.shopManager = new ShopManager(gameStorage);
     this.isReplaying = inputManager.isReplaying();
+    const runConsumables = session.getRunConsumables();
+    if (
+      !this.isReplaying &&
+      session.getLevelNumber() === 1 &&
+      runConsumables.powerupItems.length === 0 &&
+      runConsumables.powerups.length === 0
+    ) {
+      const equippedConsumables = this.shopManager.getEquippedRunConsumables();
+      if (equippedConsumables.powerupItems.length > 0) {
+        session.setRunConsumables(equippedConsumables);
+      }
+    }
     this.eventBus.playerSpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
     this.eventBus.levelGameOverMoveBlocked.addListener(

@@ -190,6 +190,10 @@ canvas {
   display: none;
 }
 
+.game-stage {
+  display: contents;
+}
+
 @media (pointer: coarse) and (max-width: 900px) {
   body.game-running {
     display: block;
@@ -199,15 +203,32 @@ canvas {
     touch-action: none;
   }
 
-  body.game-running canvas:not(.particle-overlay) {
+  body.game-running .game-stage {
+    background: #000;
+    display: block;
     height: 50dvh;
+    overflow: hidden;
+    position: relative;
     width: 100vw;
   }
 
+  body.game-running canvas:not(.particle-overlay) {
+    height: var(--mobile-game-css-height);
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--mobile-game-css-width);
+  }
+
   body.game-running .particle-overlay {
-    bottom: auto;
-    height: 50dvh;
-    width: 100vw;
+    height: var(--mobile-game-css-height);
+    inset: auto;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--mobile-game-css-width);
   }
 
   body.game-running .mobile-gamepad-qr,
@@ -215,7 +236,7 @@ canvas {
     display: none;
   }
 
-  .mobile-touch-controller {
+  body.game-running .mobile-touch-controller {
     --controller-accent: #ffae0a;
     --controller-bg: #11130f;
     --controller-line: #5f5a43;
@@ -256,16 +277,18 @@ canvas {
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(4, minmax(48px, 74px));
-    justify-content: center;
+    justify-content: end;
     overflow: hidden;
     visibility: hidden;
   }
 
-  .mobile-touch-controller.is-gameplay {
+  .mobile-touch-controller.is-gameplay,
+  body.level-playing .mobile-touch-controller {
     grid-template-rows: minmax(54px, 15%) 1fr;
   }
 
-  .mobile-touch-controller.is-gameplay .mobile-touch-controller__powers {
+  .mobile-touch-controller.is-gameplay .mobile-touch-controller__powers,
+  body.level-playing .mobile-touch-controller__powers {
     visibility: visible;
   }
 
@@ -328,12 +351,13 @@ canvas {
     border-radius: 50%;
     box-shadow: inset 0 0 0 8px rgba(255, 255, 255, 0.025);
     flex: 0 0 auto;
-    height: min(27dvh, 42vw, 210px);
-    min-height: 120px;
-    min-width: 120px;
+    height: min(24dvh, 36vw, 180px);
+    min-height: 104px;
+    min-width: 104px;
     padding: 0;
     position: relative;
-    width: min(27dvh, 42vw, 210px);
+    transform: translateY(-10px);
+    width: min(24dvh, 36vw, 180px);
   }
 
   .mobile-touch-stick__cross,
@@ -361,7 +385,7 @@ canvas {
     border-radius: 50%;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.42),
       inset 0 3px 0 rgba(255, 255, 255, 0.08);
-    height: 42%;
+    height: 38%;
     left: 50%;
     pointer-events: none;
     position: absolute;
@@ -370,7 +394,7 @@ canvas {
       calc(-50% + var(--stick-x, 0px)),
       calc(-50% + var(--stick-y, 0px))
     );
-    width: 42%;
+    width: 38%;
   }
 
   .mobile-touch-stick.is-pressed .mobile-touch-stick__knob {

@@ -90,6 +90,28 @@ function syncCanvasCssSize(width: number, height: number): void {
   document.documentElement.style.setProperty('--game-height', height.toString());
 }
 
+function syncMobileCanvasCssSize(): void {
+  if (!config.isMobileTouchViewport()) {
+    return;
+  }
+
+  const stageWidth = Math.max(window.innerWidth, 1);
+  const stageHeight = Math.max(window.innerHeight * 0.5, 1);
+  const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
+  const stageAspect = stageWidth / stageHeight;
+  const width = stageAspect > gameAspect ? stageHeight * gameAspect : stageWidth;
+  const height = stageAspect > gameAspect ? stageHeight : stageWidth / gameAspect;
+
+  document.documentElement.style.setProperty(
+    '--mobile-game-css-width',
+    `${Math.round(width)}px`,
+  );
+  document.documentElement.style.setProperty(
+    '--mobile-game-css-height',
+    `${Math.round(height)}px`,
+  );
+}
+
 function logCanvasSize(label: string, canvas: HTMLCanvasElement): void {
   const bounds = canvas.getBoundingClientRect();
   log.info(`${label} canvas size`, {
@@ -100,6 +122,7 @@ function logCanvasSize(label: string, canvas: HTMLCanvasElement): void {
 }
 
 syncCanvasCssSize(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+syncMobileCanvasCssSize();
 
 let resizeTimeoutId: number = null;
 window.addEventListener('resize', () => {
@@ -107,6 +130,7 @@ window.addEventListener('resize', () => {
   // resize events. CSS owns the half-screen mobile layout, so rebuilding the
   // scene here would only destroy the active match and its recording.
   if (config.isMobileTouchViewport()) {
+    syncMobileCanvasCssSize();
     return;
   }
 
@@ -478,6 +502,7 @@ const sceneRouter = new GameSceneRouter();
 sceneRouter.start(GameSceneType.MainMenu);
 sceneRouter.transitionStarted.addListener(() => {
   collisionSystem.reset();
+  document.body.classList.remove('level-playing');
 });
 
 const debugInspector = new DebugInspector(gameRenderer.getDomElement());
@@ -855,9 +880,7 @@ gameLoop.render.addListener((event) => {
 
   gameState.update();
   updateMobileGamepadDebug();
-  mobileTouchController.update(
-    sceneRouter.getCurrentType() === GameSceneType.LevelPlay,
-  );
+  mobileTouchController.update(document.body.classList.contains('level-playing'));
 
   stats.end();
 });
@@ -914,11 +937,14 @@ async function main(): Promise<void> {
 
   document.body.removeChild(loadingElement);
   const gameCanvas = gameRenderer.getDomElement();
-  document.body.appendChild(gameCanvas);
+  const gameStage = document.createElement('div');
+  gameStage.className = 'game-stage';
+  document.body.appendChild(gameStage);
+  gameStage.appendChild(gameCanvas);
   logCanvasSize('Game', gameCanvas);
   // Particle overlay sits directly above the game canvas.
   const particleCanvas = particles.getDomElement();
-  document.body.appendChild(particleCanvas);
+  gameStage.appendChild(particleCanvas);
   logCanvasSize('Particle', particleCanvas);
 
   gameLoop.start();
