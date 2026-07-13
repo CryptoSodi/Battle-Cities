@@ -330,7 +330,7 @@ canvas {
   body.game-running .game-stage {
     background: #000;
     display: block;
-    height: 70dvh;
+    height: 60dvh;
     overflow: hidden;
     position: relative;
     box-sizing: border-box;
@@ -374,7 +374,7 @@ canvas {
     box-sizing: border-box;
     display: grid;
     grid-template-rows: 0 1fr;
-    height: 30dvh;
+    height: 40dvh;
     left: 0;
     padding: 8px max(12px, env(safe-area-inset-right))
       max(10px, env(safe-area-inset-bottom))

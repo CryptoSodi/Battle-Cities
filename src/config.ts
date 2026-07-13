@@ -109,7 +109,7 @@ function getViewportSize(): { width: number; height: number } {
     width: Math.max(window.innerWidth, 1),
     height: Math.max(
       mobileTouchLayout
-        ? Math.floor(window.innerHeight * 0.7)
+        ? Math.floor(window.innerHeight * 0.6)
         : window.innerHeight,
       1,
     ),
