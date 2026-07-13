@@ -19,7 +19,7 @@ export class MenuCursor extends GameObject {
   constructor() {
     super(60, 60);
 
-    this.painter.alignment = SpriteAlignment.MiddleCenter;
+    this.painter.alignment = SpriteAlignment.AspectFit;
   }
 
   protected setup({ spriteLoader }: GameUpdateArgs): void {

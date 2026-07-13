@@ -11,6 +11,7 @@ export interface MenuOptions {
   initialIndex?: number;
   itemHeight?: number;
   itemOffsetX?: number;
+  itemOffsetY?: number;
 }
 
 const DEFAULT_OPTIONS = {
@@ -19,9 +20,8 @@ const DEFAULT_OPTIONS = {
   initialIndex: 0,
   itemHeight: 60,
   itemOffsetX: 96,
+  itemOffsetY: 16,
 };
-
-const ITEM_OFFSET = 16;
 
 export class Menu extends GameObject {
   public focused = new Subject<number>();
@@ -51,7 +51,7 @@ export class Menu extends GameObject {
     this.items.forEach((menuItem, index) => {
       menuItem.position.set(
         this.options.itemOffsetX,
-        index * this.options.itemHeight + ITEM_OFFSET,
+        index * this.options.itemHeight + this.options.itemOffsetY,
       );
       this.add(menuItem);
     });
@@ -75,17 +75,14 @@ export class Menu extends GameObject {
   }
 
   public selectItemAtPoint(point: Vector): boolean {
-    const box = this.getWorldBoundingBox();
-    const itemIndex = Math.floor(
-      (point.y - box.min.y) / this.options.itemHeight,
+    const itemIndex = this.items.findIndex((item) =>
+      item.getWorldBoundingBox().containsPoint(point),
     );
 
     if (
-      !box.containsPoint(point) ||
       itemIndex < 0 ||
       itemIndex >= this.items.length ||
-      !this.items[itemIndex].isFocusable() ||
-      !this.items[itemIndex].getWorldBoundingBox().containsPoint(point)
+      !this.items[itemIndex].isFocusable()
     ) {
       return false;
     }
@@ -144,7 +141,12 @@ export class Menu extends GameObject {
     this.showCursor();
 
     this.cursor.dirtyPaintBox();
-    this.cursor.position.setY(this.cursor.size.height * this.focusedIndex);
+    const focusedItem = this.items[this.focusedIndex];
+    this.cursor.position.setY(
+      focusedItem.position.y +
+        focusedItem.size.height / 2 -
+        this.cursor.size.height / 2,
+    );
     this.cursor.updateMatrix(true);
     // Re-sync render-interpolation history right after this teleport. The
     // cursor jumps whole rows in a single tick (unlike gameplay objects,
@@ -156,7 +158,6 @@ export class Menu extends GameObject {
 
     this.focused.notify(this.focusedIndex);
 
-    const focusedItem = this.items[this.focusedIndex];
     focusedItem.focus();
   }
 

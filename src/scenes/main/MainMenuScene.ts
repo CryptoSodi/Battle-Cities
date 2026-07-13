@@ -40,7 +40,6 @@ export class MainMenuScene extends GameScene {
   private moreItem: SpriteMenuItem;
   private settingsItem: SpriteMenuItem;
   private eventTicker: SpriteText;
-  private aboutItem: SpriteMenuItem;
   private logoutItem: SpriteMenuItem;
   private state: State = State.Ready;
   private session: Session;
@@ -185,9 +184,6 @@ export class MainMenuScene extends GameScene {
     this.settingsItem = createMenuItem('menu.item.settings');
     this.settingsItem.selected.addListener(this.handleSettingsSelected);
 
-    this.aboutItem = createMenuItem('menu.item.about');
-    this.aboutItem.selected.addListener(this.handleAboutSelected);
-
     this.logoutItem = createMenuItem('menu.item.logout');
     this.logoutItem.selected.addListener(this.handleLogoutSelected);
 
@@ -207,15 +203,15 @@ export class MainMenuScene extends GameScene {
       this.rankingItem,
       this.moreItem,
       this.settingsItem,
-      this.aboutItem,
       this.logoutItem,
     );
 
     this.menu = new Menu({
-      cursorOffsetX: isMobileLayout ? -64 : 0,
-      cursorSize: isMobileLayout ? 84 : 60,
+      cursorOffsetX: isMobileLayout ? -106 : 0,
+      cursorSize: isMobileLayout ? 126 : 60,
       itemHeight: isMobileLayout ? 102 : 60,
       itemOffsetX: isMobileLayout ? 30 : 96,
+      itemOffsetY: isMobileLayout ? 2 : 16,
     });
     this.menu.setItems(menuItems);
     this.menu.setCenter(this.root.getSelfCenter());
@@ -432,12 +428,6 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.SettingsMenu);
-  };
-
-  private handleAboutSelected = (): void => {
-    this.mobileGamepadQrEnabled = false;
-    this.removeMobileGamepadQrElement();
-    this.navigator.push(GameSceneType.MainAbout);
   };
 
   private handleLogoutSelected = (): void => {
