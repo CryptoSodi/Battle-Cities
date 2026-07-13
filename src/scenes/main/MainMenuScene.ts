@@ -103,10 +103,13 @@ export class MainMenuScene extends GameScene {
       : 490;
 
     this.logo = new GameObject();
-    this.logo.size.set(360, 300);
+    this.logo.size.set(
+      isMobileLayout ? 720 : 360,
+      isMobileLayout ? 600 : 300,
+    );
     this.logo.setCenter(this.root.getSelfCenter());
-    this.logo.position.subX(232);
-    this.logo.position.setY(menuY - 318);
+    this.logo.position.subX(isMobileLayout ? 330 : 232);
+    this.logo.position.setY(menuY - (isMobileLayout ? 620 : 318));
     this.logo.painter = new SpritePainter(
       spriteLoader.load('menu.logo'),
       SpriteAlignment.AspectFit,
@@ -144,8 +147,14 @@ export class MainMenuScene extends GameScene {
     this.eventTicker.position.set(92, 152);
     this.group.add(this.eventTicker);
 
+    const menuItemWidth = isMobileLayout ? 420 : 228;
+    const menuItemHeight = isMobileLayout ? 98 : 56;
     const createMenuItem = (spriteId: string): SpriteMenuItem =>
-      new SpriteMenuItem(spriteLoader.load(spriteId), 228, 56);
+      new SpriteMenuItem(
+        spriteLoader.load(spriteId),
+        menuItemWidth,
+        menuItemHeight,
+      );
 
     this.singlePlayerItem = createMenuItem('menu.item.start');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
@@ -202,7 +211,12 @@ export class MainMenuScene extends GameScene {
       this.logoutItem,
     );
 
-    this.menu = new Menu({ itemHeight: 60 });
+    this.menu = new Menu({
+      cursorOffsetX: isMobileLayout ? -64 : 0,
+      cursorSize: isMobileLayout ? 84 : 60,
+      itemHeight: isMobileLayout ? 102 : 60,
+      itemOffsetX: isMobileLayout ? 30 : 96,
+    });
     this.menu.setItems(menuItems);
     this.menu.setCenter(this.root.getSelfCenter());
     this.menu.position.setY(menuY);

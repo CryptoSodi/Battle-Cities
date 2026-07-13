@@ -6,16 +6,21 @@ import { MenuCursor } from './MenuCursor';
 import { MenuItem } from './MenuItem';
 
 export interface MenuOptions {
+  cursorOffsetX?: number;
+  cursorSize?: number;
   initialIndex?: number;
   itemHeight?: number;
+  itemOffsetX?: number;
 }
 
 const DEFAULT_OPTIONS = {
+  cursorOffsetX: 0,
+  cursorSize: 60,
   initialIndex: 0,
   itemHeight: 60,
+  itemOffsetX: 96,
 };
 
-const CURSOR_OFFSET = 96;
 const ITEM_OFFSET = 16;
 
 export class Menu extends GameObject {
@@ -31,6 +36,8 @@ export class Menu extends GameObject {
 
     this.options = Object.assign({}, DEFAULT_OPTIONS, options);
     this.focusedIndex = this.options.initialIndex;
+    this.cursor.size.set(this.options.cursorSize, this.options.cursorSize);
+    this.cursor.position.setX(this.options.cursorOffsetX);
   }
 
   public setItems(items: MenuItem[]): void {
@@ -43,7 +50,7 @@ export class Menu extends GameObject {
 
     this.items.forEach((menuItem, index) => {
       menuItem.position.set(
-        CURSOR_OFFSET,
+        this.options.itemOffsetX,
         index * this.options.itemHeight + ITEM_OFFSET,
       );
       this.add(menuItem);
