@@ -86,17 +86,20 @@ export class MainMenuScene extends GameScene {
     this.group = new GameObject();
     this.group.size.copyFrom(this.root.size);
 
+    const isMobileLayout = config.isMobileTouchViewport();
+
     // Title-screen artwork sits behind all other menu content.
     this.background = new GameObject();
     this.background.size.copyFrom(this.root.size);
     this.background.painter = new SpritePainter(
-      spriteLoader.load('menu.background'),
-      SpriteAlignment.AspectCover,
+      spriteLoader.load(
+        isMobileLayout ? 'menu.background.mobile' : 'menu.background',
+      ),
+      isMobileLayout ? SpriteAlignment.Stretch : SpriteAlignment.AspectCover,
     );
     this.background.setZIndex(-100);
     this.root.add(this.background);
 
-    const isMobileLayout = config.isMobileTouchViewport();
     const menuY = isMobileLayout
       ? Math.round(this.root.size.height * 0.5)
       : 490;
@@ -106,8 +109,9 @@ export class MainMenuScene extends GameScene {
       isMobileLayout ? 720 : 360,
       isMobileLayout ? 600 : 300,
     );
-    this.logo.setCenter(this.root.getSelfCenter());
-    this.logo.position.subX(isMobileLayout ? 330 : 232);
+    this.logo.position.setX(
+      (this.root.size.width - this.logo.size.width) / 2,
+    );
     this.logo.position.setY(menuY - (isMobileLayout ? 620 : 318));
     this.logo.painter = new SpritePainter(
       spriteLoader.load('menu.logo'),

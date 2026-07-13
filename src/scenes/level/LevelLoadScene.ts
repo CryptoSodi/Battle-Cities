@@ -1,7 +1,7 @@
 import { Logger } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
 import { AlertModal } from '../../gameObjects';
-import { InputHintSettings } from '../../input';
+import { InputHintSettings, InputVariant } from '../../input';
 import { MapConfig, MapLoader } from '../../map';
 
 import { GameScene } from '../GameScene';
@@ -68,20 +68,7 @@ export class LevelLoadScene extends GameScene {
     this.mapLoader.error.removeListener(this.handleMapLoadError);
 
     if (this.session.isMultiplayer()) {
-      // Check if players already selected their variants.
-      // It happens before first level.
-      const primaryInputVariant = this.session.primaryPlayer.getInputVariant();
-      const needSelectVariant = primaryInputVariant === null;
-
-      if (needSelectVariant) {
-        const params: LevelControlsLocationParams = {
-          canSelectVariant: true,
-          mapConfig,
-          playerIndex: 0,
-        };
-        this.navigator.replace(GameSceneType.LevelControls, params);
-        return;
-      }
+      this.ensureDefaultMultiplayerInputVariants();
     }
 
     if (this.inputHintSettings.shouldShowLevelHint()) {
@@ -98,6 +85,20 @@ export class LevelLoadScene extends GameScene {
       mapConfig,
     });
   };
+
+  private ensureDefaultMultiplayerInputVariants(): void {
+    if (this.session.primaryPlayer.getInputVariant() === null) {
+      this.session.primaryPlayer.setInputVariant(
+        InputVariant.SecondaryKeyboard0,
+      );
+    }
+
+    if (this.session.secondaryPlayer.getInputVariant() === null) {
+      this.session.secondaryPlayer.setInputVariant(
+        InputVariant.TertiaryKeyboard0,
+      );
+    }
+  }
 
   private handleMapLoadError = (err): void => {
     this.log.error('Failed to load the map', err);

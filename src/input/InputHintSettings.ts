@@ -15,12 +15,9 @@ export class InputHintSettings {
       return shouldShow;
     }
 
-    // If not set by user we decide based on if user have seen it yet
-    const seenHint = this.getSeenLevelHint();
-
-    shouldShow = !seenHint;
-
-    return shouldShow;
+    // Gameplay controls remain available in Settings, but no longer interrupt
+    // a new run unless the player explicitly enables the hint.
+    return false;
   }
 
   public shouldShowEditorHint(): boolean {
