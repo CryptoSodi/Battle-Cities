@@ -211,10 +211,10 @@ export class MainMenuScene extends GameScene {
     );
 
     this.menu = new Menu({
-      cursorOffsetX: isMobileLayout ? -106 : 0,
+      cursorOffsetX: isMobileLayout ? -106 : 30,
       cursorSize: isMobileLayout ? 126 : 60,
       itemHeight: isMobileLayout ? 102 : 60,
-      itemOffsetX: isMobileLayout ? 30 : 96,
+      itemOffsetX: isMobileLayout ? 30 : 126,
       itemOffsetY: isMobileLayout ? 2 : 16,
     });
     this.menu.setItems(menuItems);
