@@ -1,4 +1,40 @@
 {
+  "menu.hud.eventBar": {
+    "file": "assets/main-menu-event-bar.png",
+    "rect": [
+      0,
+      0,
+      1100,
+      103
+    ]
+  },
+  "menu.hud.player": {
+    "file": "assets/main-menu-hud-player.png",
+    "rect": [
+      0,
+      0,
+      490,
+      217
+    ]
+  },
+  "menu.hud.score": {
+    "file": "assets/main-menu-hud-score.png",
+    "rect": [
+      0,
+      0,
+      340,
+      226
+    ]
+  },
+  "menu.hud.highScore": {
+    "file": "assets/main-menu-hud-high-score.png",
+    "rect": [
+      0,
+      0,
+      490,
+      216
+    ]
+  },
   "menu.background": {
     "file": "assets/main-menu-battlefield.png",
     "rect": [

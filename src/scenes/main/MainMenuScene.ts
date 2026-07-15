@@ -10,11 +10,84 @@ import { EventClient } from '../../events';
 import { PlayerIdentity } from '../../auth';
 import * as config from '../../config';
 import { apiFetch } from '../../network/api';
+import { Painter } from '../../core/Painter';
+import { RenderContext } from '../../core/render';
+import { RenderObject } from '../../core/RenderObject';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
 const SLIDE_SPEED = 240;
+const MOBILE_EVENT_TICKER_SPEED = 32;
+const HUD_FONT = 'Lucida Console, Courier New, monospace';
+
+class HudTextPainter extends Painter {
+  constructor(
+    private text: string,
+    private readonly fontSize: number,
+    private readonly color: string,
+    private readonly maxWidth: number,
+    private readonly align: CanvasTextAlign = 'center',
+  ) {
+    super();
+  }
+
+  public setText(text: string): void {
+    this.text = text;
+  }
+
+  public paint(context: RenderContext, renderObject: RenderObject): void {
+    const { min } = renderObject.getWorldBoundingBox();
+    context.drawText(
+      this.text,
+      min.x,
+      min.y,
+      this.maxWidth,
+      this.fontSize,
+      HUD_FONT,
+      '700',
+      this.color,
+      this.align,
+    );
+  }
+}
+
+class EventTickerPainter extends Painter {
+  private eventName = '';
+  private width = 390;
+
+  public setEvent(eventName: string, width: number): void {
+    this.eventName = eventName;
+    this.width = width;
+  }
+
+  public paint(context: RenderContext, renderObject: RenderObject): void {
+    const { min } = renderObject.getWorldBoundingBox();
+    const prefixWidth = 170;
+    context.drawText(
+      'LIVE EVENT  -',
+      min.x,
+      min.y,
+      prefixWidth,
+      22,
+      HUD_FONT,
+      '700',
+      config.COLOR_YELLOW,
+      'left',
+    );
+    context.drawText(
+      this.eventName,
+      min.x + prefixWidth + 6,
+      min.y,
+      this.width - prefixWidth - 6,
+      22,
+      HUD_FONT,
+      '700',
+      config.COLOR_WHITE,
+      'left',
+    );
+  }
+}
 
 enum State {
   Sliding,
@@ -40,6 +113,15 @@ export class MainMenuScene extends GameScene {
   private moreItem: SpriteMenuItem;
   private settingsItem: SpriteMenuItem;
   private eventTicker: SpriteText;
+  private mobileEventTicker: GameObject = null;
+  private mobileEventTickerPainter: EventTickerPainter = null;
+  private mobileEventNames: string[] = [];
+  private mobileEventIndex = 0;
+  private mobileEventTickerInnerLeft = 0;
+  private mobileEventTickerInnerRight = 0;
+  private mobileEventTickerStartX = 0;
+  private mobileEventTickerEndX = 0;
+  private mobileEventTickerActive = false;
   private logoutItem: SpriteMenuItem;
   private state: State = State.Ready;
   private session: Session;
@@ -74,10 +156,6 @@ export class MainMenuScene extends GameScene {
     // simply runs unboosted.
     this.refreshRunBoosts();
 
-    // Live-event ticker (plan: "top promotional ticker can point users into
-    // the live event"). Filled in asynchronously; empty text when no event is
-    // live or the backend is unreachable.
-    this.loadEventTicker();
     this.playerIdentity = playerIdentity;
 
     // Restore source for maps to default
@@ -98,7 +176,9 @@ export class MainMenuScene extends GameScene {
       isMobileLayout ? SpriteAlignment.Stretch : SpriteAlignment.AspectCover,
     );
     this.background.setZIndex(-100);
-    this.root.add(this.background);
+    if (!isMobileLayout) {
+      this.root.add(this.background);
+    }
 
     const menuY = isMobileLayout
       ? Math.round(this.root.size.height * 0.5)
@@ -106,13 +186,13 @@ export class MainMenuScene extends GameScene {
 
     this.logo = new GameObject();
     this.logo.size.set(
-      isMobileLayout ? 720 : 360,
-      isMobileLayout ? 600 : 300,
+      isMobileLayout ? 504 : 360,
+      isMobileLayout ? 420 : 300,
     );
     this.logo.position.setX(
       (this.root.size.width - this.logo.size.width) / 2,
     );
-    this.logo.position.setY(menuY - (isMobileLayout ? 620 : 318));
+    this.logo.position.setY(isMobileLayout ? 190 : menuY - 318);
     this.logo.painter = new SpritePainter(
       spriteLoader.load('menu.logo'),
       SpriteAlignment.AspectFit,
@@ -122,36 +202,48 @@ export class MainMenuScene extends GameScene {
     this.primaryPoints = new SpriteText(this.getPrimaryPointsText(), {
       color: config.COLOR_WHITE,
     });
-    this.primaryPoints.position.set(92, 64);
-    this.group.add(this.primaryPoints);
+    this.primaryPoints.position.set(isMobileLayout ? 300 : 92, 64);
+    if (!isMobileLayout) {
+      this.root.add(this.primaryPoints);
+    }
 
     this.secondaryPoints = new SpriteText(this.getSecondaryPointsText(), {
       color: config.COLOR_WHITE,
     });
-    this.secondaryPoints.position.set(704, 64);
-    if (session.secondaryPlayer.wasInLastGame()) {
-      this.group.add(this.secondaryPoints);
+    this.secondaryPoints.position.set(isMobileLayout ? 820 : 704, 64);
+    if (!isMobileLayout && session.secondaryPlayer.wasInLastGame()) {
+      this.root.add(this.secondaryPoints);
     }
 
     this.commonHighscore = new SpriteText(this.getCommonHighscoreText(), {
       color: config.COLOR_WHITE,
     });
-    this.commonHighscore.position.set(380, 64);
-    this.group.add(this.commonHighscore);
+    this.commonHighscore.position.set(isMobileLayout ? 650 : 380, 64);
+    if (!isMobileLayout) {
+      this.root.add(this.commonHighscore);
+    }
 
     this.playerStatus = new SpriteText(this.getPlayerStatusText(), {
       color: config.COLOR_GRAY,
     });
-    this.playerStatus.position.set(92, 112);
-    this.group.add(this.playerStatus);
+    this.playerStatus.position.set(isMobileLayout ? 300 : 92, 112);
+    if (!isMobileLayout) {
+      this.root.add(this.playerStatus);
+    } else {
+      this.setupMobileHud(spriteLoader);
+    }
 
-    // Live-event ticker strip; text arrives async (see loadEventTicker).
-    this.eventTicker = new SpriteText('', { color: config.COLOR_YELLOW });
-    this.eventTicker.position.set(92, 152);
-    this.group.add(this.eventTicker);
+    if (isMobileLayout) {
+      this.setupMobileEventTicker(spriteLoader);
+    } else {
+      this.eventTicker = new SpriteText('', { color: config.COLOR_YELLOW });
+      this.eventTicker.position.set(92, 152);
+      this.root.add(this.eventTicker);
+    }
+    this.loadEventTicker();
 
-    const menuItemWidth = isMobileLayout ? 420 : 228;
-    const menuItemHeight = isMobileLayout ? 98 : 56;
+    const menuItemWidth = isMobileLayout ? 380 : 228;
+    const menuItemHeight = isMobileLayout ? 88 : 56;
     const createMenuItem = (spriteId: string): SpriteMenuItem =>
       new SpriteMenuItem(
         spriteLoader.load(spriteId),
@@ -211,10 +303,10 @@ export class MainMenuScene extends GameScene {
     );
 
     this.menu = new Menu({
-      cursorOffsetX: isMobileLayout ? -106 : 30,
-      cursorSize: isMobileLayout ? 126 : 60,
-      itemHeight: isMobileLayout ? 102 : 60,
-      itemOffsetX: isMobileLayout ? 30 : 126,
+      cursorOffsetX: isMobileLayout ? -86 : 30,
+      cursorSize: isMobileLayout ? 112 : 60,
+      itemHeight: isMobileLayout ? 92 : 60,
+      itemOffsetX: isMobileLayout ? 50 : 126,
       itemOffsetY: isMobileLayout ? 2 : 16,
     });
     this.menu.setItems(menuItems);
@@ -237,6 +329,7 @@ export class MainMenuScene extends GameScene {
   protected update(updateArgs: GameUpdateArgs): void {
     const { deltaTime, inputManager } = updateArgs;
 
+    this.updateMobileEventTicker(deltaTime);
     this.mobileGamepadQrEnabled = true;
     this.ensureMobileGamepadQrElement(inputManager);
     this.updateMobileGamepadQrVisibility(inputManager);
@@ -271,6 +364,205 @@ export class MainMenuScene extends GameScene {
     }
 
     super.update(updateArgs);
+  }
+
+  private setupMobileHud(
+    spriteLoader: GameUpdateArgs['spriteLoader'],
+  ): void {
+    const sideHeight = 124;
+    const scoreHeight = 148;
+    const overlap = 30;
+    const playerWidth = 280;
+    const scoreWidth = 240;
+    const highScoreWidth = 280;
+    const totalWidth =
+      playerWidth + scoreWidth + highScoreWidth - overlap * 2;
+    const x = Math.round((this.root.size.width - totalWidth) / 2);
+    const sideY = 14;
+    const scoreY = 2;
+    const scoreX = x + playerWidth - overlap;
+    const highScoreX = scoreX + scoreWidth - overlap;
+
+    const addPanel = (
+      spriteId: string,
+      panelX: number,
+      panelY: number,
+      width: number,
+      height: number,
+      zIndex: number,
+    ): void => {
+      const panel = new GameObject(width, height);
+      panel.position.set(panelX, panelY);
+      panel.painter = new SpritePainter(
+        spriteLoader.load(spriteId),
+        SpriteAlignment.Stretch,
+      );
+      panel.setZIndex(zIndex);
+      this.root.add(panel);
+    };
+
+    addPanel(
+      'menu.hud.player',
+      x,
+      sideY,
+      playerWidth,
+      sideHeight,
+      0,
+    );
+    addPanel(
+      'menu.hud.highScore',
+      highScoreX,
+      sideY,
+      highScoreWidth,
+      sideHeight,
+      0,
+    );
+    addPanel(
+      'menu.hud.score',
+      scoreX,
+      scoreY,
+      scoreWidth,
+      scoreHeight,
+      1,
+    );
+
+    const addText = (
+      text: string,
+      textX: number,
+      textY: number,
+      width: number,
+      fontSize: number,
+      color = config.COLOR_WHITE,
+    ): void => {
+      const textObject = new GameObject(width, Math.ceil(fontSize * 1.3));
+      textObject.position.set(textX, textY);
+      textObject.painter = new HudTextPainter(
+        text,
+        fontSize,
+        color,
+        width,
+      );
+      textObject.setZIndex(2);
+      this.root.add(textObject);
+    };
+
+    addText(this.getMobilePlayerName(), x + 88, sideY + 40, 174, 22);
+    addText(
+      this.getMobileScoreText(),
+      scoreX + 33,
+      scoreY + 78,
+      174,
+      30,
+      config.COLOR_YELLOW,
+    );
+    addText(
+      this.getMobileHighScoreText(),
+      highScoreX + 102,
+      sideY + 68,
+      142,
+      28,
+    );
+  }
+
+  private setupMobileEventTicker(
+    spriteLoader: GameUpdateArgs['spriteLoader'],
+  ): void {
+    const barWidth = 650;
+    const barHeight = 61;
+    const barX = Math.round((this.root.size.width - barWidth) / 2);
+    const barY = 153;
+    const textWidth = 390;
+    const horizontalInset = 80;
+
+    const bar = new GameObject(barWidth, barHeight);
+    bar.position.set(barX, barY);
+    bar.painter = new SpritePainter(
+      spriteLoader.load('menu.hud.eventBar'),
+      SpriteAlignment.AspectFit,
+    );
+    bar.setZIndex(3);
+    this.root.add(bar);
+
+    this.mobileEventTickerInnerLeft = barX + horizontalInset;
+    this.mobileEventTickerInnerRight = barX + barWidth - horizontalInset;
+    this.mobileEventTickerStartX = this.mobileEventTickerInnerLeft;
+    this.mobileEventTickerEndX =
+      this.mobileEventTickerInnerRight - textWidth;
+    this.mobileEventTickerPainter = new EventTickerPainter();
+    this.mobileEventTicker = new GameObject(textWidth, 30);
+    this.mobileEventTicker.position.set(
+      this.mobileEventTickerStartX,
+      barY + 18,
+    );
+    this.mobileEventTicker.painter = this.mobileEventTickerPainter;
+    this.mobileEventTicker.setZIndex(4);
+    this.root.add(this.mobileEventTicker);
+  }
+
+  private updateMobileEventTicker(deltaTime: number): void {
+    if (!this.mobileEventTickerActive || this.mobileEventTicker === null) {
+      return;
+    }
+
+    let nextX =
+      this.mobileEventTicker.position.x +
+      MOBILE_EVENT_TICKER_SPEED * deltaTime;
+    if (nextX > this.mobileEventTickerEndX) {
+      this.mobileEventIndex =
+        (this.mobileEventIndex + 1) % this.mobileEventNames.length;
+      this.showMobileEvent(this.mobileEventIndex);
+      return;
+    }
+
+    this.mobileEventTicker.dirtyPaintBox();
+    this.mobileEventTicker.position.setX(nextX);
+    this.mobileEventTicker.updateMatrix();
+  }
+
+  private showMobileEvent(index: number): void {
+    const eventName = this.mobileEventNames[index];
+    if (
+      eventName === undefined ||
+      this.mobileEventTicker === null ||
+      this.mobileEventTickerPainter === null
+    ) {
+      return;
+    }
+
+    const width = Math.min(
+      470,
+      Math.max(300, 176 + eventName.length * 13),
+    );
+    this.mobileEventTickerStartX = this.mobileEventTickerInnerLeft;
+    this.mobileEventTickerEndX = Math.max(
+      this.mobileEventTickerStartX,
+      this.mobileEventTickerInnerRight - width,
+    );
+    this.mobileEventTickerPainter.setEvent(eventName, width);
+    this.mobileEventTicker.dirtyPaintBox();
+    this.mobileEventTicker.size.set(width, 30);
+    this.mobileEventTicker.position.setX(this.mobileEventTickerStartX);
+    this.mobileEventTicker.updateMatrix();
+    this.mobileEventTicker.setNeedsPaint();
+  }
+
+  private getMobilePlayerName(): string {
+    const player = this.playerIdentity.getPlayer();
+    const name = this.getSafePlayerName(player?.displayName || 'PLAYER');
+    return name.length > 10 ? name.slice(0, 10) : name;
+  }
+
+  private getMobileScoreText(): string {
+    const score = this.session.primaryPlayer.getLastGamePoints() || 0;
+    return score.toString().padStart(6, '0').slice(-6);
+  }
+
+  private getMobileHighScoreText(): string {
+    return this.pointsHighscoreManager
+      .getOverallMaxPoints()
+      .toString()
+      .padStart(6, '0')
+      .slice(-6);
   }
 
   private getPrimaryPointsText(): string {
@@ -392,16 +684,29 @@ export class MainMenuScene extends GameScene {
 
   private loadEventTicker(): void {
     new EventClient().listEvents().then((events) => {
-      const live = events.find((event) => event.status === 'live');
-      if (live === undefined || this.eventTicker === undefined) {
-        return;
-      }
+      const liveEvents = events.filter((event) => event.status === 'live');
+      const eventNames =
+        liveEvents.length === 0
+          ? ['NO EVENTS']
+          : liveEvents.map((event) => event.name.toUpperCase());
 
-      // The bitmap font's character set has no ':' or '>' — see
-      // data/fonts/sprite-font.json.
-      this.eventTicker.setText(
-        `→ LIVE! ${live.name} - ENDS ${live.endsAt.slice(0, 10)}`,
-      );
+      if (this.mobileEventTickerPainter !== null) {
+        this.mobileEventNames = eventNames;
+        this.mobileEventIndex = 0;
+        this.showMobileEvent(this.mobileEventIndex);
+        this.mobileEventTickerActive = true;
+      } else if (this.eventTicker !== undefined) {
+        // The bitmap font's character set has no ':' or '>' — see
+        // data/fonts/sprite-font.json.
+        this.eventTicker.setText(
+          liveEvents
+            .map(
+              (event) =>
+                `LIVE ${event.name} - ENDS ${event.endsAt.slice(0, 10)}`,
+            )
+            .join(' - '),
+        );
+      }
     });
   }
 

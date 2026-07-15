@@ -320,6 +320,7 @@ class ShopCard extends GameObject {
 
 export class MainShopScene extends GameScene {
   private shopManager: ShopManager;
+  private panelHeight = SHOP_HEIGHT;
   private view = ShopView.Shop;
   private market = ShopMarket.Token;
   private category = ShopCategory.All;
@@ -368,6 +369,12 @@ export class MainShopScene extends GameScene {
 
     const originX = Math.max(24, Math.round((this.root.size.width - SHOP_WIDTH) / 2));
     const originY = Math.max(24, TOP_Y);
+    this.panelHeight = config.isMobileTouchViewport()
+      ? Math.max(
+          SHOP_HEIGHT,
+          this.root.size.height - (originY + TAB_HEIGHT - 2),
+        )
+      : SHOP_HEIGHT;
 
     const title = new ShopText('Game Shop', COLOR_YELLOW, 54, '900', 360);
     title.position.set(originX + 16, originY - 70);
@@ -377,7 +384,7 @@ export class MainShopScene extends GameScene {
     this.addMarketTab(originX + 246, originY, 'SOL SHOP', ShopMarket.Sol);
     this.addViewTab(originX + 476, originY, 'LOADOUT', ShopView.Loadout);
 
-    const shell = new ShopPanel(SHOP_WIDTH, SHOP_HEIGHT, COLOR_PANEL);
+    const shell = new ShopPanel(SHOP_WIDTH, this.panelHeight, COLOR_PANEL);
     shell.position.set(originX, originY + TAB_HEIGHT - 2);
     this.root.add(shell);
 
@@ -393,7 +400,12 @@ export class MainShopScene extends GameScene {
   }
 
   private renderSidePanel(x: number, y: number): void {
-    const panel = new ShopPanel(SIDE_WIDTH, SHOP_HEIGHT, '#14130f', '#2c2a22');
+    const panel = new ShopPanel(
+      SIDE_WIDTH,
+      this.panelHeight,
+      '#14130f',
+      '#2c2a22',
+    );
     panel.position.set(x, y);
     this.root.add(panel);
 

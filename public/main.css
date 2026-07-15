@@ -330,12 +330,23 @@ canvas {
   body.game-running .game-stage {
     background: #000;
     display: block;
-    height: 60dvh;
+    height: 100dvh;
     overflow: hidden;
     position: relative;
     box-sizing: border-box;
     max-width: 100%;
     width: 100%;
+  }
+
+  body.game-running.level-playing .game-stage {
+    height: 60dvh;
+  }
+
+  body.game-running.main-menu-active .game-stage {
+    background-image: url("/assets/main-menu-battlefield-mobile.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
   }
 
   body.game-running canvas:not(.particle-overlay) {
@@ -347,6 +358,11 @@ canvas {
     width: var(--mobile-game-css-width);
   }
 
+  body.game-running.main-menu-active canvas:not(.particle-overlay) {
+    top: 0;
+    transform: translateX(-50%);
+  }
+
   body.game-running .particle-overlay {
     height: var(--mobile-game-css-height);
     inset: auto;
@@ -355,6 +371,11 @@ canvas {
     top: 50%;
     transform: translate(-50%, -50%);
     width: var(--mobile-game-css-width);
+  }
+
+  body.game-running.main-menu-active .particle-overlay {
+    top: 0;
+    transform: translateX(-50%);
   }
 
   body.game-running .mobile-gamepad-qr,
@@ -376,7 +397,7 @@ canvas {
     border-top: 0;
     bottom: 0;
     box-sizing: border-box;
-    display: grid;
+    display: none;
     grid-template-rows: 0 1fr;
     height: 40dvh;
     left: 0;
@@ -389,8 +410,8 @@ canvas {
     z-index: 30;
   }
 
-  body.game-running:not(.level-playing) .mobile-touch-controller:not(.is-gameplay) {
-    height: 24dvh;
+  body.game-running.level-playing .mobile-touch-controller {
+    display: grid;
   }
 
   .mobile-touch-controller button {
