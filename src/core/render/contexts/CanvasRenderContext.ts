@@ -195,6 +195,28 @@ export class CanvasRenderContext extends RenderContext {
     this.context.restore();
   }
 
+  public pushClip(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const s = this.viewScale;
+    this.context.save();
+    this.context.beginPath();
+    this.context.rect(
+      x * s + this.viewOffsetX,
+      y * s + this.viewOffsetY,
+      width * s,
+      height * s,
+    );
+    this.context.clip();
+  }
+
+  public popClip(): void {
+    this.context.restore();
+  }
+
   public getGlobalAlpha(): number {
     return this.context.globalAlpha;
   }

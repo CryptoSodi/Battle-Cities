@@ -62,6 +62,8 @@ export abstract class RenderContext {
     color: string,
     align?: CanvasTextAlign,
   );
+  abstract pushClip(x: number, y: number, width: number, height: number): void;
+  abstract popClip(): void;
   abstract getGlobalAlpha(): number;
   abstract setGlobalAlpha(alpha: number);
   // View transform applied to subsequent draws: screen = world * scale + offset.

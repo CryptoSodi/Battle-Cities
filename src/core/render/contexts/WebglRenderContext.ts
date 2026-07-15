@@ -358,6 +358,33 @@ export class WebglRenderContext extends RenderContext {
     );
   }
 
+  public pushClip(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    this.flush();
+    const gl = this.gl;
+    const s = this.backingScale;
+    const left = (x * this.viewScale + this.viewOffsetX) * s;
+    const top = (y * this.viewScale + this.viewOffsetY) * s;
+    const clipWidth = width * this.viewScale * s;
+    const clipHeight = height * this.viewScale * s;
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(
+      Math.round(left),
+      Math.round(this.canvas.height - top - clipHeight),
+      Math.round(clipWidth),
+      Math.round(clipHeight),
+    );
+  }
+
+  public popClip(): void {
+    this.flush();
+    this.gl.disable(this.gl.SCISSOR_TEST);
+  }
+
   public getGlobalAlpha(): number {
     return this.globalAlpha;
   }

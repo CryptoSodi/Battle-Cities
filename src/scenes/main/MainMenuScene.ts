@@ -18,7 +18,7 @@ import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
 const SLIDE_SPEED = 240;
-const MOBILE_EVENT_TICKER_SPEED = 32;
+const MOBILE_EVENT_TICKER_SPEED = 52;
 const HUD_FONT = 'Lucida Console, Courier New, monospace';
 
 class HudTextPainter extends Painter {
@@ -55,15 +55,37 @@ class HudTextPainter extends Painter {
 class EventTickerPainter extends Painter {
   private eventName = '';
   private width = 390;
+  private clipX = 0;
+  private clipY = 0;
+  private clipWidth = 0;
+  private clipHeight = 0;
 
   public setEvent(eventName: string, width: number): void {
     this.eventName = eventName;
     this.width = width;
   }
 
+  public setClip(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    this.clipX = x;
+    this.clipY = y;
+    this.clipWidth = width;
+    this.clipHeight = height;
+  }
+
   public paint(context: RenderContext, renderObject: RenderObject): void {
     const { min } = renderObject.getWorldBoundingBox();
     const prefixWidth = 170;
+    context.pushClip(
+      this.clipX,
+      this.clipY,
+      this.clipWidth,
+      this.clipHeight,
+    );
     context.drawText(
       'LIVE EVENT  -',
       min.x,
@@ -86,6 +108,7 @@ class EventTickerPainter extends Painter {
       config.COLOR_WHITE,
       'left',
     );
+    context.popClip();
   }
 }
 
@@ -485,10 +508,16 @@ export class MainMenuScene extends GameScene {
 
     this.mobileEventTickerInnerLeft = barX + horizontalInset;
     this.mobileEventTickerInnerRight = barX + barWidth - horizontalInset;
-    this.mobileEventTickerStartX = this.mobileEventTickerInnerLeft;
+    this.mobileEventTickerStartX = this.mobileEventTickerInnerRight;
     this.mobileEventTickerEndX =
-      this.mobileEventTickerInnerRight - textWidth;
+      this.mobileEventTickerInnerLeft - textWidth;
     this.mobileEventTickerPainter = new EventTickerPainter();
+    this.mobileEventTickerPainter.setClip(
+      this.mobileEventTickerInnerLeft,
+      barY + 14,
+      this.mobileEventTickerInnerRight - this.mobileEventTickerInnerLeft,
+      34,
+    );
     this.mobileEventTicker = new GameObject(textWidth, 30);
     this.mobileEventTicker.position.set(
       this.mobileEventTickerStartX,
@@ -506,8 +535,8 @@ export class MainMenuScene extends GameScene {
 
     let nextX =
       this.mobileEventTicker.position.x +
-      MOBILE_EVENT_TICKER_SPEED * deltaTime;
-    if (nextX > this.mobileEventTickerEndX) {
+      -MOBILE_EVENT_TICKER_SPEED * deltaTime;
+    if (nextX < this.mobileEventTickerEndX) {
       this.mobileEventIndex =
         (this.mobileEventIndex + 1) % this.mobileEventNames.length;
       this.showMobileEvent(this.mobileEventIndex);
@@ -533,11 +562,8 @@ export class MainMenuScene extends GameScene {
       470,
       Math.max(300, 176 + eventName.length * 13),
     );
-    this.mobileEventTickerStartX = this.mobileEventTickerInnerLeft;
-    this.mobileEventTickerEndX = Math.max(
-      this.mobileEventTickerStartX,
-      this.mobileEventTickerInnerRight - width,
-    );
+    this.mobileEventTickerStartX = this.mobileEventTickerInnerRight;
+    this.mobileEventTickerEndX = this.mobileEventTickerInnerLeft - width;
     this.mobileEventTickerPainter.setEvent(eventName, width);
     this.mobileEventTicker.dirtyPaintBox();
     this.mobileEventTicker.size.set(width, 30);
