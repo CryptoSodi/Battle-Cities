@@ -6,6 +6,7 @@ import { MenuInputContext } from '../../input';
 import * as config from '../../config';
 
 import { GameScene } from '../GameScene';
+import { UI_FONT_FAMILY } from '../../core/text/UiTypography';
 
 // Shared UI kit for the economy/meta screens (ranking, staking, events,
 // trading, boost, treasury, airdrop, wiki). Mirrors MainShopScene's visual
@@ -30,7 +31,7 @@ export const UI = {
   BLACK: config.COLOR_BLACK,
   RED: config.COLOR_RED,
   GREEN: '#3ddc84',
-  FONT: 'Inter, Segoe UI, Arial, sans-serif',
+  FONT: UI_FONT_FAMILY,
   WIDTH: 1240,
 };
 

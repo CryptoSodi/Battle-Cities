@@ -7,6 +7,11 @@ import {
 } from '../../core';
 import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
+import {
+  UI_FONT_FAMILY,
+  UI_TEXT_STROKE_COLOR,
+  UI_TEXT_STROKE_WIDTH,
+} from '../../core/text/UiTypography';
 import { GameUpdateArgs } from '../../game';
 import { MenuInputContext } from '../../input';
 import {
@@ -56,25 +61,30 @@ interface ShopAction {
   slot?: ShopLoadoutSlot;
 }
 
-const COLOR_PAGE = '#080806';
-const COLOR_PANEL = '#171611';
-const COLOR_PANEL_ALT = '#211f18';
-const COLOR_CARD = '#2b2605';
-const COLOR_CARD_ALT = '#3b3511';
-const COLOR_CARD_FOCUS = '#4a3f0b';
-const COLOR_YELLOW = config.COLOR_YELLOW;
-const COLOR_YELLOW_DARK = '#8a6b00';
-const COLOR_MUTED = config.COLOR_GRAY;
-const COLOR_GREEN = config.COLOR_WHITE;
-const COLOR_PURPLE = config.COLOR_RED;
-const COLOR_ORANGE = config.COLOR_YELLOW;
+const COLOR_PAGE = '#05080a';
+const COLOR_PANEL = '#0b1014';
+const COLOR_PANEL_ALT = '#12181d';
+const COLOR_PANEL_RAISED = '#182026';
+const COLOR_PANEL_LINE = '#35414a';
+const COLOR_PANEL_HIGHLIGHT = '#65717a';
+const COLOR_CARD = '#0b1013';
+const COLOR_CARD_FOCUS = '#18242b';
+const COLOR_YELLOW = '#f2ad0d';
+const COLOR_YELLOW_LIGHT = '#ffd75a';
+const COLOR_YELLOW_DARK = '#8f6506';
+const COLOR_MUTED = '#8f989f';
+const COLOR_PRICE = '#174d11';
+const COLOR_PRICE_BORDER = '#4d982f';
+const COLOR_RED = '#5b1b18';
+const COLOR_RED_FOCUS = '#982d26';
+const COLOR_RED_BORDER = '#d34c3e';
 
 const SHOP_WIDTH = 1240;
-const SHOP_HEIGHT = 720;
+const SHOP_HEIGHT = 820;
 const SIDE_WIDTH = 314;
 const TOP_Y = 96;
-const TAB_HEIGHT = 52;
-const FILTER_HEIGHT = 48;
+const TAB_HEIGHT = 58;
+const FILTER_HEIGHT = 56;
 const FILTER_TAB_COLUMNS = 4;
 const FILTER_TAB_GAP = 20;
 const FILTER_TAB_WIDTH = Math.floor(
@@ -83,17 +93,25 @@ const FILTER_TAB_WIDTH = Math.floor(
 );
 const CARD_COLUMNS = 4;
 const CATALOG_VISIBLE_ROWS = 3;
-const CARD_WIDTH = 192;
-const CARD_HEIGHT = 166;
-const CARD_GAP_X = 22;
-const CARD_GAP_Y = 22;
+const CARD_WIDTH = 202;
+const CARD_HEIGHT = 198;
+const CARD_GAP_X = 8;
+const CARD_GAP_Y = 8;
 const LOADOUT_SLOT_WIDTH = 192;
 const LOADOUT_SLOT_HEIGHT = 132;
 const LOADOUT_SLOT_GAP_X = 22;
 const LOADOUT_OWNED_TILE_WIDTH = 192;
 const LOADOUT_OWNED_TILE_GAP_X = 22;
+const SIDE_OWNED_COLUMNS = 3;
+const SIDE_OWNED_GAP_X = 8;
+const SIDE_OWNED_GAP_Y = 10;
+const SIDE_OWNED_TILE_WIDTH = Math.floor(
+  (SIDE_WIDTH - 56 - SIDE_OWNED_GAP_X * (SIDE_OWNED_COLUMNS - 1)) /
+    SIDE_OWNED_COLUMNS,
+);
+const SIDE_OWNED_TILE_HEIGHT = 96;
 const ICON_SIZE = 82;
-const SHOP_FONT = 'Inter, Segoe UI, Arial, sans-serif';
+const SHOP_FONT = UI_FONT_FAMILY;
 
 class NativeTextPainter extends Painter {
   public text: string;
@@ -132,6 +150,8 @@ class NativeTextPainter extends Painter {
       this.fontWeight,
       this.color,
       this.align,
+      UI_TEXT_STROKE_COLOR,
+      UI_TEXT_STROKE_WIDTH,
     );
   }
 }
@@ -175,12 +195,19 @@ class ShopPanel extends GameObject {
 
 class ShopButton extends GameObject {
   private background: RectPainter;
+  private highlight: ShopPanel;
   private label: ShopText;
   private active = false;
   private focused = false;
   private readonly variant: 'normal' | 'back';
 
-  constructor(width: number, height: number, text: string, variant: 'normal' | 'back' = 'normal') {
+  constructor(
+    width: number,
+    height: number,
+    text: string,
+    variant: 'normal' | 'back' = 'normal',
+    iconId: string = null,
+  ) {
     super(width, height);
     this.variant = variant;
 
@@ -188,15 +215,28 @@ class ShopButton extends GameObject {
     this.background.lineWidth = 2;
     this.painter = this.background;
 
+    this.highlight = new ShopPanel(width - 8, 2, COLOR_PANEL_LINE, null);
+    this.highlight.position.set(4, 4);
+    this.add(this.highlight);
+
+    const labelX = iconId === null ? 2 : 54;
+    const labelWidth = iconId === null ? width - 4 : width - 58;
+
+    if (iconId !== null) {
+      const icon = new ShopIcon(iconId, 34, SpriteAlignment.AspectFit);
+      icon.position.set(12, Math.round((height - 34) / 2));
+      this.add(icon);
+    }
+
     this.label = new ShopText(
       text,
       config.COLOR_WHITE,
-      26,
-      '800',
-      width - 4,
-      'center',
+      24,
+      '700',
+      labelWidth,
+      iconId === null ? 'center' : 'left',
     );
-    this.label.position.set(2, Math.max(8, Math.round((height - 26) / 2)));
+    this.label.position.set(labelX, Math.max(5, Math.round((height - 24 * 1.18) / 2) - 1));
     this.add(this.label);
   }
 
@@ -215,11 +255,29 @@ class ShopButton extends GameObject {
   }
 
   private refreshStyle(): void {
-    const focusedBack = this.focused && this.variant === 'back';
-    this.background.fillColor = this.active ? COLOR_YELLOW : focusedBack ? config.COLOR_RED : COLOR_PANEL_ALT;
-    this.background.strokeColor = this.focused ? (focusedBack ? config.COLOR_RED : config.COLOR_WHITE) : COLOR_YELLOW_DARK;
-    this.background.lineWidth = this.focused ? 4 : 2;
-    this.label.setColor(this.active ? config.COLOR_BLACK : focusedBack ? config.COLOR_WHITE : config.COLOR_WHITE);
+    if (this.active) {
+      this.background.fillColor = COLOR_YELLOW;
+      this.background.strokeColor = COLOR_YELLOW_LIGHT;
+      this.highlight.painter.fillColor = COLOR_YELLOW_LIGHT;
+      this.label.setColor(config.COLOR_WHITE);
+    } else if (this.variant === 'back') {
+      this.background.fillColor = this.focused ? COLOR_RED_FOCUS : COLOR_RED;
+      this.background.strokeColor = COLOR_RED_BORDER;
+      this.highlight.painter.fillColor = COLOR_RED_BORDER;
+      this.label.setColor(config.COLOR_WHITE);
+    } else if (this.focused) {
+      this.background.fillColor = COLOR_PANEL_RAISED;
+      this.background.strokeColor = COLOR_YELLOW;
+      this.highlight.painter.fillColor = COLOR_PANEL_HIGHLIGHT;
+      this.label.setColor(config.COLOR_WHITE);
+    } else {
+      this.background.fillColor = COLOR_PANEL_ALT;
+      this.background.strokeColor = COLOR_PANEL_LINE;
+      this.highlight.painter.fillColor = COLOR_PANEL_LINE;
+      this.label.setColor(COLOR_YELLOW);
+    }
+
+    this.background.lineWidth = this.focused ? 3 : 2;
     this.setNeedsPaint();
   }
 }
@@ -227,16 +285,22 @@ class ShopButton extends GameObject {
 class ShopIcon extends GameObject {
   public painter: SpritePainter = null;
   private readonly spriteId: string;
+  private readonly alignment: SpriteAlignment;
 
-  constructor(spriteId: string, size = ICON_SIZE) {
+  constructor(
+    spriteId: string,
+    size = ICON_SIZE,
+    alignment = SpriteAlignment.Stretch,
+  ) {
     super(size, size);
     this.spriteId = spriteId;
+    this.alignment = alignment;
   }
 
   protected setup({ spriteLoader }: GameUpdateArgs): void {
     this.painter = new SpritePainter(
       spriteLoader.load(this.spriteId),
-      SpriteAlignment.Stretch,
+      this.alignment,
     );
   }
 }
@@ -244,11 +308,15 @@ class ShopIcon extends GameObject {
 class ShopCard extends GameObject {
   private background: RectPainter;
   private footer: ShopPanel;
+  private topHighlight: ShopPanel;
   private title: ShopText;
   private detail: ShopText;
   private price: ShopText;
+  private priceIcon: ShopIcon = null;
   private icon: ShopIcon;
   private focused = false;
+  private readonly priceFontSize: number;
+  private readonly priceIconSize: number;
 
   constructor(
     width: number,
@@ -256,46 +324,103 @@ class ShopCard extends GameObject {
     iconId: string,
     detailFontSizeOverride: number = null,
     detailMaxWidthOverride: number = null,
+    footerVariant: 'purchase' | 'equip' = 'purchase',
+    iconAlignment = SpriteAlignment.Stretch,
+    showIconFrame = true,
+    swapBodyLayout = false,
+    iconPadding = 0,
+    priceIconId: string = null,
   ) {
     super(width, height);
     const compact = height <= LOADOUT_SLOT_HEIGHT;
-    const titleFontSize = compact ? 22 : 24;
-    const detailFontSize = detailFontSizeOverride ?? (compact ? 17 : 26);
-    const priceFontSize = compact ? 20 : 24;
+    const titleFontSize = compact ? 21 : 23;
+    const detailFontSize = detailFontSizeOverride ?? (compact ? 16 : 24);
+    const priceFontSize = compact ? 19 : 20;
+    this.priceFontSize = priceFontSize;
+    this.priceIconSize = footerVariant === 'purchase' ? 30 : 26;
     const iconY = compact ? 34 : 42;
     const titleY = compact ? 12 : 16;
     const detailY = compact ? 42 : 78;
-    const priceY = compact ? height - 32 : height - 34;
-    const detailMaxWidth = detailMaxWidthOverride ?? width - ICON_SIZE - 48;
+    const priceY = height - 50;
+    const detailMaxWidth =
+      detailMaxWidthOverride ??
+      (swapBodyLayout ? width - ICON_SIZE - 28 : width - ICON_SIZE - 48);
+    const iconFrameX = swapBodyLayout ? 10 : width - ICON_SIZE - 14;
+    const iconSize = Math.max(24, ICON_SIZE - iconPadding * 2);
 
     this.background = new RectPainter(COLOR_CARD, COLOR_YELLOW_DARK);
-    this.background.lineWidth = 2;
+    this.background.lineWidth = 1;
     this.painter = this.background;
 
-    const glow = new ShopPanel(width - 34, height - 58, '#332d08', null);
-    glow.position.set(17, 34);
-    glow.setZIndex(-1);
-    this.add(glow);
+    this.topHighlight = new ShopPanel(width - 10, 2, COLOR_PANEL_LINE, null);
+    this.topHighlight.position.set(5, 5);
+    this.add(this.topHighlight);
 
-    this.footer = new ShopPanel(width, 42, COLOR_YELLOW, null);
-    this.footer.position.set(0, height - 42);
+    const footerInset = 11;
+    const footerHeight = 38;
+
+    this.footer = new ShopPanel(
+      width - footerInset * 2,
+      footerHeight,
+      COLOR_PRICE,
+      COLOR_PRICE_BORDER,
+    );
+    this.footer.position.set(footerInset, height - 47);
     this.add(this.footer);
 
-    this.icon = new ShopIcon(iconId);
-    this.icon.position.set(width - ICON_SIZE - 10, iconY);
+    if (showIconFrame) {
+      const iconFrame = new ShopPanel(
+        ICON_SIZE + 8,
+        ICON_SIZE + 8,
+        '#070a0c',
+        COLOR_PANEL_HIGHLIGHT,
+      );
+      iconFrame.position.set(iconFrameX, iconY - 4);
+      this.add(iconFrame);
+    }
+
+    this.icon = new ShopIcon(iconId, iconSize, iconAlignment);
+    this.icon.position.set(iconFrameX + 4 + iconPadding, iconY + iconPadding);
     this.add(this.icon);
 
-    this.title = new ShopText('', COLOR_YELLOW, titleFontSize, '800', width - 36);
+    this.title = new ShopText(
+      '',
+      COLOR_YELLOW,
+      titleFontSize,
+      '700',
+      width - 36,
+      'center',
+    );
     this.title.position.set(18, titleY);
     this.add(this.title);
 
-    this.detail = new ShopText('', config.COLOR_WHITE, detailFontSize, '800', detailMaxWidth);
-    this.detail.position.set(20, detailY);
+    this.detail = new ShopText('', COLOR_YELLOW, detailFontSize, '700', detailMaxWidth);
+    this.detail.position.set(swapBodyLayout ? ICON_SIZE + 24 : 20, detailY);
     this.add(this.detail);
 
-    this.price = new ShopText('', config.COLOR_BLACK, priceFontSize, '900', width - 36);
-    this.price.position.set(18, priceY);
+    this.price = new ShopText(
+      '',
+      config.COLOR_WHITE,
+      priceFontSize,
+      '700',
+      width - 16,
+      priceIconId === null ? 'center' : 'left',
+    );
+    this.price.position.set(8, priceY);
     this.add(this.price);
+
+    if (priceIconId !== null) {
+      this.priceIcon = new ShopIcon(
+        priceIconId,
+        this.priceIconSize,
+        SpriteAlignment.AspectFit,
+      );
+      this.priceIcon.position.set(
+        8,
+        height - 52,
+      );
+      this.add(this.priceIcon);
+    }
   }
 
   public setContent(
@@ -306,14 +431,32 @@ class ShopCard extends GameObject {
     this.title.setText(title);
     this.detail.setText(detail);
     this.price.setText(price);
+
+    if (this.priceIcon !== null) {
+      const estimatedTextWidth = Math.min(
+        this.size.width - this.priceIconSize - 32,
+        Math.ceil(price.length * this.priceFontSize * 0.58),
+      );
+      const groupWidth = this.priceIconSize + 8 + estimatedTextWidth;
+      const groupX = Math.round((this.size.width - groupWidth) / 2);
+      this.priceIcon.position.x = groupX;
+      this.price.position.x = groupX + this.priceIconSize + 8;
+    }
   }
 
   public setFocused(focused: boolean): void {
     this.focused = focused;
     this.background.fillColor = focused ? COLOR_CARD_FOCUS : COLOR_CARD;
-    this.background.strokeColor = focused ? config.COLOR_WHITE : COLOR_YELLOW_DARK;
-    this.background.lineWidth = focused ? 4 : 2;
-    this.footer.painter.fillColor = focused ? config.COLOR_WHITE : COLOR_YELLOW;
+    this.background.strokeColor = focused ? COLOR_YELLOW_LIGHT : COLOR_YELLOW_DARK;
+    this.background.lineWidth = focused ? 3 : 1;
+    this.topHighlight.painter.fillColor = focused ? COLOR_YELLOW_LIGHT : COLOR_PANEL_LINE;
+    this.title.setColor(focused ? config.COLOR_WHITE : COLOR_YELLOW);
+    this.detail.setColor(focused ? config.COLOR_WHITE : COLOR_YELLOW);
+    this.footer.painter.fillColor = focused ? COLOR_YELLOW : COLOR_PRICE;
+    this.footer.painter.strokeColor = focused
+      ? COLOR_YELLOW_LIGHT
+      : COLOR_PRICE_BORDER;
+    this.price.setColor(focused ? COLOR_PAGE : config.COLOR_WHITE);
     this.setNeedsPaint();
   }
 }
@@ -363,7 +506,11 @@ export class MainShopScene extends GameScene {
     this.root.removeAllChildren();
     this.actions = [];
 
-    const background = new ShopPanel(this.root.size.width, this.root.size.height, COLOR_PAGE);
+    const background = new ShopPanel(
+      this.root.size.width,
+      this.root.size.height,
+      COLOR_PAGE,
+    );
     background.setZIndex(-10);
     this.root.add(background);
 
@@ -372,26 +519,47 @@ export class MainShopScene extends GameScene {
     this.panelHeight = config.isMobileTouchViewport()
       ? Math.max(
           SHOP_HEIGHT,
-          this.root.size.height - (originY + TAB_HEIGHT - 2),
+          this.root.size.height - originY - 24,
         )
       : SHOP_HEIGHT;
 
-    const title = new ShopText('Game Shop', COLOR_YELLOW, 54, '900', 360);
-    title.position.set(originX + 16, originY - 70);
-    this.root.add(title);
-
-    this.addMarketTab(originX + 16, originY, 'TOKEN SHOP', ShopMarket.Token);
-    this.addMarketTab(originX + 246, originY, 'SOL SHOP', ShopMarket.Sol);
-    this.addViewTab(originX + 476, originY, 'LOADOUT', ShopView.Loadout);
-
-    const shell = new ShopPanel(SHOP_WIDTH, this.panelHeight, COLOR_PANEL);
-    shell.position.set(originX, originY + TAB_HEIGHT - 2);
+    const shell = new ShopPanel(
+      SHOP_WIDTH,
+      this.panelHeight,
+      COLOR_PANEL,
+      COLOR_PANEL_LINE,
+    );
+    shell.position.set(originX, originY);
+    shell.setZIndex(-2);
     this.root.add(shell);
 
-    this.renderSidePanel(originX, originY + TAB_HEIGHT - 2);
-    this.renderContent(originX + SIDE_WIDTH + 32, originY + TAB_HEIGHT + 30);
+    const shellAccent = new ShopPanel(SHOP_WIDTH - 12, 2, COLOR_YELLOW_DARK, null);
+    shellAccent.position.set(originX + 6, originY + 5);
+    this.root.add(shellAccent);
 
-    this.addButton(originX + SHOP_WIDTH - 142, originY - 4, 120, 44, 'BACK', {
+    const tabY = originY - TAB_HEIGHT + 1;
+    this.addMarketTab(originX + 12, tabY, 'TOKEN SHOP', ShopMarket.Token);
+    this.addMarketTab(originX + 230, tabY, 'SOL SHOP', ShopMarket.Sol);
+    this.addViewTab(originX + 448, tabY, 'LOADOUT', ShopView.Loadout);
+
+    const sideX = originX + 8;
+    const panelY = originY + 16;
+    const contentPanelX = originX + SIDE_WIDTH + 8;
+    const contentPanelWidth = SHOP_WIDTH - SIDE_WIDTH - 16;
+    const contentPanel = new ShopPanel(
+      contentPanelWidth,
+      this.panelHeight - 32,
+      COLOR_PAGE,
+      COLOR_PANEL_LINE,
+    );
+    contentPanel.position.set(contentPanelX, panelY);
+    contentPanel.setZIndex(-1);
+    this.root.add(contentPanel);
+
+    this.renderSidePanel(sideX, panelY);
+    this.renderContent(contentPanelX + 24, panelY + 18);
+
+    this.addButton(originX + SHOP_WIDTH - 152, tabY + 5, 140, 48, '←  BACK', {
       key: 'back',
       kind: 'back',
     });
@@ -401,15 +569,16 @@ export class MainShopScene extends GameScene {
 
   private renderSidePanel(x: number, y: number): void {
     const panel = new ShopPanel(
-      SIDE_WIDTH,
-      this.panelHeight,
-      '#14130f',
-      '#2c2a22',
+      SIDE_WIDTH - 16,
+      this.panelHeight - 32,
+      COLOR_PAGE,
+      COLOR_PANEL_LINE,
     );
     panel.position.set(x, y);
+    panel.setZIndex(-1);
     this.root.add(panel);
 
-    const heading = new ShopText('Inventory', COLOR_MUTED, 28, '800', SIDE_WIDTH - 56);
+    const heading = new ShopText('Inventory', config.COLOR_WHITE, 28, '700', SIDE_WIDTH - 56);
     heading.position.set(x + 28, y + 30);
     this.root.add(heading);
 
@@ -428,14 +597,14 @@ export class MainShopScene extends GameScene {
       y + 124,
       'BACT',
       this.shopManager.getTokenBalance().toString(),
-      'shop.coin',
+      'shop.tab.token',
     );
     this.addResourceChip(
       x + 28,
       y + 184,
       'SOL',
       this.formatSol(this.shopManager.getSolBalance()),
-      'shop.coin',
+      'shop.tab.solana',
     );
     this.addResourceChip(
       x + 28,
@@ -450,41 +619,42 @@ export class MainShopScene extends GameScene {
     }
 
     const inventoryY = y + 324;
-    const inventoryTitle = new ShopText('Owned', COLOR_MUTED, 24, '800', SIDE_WIDTH - 56);
+    const inventoryTitle = new ShopText('Owned Items', config.COLOR_WHITE, 24, '700', SIDE_WIDTH - 56);
     inventoryTitle.position.set(x + 28, inventoryY);
     this.root.add(inventoryTitle);
 
-    const ownedTileX = x + 28;
-    const ownedTileGap = 18;
-    const ownedTileWidth = 122;
-    this.addInventoryTile(ownedTileX, inventoryY + 42, ShopInventoryItemId.Shield, ownedTileWidth);
-    this.addInventoryTile(
-      ownedTileX + ownedTileWidth + ownedTileGap,
-      inventoryY + 42,
+    const ownedItems = [
+      ShopInventoryItemId.Shield,
       ShopInventoryItemId.BaseDefence,
-      ownedTileWidth,
-    );
-    this.addInventoryTile(ownedTileX, inventoryY + 114, ShopInventoryItemId.Freeze, ownedTileWidth);
-    this.addInventoryTile(
-      ownedTileX + ownedTileWidth + ownedTileGap,
-      inventoryY + 114,
+      ShopInventoryItemId.Freeze,
       ShopInventoryItemId.Speed,
-      ownedTileWidth,
-    );
-    this.addInventoryTile(ownedTileX, inventoryY + 186, ShopInventoryItemId.Upgrade, ownedTileWidth);
-    this.addInventoryTile(
-      ownedTileX + ownedTileWidth + ownedTileGap,
-      inventoryY + 186,
+      ShopInventoryItemId.Upgrade,
       ShopInventoryItemId.ZoomOut,
-      ownedTileWidth,
-    );
-    this.addInventoryTile(ownedTileX, inventoryY + 258, ShopInventoryItemId.Wipeout, ownedTileWidth);
-    this.addInventoryTile(
-      ownedTileX + ownedTileWidth + ownedTileGap,
-      inventoryY + 258,
+      ShopInventoryItemId.Wipeout,
       ShopInventoryItemId.ExtraLife,
-      ownedTileWidth,
-    );
+    ];
+
+    ownedItems.forEach((itemId, index) => {
+      const col = index % SIDE_OWNED_COLUMNS;
+      const row = Math.floor(index / SIDE_OWNED_COLUMNS);
+      this.addInventoryTile(
+        x + 28 + col * (SIDE_OWNED_TILE_WIDTH + SIDE_OWNED_GAP_X),
+        inventoryY + 42 + row * (SIDE_OWNED_TILE_HEIGHT + SIDE_OWNED_GAP_Y),
+        itemId,
+      );
+    });
+
+    if (this.statusText !== '') {
+      const status = new ShopText(
+        this.statusText,
+        COLOR_MUTED,
+        18,
+        '600',
+        SIDE_WIDTH - 56,
+      );
+      status.position.set(x + 28, y + this.panelHeight - 76);
+      this.root.add(status);
+    }
   }
 
   private renderContent(x: number, y: number): void {
@@ -497,31 +667,33 @@ export class MainShopScene extends GameScene {
   }
 
   private renderShopContent(x: number, y: number): void {
-    this.addCategoryButton(x, y, 'ALL', ShopCategory.All, FILTER_TAB_WIDTH);
+    const contentY = y + 18;
+
+    this.addCategoryButton(x, contentY, 'ALL', ShopCategory.All, FILTER_TAB_WIDTH);
     this.addCategoryButton(
       x + FILTER_TAB_WIDTH + FILTER_TAB_GAP,
-      y,
+      contentY,
       'FUEL',
       ShopCategory.Fuel,
       FILTER_TAB_WIDTH,
     );
     this.addCategoryButton(
       x + (FILTER_TAB_WIDTH + FILTER_TAB_GAP) * 2,
-      y,
+      contentY,
       'POWER',
       ShopCategory.Powerups,
       FILTER_TAB_WIDTH,
     );
     this.addCategoryButton(
       x + (FILTER_TAB_WIDTH + FILTER_TAB_GAP) * 3,
-      y,
+      contentY,
       'PACKS',
       ShopCategory.Packs,
       FILTER_TAB_WIDTH,
     );
 
-    const line = new ShopPanel(SHOP_WIDTH - SIDE_WIDTH - 92, 2, '#2c2a22');
-    line.position.set(x, y + FILTER_HEIGHT + 14);
+    const line = new ShopPanel(SHOP_WIDTH - SIDE_WIDTH - 92, 2, COLOR_PANEL_LINE);
+    line.position.set(x, contentY + FILTER_HEIGHT + 14);
     this.root.add(line);
 
     const allItems = this.getVisibleCatalogItems();
@@ -537,7 +709,7 @@ export class MainShopScene extends GameScene {
 
     if (items.length === 0) {
       const empty = new ShopText('No items in this category', COLOR_MUTED, 26, '700', 520);
-      empty.position.set(x, y + 110);
+      empty.position.set(x, contentY + 110);
       this.root.add(empty);
       return;
     }
@@ -546,18 +718,18 @@ export class MainShopScene extends GameScene {
       const sectionText = new ShopText(
         `All Items ${firstVisibleIndex + 1}-${firstVisibleIndex + items.length}/${allItems.length}`,
         config.COLOR_WHITE,
-        30,
-        '900',
+        26,
+        '700',
         520,
       );
-      sectionText.position.set(x, y + 84);
+      sectionText.position.set(x, contentY + 84);
       this.root.add(sectionText);
 
       items.forEach((item, index) => {
         const itemIndex = firstVisibleIndex + index;
         const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
         const cardY =
-          y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
+          contentY + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
         this.addCatalogCard(
           cardX,
           cardY,
@@ -573,17 +745,17 @@ export class MainShopScene extends GameScene {
     const sectionText = new ShopText(
       `${this.getCategoryTitle()} ${firstVisibleIndex + 1}-${firstVisibleIndex + items.length}/${allItems.length}`,
       config.COLOR_WHITE,
-      28,
-      '900',
+      26,
+      '700',
       520,
     );
-    sectionText.position.set(x, y + 84);
+    sectionText.position.set(x, contentY + 84);
     this.root.add(sectionText);
 
     items.forEach((item, index) => {
       const itemIndex = firstVisibleIndex + index;
       const cardX = x + (index % CARD_COLUMNS) * (CARD_WIDTH + CARD_GAP_X);
-      const cardY = y + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
+      const cardY = contentY + 124 + Math.floor(index / CARD_COLUMNS) * (CARD_HEIGHT + CARD_GAP_Y);
       this.addCatalogCard(
         cardX,
         cardY,
@@ -596,7 +768,7 @@ export class MainShopScene extends GameScene {
   }
 
   private renderLoadoutContent(x: number, y: number): void {
-    const title = new ShopText('Loadout', config.COLOR_WHITE, 34, '900', 360);
+    const title = new ShopText('Loadout', config.COLOR_WHITE, 34, '700', 360);
     title.position.set(x, y);
     this.root.add(title);
 
@@ -604,7 +776,7 @@ export class MainShopScene extends GameScene {
     helper.position.set(x, y + 34);
     this.root.add(helper);
 
-    const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '900', 420);
+    const ownedTitle = new ShopText('Owned Consumables', config.COLOR_WHITE, 28, '700', 420);
     ownedTitle.position.set(x, y + 88);
     this.root.add(ownedTitle);
 
@@ -642,7 +814,7 @@ export class MainShopScene extends GameScene {
     );
 
     const slotsY = y + 370;
-    const slotsTitle = new ShopText('Equipped Slots', config.COLOR_WHITE, 28, '900', 420);
+    const slotsTitle = new ShopText('Equipped Slots', config.COLOR_WHITE, 28, '700', 420);
     slotsTitle.position.set(x, slotsY);
     this.root.add(slotsTitle);
 
@@ -679,7 +851,7 @@ export class MainShopScene extends GameScene {
       '700',
       620,
     );
-    note.position.set(x, slotsY + 232);
+    note.position.set(x, slotsY + 252);
     this.root.add(note);
   }
 
@@ -693,7 +865,8 @@ export class MainShopScene extends GameScene {
       key: `market:${market}`,
       kind: 'market',
       market,
-    }, this.view === ShopView.Shop && this.market === market);
+    }, this.view === ShopView.Shop && this.market === market,
+    market === ShopMarket.Token ? 'shop.tab.token' : 'shop.tab.solana');
   }
 
   private addViewTab(
@@ -702,11 +875,11 @@ export class MainShopScene extends GameScene {
     text: string,
     view: ShopView,
   ): void {
-    this.addButton(x, y, 190, TAB_HEIGHT, text, {
+    this.addButton(x, y, 210, TAB_HEIGHT, text, {
       key: `view:${view}`,
       kind: 'view',
       view,
-    }, this.view === view);
+    }, this.view === view, 'shop.tab.loadout');
   }
 
   private addCategoryButton(
@@ -736,8 +909,14 @@ export class MainShopScene extends GameScene {
       CARD_WIDTH,
       CARD_HEIGHT,
       this.getItemIconId(item.id),
-      isStarterPack ? 22 : null,
+      isStarterPack ? 18 : null,
       isStarterPack ? 80 : null,
+      'equip',
+      SpriteAlignment.AspectFit,
+      false,
+      true,
+      12,
+      this.market === ShopMarket.Token ? 'shop.tab.token' : 'shop.tab.solana',
     );
     card.position.set(x, y);
     card.setContent(
@@ -771,7 +950,15 @@ export class MainShopScene extends GameScene {
     const card = new ShopCard(
       CARD_WIDTH,
       CARD_HEIGHT,
-      itemId === null ? 'shop.bundle' : this.getInventoryIconId(itemId),
+      itemId === null ? 'shop.loadout.empty' : this.getOwnedInventoryIconId(itemId),
+      null,
+      null,
+      'equip',
+      SpriteAlignment.AspectFit,
+      false,
+      true,
+      12,
+      null,
     );
     card.position.set(x, y);
     card.setContent(
@@ -804,7 +991,15 @@ export class MainShopScene extends GameScene {
     const card = new ShopCard(
       LOADOUT_SLOT_WIDTH,
       LOADOUT_SLOT_HEIGHT,
-      itemId === null ? 'shop.bundle' : this.getInventoryIconId(itemId),
+      itemId === null ? 'shop.loadout.empty' : this.getOwnedInventoryIconId(itemId),
+      null,
+      null,
+      'purchase',
+      SpriteAlignment.AspectFit,
+      false,
+      true,
+      12,
+      null,
     );
     card.position.set(x, y);
     card.setContent(
@@ -830,19 +1025,28 @@ export class MainShopScene extends GameScene {
     y: number,
     itemId: ShopInventoryItemId,
   ): void {
-    const tile = new ShopPanel(LOADOUT_OWNED_TILE_WIDTH, 82, COLOR_PANEL_ALT, '#2c2a22');
+    const tile = new ShopPanel(
+      LOADOUT_OWNED_TILE_WIDTH,
+      82,
+      COLOR_PANEL_ALT,
+      COLOR_PANEL_LINE,
+    );
     tile.position.set(x, y);
     this.root.add(tile);
 
-    const icon = new ShopIcon(this.getInventoryIconId(itemId), 60);
+    const icon = new ShopIcon(
+      this.getOwnedInventoryIconId(itemId),
+      60,
+      SpriteAlignment.AspectFit,
+    );
     icon.position.set(x + 8, y + 10);
     this.root.add(icon);
 
-    const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 16, '900', 112);
+    const label = new ShopText(this.getInventoryLabel(itemId), config.COLOR_WHITE, 16, '700', 112);
     label.position.set(x + 76, y + 14);
     this.root.add(label);
 
-    const count = new ShopText(`${this.getInventoryCountText(itemId)} OWNED`, COLOR_YELLOW, 16, '900', 112);
+    const count = new ShopText(`${this.getInventoryCountText(itemId)} OWNED`, COLOR_YELLOW, 16, '700', 112);
     count.position.set(x + 76, y + 44);
     this.root.add(count);
   }
@@ -855,8 +1059,15 @@ export class MainShopScene extends GameScene {
     text: string,
     action: Omit<ShopAction, 'target'>,
     active = false,
+    iconId: string = null,
   ): ShopButton {
-    const button = new ShopButton(width, height, text, action.kind === 'back' ? 'back' : 'normal');
+    const button = new ShopButton(
+      width,
+      height,
+      text,
+      action.kind === 'back' ? 'back' : 'normal',
+      iconId,
+    );
     button.position.set(x, y);
     button.setActive(active);
     this.root.add(button);
@@ -880,7 +1091,12 @@ export class MainShopScene extends GameScene {
     value: string,
     iconId: string,
   ): void {
-    const chip = new ShopPanel(SIDE_WIDTH - 56, 58, COLOR_PANEL_ALT, '#2c2a22');
+    const chip = new ShopPanel(
+      SIDE_WIDTH - 56,
+      58,
+      COLOR_PANEL_ALT,
+      COLOR_PANEL_LINE,
+    );
     chip.position.set(x, y);
     this.root.add(chip);
 
@@ -897,25 +1113,42 @@ export class MainShopScene extends GameScene {
     x: number,
     y: number,
     itemId: ShopInventoryItemId,
-    width = 120,
   ): void {
-    const tile = new ShopPanel(width, 68, COLOR_PANEL_ALT, '#2c2a22');
+    const tile = new ShopPanel(
+      SIDE_OWNED_TILE_WIDTH,
+      SIDE_OWNED_TILE_HEIGHT,
+      COLOR_PANEL_ALT,
+      COLOR_PANEL_HIGHLIGHT,
+    );
     tile.position.set(x, y);
     this.root.add(tile);
 
-    const icon = new ShopIcon(this.getInventoryIconId(itemId), 62);
-    icon.position.set(x + 6, y + 3);
+    const icon = new ShopIcon(
+      this.getOwnedInventoryIconId(itemId),
+      54,
+      SpriteAlignment.AspectFit,
+    );
+    icon.position.set(x + Math.floor((SIDE_OWNED_TILE_WIDTH - 54) / 2), y + 8);
     this.root.add(icon);
+
+    const countStrip = new ShopPanel(
+      SIDE_OWNED_TILE_WIDTH - 4,
+      29,
+      '#070a0c',
+      null,
+    );
+    countStrip.position.set(x + 2, y + 65);
+    this.root.add(countStrip);
 
     const count = new ShopText(
       this.getInventoryCountText(itemId),
       COLOR_YELLOW,
-      24,
+      22,
       '700',
-      42,
+      SIDE_OWNED_TILE_WIDTH - 6,
       'center',
     );
-    count.position.set(x + 74, y + 21);
+    count.position.set(x + 3, y + 69);
     this.root.add(count);
   }
 
@@ -1349,21 +1582,21 @@ export class MainShopScene extends GameScene {
       case ShopItemId.FuelTwenty:
         return 'shop.fuel';
       case ShopItemId.Shield:
-        return 'powerup.helmet';
+        return 'shop.owned.helmet';
       case ShopItemId.BaseDefence:
-        return 'powerup.shovel';
+        return 'shop.owned.shovel';
       case ShopItemId.Freeze:
-        return 'powerup.clock';
+        return 'shop.owned.clock';
       case ShopItemId.Speed:
-        return 'powerup.speed';
+        return 'shop.owned.speed';
       case ShopItemId.Upgrade:
-        return 'powerup.star';
+        return 'shop.owned.star';
       case ShopItemId.ZoomOut:
-        return 'powerup.zoomout';
+        return 'shop.owned.zoomout';
       case ShopItemId.Wipeout:
-        return 'powerup.grenade';
+        return 'shop.owned.grenade';
       case ShopItemId.ExtraLife:
-        return 'powerup.tank';
+        return 'shop.owned.life';
       case ShopItemId.StarterPack:
         return 'shop.bundle';
       default:
@@ -1446,7 +1679,30 @@ export class MainShopScene extends GameScene {
       case ShopInventoryItemId.Wipeout:
         return 'powerup.grenade';
       case ShopInventoryItemId.ExtraLife:
-        return 'powerup.tank';
+        return 'powerup.life';
+      default:
+        return 'shop.bundle';
+    }
+  }
+
+  private getOwnedInventoryIconId(itemId: ShopInventoryItemId): string {
+    switch (itemId) {
+      case ShopInventoryItemId.Shield:
+        return 'shop.owned.helmet';
+      case ShopInventoryItemId.BaseDefence:
+        return 'shop.owned.shovel';
+      case ShopInventoryItemId.Freeze:
+        return 'shop.owned.clock';
+      case ShopInventoryItemId.Speed:
+        return 'shop.owned.speed';
+      case ShopInventoryItemId.Upgrade:
+        return 'shop.owned.star';
+      case ShopInventoryItemId.ZoomOut:
+        return 'shop.owned.zoomout';
+      case ShopInventoryItemId.Wipeout:
+        return 'shop.owned.grenade';
+      case ShopInventoryItemId.ExtraLife:
+        return 'shop.owned.life';
       default:
         return 'shop.bundle';
     }

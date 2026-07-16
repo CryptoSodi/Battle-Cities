@@ -89,7 +89,7 @@ class PowerHotbarSlot extends GameObject {
       case ShopInventoryItemId.Wipeout:
         return 'powerup.grenade';
       case ShopInventoryItemId.ExtraLife:
-        return 'powerup.tank';
+        return 'powerup.life';
       default:
         return 'shop.bundle';
     }

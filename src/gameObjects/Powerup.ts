@@ -97,7 +97,7 @@ export class Powerup extends GameObject {
       case PowerupType.Freeze:
         return 'powerup.clock';
       case PowerupType.Life:
-        return 'powerup.tank';
+        return 'powerup.life';
       case PowerupType.Shield:
         return 'powerup.helmet';
       case PowerupType.Speed:

@@ -19,7 +19,7 @@ const ITEM_ICONS: Record<string, string> = {
   upgrade: 'powerup.star',
   'zoom-out': 'powerup.zoomout',
   wipeout: 'powerup.grenade',
-  'extra-life': 'powerup.tank',
+  'extra-life': 'powerup.life',
 };
 
 // The player's treasury, shop-styled: balance stat cards on top, owned item

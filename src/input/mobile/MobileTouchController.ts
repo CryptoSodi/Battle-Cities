@@ -13,7 +13,7 @@ const POWER_ICONS: Partial<Record<ShopInventoryItemId, string>> = {
   [ShopInventoryItemId.Upgrade]: 'data/graphics/powerup-star.png',
   [ShopInventoryItemId.ZoomOut]: 'data/graphics/powerup-zoomout.png',
   [ShopInventoryItemId.Wipeout]: 'data/graphics/powerup-grenade.png',
-  [ShopInventoryItemId.ExtraLife]: 'data/graphics/TANKS/powerup-tank.png',
+  [ShopInventoryItemId.ExtraLife]: 'data/graphics/TANKS/powerup-life.png',
 };
 
 const POWER_TYPE_ICONS: Record<string, string> = {
@@ -24,7 +24,7 @@ const POWER_TYPE_ICONS: Record<string, string> = {
   upgrade: 'data/graphics/powerup-star.png',
   zoomout: 'data/graphics/powerup-zoomout.png',
   wipeout: 'data/graphics/powerup-grenade.png',
-  life: 'data/graphics/TANKS/powerup-tank.png',
+  life: 'data/graphics/TANKS/powerup-life.png',
 };
 
 type ControlDefinition = {

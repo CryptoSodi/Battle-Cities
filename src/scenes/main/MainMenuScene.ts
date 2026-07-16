@@ -13,13 +13,14 @@ import { apiFetch } from '../../network/api';
 import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
 import { RenderObject } from '../../core/RenderObject';
+import { UI_FONT_FAMILY } from '../../core/text/UiTypography';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
 const SLIDE_SPEED = 240;
 const MOBILE_EVENT_TICKER_SPEED = 52;
-const HUD_FONT = 'Lucida Console, Courier New, monospace';
+const HUD_FONT = UI_FONT_FAMILY;
 
 class HudTextPainter extends Painter {
   constructor(

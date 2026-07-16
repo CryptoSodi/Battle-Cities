@@ -325,6 +325,8 @@ export class WebglRenderContext extends RenderContext {
     fontWeight: string,
     color: string,
     align: CanvasTextAlign = 'left',
+    strokeColor: string = null,
+    strokeWidth = 0,
   ): void {
     const canvas = this.getTextCanvas(
       text,
@@ -334,6 +336,8 @@ export class WebglRenderContext extends RenderContext {
       fontWeight,
       color,
       align,
+      strokeColor,
+      strokeWidth,
     );
     const texture = this.getTexture(canvas);
     this.pushQuad(
@@ -575,6 +579,8 @@ export class WebglRenderContext extends RenderContext {
     fontWeight: string,
     color: string,
     align: CanvasTextAlign,
+    strokeColor: string,
+    strokeWidth: number,
   ): HTMLCanvasElement {
     const width = Math.max(1, Math.ceil(maxWidth));
     const height = Math.max(1, Math.ceil(fontSize * 1.35));
@@ -587,6 +593,8 @@ export class WebglRenderContext extends RenderContext {
       fontWeight,
       color,
       align,
+      strokeColor,
+      strokeWidth,
     ].join('|');
     const existing = this.textCanvasMap.get(key);
     if (existing !== undefined) {
@@ -605,6 +613,12 @@ export class WebglRenderContext extends RenderContext {
       context.textBaseline = 'top';
       const textX =
         align === 'center' ? width / 2 : align === 'right' ? width : 0;
+      if (strokeColor !== null && strokeWidth > 0) {
+        context.strokeStyle = strokeColor;
+        context.lineWidth = strokeWidth;
+        context.lineJoin = 'round';
+        context.strokeText(text, textX, 0, width);
+      }
       context.fillText(text, textX, 0, width);
     }
 

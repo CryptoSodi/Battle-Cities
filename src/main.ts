@@ -930,7 +930,25 @@ gameLoop.render.addListener((event) => {
   stats.end();
 });
 
+async function preloadUiFont(): Promise<void> {
+  const fontSet = (document as Document & {
+    fonts?: { load(font: string): Promise<unknown> };
+  }).fonts;
+
+  if (fontSet === undefined) {
+    return;
+  }
+
+  await Promise.all([
+    fontSet.load('400 24px "Battle Cities UI"'),
+    fontSet.load('600 24px "Battle Cities UI"'),
+    fontSet.load('700 24px "Battle Cities UI"'),
+  ]);
+}
+
 async function main(): Promise<void> {
+  loadingElement.textContent = 'Loading interface...';
+  await preloadUiFont();
   await waitForLogin();
   await hydrateShopCacheFromServer();
   enterGameView();

@@ -179,6 +179,8 @@ export class CanvasRenderContext extends RenderContext {
     fontWeight: string,
     color: string,
     align: CanvasTextAlign = 'left',
+    strokeColor: string = null,
+    strokeWidth = 0,
   ): void {
     const s = this.viewScale;
     this.context.save();
@@ -186,9 +188,23 @@ export class CanvasRenderContext extends RenderContext {
     this.context.font = `${fontWeight} ${fontSize * s}px ${fontFamily}`;
     this.context.textAlign = align;
     this.context.textBaseline = 'top';
+    const textX =
+      (align === 'center' ? x + maxWidth / 2 : align === 'right' ? x + maxWidth : x) * s +
+      this.viewOffsetX;
+    if (strokeColor !== null && strokeWidth > 0) {
+      this.context.strokeStyle = strokeColor;
+      this.context.lineWidth = strokeWidth * s;
+      this.context.lineJoin = 'round';
+      this.context.strokeText(
+        text,
+        textX,
+        y * s + this.viewOffsetY,
+        maxWidth * s,
+      );
+    }
     this.context.fillText(
       text,
-      x * s + this.viewOffsetX,
+      textX,
       y * s + this.viewOffsetY,
       maxWidth * s,
     );

@@ -61,6 +61,8 @@ export abstract class RenderContext {
     fontWeight: string,
     color: string,
     align?: CanvasTextAlign,
+    strokeColor?: string,
+    strokeWidth?: number,
   );
   abstract pushClip(x: number, y: number, width: number, height: number): void;
   abstract popClip(): void;

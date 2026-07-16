@@ -1,3 +1,27 @@
+@font-face {
+  font-display: swap;
+  font-family: 'Battle Cities UI';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/BarlowCondensed-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Battle Cities UI';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/BarlowCondensed-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Battle Cities UI';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+}
+
 html {
   display: flex;
   height: 100%;
@@ -15,6 +39,7 @@ body {
   color: #f4efe4;
   display: flex;
   flex: 1;
+  font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   justify-content: center;
   margin: 0;
   min-height: 100vh;
@@ -85,7 +110,7 @@ body.scanlines-disabled::after {
 
 .auth-kicker {
   color: #ffb018;
-  font: 700 13px/1.2 Arial, sans-serif;
+  font: 700 13px/1.2 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   letter-spacing: 0.16em;
   margin-bottom: 14px;
   text-transform: uppercase;
@@ -93,13 +118,13 @@ body.scanlines-disabled::after {
 
 .auth-panel h1 {
   color: #fff7df;
-  font: 800 44px/1.02 Arial, sans-serif;
+  font: 800 44px/1.02 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   margin: 0 0 16px;
 }
 
 .auth-copy {
   color: #c9c1ad;
-  font: 400 16px/1.55 Arial, sans-serif;
+  font: 400 16px/1.55 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   margin: 0 0 28px;
 }
 
@@ -115,7 +140,7 @@ body.scanlines-disabled::after {
   color: #f6f1e6;
   cursor: pointer;
   display: flex;
-  font: 700 16px/1 Arial, sans-serif;
+  font: 700 16px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   gap: 12px;
   min-height: 52px;
   padding: 0 16px;
@@ -152,7 +177,7 @@ body.scanlines-disabled::after {
   border: 1px solid rgba(255, 255, 255, 0.24);
   display: flex;
   flex: 0 0 30px;
-  font: 800 13px/1 Arial, sans-serif;
+  font: 800 13px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   height: 30px;
   justify-content: center;
   width: 30px;
@@ -200,7 +225,7 @@ body.scanlines-disabled::after {
   color: #c7c1b4;
   display: flex;
   flex-wrap: wrap;
-  font: 600 11px/1.4 Arial, sans-serif;
+  font: 600 11px/1.4 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   gap: 10px 16px;
   justify-content: center;
   margin-top: 20px;
@@ -227,14 +252,14 @@ body.scanlines-disabled::after {
 
 .auth-status {
   color: #9f9785;
-  font: 400 14px/1.45 Arial, sans-serif;
+  font: 400 14px/1.45 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   margin: 18px 0 0;
   min-height: 20px;
 }
 
 .auth-legal {
   color: #817b6c;
-  font: 400 12px/1.5 Arial, sans-serif;
+  font: 400 12px/1.5 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
   margin: 14px 0 0;
 }
 
@@ -418,7 +443,7 @@ canvas {
     -webkit-tap-highlight-color: transparent;
     color: #f5f2e8;
     cursor: pointer;
-    font-family: Arial, sans-serif;
+    font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
     touch-action: none;
     user-select: none;
   }
