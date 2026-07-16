@@ -45,15 +45,21 @@ import * as rectFontConfig from '../data/fonts/rect-font.json';
 import * as mapManifest from '../data/map.manifest.json';
 
 const loadingElement = document.querySelector('[data-loading]');
-const authShellElement = document.querySelector('[data-auth-shell]') as HTMLElement;
-const guestLoginButton = document.querySelector('[data-auth-guest]') as HTMLButtonElement;
+const authShellElement = document.querySelector(
+  '[data-auth-shell]',
+) as HTMLElement;
+const guestLoginButton = document.querySelector(
+  '[data-auth-guest]',
+) as HTMLButtonElement;
 const walletLoginButton = document.querySelector(
   '[data-auth-wallet]',
 ) as HTMLButtonElement;
 const googleLoginButton = document.querySelector(
   '[data-auth-google]',
 ) as HTMLButtonElement;
-const authStatusElement = document.querySelector('[data-auth-status]') as HTMLElement;
+const authStatusElement = document.querySelector(
+  '[data-auth-status]',
+) as HTMLElement;
 
 type PhantomProvider = {
   isPhantom?: boolean;
@@ -87,7 +93,10 @@ const gameRenderer = new GameRenderer({
 
 function syncCanvasCssSize(width: number, height: number): void {
   document.documentElement.style.setProperty('--game-width', width.toString());
-  document.documentElement.style.setProperty('--game-height', height.toString());
+  document.documentElement.style.setProperty(
+    '--game-height',
+    height.toString(),
+  );
 }
 
 function syncMobileCanvasCssSize(): void {
@@ -108,6 +117,7 @@ function syncMobileCanvasCssSize(): void {
   const isMainMenu = document.body.classList.contains('main-menu-active');
   const isShop = document.body.classList.contains('shop-active');
   const isRanking = document.body.classList.contains('ranking-active');
+  const isSettings = document.body.classList.contains('settings-active');
   const stageWidth = Math.max(Math.floor(viewportWidth), 1);
   const stageHeight = Math.max(
     Math.floor(viewportHeight * (isGameplay ? 0.6 : 1)),
@@ -117,7 +127,7 @@ function syncMobileCanvasCssSize(): void {
   const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
   const stageAspect = stageWidth / stageHeight;
   const useHeightAsConstraint =
-    ((isMainMenu || isShop || isRanking) && !isGameplay) ||
+    ((isMainMenu || isShop || isRanking || isSettings) && !isGameplay) ||
     stageAspect > gameAspect;
   const width = useHeightAsConstraint ? stageHeight * gameAspect : stageWidth;
   const height = useHeightAsConstraint ? stageHeight : stageWidth / gameAspect;
@@ -475,7 +485,8 @@ function updateMobileGamepadDebug(): void {
     buttonElement.classList.toggle('pressed', pressed);
   });
 
-  const age = gamepad.receivedAt === undefined ? 0 : Date.now() - gamepad.receivedAt;
+  const age =
+    gamepad.receivedAt === undefined ? 0 : Date.now() - gamepad.receivedAt;
   mobileGamepadDebugMeta.textContent = [
     `x ${axisX.toFixed(2)}`,
     `y ${axisY.toFixed(2)}`,
@@ -543,7 +554,7 @@ const gameState = new State<GameState>(GameState.Playing);
 
 // Seeded RNG for all simulation randomness. Seeded from the clock for variety;
 // record getSeed() to reproduce a run deterministically.
-const rng = new Prng((Date.now() >>> 0) || 1);
+const rng = new Prng(Date.now() >>> 0 || 1);
 
 // Cosmetic particle overlay (dust, sparks, debris). Own canvas over the game
 // canvas; matches the game's logical resolution so world coords line up.
@@ -911,6 +922,10 @@ gameLoop.render.addListener((event) => {
     'ranking-active',
     sceneRouter.getCurrentType() === GameSceneType.MainRanking,
   );
+  document.body.classList.toggle(
+    'settings-active',
+    sceneRouter.getCurrentType() === GameSceneType.SettingsMenu,
+  );
   syncMobileCanvasCssSize();
 
   const scene = sceneRouter.getCurrentScene();
@@ -936,7 +951,9 @@ gameLoop.render.addListener((event) => {
 
   gameState.update();
   updateMobileGamepadDebug();
-  mobileTouchController.update(document.body.classList.contains('level-playing'));
+  mobileTouchController.update(
+    document.body.classList.contains('level-playing'),
+  );
 
   stats.end();
 });
@@ -1000,14 +1017,12 @@ function startBackgroundSpritePreload(): void {
       .then(() => log.timeEnd('Background sprites preload'))
       .catch((error) => log.warn('Background sprite preload failed', error));
   };
-  const requestIdle = (
-    window as Window & {
-      requestIdleCallback?: (
-        callback: () => void,
-        options?: { timeout: number },
-      ) => number;
-    }
-  ).requestIdleCallback;
+  const requestIdle = (window as Window & {
+    requestIdleCallback?: (
+      callback: () => void,
+      options?: { timeout: number },
+    ) => number;
+  }).requestIdleCallback;
 
   if (typeof requestIdle === 'function') {
     requestIdle.call(window, preload, { timeout: 1000 });

@@ -246,9 +246,91 @@ export class UiButton extends GameObject {
   }
 }
 
+export class UiToggleButton extends GameObject {
+  private background: RectPainter;
+  private highlight: UiPanel;
+  private label: UiText;
+  private indicator: UiPanel;
+  private enabled: boolean;
+  private focused = false;
+
+  constructor(width: number, height: number, enabled: boolean) {
+    super(width, height);
+    this.enabled = enabled;
+
+    this.background = new RectPainter(UI.PANEL_ALT, UI.PANEL_LINE);
+    this.background.lineWidth = 2;
+    this.painter = this.background;
+
+    this.highlight = new UiPanel(width - 8, 2, UI.PANEL_LINE, null);
+    this.highlight.position.set(4, 4);
+    this.add(this.highlight);
+
+    const indicatorSize = Math.max(36, height - 24);
+    const indicatorX = width - indicatorSize - 12;
+    this.indicator = new UiPanel(
+      indicatorSize,
+      indicatorSize,
+      UI.PANEL_RAISED,
+      UI.PANEL_LINE,
+    );
+    this.indicator.position.set(
+      indicatorX,
+      Math.floor((height - indicatorSize) / 2),
+    );
+    this.add(this.indicator);
+
+    this.label = new UiText(
+      enabled ? 'ON' : 'OFF',
+      UI.MUTED_LIGHT,
+      30,
+      '900',
+      indicatorX - 12,
+      'center',
+    );
+    const lineHeight = Math.ceil(30 * 1.18);
+    this.label.position.set(4, Math.floor((height - lineHeight) / 2) + 3);
+    this.add(this.label);
+
+    this.refreshStyle();
+  }
+
+  public setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    this.label.setText(enabled ? 'ON' : 'OFF');
+    this.refreshStyle();
+  }
+
+  public setFocused(focused: boolean): void {
+    this.focused = focused;
+    this.refreshStyle();
+  }
+
+  private refreshStyle(): void {
+    this.background.fillColor = UI.PANEL_ALT;
+    this.background.strokeColor = this.focused ? UI.YELLOW : UI.PANEL_LINE;
+    this.background.lineWidth = this.focused ? 3 : 2;
+    this.highlight.painter.fillColor = this.focused ? UI.YELLOW : UI.PANEL_LINE;
+    this.label.setColor(
+      this.enabled ? UI.YELLOW : this.focused ? UI.WHITE : UI.MUTED,
+    );
+    this.indicator.painter.fillColor = this.enabled
+      ? UI.YELLOW
+      : UI.PANEL_RAISED;
+    this.indicator.painter.strokeColor = this.enabled
+      ? UI.YELLOW_LIGHT
+      : UI.PANEL_LINE;
+    this.setNeedsPaint();
+  }
+}
+
+interface UiActionTarget extends GameObject {
+  setFocused(focused: boolean): void;
+}
+
 interface UiAction {
   key: string;
-  target: UiButton;
+  target: UiActionTarget;
   onSelect: () => void;
   // Tab-style buttons activate as focus slides onto them horizontally, the
   // way the shop's market/view/category tabs do.
@@ -324,7 +406,8 @@ export abstract class PanelScene extends GameScene {
     return null;
   }
 
-  protected setup(): void {
+  protected setup(_updateArgs: GameUpdateArgs): void {
+    void _updateArgs;
     this.pageY = this.getPageTop();
     this.pageX = Math.max(
       24,
@@ -494,6 +577,27 @@ export abstract class PanelScene extends GameScene {
     this.root.add(button);
     this.actions.push({ key, target: button, onSelect, autoActivate });
     return button;
+  }
+
+  protected addToggle(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    enabled: boolean,
+    key: string,
+    onSelect: () => void,
+  ): UiToggleButton {
+    const toggle = new UiToggleButton(width, height, enabled);
+    toggle.position.set(x, y);
+    this.root.add(toggle);
+    this.actions.push({
+      key,
+      target: toggle,
+      onSelect,
+      autoActivate: false,
+    });
+    return toggle;
   }
 
   protected addIcon(spriteId: string, x: number, y: number, size = 34): UiIcon {
