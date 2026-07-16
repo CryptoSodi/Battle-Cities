@@ -36,15 +36,36 @@ export class MainRankingScene extends PanelScene {
   }
 
   protected getBackButtonY(): number {
-    return this.pageY - (config.isMobileTouchViewport() ? 36 : 16);
+    return config.isMobileTouchViewport() ? 8 : 44;
   }
 
   protected getBackButtonWidth(): number {
-    return 140;
+    return config.isMobileTouchViewport() ? 152 : 140;
   }
 
   protected getBackButtonRightInset(): number {
-    return 12;
+    return config.isMobileTouchViewport() ? 0 : 12;
+  }
+
+  protected getBackButtonHeight(): number {
+    return config.isMobileTouchViewport() ? 60 : 48;
+  }
+
+  protected isActionNavigable(key: string): boolean {
+    return !(this.seasonDropdownOpen && key === 'season');
+  }
+
+  protected getPreferredVerticalNavigationKey(
+    currentKey: string,
+    direction: number,
+  ): string {
+    if (
+      direction < 0 &&
+      (currentKey === 'season' || currentKey.startsWith('season-option:'))
+    ) {
+      return this.scope === 'gaming' ? 'tab-gaming' : 'tab-trading';
+    }
+    return null;
   }
 
   protected load(): void {
@@ -96,14 +117,13 @@ export class MainRankingScene extends PanelScene {
     const y = this.pageY;
     const width = UI.WIDTH;
 
-    this.renderTitleBanner(x, y - 72, 560, 96, false);
-    this.renderContentShell(x, y + 40, width, 18);
+    this.renderHeaderTabs(x, y - 57, false);
+    this.renderContentShell(x, y, width, 18);
 
-    const summaryY = y + 52;
+    const summaryY = y + 16;
     this.renderDesktopSummary(x, summaryY, width);
 
     const controlsY = summaryY + 132;
-    this.renderScopeButtons(x, controlsY, 228, 60, 8);
     this.renderSeasonSelector(x + width - 350, controlsY, 350, 60, 46);
 
     const tableY = controlsY + 82;
@@ -113,21 +133,15 @@ export class MainRankingScene extends PanelScene {
 
   private renderMobileContent(): void {
     const x = this.pageX;
-    const y = this.pageY;
     const width = MOBILE_WIDTH;
 
-    this.renderTitleBanner(x, y - 64, 500, 72, true);
-    this.renderContentShell(x, y + 20, width, 12);
+    this.renderHeaderTabs(x, 8, true);
+    this.renderContentShell(x, 76, width, 12);
 
-    const summaryY = y + 36;
+    const summaryY = 88;
     this.renderMobileSummary(x, summaryY, width);
 
-    const controlsY = summaryY + 128;
-    const gap = 8;
-    const tabWidth = Math.floor((width - gap) / 2);
-    this.renderScopeButtons(x, controlsY, tabWidth, 56, gap);
-
-    const seasonY = controlsY + 66;
+    const seasonY = summaryY + 128;
     this.renderSeasonSelector(x, seasonY, width, 58, 46);
 
     const tableY = seasonY + 78;
@@ -164,29 +178,37 @@ export class MainRankingScene extends PanelScene {
     accent.setZIndex(-1);
   }
 
-  private renderTitleBanner(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    compact: boolean,
-  ): void {
-    this.addPanel(x, y, width, height, UI.YELLOW, UI.YELLOW_LIGHT);
-    const iconSize = compact ? 42 : 58;
-    this.addIcon(
-      'ui.icon.trophy',
-      x + (compact ? 24 : 30),
-      y + Math.floor((height - iconSize) / 2),
-      iconSize,
+  private renderHeaderTabs(x: number, y: number, mobile: boolean): void {
+    const gamingWidth = mobile ? 190 : 210;
+    const tradingWidth = mobile ? 170 : 210;
+    const gap = mobile ? 8 : 8;
+    const height = mobile ? 60 : 58;
+
+    this.addButton(
+      x + (mobile ? 0 : 12),
+      y,
+      gamingWidth,
+      height,
+      'GAMING',
+      'tab-gaming',
+      () => this.switchScope('gaming'),
+      this.scope === 'gaming',
+      'normal',
+      26,
+      true,
     );
-    this.addText(
-      'HALL OF FAME',
-      x + (compact ? 88 : 112),
-      y + (compact ? 20 : 25),
-      UI.WHITE,
-      compact ? 34 : 46,
-      '900',
-      width - (compact ? 106 : 132),
+    this.addButton(
+      x + (mobile ? gamingWidth + gap : 230),
+      y,
+      tradingWidth,
+      height,
+      'TRADING',
+      'tab-trading',
+      () => this.switchScope('trading'),
+      this.scope === 'trading',
+      'normal',
+      26,
+      true,
     );
   }
 
@@ -252,41 +274,6 @@ export class MainRankingScene extends PanelScene {
     this.addText('--', x, y + 37, UI.MUTED_LIGHT, 30, '900', width);
   }
 
-  private renderScopeButtons(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    gap: number,
-  ): void {
-    this.addButton(
-      x,
-      y,
-      width,
-      height,
-      'GAMING',
-      'tab-gaming',
-      () => this.switchScope('gaming'),
-      this.scope === 'gaming',
-      'normal',
-      26,
-      true,
-    );
-    this.addButton(
-      x + width + gap,
-      y,
-      width,
-      height,
-      'TRADING',
-      'tab-trading',
-      () => this.switchScope('trading'),
-      this.scope === 'trading',
-      'normal',
-      26,
-      true,
-    );
-  }
-
   private renderSeasonSelector(
     x: number,
     y: number,
@@ -305,7 +292,11 @@ export class MainRankingScene extends PanelScene {
       'season',
       () => {
         this.seasonDropdownOpen = !this.seasonDropdownOpen;
-        this.refresh('season');
+        this.refresh(
+          this.seasonDropdownOpen
+            ? this.getSeasonOptionKey(this.seasonScope)
+            : 'season',
+        );
       },
       this.seasonDropdownOpen,
       'normal',
@@ -318,9 +309,7 @@ export class MainRankingScene extends PanelScene {
     }
 
     this.getSeasonOptions().forEach((option, index) => {
-      const key = `season-option:${
-        option.id === null ? 'all-time' : option.id || 'current'
-      }`;
+      const key = this.getSeasonOptionKey(option.id);
       const button = this.addButton(
         x,
         y + height + index * optionHeight,
@@ -344,6 +333,12 @@ export class MainRankingScene extends PanelScene {
         { id: null, label: 'ALL TIME' },
       ]
     );
+  }
+
+  private getSeasonOptionKey(seasonId: string | null): string {
+    return `season-option:${
+      seasonId === null ? 'all-time' : seasonId || 'current'
+    }`;
   }
 
   private selectSeason(seasonId: string | null): void {

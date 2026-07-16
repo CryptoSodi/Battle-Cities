@@ -301,6 +301,24 @@ export abstract class PanelScene extends GameScene {
     return 22;
   }
 
+  protected getBackButtonHeight(): number {
+    return 44;
+  }
+
+  protected isActionNavigable(_key: string): boolean {
+    void _key;
+    return true;
+  }
+
+  protected getPreferredVerticalNavigationKey(
+    _currentKey: string,
+    _direction: number,
+  ): string {
+    void _currentKey;
+    void _direction;
+    return null;
+  }
+
   // Optional sprite drawn left of the page title (see data/graphics/ui/).
   protected getTitleIcon(): string {
     return null;
@@ -379,7 +397,7 @@ export abstract class PanelScene extends GameScene {
         this.getBackButtonRightInset(),
       this.getBackButtonY(),
       backButtonWidth,
-      44,
+      this.getBackButtonHeight(),
       '←  BACK',
       'back',
       () => {
@@ -592,6 +610,23 @@ export abstract class PanelScene extends GameScene {
       return;
     }
 
+    if (dy !== 0) {
+      const preferredKey = this.getPreferredVerticalNavigationKey(
+        currentAction.key,
+        dy,
+      );
+      if (preferredKey !== null) {
+        const preferredIndex = this.actions.findIndex(
+          (action) =>
+            action.key === preferredKey && this.isActionNavigable(action.key),
+        );
+        if (preferredIndex !== -1) {
+          this.setFocusedAction(preferredIndex);
+          return;
+        }
+      }
+    }
+
     const rows = this.buildNavRows();
     const rowIndex = rows.findIndex((row) => row.includes(currentAction));
     if (rowIndex === -1) {
@@ -645,6 +680,7 @@ export abstract class PanelScene extends GameScene {
   // right. Rebuilt on demand so it always matches the latest refresh().
   private buildNavRows(): UiAction[][] {
     const sorted = this.actions
+      .filter((action) => this.isActionNavigable(action.key))
       .slice()
       .sort(
         (a, b) =>
