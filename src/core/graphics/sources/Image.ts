@@ -7,12 +7,14 @@ import { ImageSource } from '../ImageSource';
  */
 export class Image extends ImageSource {
   private readonly imageElement: HTMLImageElement;
+  private failed = false;
 
   constructor(imageElement: HTMLImageElement) {
     super();
 
     this.imageElement = imageElement;
     this.imageElement.addEventListener('load', this.handleLoaded);
+    this.imageElement.addEventListener('error', this.handleFailed);
   }
 
   public getElement(): HTMLImageElement {
@@ -28,11 +30,25 @@ export class Image extends ImageSource {
   }
 
   public isLoaded(): boolean {
-    return this.imageElement.complete;
+    return this.imageElement.complete && this.imageElement.naturalWidth > 0;
+  }
+
+  public hasFailed(): boolean {
+    return this.failed;
   }
 
   private handleLoaded = (): void => {
     this.loaded.notify(null);
-    this.imageElement.removeEventListener('load', this.handleLoaded);
+    this.removeLoadListeners();
   };
+
+  private handleFailed = (): void => {
+    this.failed = true;
+    this.removeLoadListeners();
+  };
+
+  private removeLoadListeners(): void {
+    this.imageElement.removeEventListener('load', this.handleLoaded);
+    this.imageElement.removeEventListener('error', this.handleFailed);
+  }
 }

@@ -951,6 +951,65 @@ async function preloadUiFont(): Promise<void> {
   ]);
 }
 
+function getInitialMenuSpriteIds(): string[] {
+  const ids = [
+    'menu.logo',
+    'menu.item.start',
+    'menu.item.shop',
+    'menu.item.ranking',
+    'menu.item.headquarters',
+    'menu.item.settings',
+    'menu.item.logout',
+  ];
+
+  if (config.IS_DEV) {
+    ids.push(
+      'menu.item.2players',
+      'menu.item.modes',
+      'menu.item.construction',
+      'menu.item.replay',
+    );
+  }
+
+  if (config.isMobileTouchViewport()) {
+    ids.push(
+      'menu.background.mobile',
+      'menu.hud.player',
+      'menu.hud.score',
+      'menu.hud.highScore',
+      'menu.hud.eventBar',
+    );
+  } else {
+    ids.push('menu.background');
+  }
+
+  return ids;
+}
+
+function startBackgroundSpritePreload(): void {
+  const preload = (): void => {
+    log.time('Background sprites preload');
+    spriteLoader
+      .preloadAllInBatchesAsync(3)
+      .then(() => log.timeEnd('Background sprites preload'))
+      .catch((error) => log.warn('Background sprite preload failed', error));
+  };
+  const requestIdle = (
+    window as Window & {
+      requestIdleCallback?: (
+        callback: () => void,
+        options?: { timeout: number },
+      ) => number;
+    }
+  ).requestIdleCallback;
+
+  if (typeof requestIdle === 'function') {
+    requestIdle.call(window, preload, { timeout: 1000 });
+  } else {
+    window.setTimeout(preload, 100);
+  }
+}
+
 async function main(): Promise<void> {
   loadingElement.textContent = 'Loading interface...';
   await preloadUiFont();
@@ -993,10 +1052,10 @@ async function main(): Promise<void> {
   );
   log.timeEnd('Color sprite font generation');
 
-  log.time('Sprites preload');
-  loadingElement.textContent = 'Loading sprites...';
-  await spriteLoader.preloadAllAsync();
-  log.timeEnd('Sprites preload');
+  log.time('Menu sprites preload');
+  loadingElement.textContent = 'Loading main menu...';
+  await spriteLoader.preloadAsync(getInitialMenuSpriteIds());
+  log.timeEnd('Menu sprites preload');
 
   log.time('Input bindings load');
   loadingElement.textContent = 'Loading input bindings...';
@@ -1016,6 +1075,7 @@ async function main(): Promise<void> {
   logCanvasSize('Particle', particleCanvas);
 
   gameLoop.start();
+  startBackgroundSpritePreload();
   // gameLoop.next();
 }
 

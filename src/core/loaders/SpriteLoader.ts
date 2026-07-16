@@ -46,7 +46,11 @@ export class SpriteLoader {
       throw new Error(`Invalid sprite id = "${id}"`);
     }
 
-    const { file: filePath, rect: sourceRectValues, scale: itemScale = 1 } = item;
+    const {
+      file: filePath,
+      rect: sourceRectValues,
+      scale: itemScale = 1,
+    } = item;
     const image = this.imageLoader.load(filePath);
     const sourceRect = new Rect(...sourceRectValues);
 
@@ -122,10 +126,40 @@ export class SpriteLoader {
   }
 
   public async preloadAllAsync(): Promise<void> {
+    await this.preloadAsync(Object.keys(this.manifest));
+  }
+
+  public async preloadAsync(ids: string[]): Promise<void> {
+    const filePaths = this.getUniqueFilePaths(ids);
     await Promise.all(
-      Object.keys(this.manifest).map((id) => {
-        return this.loadAsync(id);
-      }),
+      filePaths.map((filePath) => this.imageLoader.loadAsync(filePath)),
     );
+  }
+
+  public async preloadAllInBatchesAsync(batchSize = 4): Promise<void> {
+    const filePaths = this.getUniqueFilePaths(Object.keys(this.manifest));
+    const safeBatchSize = Math.max(1, Math.floor(batchSize));
+
+    for (let index = 0; index < filePaths.length; index += safeBatchSize) {
+      const batch = filePaths.slice(index, index + safeBatchSize);
+      await Promise.all(
+        batch.map((filePath) => this.imageLoader.loadAsync(filePath)),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  private getUniqueFilePaths(ids: string[]): string[] {
+    const filePaths = new Set<string>();
+
+    ids.forEach((id) => {
+      const item = this.manifest[id];
+      if (item === undefined) {
+        throw new Error(`Invalid sprite id = "${id}"`);
+      }
+      filePaths.add(item.file);
+    });
+
+    return Array.from(filePaths);
   }
 }

@@ -29,12 +29,19 @@ export class ImageLoader {
   public async loadAsync(path: string): Promise<Image> {
     return new Promise((resolve) => {
       const image = this.load(path);
-      if (image.isLoaded()) {
+      if (image.isLoaded() || image.hasFailed()) {
         resolve(image);
       } else {
-        image.loaded.addListenerOnce(() => {
+        const imageElement = image.getElement();
+        let unsubscribeLoaded = (): void => undefined;
+        const finish = (): void => {
+          unsubscribeLoaded();
+          imageElement.removeEventListener('error', finish);
           resolve(image);
-        });
+        };
+
+        unsubscribeLoaded = image.loaded.addListenerOnce(finish);
+        imageElement.addEventListener('error', finish, { once: true });
       }
     });
   }
