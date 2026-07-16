@@ -75,6 +75,7 @@ const COLOR_YELLOW_DARK = '#8f6506';
 const COLOR_MUTED = '#8f989f';
 const COLOR_PRICE = '#174d11';
 const COLOR_PRICE_BORDER = '#4d982f';
+const COLOR_PRICE_TEXT = '#f3e6a6';
 const COLOR_RED = '#5b1b18';
 const COLOR_RED_FOCUS = '#982d26';
 const COLOR_RED_BORDER = '#d34c3e';
@@ -338,10 +339,14 @@ class ShopCard extends GameObject {
     const priceFontSize = compact ? 19 : 20;
     this.priceFontSize = priceFontSize;
     this.priceIconSize = footerVariant === 'purchase' ? 30 : 26;
+    const footerInset = 11;
+    const footerHeight = 38;
+    const footerY = height - 47;
     const iconY = compact ? 34 : 42;
     const titleY = compact ? 12 : 16;
     const detailY = compact ? 42 : 78;
-    const priceY = height - 50;
+    const priceLineHeight = Math.ceil(priceFontSize * 1.18);
+    const priceY = footerY + Math.floor((footerHeight - priceLineHeight) / 2);
     const detailMaxWidth =
       detailMaxWidthOverride ??
       (swapBodyLayout ? width - ICON_SIZE - 28 : width - ICON_SIZE - 48);
@@ -356,16 +361,13 @@ class ShopCard extends GameObject {
     this.topHighlight.position.set(5, 5);
     this.add(this.topHighlight);
 
-    const footerInset = 11;
-    const footerHeight = 38;
-
     this.footer = new ShopPanel(
       width - footerInset * 2,
       footerHeight,
       COLOR_PRICE,
       COLOR_PRICE_BORDER,
     );
-    this.footer.position.set(footerInset, height - 47);
+    this.footer.position.set(footerInset, footerY);
     this.add(this.footer);
 
     if (showIconFrame) {
@@ -400,7 +402,7 @@ class ShopCard extends GameObject {
 
     this.price = new ShopText(
       '',
-      config.COLOR_WHITE,
+      COLOR_PRICE_TEXT,
       priceFontSize,
       '700',
       width - 16,
@@ -417,7 +419,7 @@ class ShopCard extends GameObject {
       );
       this.priceIcon.position.set(
         8,
-        height - 52,
+        footerY + Math.floor((footerHeight - this.priceIconSize) / 2),
       );
       this.add(this.priceIcon);
     }
@@ -456,7 +458,7 @@ class ShopCard extends GameObject {
     this.footer.painter.strokeColor = focused
       ? COLOR_YELLOW_LIGHT
       : COLOR_PRICE_BORDER;
-    this.price.setColor(focused ? COLOR_PAGE : config.COLOR_WHITE);
+    this.price.setColor(focused ? config.COLOR_WHITE : COLOR_PRICE_TEXT);
     this.setNeedsPaint();
   }
 }
