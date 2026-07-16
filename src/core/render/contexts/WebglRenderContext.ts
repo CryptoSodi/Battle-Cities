@@ -254,6 +254,10 @@ export class WebglRenderContext extends RenderContext {
     tintColor: string = null,
     tintAlpha = 0,
   ): void {
+    if (!image.isLoaded()) {
+      return;
+    }
+
     const element = image.getElement() as TexImageSource;
     const texture = this.getTexture(element);
 

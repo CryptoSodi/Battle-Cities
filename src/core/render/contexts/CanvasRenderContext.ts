@@ -36,6 +36,10 @@ export class CanvasRenderContext extends RenderContext {
     tintColor: string = null,
     tintAlpha = 0,
   ): void {
+    if (!imageSource.isLoaded()) {
+      return;
+    }
+
     const s = this.viewScale;
     const element = imageSource.getElement();
     const dx = Math.round(destinationRect.x * s + this.viewOffsetX);

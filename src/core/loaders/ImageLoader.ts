@@ -45,4 +45,13 @@ export class ImageLoader {
       }
     });
   }
+
+  public async retryAsync(path: string): Promise<Image> {
+    const cachedImage = this.images.get(path);
+    if (cachedImage !== undefined && cachedImage.hasFailed()) {
+      this.images.delete(path);
+    }
+
+    return this.loadAsync(path);
+  }
 }

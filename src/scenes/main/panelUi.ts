@@ -1,4 +1,10 @@
-import { GameObject, RectPainter, SpriteAlignment, SpritePainter, Vector } from '../../core';
+import {
+  GameObject,
+  RectPainter,
+  SpriteAlignment,
+  SpritePainter,
+  Vector,
+} from '../../core';
 import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
 import { GameUpdateArgs } from '../../game';
@@ -6,7 +12,12 @@ import { MenuInputContext } from '../../input';
 import * as config from '../../config';
 
 import { GameScene } from '../GameScene';
-import { UI_FONT_FAMILY } from '../../core/text/UiTypography';
+import {
+  UI_FONT_FAMILY,
+  UI_TEXT_LETTER_SPACING,
+  UI_TEXT_STROKE_COLOR,
+  UI_TEXT_STROKE_WIDTH,
+} from '../../core/text/UiTypography';
 
 // Shared UI kit for the economy/meta screens (ranking, staking, events,
 // trading, boost, treasury, airdrop, wiki). Mirrors MainShopScene's visual
@@ -16,21 +27,26 @@ import { UI_FONT_FAMILY } from '../../core/text/UiTypography';
 // shouldn't be destabilized by kit changes.
 
 export const UI = {
-  PAGE: '#080806',
-  PANEL: '#171611',
-  PANEL_ALT: '#211f18',
-  PANEL_LINE: '#2c2a22',
-  SIDE: '#14130f',
-  CARD: '#2b2605',
-  CARD_FOCUS: '#4a3f0b',
-  YELLOW: config.COLOR_YELLOW,
-  YELLOW_DARK: '#8a6b00',
-  MUTED: config.COLOR_GRAY,
-  MUTED_LIGHT: config.COLOR_GRAY_LIGHT,
+  PAGE: '#05080a',
+  PANEL: '#0b1014',
+  PANEL_ALT: '#12181d',
+  PANEL_RAISED: '#182026',
+  PANEL_LINE: '#35414a',
+  PANEL_HIGHLIGHT: '#65717a',
+  SIDE: '#0b1014',
+  CARD: '#0b1013',
+  CARD_FOCUS: '#18242b',
+  YELLOW: '#f2ad0d',
+  YELLOW_LIGHT: '#ffd75a',
+  YELLOW_DARK: '#8f6506',
+  MUTED: '#8f989f',
+  MUTED_LIGHT: '#c0c7cc',
   WHITE: config.COLOR_WHITE,
   BLACK: config.COLOR_BLACK,
-  RED: config.COLOR_RED,
-  GREEN: '#3ddc84',
+  RED: '#982d26',
+  RED_DARK: '#5b1b18',
+  RED_BORDER: '#d34c3e',
+  GREEN: '#35cf06',
   FONT: UI_FONT_FAMILY,
   WIDTH: 1240,
 };
@@ -72,6 +88,9 @@ class UiTextPainter extends Painter {
       this.fontWeight,
       this.color,
       this.align,
+      UI_TEXT_STROKE_COLOR,
+      UI_TEXT_STROKE_WIDTH,
+      UI_TEXT_LETTER_SPACING,
     );
   }
 }
@@ -87,9 +106,17 @@ export class UiText extends GameObject {
     maxWidth: number = null,
     align: CanvasTextAlign = 'left',
   ) {
-    const width = maxWidth ?? Math.max(24, Math.ceil(text.length * fontSize * 0.62));
+    const width =
+      maxWidth ?? Math.max(24, Math.ceil(text.length * fontSize * 0.62));
     super(width, Math.ceil(fontSize * 1.35));
-    this.painter = new UiTextPainter(text, color, fontSize, fontWeight, width, align);
+    this.painter = new UiTextPainter(
+      text,
+      color,
+      fontSize,
+      fontWeight,
+      width,
+      align,
+    );
   }
 
   public setText(text: string): void {
@@ -106,7 +133,12 @@ export class UiText extends GameObject {
 export class UiPanel extends GameObject {
   public painter: RectPainter;
 
-  constructor(width: number, height: number, fill = UI.PANEL, stroke: string = null) {
+  constructor(
+    width: number,
+    height: number,
+    fill = UI.PANEL,
+    stroke: string = null,
+  ) {
     super(width, height);
     this.painter = new RectPainter(fill, stroke);
     this.painter.lineWidth = 2;
@@ -132,6 +164,7 @@ export class UiIcon extends GameObject {
 
 export class UiButton extends GameObject {
   private background: RectPainter;
+  private highlight: UiPanel;
   private label: UiText;
   private active = false;
   private focused = false;
@@ -147,12 +180,24 @@ export class UiButton extends GameObject {
     super(width, height);
     this.variant = variant;
 
-    this.background = new RectPainter(UI.PANEL_ALT, UI.YELLOW_DARK);
+    this.background = new RectPainter(UI.PANEL_ALT, UI.PANEL_LINE);
     this.background.lineWidth = 2;
     this.painter = this.background;
 
-    this.label = new UiText(text, UI.WHITE, fontSize, '800', width - 4, 'center');
-    this.label.position.set(2, Math.max(8, Math.round((height - fontSize) / 2)));
+    this.highlight = new UiPanel(width - 8, 2, UI.PANEL_LINE, null);
+    this.highlight.position.set(4, 4);
+    this.add(this.highlight);
+
+    this.label = new UiText(
+      text,
+      UI.WHITE,
+      fontSize,
+      '800',
+      width - 4,
+      'center',
+    );
+    const lineHeight = Math.ceil(fontSize * 1.18);
+    this.label.position.set(2, Math.floor((height - lineHeight) / 2) + 3);
     this.add(this.label);
   }
 
@@ -174,28 +219,29 @@ export class UiButton extends GameObject {
   // brightens to the warm card-focus tone and the label goes yellow, so the
   // cursor is obvious at a glance.
   private refreshStyle(): void {
-    const focusedBack = this.focused && this.variant === 'back';
-
     if (this.active) {
       this.background.fillColor = UI.YELLOW;
-      this.label.setColor(UI.BLACK);
-    } else if (focusedBack) {
+      this.background.strokeColor = UI.YELLOW_LIGHT;
+      this.highlight.painter.fillColor = UI.YELLOW_LIGHT;
+      this.label.setColor(UI.WHITE);
+    } else if (this.focused && this.variant === 'back') {
       this.background.fillColor = UI.RED;
+      this.background.strokeColor = UI.RED_BORDER;
+      this.highlight.painter.fillColor = UI.RED_BORDER;
       this.label.setColor(UI.WHITE);
     } else if (this.focused) {
-      this.background.fillColor = UI.CARD_FOCUS;
-      this.label.setColor(UI.YELLOW);
+      this.background.fillColor = UI.PANEL_RAISED;
+      this.background.strokeColor = UI.YELLOW;
+      this.highlight.painter.fillColor = UI.PANEL_HIGHLIGHT;
+      this.label.setColor(UI.WHITE);
     } else {
       this.background.fillColor = UI.PANEL_ALT;
-      this.label.setColor(UI.WHITE);
+      this.background.strokeColor = UI.PANEL_LINE;
+      this.highlight.painter.fillColor = UI.PANEL_LINE;
+      this.label.setColor(UI.YELLOW);
     }
 
-    this.background.strokeColor = this.focused
-      ? focusedBack
-        ? UI.RED
-        : UI.WHITE
-      : UI.YELLOW_DARK;
-    this.background.lineWidth = this.focused ? 4 : 2;
+    this.background.lineWidth = this.focused ? 3 : 2;
     this.setNeedsPaint();
   }
 }
@@ -231,13 +277,41 @@ export abstract class PanelScene extends GameScene {
   // First data load; called once from setup. Static pages just call refresh().
   protected abstract load(): void;
 
+  protected getContentWidth(): number {
+    return UI.WIDTH;
+  }
+
+  protected getPageTop(): number {
+    return 96;
+  }
+
+  protected getInitialFocusKey(): string {
+    return null;
+  }
+
+  protected getBackButtonY(): number {
+    return this.pageY - 56;
+  }
+
+  protected getBackButtonWidth(): number {
+    return 120;
+  }
+
+  protected getBackButtonRightInset(): number {
+    return 22;
+  }
+
   // Optional sprite drawn left of the page title (see data/graphics/ui/).
   protected getTitleIcon(): string {
     return null;
   }
 
   protected setup(): void {
-    this.pageX = Math.max(24, Math.round((this.root.size.width - UI.WIDTH) / 2));
+    this.pageY = this.getPageTop();
+    this.pageX = Math.max(
+      24,
+      Math.round((this.root.size.width - this.getContentWidth()) / 2),
+    );
     this.load();
     this.refresh();
   }
@@ -269,7 +343,10 @@ export abstract class PanelScene extends GameScene {
   // when it still exists after the rebuild.
   protected refresh(preferredFocusKey: string = null): void {
     const previousKey =
-      preferredFocusKey ?? this.actions[this.focusedActionIndex]?.key ?? null;
+      preferredFocusKey ??
+      this.actions[this.focusedActionIndex]?.key ??
+      this.getInitialFocusKey();
+    const contentWidth = this.getContentWidth();
 
     this.root.removeAllChildren();
     this.actions = [];
@@ -294,19 +371,41 @@ export abstract class PanelScene extends GameScene {
     title.position.set(titleX, this.pageY - 70);
     this.root.add(title);
 
-    this.addButton(this.pageX + UI.WIDTH - 142, this.pageY - 56, 120, 44, 'BACK', 'back', () => {
-      this.navigator.back();
-    }, false, 'back');
+    const backButtonWidth = this.getBackButtonWidth();
+    this.addButton(
+      this.pageX +
+        contentWidth -
+        backButtonWidth -
+        this.getBackButtonRightInset(),
+      this.getBackButtonY(),
+      backButtonWidth,
+      44,
+      '←  BACK',
+      'back',
+      () => {
+        this.navigator.back();
+      },
+      false,
+      'back',
+    );
 
     this.renderContent();
 
     if (this.statusText !== '') {
-      this.statusLine = new UiText(this.statusText, UI.YELLOW, 24, '800', UI.WIDTH - 32);
+      this.statusLine = new UiText(
+        this.statusText,
+        UI.YELLOW,
+        24,
+        '800',
+        contentWidth - 32,
+      );
       this.statusLine.position.set(this.pageX + 16, this.root.size.height - 56);
       this.root.add(this.statusLine);
     }
 
-    const index = this.actions.findIndex((action) => action.key === previousKey);
+    const index = this.actions.findIndex(
+      (action) => action.key === previousKey,
+    );
     this.setFocusedAction(index === -1 ? 0 : index);
   }
 
@@ -345,7 +444,14 @@ export abstract class PanelScene extends GameScene {
     maxWidth: number = null,
     align: CanvasTextAlign = 'left',
   ): UiText {
-    const uiText = new UiText(text, color, fontSize, fontWeight, maxWidth, align);
+    const uiText = new UiText(
+      text,
+      color,
+      fontSize,
+      fontWeight,
+      maxWidth,
+      align,
+    );
     uiText.position.set(x, y);
     this.root.add(uiText);
     return uiText;
@@ -417,7 +523,12 @@ export abstract class PanelScene extends GameScene {
     x: number,
     y: number,
     width: number,
-    columns: { label: string; offset: number; align?: CanvasTextAlign; width?: number }[],
+    columns: {
+      label: string;
+      offset: number;
+      align?: CanvasTextAlign;
+      width?: number;
+    }[],
   ): void {
     this.addPanel(x, y, width, 44, UI.PANEL_ALT, null);
     columns.forEach((column) => {

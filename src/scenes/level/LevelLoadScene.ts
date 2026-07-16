@@ -21,11 +21,14 @@ export class LevelLoadScene extends GameScene {
   private inputHintSettings: InputHintSettings;
   private state = State.Navigation;
   private log = new Logger(LevelLoadScene.name, Logger.Level.Warn);
+  private mapConfig: MapConfig = null;
+  private tankSpritesLoaded = false;
 
   protected setup({
     inputHintSettings,
     mapLoader,
     session,
+    spriteLoader,
   }: GameUpdateArgs): void {
     this.inputHintSettings = inputHintSettings;
     this.session = session;
@@ -45,6 +48,11 @@ export class LevelLoadScene extends GameScene {
     this.mapLoader.loaded.addListenerOnce(this.handleMapLoaded);
     this.mapLoader.error.addListenerOnce(this.handleMapLoadError);
     this.mapLoader.loadAsync(levelNumber);
+
+    spriteLoader
+      .preloadRequiredByPrefixAsync('tank.')
+      .then(this.handleTankSpritesLoaded)
+      .catch((err) => this.log.error('Failed to prepare tank sprites', err));
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
@@ -66,15 +74,29 @@ export class LevelLoadScene extends GameScene {
 
   private handleMapLoaded = (mapConfig: MapConfig): void => {
     this.mapLoader.error.removeListener(this.handleMapLoadError);
+    this.mapConfig = mapConfig;
 
     if (this.session.isMultiplayer()) {
       this.ensureDefaultMultiplayerInputVariants();
     }
 
+    this.finishLoading();
+  };
+
+  private handleTankSpritesLoaded = (): void => {
+    this.tankSpritesLoaded = true;
+    this.finishLoading();
+  };
+
+  private finishLoading(): void {
+    if (this.mapConfig === null || !this.tankSpritesLoaded) {
+      return;
+    }
+
     if (this.inputHintSettings.shouldShowLevelHint()) {
       const params: LevelControlsLocationParams = {
         canSelectVariant: false,
-        mapConfig,
+        mapConfig: this.mapConfig,
         playerIndex: 0,
       };
       this.navigator.replace(GameSceneType.LevelControls, params);
@@ -82,9 +104,9 @@ export class LevelLoadScene extends GameScene {
     }
 
     this.navigator.replace(GameSceneType.LevelPlay, {
-      mapConfig,
+      mapConfig: this.mapConfig,
     });
-  };
+  }
 
   private ensureDefaultMultiplayerInputVariants(): void {
     if (this.session.primaryPlayer.getInputVariant() === null) {

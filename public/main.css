@@ -33,8 +33,11 @@ html {
 
 body {
   align-items: stretch;
-  background:
-    radial-gradient(circle at 78% 12%, rgba(255, 176, 28, 0.18), transparent 30%),
+  background: radial-gradient(
+      circle at 78% 12%,
+      rgba(255, 176, 28, 0.18),
+      transparent 30%
+    ),
     linear-gradient(135deg, #070807 0%, #10130e 48%, #050607 100%);
   color: #f4efe4;
   display: flex;
@@ -54,14 +57,13 @@ body.game-running {
 }
 
 body.game-running::before {
-  background:
-    radial-gradient(
-      circle at center,
-      rgba(0, 0, 0, 0) 48%,
-      rgba(0, 0, 0, 0.18) 68%,
-      rgba(0, 0, 0, 0.45) 84%,
-      rgba(0, 0, 0, 0.72) 100%
-    );
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0) 48%,
+    rgba(0, 0, 0, 0.18) 68%,
+    rgba(0, 0, 0, 0.45) 84%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
   content: '';
   inset: 0;
   pointer-events: none;
@@ -69,14 +71,13 @@ body.game-running::before {
 }
 
 body.game-running::after {
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.12) 0,
-      rgba(255, 255, 255, 0.12) 1px,
-      rgba(0, 0, 0, 0.32) 1px,
-      rgba(0, 0, 0, 0.32) 4px
-    );
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12) 0,
+    rgba(255, 255, 255, 0.12) 1px,
+    rgba(0, 0, 0, 0.32) 1px,
+    rgba(0, 0, 0, 0.32) 4px
+  );
   content: '';
   inset: 0;
   pointer-events: none;
@@ -111,7 +112,8 @@ body.scanlines-disabled::after {
 
 .auth-kicker {
   color: #ffb018;
-  font: 700 13px/1.2 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 700 13px/1.2 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   letter-spacing: 1px;
   margin-bottom: 14px;
   text-transform: uppercase;
@@ -119,13 +121,15 @@ body.scanlines-disabled::after {
 
 .auth-panel h1 {
   color: #fff7df;
-  font: 800 44px/1.02 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 800 44px/1.02 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   margin: 0 0 16px;
 }
 
 .auth-copy {
   color: #c9c1ad;
-  font: 400 16px/1.55 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 400 16px/1.55 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   margin: 0 0 28px;
 }
 
@@ -141,7 +145,8 @@ body.scanlines-disabled::after {
   color: #f6f1e6;
   cursor: pointer;
   display: flex;
-  font: 700 16px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 700 16px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   gap: 12px;
   min-height: 52px;
   padding: 0 16px;
@@ -178,7 +183,8 @@ body.scanlines-disabled::after {
   border: 1px solid rgba(255, 255, 255, 0.24);
   display: flex;
   flex: 0 0 30px;
-  font: 800 13px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 800 13px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   height: 30px;
   justify-content: center;
   width: 30px;
@@ -226,7 +232,8 @@ body.scanlines-disabled::after {
   color: #c7c1b4;
   display: flex;
   flex-wrap: wrap;
-  font: 600 11px/1.4 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 600 11px/1.4 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   gap: 10px 16px;
   justify-content: center;
   margin-top: 20px;
@@ -253,14 +260,16 @@ body.scanlines-disabled::after {
 
 .auth-status {
   color: #9f9785;
-  font: 400 14px/1.45 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 400 14px/1.45 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   margin: 18px 0 0;
   min-height: 20px;
 }
 
 .auth-legal {
   color: #817b6c;
-  font: 400 12px/1.5 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 400 12px/1.5 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
   margin: 14px 0 0;
 }
 
@@ -369,7 +378,7 @@ canvas {
   }
 
   body.game-running.main-menu-active .game-stage {
-    background-image: url("/assets/main-menu-battlefield-mobile.png");
+    background-image: url('/assets/main-menu-battlefield-mobile.png');
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
@@ -385,7 +394,8 @@ canvas {
   }
 
   body.game-running.main-menu-active canvas:not(.particle-overlay),
-  body.game-running.shop-active canvas:not(.particle-overlay) {
+  body.game-running.shop-active canvas:not(.particle-overlay),
+  body.game-running.ranking-active canvas:not(.particle-overlay) {
     top: 0;
     transform: translateX(-50%);
   }
@@ -401,7 +411,8 @@ canvas {
   }
 
   body.game-running.main-menu-active .particle-overlay,
-  body.game-running.shop-active .particle-overlay {
+  body.game-running.shop-active .particle-overlay,
+  body.game-running.ranking-active .particle-overlay {
     top: 0;
     transform: translateX(-50%);
   }
@@ -417,8 +428,11 @@ canvas {
     --controller-line: #5f5a43;
     --controller-panel: #20231b;
     background-color: var(--controller-bg);
-    background-image: linear-gradient(rgba(255, 255, 255, 0.015), rgba(0, 0, 0, 0.08)),
-      url("/assets/mobile-gamepad-panel-background.png");
+    background-image: linear-gradient(
+        rgba(255, 255, 255, 0.015),
+        rgba(0, 0, 0, 0.08)
+      ),
+      url('/assets/mobile-gamepad-panel-background.png');
     background-position: center;
     background-repeat: no-repeat;
     background-size: 100% 100%;
@@ -446,7 +460,8 @@ canvas {
     -webkit-tap-highlight-color: transparent;
     color: #f5f2e8;
     cursor: pointer;
-    font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+    font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+      sans-serif;
     touch-action: none;
     user-select: none;
   }
@@ -460,7 +475,8 @@ canvas {
     align-items: center;
     align-self: start;
     aspect-ratio: 963 / 311;
-    background: url("/assets/mobile-gamepad-loadout-container.png") center / contain no-repeat;
+    background: url('/assets/mobile-gamepad-loadout-container.png') center /
+      contain no-repeat;
     box-sizing: border-box;
     display: grid;
     gap: clamp(6px, 1.7vw, 12px);
@@ -503,7 +519,8 @@ canvas {
   }
 
   .mobile-touch-power.is-pressed {
-    box-shadow: inset 0 0 18px rgba(255, 24, 16, 0.72), 0 0 14px rgba(255, 24, 16, 0.45);
+    box-shadow: inset 0 0 18px rgba(255, 24, 16, 0.72),
+      0 0 14px rgba(255, 24, 16, 0.45);
     transform: scale(0.96);
   }
 
@@ -551,7 +568,7 @@ canvas {
 
   .mobile-touch-stick {
     background-color: transparent;
-    background-image: url("/assets/mobile-gamepad-joystick-base.png");
+    background-image: url('/assets/mobile-gamepad-joystick-base.png');
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
@@ -569,7 +586,8 @@ canvas {
   }
 
   .mobile-touch-stick::before {
-    background: url("/assets/mobile-gamepad-joystick-ring.png") center / contain no-repeat;
+    background: url('/assets/mobile-gamepad-joystick-ring.png') center / contain
+      no-repeat;
     content: '';
     inset: -8%;
     pointer-events: none;
@@ -578,7 +596,8 @@ canvas {
   }
 
   .mobile-touch-stick__cross {
-    background: url("/assets/mobile-gamepad-joystick-directions.png") center / contain no-repeat;
+    background: url('/assets/mobile-gamepad-joystick-directions.png') center /
+      contain no-repeat;
     inset: 8%;
     pointer-events: none;
     position: absolute;
@@ -586,7 +605,8 @@ canvas {
   }
 
   .mobile-touch-stick__knob {
-    background: url("/assets/mobile-gamepad-joystick-knob.png") center / contain no-repeat;
+    background: url('/assets/mobile-gamepad-joystick-knob.png') center / contain
+      no-repeat;
     border: 0;
     border-radius: 50%;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.42);
@@ -643,11 +663,11 @@ canvas {
   }
 
   .mobile-touch-fire__button--normal .mobile-touch-fire__label {
-    background-image: url("/assets/mobile-gamepad-normal-fire-button.png");
+    background-image: url('/assets/mobile-gamepad-normal-fire-button.png');
   }
 
   .mobile-touch-fire__button--rapid .mobile-touch-fire__label {
-    background-image: url("/assets/mobile-gamepad-rapid-fire-button.png");
+    background-image: url('/assets/mobile-gamepad-rapid-fire-button.png');
   }
 
   .mobile-touch-fire__button.is-pressed {
@@ -671,7 +691,6 @@ canvas {
     inset: 0;
     position: absolute;
   }
-
 }
 
 @media (max-width: 560px) {

@@ -136,6 +136,28 @@ export class SpriteLoader {
     );
   }
 
+  public async preloadRequiredByPrefixAsync(prefix: string): Promise<void> {
+    const ids = Object.keys(this.manifest).filter((id) =>
+      id.startsWith(prefix),
+    );
+    if (ids.length === 0) {
+      throw new Error(`No sprites found with prefix = "${prefix}"`);
+    }
+
+    const filePaths = this.getUniqueFilePaths(ids);
+
+    while (true) {
+      const images = await Promise.all(
+        filePaths.map((filePath) => this.imageLoader.retryAsync(filePath)),
+      );
+      if (images.every((image) => image.isLoaded())) {
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
   public async preloadAllInBatchesAsync(batchSize = 4): Promise<void> {
     const filePaths = this.getUniqueFilePaths(Object.keys(this.manifest));
     const safeBatchSize = Math.max(1, Math.floor(batchSize));
