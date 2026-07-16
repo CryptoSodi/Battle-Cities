@@ -250,6 +250,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.inputManager = inputManager;
     this.session = session;
+    this.session.startLevelStats(
+      this.params.mapConfig.getEnemySpawnList().length,
+    );
     this.applyRunExtraLives();
 
     const playerSpawnPositions = mapConfig.getPlayerSpawnPositions();
@@ -449,6 +452,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
+    this.session.recordLevelTick();
     const { collisionSystem, gameState } = updateArgs;
     this.zoomOutTimer.update(updateArgs.deltaTime);
     this.cameraFocusTimer.update(updateArgs.deltaTime);
@@ -745,6 +749,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   };
 
   private handleEnemyDied = (event: LevelEnemyDiedEvent): void => {
+    this.session.recordEnemyDefeated();
+
     // Only kills are awarded
     if (event.reason === TankDeathReason.WipeoutPowerup) {
       return;

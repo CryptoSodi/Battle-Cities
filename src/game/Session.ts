@@ -43,6 +43,9 @@ export class Session {
   private state: State;
   private runConsumables: SessionRunConsumables;
   private runBoosts: SessionRunBoosts;
+  private levelEnemyTotal: number;
+  private levelEnemiesDefeated: number;
+  private levelDurationTicks: number;
 
   constructor() {
     this.reset();
@@ -76,6 +79,9 @@ export class Session {
       extraLives: 0,
     };
     this.runBoosts = createEmptyRunBoosts();
+    this.levelEnemyTotal = 0;
+    this.levelEnemiesDefeated = 0;
+    this.levelDurationTicks = 0;
 
     this.primaryPlayer.reset();
     this.secondaryPlayer.reset();
@@ -221,6 +227,32 @@ export class Session {
 
   public getRunBoosts(): SessionRunBoosts {
     return this.runBoosts;
+  }
+
+  public startLevelStats(enemyTotal: number): void {
+    this.levelEnemyTotal = Math.max(0, Math.floor(enemyTotal));
+    this.levelEnemiesDefeated = 0;
+    this.levelDurationTicks = 0;
+  }
+
+  public recordLevelTick(): void {
+    this.levelDurationTicks += 1;
+  }
+
+  public recordEnemyDefeated(): void {
+    this.levelEnemiesDefeated += 1;
+  }
+
+  public getLevelEnemyTotal(): number {
+    return this.levelEnemyTotal;
+  }
+
+  public getLevelEnemiesDefeated(): number {
+    return this.levelEnemiesDefeated;
+  }
+
+  public getLevelDurationTicks(): number {
+    return this.levelDurationTicks;
   }
 }
 

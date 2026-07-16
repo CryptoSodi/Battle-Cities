@@ -1,6 +1,6 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, GameStorage, Session } from '../../game';
-import { Menu, SpriteMenuItem, SpriteText } from '../../gameObjects';
+import { Menu, SpriteMenuItem } from '../../gameObjects';
 import { InputManager, MenuInputContext } from '../../input';
 import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
@@ -122,10 +122,6 @@ export class MainMenuScene extends GameScene {
   private group: GameObject;
   private background: GameObject;
   private logo: GameObject;
-  private primaryPoints: SpriteText;
-  private secondaryPoints: SpriteText;
-  private commonHighscore: SpriteText;
-  private playerStatus: SpriteText;
   private menu: Menu;
   private singlePlayerItem: SpriteMenuItem;
   private multiPlayerItem: SpriteMenuItem;
@@ -136,7 +132,6 @@ export class MainMenuScene extends GameScene {
   private rankingItem: SpriteMenuItem;
   private moreItem: SpriteMenuItem;
   private settingsItem: SpriteMenuItem;
-  private eventTicker: SpriteText;
   private mobileEventTicker: GameObject = null;
   private mobileEventTickerPainter: EventTickerPainter = null;
   private mobileEventNames: string[] = [];
@@ -205,7 +200,7 @@ export class MainMenuScene extends GameScene {
     }
 
     const menuY = isMobileLayout
-      ? Math.round(this.root.size.height * 0.5)
+      ? Math.round(this.root.size.height * 0.5) + 72
       : 490;
 
     this.logo = new GameObject();
@@ -216,54 +211,16 @@ export class MainMenuScene extends GameScene {
     this.logo.position.setX(
       (this.root.size.width - this.logo.size.width) / 2,
     );
-    this.logo.position.setY(isMobileLayout ? 190 : menuY - 318);
+    this.logo.position.setY(isMobileLayout ? 238 : menuY - 252);
     this.logo.painter = new SpritePainter(
       spriteLoader.load('menu.logo'),
       SpriteAlignment.AspectFit,
     );
     this.group.add(this.logo);
 
-    this.primaryPoints = new SpriteText(this.getPrimaryPointsText(), {
-      color: config.COLOR_WHITE,
-    });
-    this.primaryPoints.position.set(isMobileLayout ? 300 : 92, 64);
-    if (!isMobileLayout) {
-      this.root.add(this.primaryPoints);
-    }
+    this.setupHud(spriteLoader);
 
-    this.secondaryPoints = new SpriteText(this.getSecondaryPointsText(), {
-      color: config.COLOR_WHITE,
-    });
-    this.secondaryPoints.position.set(isMobileLayout ? 820 : 704, 64);
-    if (!isMobileLayout && session.secondaryPlayer.wasInLastGame()) {
-      this.root.add(this.secondaryPoints);
-    }
-
-    this.commonHighscore = new SpriteText(this.getCommonHighscoreText(), {
-      color: config.COLOR_WHITE,
-    });
-    this.commonHighscore.position.set(isMobileLayout ? 650 : 380, 64);
-    if (!isMobileLayout) {
-      this.root.add(this.commonHighscore);
-    }
-
-    this.playerStatus = new SpriteText(this.getPlayerStatusText(), {
-      color: config.COLOR_GRAY,
-    });
-    this.playerStatus.position.set(isMobileLayout ? 300 : 92, 112);
-    if (!isMobileLayout) {
-      this.root.add(this.playerStatus);
-    } else {
-      this.setupMobileHud(spriteLoader);
-    }
-
-    if (isMobileLayout) {
-      this.setupMobileEventTicker(spriteLoader);
-    } else {
-      this.eventTicker = new SpriteText('', { color: config.COLOR_YELLOW });
-      this.eventTicker.position.set(92, 152);
-      this.root.add(this.eventTicker);
-    }
+    this.setupEventTicker(spriteLoader, isMobileLayout);
     this.loadEventTicker();
 
     const menuItemWidth = isMobileLayout ? 380 : 228;
@@ -361,13 +318,18 @@ export class MainMenuScene extends GameScene {
     const inputMethod = inputManager.getActiveMethod();
 
     if (this.state === State.Sliding) {
+      const hasPointerSkip = updateArgs.pointerClick !== null;
+      if (hasPointerSkip) {
+        updateArgs.pointerClick = null;
+      }
+
       let nextPosition = this.group.position.y - SLIDE_SPEED * deltaTime;
       if (nextPosition <= 0) {
         nextPosition = 0;
       }
 
       const isSkipped = inputMethod.isDownAny(MenuInputContext.Skip);
-      if (isSkipped) {
+      if (isSkipped || hasPointerSkip) {
         nextPosition = 0;
       }
 
@@ -390,7 +352,7 @@ export class MainMenuScene extends GameScene {
     super.update(updateArgs);
   }
 
-  private setupMobileHud(
+  private setupHud(
     spriteLoader: GameUpdateArgs['spriteLoader'],
   ): void {
     const sideHeight = 124;
@@ -470,9 +432,9 @@ export class MainMenuScene extends GameScene {
       this.root.add(textObject);
     };
 
-    addText(this.getMobilePlayerName(), x + 88, sideY + 40, 174, 22);
+    addText(this.getHudPlayerName(), x + 88, sideY + 40, 174, 22);
     addText(
-      this.getMobileScoreText(),
+      this.getHudScoreText(),
       scoreX + 33,
       scoreY + 78,
       174,
@@ -480,7 +442,7 @@ export class MainMenuScene extends GameScene {
       config.COLOR_YELLOW,
     );
     addText(
-      this.getMobileHighScoreText(),
+      this.getHudHighScoreText(),
       highScoreX + 102,
       sideY + 68,
       142,
@@ -488,15 +450,16 @@ export class MainMenuScene extends GameScene {
     );
   }
 
-  private setupMobileEventTicker(
+  private setupEventTicker(
     spriteLoader: GameUpdateArgs['spriteLoader'],
+    isMobileLayout: boolean,
   ): void {
-    const barWidth = 650;
-    const barHeight = 61;
+    const barWidth = isMobileLayout ? 610 : 660;
+    const barHeight = isMobileLayout ? 61 : 66;
     const barX = Math.round((this.root.size.width - barWidth) / 2);
-    const barY = 153;
-    const textWidth = 390;
-    const horizontalInset = 80;
+    const barY = isMobileLayout ? 164 : 164;
+    const textWidth = isMobileLayout ? 390 : 430;
+    const horizontalInset = isMobileLayout ? 124 : 140;
 
     const bar = new GameObject(barWidth, barHeight);
     bar.position.set(barX, barY);
@@ -515,14 +478,14 @@ export class MainMenuScene extends GameScene {
     this.mobileEventTickerPainter = new EventTickerPainter();
     this.mobileEventTickerPainter.setClip(
       this.mobileEventTickerInnerLeft,
-      barY + 14,
+      barY + (isMobileLayout ? 14 : 16),
       this.mobileEventTickerInnerRight - this.mobileEventTickerInnerLeft,
-      34,
+      isMobileLayout ? 34 : 36,
     );
     this.mobileEventTicker = new GameObject(textWidth, 30);
     this.mobileEventTicker.position.set(
       this.mobileEventTickerStartX,
-      barY + 18,
+      barY + (isMobileLayout ? 18 : 20),
     );
     this.mobileEventTicker.painter = this.mobileEventTickerPainter;
     this.mobileEventTicker.setZIndex(4);
@@ -573,65 +536,23 @@ export class MainMenuScene extends GameScene {
     this.mobileEventTicker.setNeedsPaint();
   }
 
-  private getMobilePlayerName(): string {
+  private getHudPlayerName(): string {
     const player = this.playerIdentity.getPlayer();
     const name = this.getSafePlayerName(player?.displayName || 'PLAYER');
     return name.length > 10 ? name.slice(0, 10) : name;
   }
 
-  private getMobileScoreText(): string {
+  private getHudScoreText(): string {
     const score = this.session.primaryPlayer.getLastGamePoints() || 0;
     return score.toString().padStart(6, '0').slice(-6);
   }
 
-  private getMobileHighScoreText(): string {
+  private getHudHighScoreText(): string {
     return this.pointsHighscoreManager
       .getOverallMaxPoints()
       .toString()
       .padStart(6, '0')
       .slice(-6);
-  }
-
-  private getPrimaryPointsText(): string {
-    const points = this.session.primaryPlayer.getLastGamePoints() || 0;
-
-    const pointsNumberText = points > 0 ? points.toString() : '00';
-    const pointsText = pointsNumberText.padStart(6, ' ');
-
-    const text = `Ⅰ-${pointsText}`;
-
-    return text;
-  }
-
-  private getSecondaryPointsText(): string {
-    const points = this.session.secondaryPlayer.getLastGamePoints() || 0;
-
-    const pointsNumberText = points > 0 ? points.toString() : '00';
-    const pointsText = pointsNumberText.padStart(6, ' ');
-
-    const text = `Ⅱ-${pointsText}`;
-
-    return text;
-  }
-
-  private getCommonHighscoreText(): string {
-    const points = this.pointsHighscoreManager.getOverallMaxPoints();
-    const pointsText = points.toString().padStart(6, ' ');
-
-    const text = `HI-${pointsText}`;
-
-    return text;
-  }
-
-  private getPlayerStatusText(): string {
-    const player = this.playerIdentity.getPlayer();
-    if (player === null) {
-      return 'PLAYER UNKNOWN';
-    }
-
-    return `${this.playerIdentity.getProviderLabel().toUpperCase()}-${this.getSafePlayerName(
-      player.displayName,
-    )}`;
   }
 
   private getSafePlayerName(name: string): string {
@@ -722,17 +643,6 @@ export class MainMenuScene extends GameScene {
         this.mobileEventIndex = 0;
         this.showMobileEvent(this.mobileEventIndex);
         this.mobileEventTickerActive = true;
-      } else if (this.eventTicker !== undefined) {
-        // The bitmap font's character set has no ':' or '>' — see
-        // data/fonts/sprite-font.json.
-        this.eventTicker.setText(
-          liveEvents
-            .map(
-              (event) =>
-                `LIVE ${event.name} - ENDS ${event.endsAt.slice(0, 10)}`,
-            )
-            .join(' - '),
-        );
       }
     });
   }

@@ -47,6 +47,7 @@ export const UI = {
   RED_DARK: '#5b1b18',
   RED_BORDER: '#d34c3e',
   GREEN: '#35cf06',
+  GREEN_PANEL: '#0d2412',
   FONT: UI_FONT_FAMILY,
   WIDTH: 1240,
 };
@@ -387,6 +388,22 @@ export abstract class PanelScene extends GameScene {
     return 44;
   }
 
+  protected getHeaderActionText(): string {
+    return '←  BACK';
+  }
+
+  protected getHeaderActionKey(): string {
+    return 'back';
+  }
+
+  protected getHeaderActionVariant(): 'normal' | 'back' {
+    return 'back';
+  }
+
+  protected handleHeaderAction(): void {
+    this.navigator.back();
+  }
+
   protected isActionNavigable(_key: string): boolean {
     void _key;
     return true;
@@ -481,13 +498,11 @@ export abstract class PanelScene extends GameScene {
       this.getBackButtonY(),
       backButtonWidth,
       this.getBackButtonHeight(),
-      '←  BACK',
-      'back',
-      () => {
-        this.navigator.back();
-      },
+      this.getHeaderActionText(),
+      this.getHeaderActionKey(),
+      () => this.handleHeaderAction(),
       false,
-      'back',
+      this.getHeaderActionVariant(),
     );
 
     this.renderContent();
