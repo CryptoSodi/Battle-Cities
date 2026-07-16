@@ -130,10 +130,10 @@ const SHOP_FONT = UI_FONT_FAMILY;
 const MOBILE_SHOP_WIDTH = 744;
 const MOBILE_PAGE_INSET = 16;
 const MOBILE_INNER_WIDTH = MOBILE_SHOP_WIDTH - MOBILE_PAGE_INSET * 2;
-const MOBILE_TOP_Y = 16;
-const MOBILE_TAB_HEIGHT = 88;
-const MOBILE_SHELL_Y = 112;
-const MOBILE_SUMMARY_HEIGHT = 174;
+const MOBILE_TOP_Y = 8;
+const MOBILE_TAB_HEIGHT = 60;
+const MOBILE_SHELL_Y = 76;
+const MOBILE_SUMMARY_HEIGHT = 94;
 const MOBILE_OWNED_COLUMNS = 8;
 const MOBILE_OWNED_GAP = 8;
 const MOBILE_OWNED_TILE_WIDTH = Math.floor(
@@ -141,7 +141,7 @@ const MOBILE_OWNED_TILE_WIDTH = Math.floor(
     MOBILE_OWNED_COLUMNS,
 );
 const MOBILE_OWNED_TILE_HEIGHT = 104;
-const MOBILE_FILTER_HEIGHT = 88;
+const MOBILE_FILTER_HEIGHT = 60;
 const MOBILE_FILTER_GAP = 10;
 const MOBILE_FILTER_WIDTH = Math.floor(
   (MOBILE_INNER_WIDTH - MOBILE_FILTER_GAP * (FILTER_TAB_COLUMNS - 1)) /
@@ -153,7 +153,7 @@ const MOBILE_CARD_WIDTH = Math.floor(
   (MOBILE_INNER_WIDTH - MOBILE_CARD_GAP * (MOBILE_CARD_COLUMNS - 1)) /
     MOBILE_CARD_COLUMNS,
 );
-const MOBILE_CARDS_Y = 642;
+const MOBILE_CARDS_Y = 496;
 const MOBILE_CARD_MIN_HEIGHT = 150;
 const MOBILE_CARD_MAX_HEIGHT = 216;
 
@@ -718,10 +718,10 @@ export class MainShopScene extends GameScene {
     const contentX = originX + MOBILE_PAGE_INSET;
     this.renderMobileSummary(
       contentX,
-      MOBILE_SHELL_Y + 16,
+      MOBILE_SHELL_Y + 12,
       MOBILE_INNER_WIDTH,
     );
-    this.renderMobileOwnedItems(contentX, 322, MOBILE_INNER_WIDTH);
+    this.renderMobileOwnedItems(contentX, 206, MOBILE_INNER_WIDTH);
 
     if (this.view === ShopView.Shop) {
       this.renderMobileShopContent(contentX);
@@ -744,37 +744,37 @@ export class MainShopScene extends GameScene {
 
     this.addButton(
       x + 12,
-      y + 38,
+      y + 17,
       154,
-      88,
-      this.shopManager.isWalletConnected() ? 'WALLET' : 'CONNECT',
+      60,
+      this.shopManager.isWalletConnected() ? 'CONNECTED' : 'CONNECT',
       { key: 'wallet', kind: 'wallet' },
       this.shopManager.isWalletConnected(),
     );
 
     [180, 356, 532].forEach((offset) => {
-      const divider = new ShopPanel(2, 116, COLOR_PANEL_LINE, null);
-      divider.position.set(x + offset, y + 29);
+      const divider = new ShopPanel(2, 64, COLOR_PANEL_LINE, null);
+      divider.position.set(x + offset, y + 15);
       this.root.add(divider);
     });
 
     this.addMobileResource(
       x + 200,
-      y + 28,
+      y + 6,
       'BACT',
       this.shopManager.getTokenBalance().toString(),
       'shop.tab.token',
     );
     this.addMobileResource(
       x + 376,
-      y + 28,
+      y + 6,
       'SOL',
       this.formatSol(this.shopManager.getSolBalance()),
       'shop.tab.solana',
     );
     this.addMobileResource(
       x + 552,
-      y + 28,
+      y + 6,
       'FUEL',
       this.shopManager.getFuelBalance().toString(),
       'shop.fuel',
@@ -788,16 +788,16 @@ export class MainShopScene extends GameScene {
     value: string,
     iconId: string,
   ): void {
-    const icon = new ShopIcon(iconId, 64, SpriteAlignment.AspectFit);
-    icon.position.set(x, y + 20);
+    const icon = new ShopIcon(iconId, 46, SpriteAlignment.AspectFit);
+    icon.position.set(x + 7, y + 15);
     this.root.add(icon);
 
     const labelText = new ShopText(label, config.COLOR_WHITE, 22, '700', 84);
-    labelText.position.set(x + 76, y + 16);
+    labelText.position.set(x + 62, y + 13);
     this.root.add(labelText);
 
     const valueText = new ShopText(value, COLOR_MUTED, 24, '700', 84);
-    valueText.position.set(x + 76, y + 60);
+    valueText.position.set(x + 62, y + 42);
     this.root.add(valueText);
   }
 
@@ -856,6 +856,15 @@ export class MainShopScene extends GameScene {
     );
     this.root.add(icon);
 
+    const countStrip = new ShopPanel(
+      MOBILE_OWNED_TILE_WIDTH - 4,
+      29,
+      '#070a0c',
+      null,
+    );
+    countStrip.position.set(x + 2, y + MOBILE_OWNED_TILE_HEIGHT - 31);
+    this.root.add(countStrip);
+
     const count = new ShopText(
       this.getInventoryCountText(itemId),
       COLOR_YELLOW,
@@ -869,7 +878,7 @@ export class MainShopScene extends GameScene {
   }
 
   private renderMobileShopContent(x: number): void {
-    const filterY = 494;
+    const filterY = 378;
     const categories: Array<[string, ShopCategory]> = [
       ['ALL', ShopCategory.All],
       ['FUEL', ShopCategory.Fuel],
@@ -895,7 +904,7 @@ export class MainShopScene extends GameScene {
       '700',
       MOBILE_INNER_WIDTH,
     );
-    sectionText.position.set(x, 604);
+    sectionText.position.set(x, 458);
     this.root.add(sectionText);
 
     if (allItems.length === 0) {
@@ -960,7 +969,7 @@ export class MainShopScene extends GameScene {
       '700',
       MOBILE_INNER_WIDTH,
     );
-    title.position.set(x, 510);
+    title.position.set(x, 394);
     this.root.add(title);
 
     const helper = new ShopText(
@@ -970,14 +979,14 @@ export class MainShopScene extends GameScene {
       '700',
       MOBILE_INNER_WIDTH,
     );
-    helper.position.set(x, 548);
+    helper.position.set(x, 432);
     this.root.add(helper);
 
     const gap = 12;
     const cardWidth = Math.floor((MOBILE_INNER_WIDTH - gap) / 2);
     const cardHeight = Math.min(
       232,
-      Math.floor((this.root.size.height - 626 - 70 - gap) / 2),
+      Math.floor((this.root.size.height - 510 - 70 - gap) / 2),
     );
     const slots: Array<[ShopLoadoutSlot, string]> = [
       [ShopLoadoutSlot.ActiveOne, 'SLOT 1'],
@@ -988,7 +997,7 @@ export class MainShopScene extends GameScene {
     slots.forEach(([slot, label], index) => {
       this.addMobileSlotCard(
         x + (index % 2) * (cardWidth + gap),
-        586 + Math.floor(index / 2) * (cardHeight + gap),
+        470 + Math.floor(index / 2) * (cardHeight + gap),
         cardWidth,
         cardHeight,
         slot,
@@ -1030,7 +1039,7 @@ export class MainShopScene extends GameScene {
       y + 68,
       SIDE_CONTENT_WIDTH,
       44,
-      this.shopManager.isWalletConnected() ? 'WALLET' : 'CONNECT',
+      this.shopManager.isWalletConnected() ? 'CONNECTED' : 'CONNECT',
       { key: 'wallet', kind: 'wallet' },
       this.shopManager.isWalletConnected(),
     );
@@ -1392,7 +1401,10 @@ export class MainShopScene extends GameScene {
     height: number,
   ): void {
     const isStarterPack = item.id === ShopItemId.StarterPack;
-    const uiScale = Math.max(0.78, Math.min(1.08, height / CARD_HEIGHT));
+    const uiScale = Math.max(
+      1.08,
+      Math.min(1.22, (height / CARD_HEIGHT) * 1.12),
+    );
     const card = new ShopCard(
       MOBILE_CARD_WIDTH,
       height,
@@ -1403,7 +1415,7 @@ export class MainShopScene extends GameScene {
       SpriteAlignment.AspectFit,
       false,
       true,
-      10,
+      6,
       this.market === ShopMarket.Token ? 'shop.tab.token' : 'shop.tab.solana',
       uiScale,
     );
@@ -1777,7 +1789,8 @@ export class MainShopScene extends GameScene {
     if (action.kind === 'wallet') {
       this.shopManager.connectWallet();
       this.statusText = 'WALLET CONNECTED';
-      this.renderShop(action.key);
+      this.verticalParentKeys = {};
+      this.renderShop(this.getActiveTopKey());
       return;
     }
 
@@ -1881,6 +1894,11 @@ export class MainShopScene extends GameScene {
     dx: number,
     dy: number,
   ): void {
+    if (currentAction.kind === 'wallet') {
+      this.focusWalletDirection(currentAction, dx, dy);
+      return;
+    }
+
     if (dx !== 0) {
       this.focusHorizontal(currentAction, dx);
       return;
@@ -1894,6 +1912,17 @@ export class MainShopScene extends GameScene {
   private focusHorizontal(currentAction: ShopAction, dx: number): void {
     const actions = this.getNavActions(currentAction.navLayer, currentAction.navRow);
     const currentIndex = actions.indexOf(currentAction);
+
+    if (
+      currentAction.navLayer === 'category' &&
+      dx < 0 &&
+      currentIndex === 0 &&
+      !this.shopManager.isWalletConnected() &&
+      this.focusActionByKey('wallet')
+    ) {
+      return;
+    }
+
     const nextAction = actions[currentIndex + dx];
 
     if (nextAction === undefined) {
@@ -1915,13 +1944,31 @@ export class MainShopScene extends GameScene {
 
   private focusVertical(currentAction: ShopAction, dy: number): void {
     if (currentAction.navLayer === 'top' && dy > 0) {
+      if (
+        !this.shopManager.isWalletConnected() &&
+        this.focusActionByKey('wallet')
+      ) {
+        return;
+      }
+
       this.focusChildLayer(currentAction, this.view === ShopView.Shop ? 'category' : 'items');
       return;
     }
 
     if (currentAction.navLayer === 'category') {
       if (dy < 0) {
-        this.focusParentLayer('category', 'top', currentAction.navCol);
+        if (
+          !this.shopManager.isWalletConnected() &&
+          this.focusActionByKey('wallet')
+        ) {
+          return;
+        }
+
+        if (this.shopManager.isWalletConnected()) {
+          this.focusActionByKey(this.getActiveTopKey());
+        } else {
+          this.focusParentLayer('category', 'top', currentAction.navCol);
+        }
       } else {
         this.focusChildLayer(currentAction, 'items');
       }
@@ -1948,6 +1995,24 @@ export class MainShopScene extends GameScene {
       if (nextAction !== null) {
         this.setFocusedAction(this.actions.indexOf(nextAction));
       }
+    }
+  }
+
+  private focusWalletDirection(
+    currentAction: ShopAction,
+    dx: number,
+    dy: number,
+  ): void {
+    if (dy < 0) {
+      this.focusActionByKey(this.getActiveTopKey());
+      return;
+    }
+
+    if (dy > 0 || dx > 0) {
+      this.focusChildLayer(
+        currentAction,
+        this.view === ShopView.Shop ? 'category' : 'items',
+      );
     }
   }
 
@@ -1989,11 +2054,25 @@ export class MainShopScene extends GameScene {
     fallbackColumn: number,
   ): void {
     const parentKey = this.verticalParentKeys[childLayer];
+    if (
+      parentKey === 'wallet' &&
+      this.shopManager.isWalletConnected()
+    ) {
+      this.focusActionByKey(this.getActiveTopKey());
+      return;
+    }
+
     if (parentKey !== undefined && this.focusActionByKey(parentKey)) {
       return;
     }
 
     this.focusNearestColumn(parentLayer, fallbackColumn);
+  }
+
+  private getActiveTopKey(): string {
+    return this.view === ShopView.Loadout
+      ? `view:${ShopView.Loadout}`
+      : `market:${this.market}`;
   }
 
   private focusFirstInLayer(layer: ShopNavLayer): void {
