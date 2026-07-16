@@ -220,24 +220,37 @@ class ShopButton extends GameObject {
     this.highlight.position.set(4, 4);
     this.add(this.highlight);
 
-    const labelX = iconId === null ? 2 : 54;
-    const labelWidth = iconId === null ? width - 4 : width - 58;
+    const labelFontSize = 24;
+    const labelLineHeight = Math.ceil(labelFontSize * 1.18);
+    const labelY = Math.floor((height - labelLineHeight) / 2) + 3;
+    let labelX = 2;
+    let labelWidth = width - 4;
 
     if (iconId !== null) {
+      const iconSize = 34;
+      const iconGap = 10;
+      const estimatedTextWidth = Math.ceil(
+        text.length * labelFontSize * 0.48,
+      );
+      const contentWidth = iconSize + iconGap + estimatedTextWidth;
+      const contentX = Math.max(10, Math.floor((width - contentWidth) / 2));
       const icon = new ShopIcon(iconId, 34, SpriteAlignment.AspectFit);
-      icon.position.set(12, Math.round((height - 34) / 2));
+      icon.position.set(contentX, Math.floor((height - iconSize) / 2));
       this.add(icon);
+
+      labelX = contentX + iconSize + iconGap;
+      labelWidth = Math.min(estimatedTextWidth + 4, width - labelX - 8);
     }
 
     this.label = new ShopText(
       text,
       config.COLOR_WHITE,
-      24,
+      labelFontSize,
       '700',
       labelWidth,
       iconId === null ? 'center' : 'left',
     );
-    this.label.position.set(labelX, Math.max(5, Math.round((height - 24 * 1.18) / 2) - 1));
+    this.label.position.set(labelX, labelY);
     this.add(this.label);
   }
 
@@ -346,7 +359,8 @@ class ShopCard extends GameObject {
     const titleY = compact ? 12 : 16;
     const detailY = compact ? 42 : 78;
     const priceLineHeight = Math.ceil(priceFontSize * 1.18);
-    const priceY = footerY + Math.floor((footerHeight - priceLineHeight) / 2);
+    const priceY =
+      footerY + Math.floor((footerHeight - priceLineHeight) / 2) + 2;
     const detailMaxWidth =
       detailMaxWidthOverride ??
       (swapBodyLayout ? width - ICON_SIZE - 28 : width - ICON_SIZE - 48);
