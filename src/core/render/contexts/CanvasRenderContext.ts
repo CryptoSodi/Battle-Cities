@@ -182,7 +182,7 @@ export class CanvasRenderContext extends RenderContext {
     align: CanvasTextAlign = 'left',
     strokeColor: string = null,
     strokeWidth = 0,
-    letterSpacing = 2,
+    letterSpacing = 1,
   ): void {
     const s = this.viewScale;
     this.context.save();

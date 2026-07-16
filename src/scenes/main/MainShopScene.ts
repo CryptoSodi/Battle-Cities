@@ -85,6 +85,11 @@ const COLOR_RED_BORDER = '#d34c3e';
 const SHOP_WIDTH = 1240;
 const SHOP_HEIGHT = 820;
 const SIDE_WIDTH = 314;
+const SIDE_PANEL_WIDTH = SIDE_WIDTH - 16;
+const SIDE_CONTENT_WIDTH = SIDE_WIDTH - 56;
+const SIDE_CONTENT_INSET = Math.floor(
+  (SIDE_PANEL_WIDTH - SIDE_CONTENT_WIDTH) / 2,
+);
 const TOP_Y = 96;
 const TAB_HEIGHT = 58;
 const FILTER_HEIGHT = 56;
@@ -113,6 +118,12 @@ const SIDE_OWNED_TILE_WIDTH = Math.floor(
     SIDE_OWNED_COLUMNS,
 );
 const SIDE_OWNED_TILE_HEIGHT = 96;
+const SIDE_OWNED_GRID_WIDTH =
+  SIDE_OWNED_TILE_WIDTH * SIDE_OWNED_COLUMNS +
+  SIDE_OWNED_GAP_X * (SIDE_OWNED_COLUMNS - 1);
+const SIDE_OWNED_GRID_INSET = Math.floor(
+  (SIDE_PANEL_WIDTH - SIDE_OWNED_GRID_WIDTH) / 2,
+);
 const ICON_SIZE = 82;
 const SHOP_FONT = UI_FONT_FAMILY;
 
@@ -277,8 +288,8 @@ class ShopButton extends GameObject {
       this.background.strokeColor = COLOR_YELLOW_LIGHT;
       this.highlight.painter.fillColor = COLOR_YELLOW_LIGHT;
       this.label.setColor(config.COLOR_WHITE);
-    } else if (this.variant === 'back') {
-      this.background.fillColor = this.focused ? COLOR_RED_FOCUS : COLOR_RED;
+    } else if (this.variant === 'back' && this.focused) {
+      this.background.fillColor = COLOR_RED_FOCUS;
       this.background.strokeColor = COLOR_RED_BORDER;
       this.highlight.painter.fillColor = COLOR_RED_BORDER;
       this.label.setColor(config.COLOR_WHITE);
@@ -588,7 +599,7 @@ export class MainShopScene extends GameScene {
 
   private renderSidePanel(x: number, y: number): void {
     const panel = new ShopPanel(
-      SIDE_WIDTH - 16,
+      SIDE_PANEL_WIDTH,
       this.panelHeight - 32,
       COLOR_PAGE,
       COLOR_PANEL_LINE,
@@ -597,14 +608,14 @@ export class MainShopScene extends GameScene {
     panel.setZIndex(-1);
     this.root.add(panel);
 
-    const heading = new ShopText('Inventory', config.COLOR_WHITE, 28, '700', SIDE_WIDTH - 56);
-    heading.position.set(x + 28, y + 30);
+    const heading = new ShopText('Inventory', config.COLOR_WHITE, 28, '700', SIDE_CONTENT_WIDTH);
+    heading.position.set(x + SIDE_CONTENT_INSET, y + 30);
     this.root.add(heading);
 
     this.addButton(
-      x + 28,
+      x + SIDE_CONTENT_INSET,
       y + 68,
-      SIDE_WIDTH - 56,
+      SIDE_CONTENT_WIDTH,
       44,
       this.shopManager.isWalletConnected() ? 'WALLET' : 'CONNECT',
       { key: 'wallet', kind: 'wallet' },
@@ -612,21 +623,21 @@ export class MainShopScene extends GameScene {
     );
 
     this.addResourceChip(
-      x + 28,
+      x + SIDE_CONTENT_INSET,
       y + 124,
       'BACT',
       this.shopManager.getTokenBalance().toString(),
       'shop.tab.token',
     );
     this.addResourceChip(
-      x + 28,
+      x + SIDE_CONTENT_INSET,
       y + 184,
       'SOL',
       this.formatSol(this.shopManager.getSolBalance()),
       'shop.tab.solana',
     );
     this.addResourceChip(
-      x + 28,
+      x + SIDE_CONTENT_INSET,
       y + 244,
       'FUEL',
       this.shopManager.getFuelBalance().toString(),
@@ -638,8 +649,8 @@ export class MainShopScene extends GameScene {
     }
 
     const inventoryY = y + 324;
-    const inventoryTitle = new ShopText('Owned Items', config.COLOR_WHITE, 24, '700', SIDE_WIDTH - 56);
-    inventoryTitle.position.set(x + 28, inventoryY);
+    const inventoryTitle = new ShopText('Owned Items', config.COLOR_WHITE, 24, '700', SIDE_CONTENT_WIDTH);
+    inventoryTitle.position.set(x + SIDE_CONTENT_INSET, inventoryY);
     this.root.add(inventoryTitle);
 
     const ownedItems = [
@@ -657,7 +668,7 @@ export class MainShopScene extends GameScene {
       const col = index % SIDE_OWNED_COLUMNS;
       const row = Math.floor(index / SIDE_OWNED_COLUMNS);
       this.addInventoryTile(
-        x + 28 + col * (SIDE_OWNED_TILE_WIDTH + SIDE_OWNED_GAP_X),
+        x + SIDE_OWNED_GRID_INSET + col * (SIDE_OWNED_TILE_WIDTH + SIDE_OWNED_GAP_X),
         inventoryY + 42 + row * (SIDE_OWNED_TILE_HEIGHT + SIDE_OWNED_GAP_Y),
         itemId,
       );
@@ -669,9 +680,9 @@ export class MainShopScene extends GameScene {
         COLOR_MUTED,
         18,
         '600',
-        SIDE_WIDTH - 56,
+        SIDE_CONTENT_WIDTH,
       );
-      status.position.set(x + 28, y + this.panelHeight - 76);
+      status.position.set(x + SIDE_CONTENT_INSET, y + this.panelHeight - 76);
       this.root.add(status);
     }
   }
@@ -1111,7 +1122,7 @@ export class MainShopScene extends GameScene {
     iconId: string,
   ): void {
     const chip = new ShopPanel(
-      SIDE_WIDTH - 56,
+      SIDE_CONTENT_WIDTH,
       58,
       COLOR_PANEL_ALT,
       COLOR_PANEL_LINE,

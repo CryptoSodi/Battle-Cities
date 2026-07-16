@@ -3,4 +3,4 @@ export const UI_FONT_FAMILY =
 
 export const UI_TEXT_STROKE_COLOR = '#030506';
 export const UI_TEXT_STROKE_WIDTH = 0.65;
-export const UI_TEXT_LETTER_SPACING = 2;
+export const UI_TEXT_LETTER_SPACING = 1;

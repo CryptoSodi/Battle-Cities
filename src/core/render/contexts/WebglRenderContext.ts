@@ -328,7 +328,7 @@ export class WebglRenderContext extends RenderContext {
     align: CanvasTextAlign = 'left',
     strokeColor: string = null,
     strokeWidth = 0,
-    letterSpacing = 2,
+    letterSpacing = 1,
   ): void {
     const canvas = this.getTextCanvas(
       text,
