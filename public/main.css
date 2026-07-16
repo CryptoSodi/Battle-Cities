@@ -40,6 +40,7 @@ body {
   display: flex;
   flex: 1;
   font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 2px;
   justify-content: center;
   margin: 0;
   min-height: 100vh;
@@ -111,7 +112,7 @@ body.scanlines-disabled::after {
 .auth-kicker {
   color: #ffb018;
   font: 700 13px/1.2 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial, sans-serif;
-  letter-spacing: 0.16em;
+  letter-spacing: 2px;
   margin-bottom: 14px;
   text-transform: uppercase;
 }

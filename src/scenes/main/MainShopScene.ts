@@ -9,6 +9,7 @@ import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
 import {
   UI_FONT_FAMILY,
+  UI_TEXT_LETTER_SPACING,
   UI_TEXT_STROKE_COLOR,
   UI_TEXT_STROKE_WIDTH,
 } from '../../core/text/UiTypography';
@@ -69,6 +70,7 @@ const COLOR_PANEL_LINE = '#35414a';
 const COLOR_PANEL_HIGHLIGHT = '#65717a';
 const COLOR_CARD = '#0b1013';
 const COLOR_CARD_FOCUS = '#18242b';
+const COLOR_CARD_TITLE = '#35cf06';
 const COLOR_YELLOW = '#f2ad0d';
 const COLOR_YELLOW_LIGHT = '#ffd75a';
 const COLOR_YELLOW_DARK = '#8f6506';
@@ -153,6 +155,7 @@ class NativeTextPainter extends Painter {
       this.align,
       UI_TEXT_STROKE_COLOR,
       UI_TEXT_STROKE_WIDTH,
+      UI_TEXT_LETTER_SPACING,
     );
   }
 }
@@ -401,7 +404,7 @@ class ShopCard extends GameObject {
 
     this.title = new ShopText(
       '',
-      COLOR_YELLOW,
+      COLOR_CARD_TITLE,
       titleFontSize,
       '700',
       width - 36,
@@ -466,7 +469,7 @@ class ShopCard extends GameObject {
     this.background.strokeColor = focused ? COLOR_YELLOW_LIGHT : COLOR_YELLOW_DARK;
     this.background.lineWidth = focused ? 3 : 1;
     this.topHighlight.painter.fillColor = focused ? COLOR_YELLOW_LIGHT : COLOR_PANEL_LINE;
-    this.title.setColor(focused ? config.COLOR_WHITE : COLOR_YELLOW);
+    this.title.setColor(focused ? config.COLOR_WHITE : COLOR_CARD_TITLE);
     this.detail.setColor(focused ? config.COLOR_WHITE : COLOR_YELLOW);
     this.footer.painter.fillColor = focused ? COLOR_YELLOW : COLOR_PRICE;
     this.footer.painter.strokeColor = focused

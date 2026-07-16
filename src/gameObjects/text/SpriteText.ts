@@ -10,9 +10,11 @@ import { RenderContext } from '../../core/render';
 import * as config from '../../config';
 import {
   UI_FONT_FAMILY,
+  UI_TEXT_LETTER_SPACING,
   UI_TEXT_STROKE_COLOR,
   UI_TEXT_STROKE_WIDTH,
 } from '../../core/text/UiTypography';
+import { measureTrackedTextWidth } from '../../core/text/CanvasText';
 
 export interface SpriteTextOptions extends TextOptions {
   color?: string;
@@ -31,7 +33,7 @@ const DEFAULT_OPTIONS: SpriteTextOptions = {
   fontFamily: UI_FONT_FAMILY,
   fontSize: 24,
   fontWeight: '700',
-  letterSpacing: 0,
+  letterSpacing: UI_TEXT_LETTER_SPACING,
   lineSpacing: 8,
   opacity: 1,
   strokeColor: UI_TEXT_STROKE_COLOR,
@@ -46,6 +48,7 @@ class NativeSpriteTextPainter extends Painter {
   public fontSize = 24;
   public fontWeight = '700';
   public lineSpacing = 8;
+  public letterSpacing = UI_TEXT_LETTER_SPACING;
   public maxWidth = 1;
   public alignment = TextAlignment.Left;
   public strokeColor = UI_TEXT_STROKE_COLOR;
@@ -74,6 +77,7 @@ class NativeSpriteTextPainter extends Painter {
         align,
         this.strokeColor,
         this.strokeWidth,
+        this.letterSpacing,
       );
     });
 
@@ -111,6 +115,7 @@ export class SpriteText extends GameObject {
     this.painter.fontSize = this.options.fontSize;
     this.painter.fontWeight = this.options.fontWeight;
     this.painter.lineSpacing = this.options.lineSpacing;
+    this.painter.letterSpacing = this.options.letterSpacing;
     this.painter.alignment = this.options.alignment;
     this.painter.strokeColor = this.options.strokeColor;
     this.painter.strokeWidth = this.options.strokeWidth;
@@ -151,12 +156,10 @@ export class SpriteText extends GameObject {
 
     lines.forEach((line) => {
       const measuredWidth = context === null
-        ? line.length * fontSize * 0.56
-        : context.measureText(line).width;
-      width = Math.max(
-        width,
-        measuredWidth + Math.max(0, line.length - 1) * letterSpacing,
-      );
+        ? line.length * fontSize * 0.56 +
+          Math.max(0, Array.from(line).length - 1) * letterSpacing
+        : measureTrackedTextWidth(context, line, letterSpacing);
+      width = Math.max(width, measuredWidth);
     });
 
     const height =

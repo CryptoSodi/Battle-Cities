@@ -2,6 +2,7 @@ import { ImageSource } from '../../graphics';
 
 import { Rect } from '../../Rect';
 import { Vector } from '../../Vector';
+import { drawTrackedText } from '../../text/CanvasText';
 
 import { RenderContext } from '../RenderContext';
 
@@ -181,6 +182,7 @@ export class CanvasRenderContext extends RenderContext {
     align: CanvasTextAlign = 'left',
     strokeColor: string = null,
     strokeWidth = 0,
+    letterSpacing = 2,
   ): void {
     const s = this.viewScale;
     this.context.save();
@@ -191,22 +193,30 @@ export class CanvasRenderContext extends RenderContext {
     const textX =
       (align === 'center' ? x + maxWidth / 2 : align === 'right' ? x + maxWidth : x) * s +
       this.viewOffsetX;
+    const textY = y * s + this.viewOffsetY;
     if (strokeColor !== null && strokeWidth > 0) {
       this.context.strokeStyle = strokeColor;
       this.context.lineWidth = strokeWidth * s;
       this.context.lineJoin = 'round';
-      this.context.strokeText(
+      drawTrackedText(
+        this.context,
         text,
         textX,
-        y * s + this.viewOffsetY,
+        textY,
         maxWidth * s,
+        align,
+        letterSpacing * s,
+        true,
       );
     }
-    this.context.fillText(
+    drawTrackedText(
+      this.context,
       text,
       textX,
-      y * s + this.viewOffsetY,
+      textY,
       maxWidth * s,
+      align,
+      letterSpacing * s,
     );
     this.context.restore();
   }

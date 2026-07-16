@@ -3,6 +3,7 @@ import { ImageSource } from '../../graphics';
 import { Matrix4 } from '../../Matrix4';
 import { Rect } from '../../Rect';
 import { Vector } from '../../Vector';
+import { drawTrackedText } from '../../text/CanvasText';
 
 import { RenderContext } from '../RenderContext';
 
@@ -327,6 +328,7 @@ export class WebglRenderContext extends RenderContext {
     align: CanvasTextAlign = 'left',
     strokeColor: string = null,
     strokeWidth = 0,
+    letterSpacing = 2,
   ): void {
     const canvas = this.getTextCanvas(
       text,
@@ -338,6 +340,7 @@ export class WebglRenderContext extends RenderContext {
       align,
       strokeColor,
       strokeWidth,
+      letterSpacing,
     );
     const texture = this.getTexture(canvas);
     this.pushQuad(
@@ -581,6 +584,7 @@ export class WebglRenderContext extends RenderContext {
     align: CanvasTextAlign,
     strokeColor: string,
     strokeWidth: number,
+    letterSpacing: number,
   ): HTMLCanvasElement {
     const width = Math.max(1, Math.ceil(maxWidth));
     const height = Math.max(1, Math.ceil(fontSize * 1.35));
@@ -595,6 +599,7 @@ export class WebglRenderContext extends RenderContext {
       align,
       strokeColor,
       strokeWidth,
+      letterSpacing,
     ].join('|');
     const existing = this.textCanvasMap.get(key);
     if (existing !== undefined) {
@@ -617,9 +622,26 @@ export class WebglRenderContext extends RenderContext {
         context.strokeStyle = strokeColor;
         context.lineWidth = strokeWidth;
         context.lineJoin = 'round';
-        context.strokeText(text, textX, 0, width);
+        drawTrackedText(
+          context,
+          text,
+          textX,
+          0,
+          width,
+          align,
+          letterSpacing,
+          true,
+        );
       }
-      context.fillText(text, textX, 0, width);
+      drawTrackedText(
+        context,
+        text,
+        textX,
+        0,
+        width,
+        align,
+        letterSpacing,
+      );
     }
 
     this.textCanvasMap.set(key, canvas);
