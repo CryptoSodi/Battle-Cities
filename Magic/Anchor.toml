@@ -1,0 +1,13 @@
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+tank_movement = "6h22S7XADcvgqt8aXEteSu8HzbUmzsAdGucH3zpszC23"
+
+[provider]
+cluster = "https://rpc.magicblock.app/devnet"
+wallet = "C:/Users/tassa/.config/solana/id.json"
+
+[workspace]
+types = "app/src/idl/"

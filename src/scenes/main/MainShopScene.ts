@@ -127,6 +127,36 @@ const SIDE_OWNED_GRID_INSET = Math.floor(
 const ICON_SIZE = 82;
 const SHOP_FONT = UI_FONT_FAMILY;
 
+const MOBILE_SHOP_WIDTH = 744;
+const MOBILE_PAGE_INSET = 16;
+const MOBILE_INNER_WIDTH = MOBILE_SHOP_WIDTH - MOBILE_PAGE_INSET * 2;
+const MOBILE_TOP_Y = 16;
+const MOBILE_TAB_HEIGHT = 88;
+const MOBILE_SHELL_Y = 112;
+const MOBILE_SUMMARY_HEIGHT = 174;
+const MOBILE_OWNED_COLUMNS = 8;
+const MOBILE_OWNED_GAP = 8;
+const MOBILE_OWNED_TILE_WIDTH = Math.floor(
+  (MOBILE_INNER_WIDTH - MOBILE_OWNED_GAP * (MOBILE_OWNED_COLUMNS - 1)) /
+    MOBILE_OWNED_COLUMNS,
+);
+const MOBILE_OWNED_TILE_HEIGHT = 104;
+const MOBILE_FILTER_HEIGHT = 88;
+const MOBILE_FILTER_GAP = 10;
+const MOBILE_FILTER_WIDTH = Math.floor(
+  (MOBILE_INNER_WIDTH - MOBILE_FILTER_GAP * (FILTER_TAB_COLUMNS - 1)) /
+    FILTER_TAB_COLUMNS,
+);
+const MOBILE_CARD_COLUMNS = 3;
+const MOBILE_CARD_GAP = 12;
+const MOBILE_CARD_WIDTH = Math.floor(
+  (MOBILE_INNER_WIDTH - MOBILE_CARD_GAP * (MOBILE_CARD_COLUMNS - 1)) /
+    MOBILE_CARD_COLUMNS,
+);
+const MOBILE_CARDS_Y = 642;
+const MOBILE_CARD_MIN_HEIGHT = 150;
+const MOBILE_CARD_MAX_HEIGHT = 216;
+
 class NativeTextPainter extends Painter {
   public text: string;
   public color: string;
@@ -358,28 +388,41 @@ class ShopCard extends GameObject {
     swapBodyLayout = false,
     iconPadding = 0,
     priceIconId: string = null,
+    uiScale = 1,
   ) {
     super(width, height);
     const compact = height <= LOADOUT_SLOT_HEIGHT;
-    const titleFontSize = compact ? 21 : 23;
-    const detailFontSize = detailFontSizeOverride ?? (compact ? 16 : 24);
-    const priceFontSize = compact ? 19 : 20;
+    const scaledIconSize = Math.round(ICON_SIZE * uiScale);
+    const scaledIconPadding = Math.round(iconPadding * uiScale);
+    const titleFontSize = Math.round((compact ? 21 : 23) * uiScale);
+    const detailFontSize =
+      detailFontSizeOverride ?? Math.round((compact ? 16 : 24) * uiScale);
+    const priceFontSize = Math.round((compact ? 19 : 20) * uiScale);
     this.priceFontSize = priceFontSize;
-    this.priceIconSize = footerVariant === 'purchase' ? 30 : 26;
-    const footerInset = 11;
-    const footerHeight = 38;
-    const footerY = height - 47;
-    const iconY = compact ? 34 : 42;
-    const titleY = compact ? 12 : 16;
-    const detailY = compact ? 42 : 78;
+    this.priceIconSize = Math.round(
+      (footerVariant === 'purchase' ? 30 : 26) * uiScale,
+    );
+    const footerInset = Math.round(11 * uiScale);
+    const footerHeight = Math.round(38 * uiScale);
+    const footerY = height - Math.round(47 * uiScale);
+    const iconY = Math.round((compact ? 34 : 42) * uiScale);
+    const titleY = Math.round((compact ? 12 : 16) * uiScale);
+    const detailY = Math.round((compact ? 42 : 78) * uiScale);
     const priceLineHeight = Math.ceil(priceFontSize * 1.18);
     const priceY =
       footerY + Math.floor((footerHeight - priceLineHeight) / 2) + 2;
     const detailMaxWidth =
       detailMaxWidthOverride ??
-      (swapBodyLayout ? width - ICON_SIZE - 28 : width - ICON_SIZE - 48);
-    const iconFrameX = swapBodyLayout ? 10 : width - ICON_SIZE - 14;
-    const iconSize = Math.max(24, ICON_SIZE - iconPadding * 2);
+      (swapBodyLayout
+        ? width - scaledIconSize - Math.round(28 * uiScale)
+        : width - scaledIconSize - Math.round(48 * uiScale));
+    const iconFrameX = swapBodyLayout
+      ? Math.round(10 * uiScale)
+      : width - scaledIconSize - Math.round(14 * uiScale);
+    const iconSize = Math.max(
+      Math.round(24 * uiScale),
+      scaledIconSize - scaledIconPadding * 2,
+    );
 
     this.background = new RectPainter(COLOR_CARD, COLOR_YELLOW_DARK);
     this.background.lineWidth = 1;
@@ -400,17 +443,20 @@ class ShopCard extends GameObject {
 
     if (showIconFrame) {
       const iconFrame = new ShopPanel(
-        ICON_SIZE + 8,
-        ICON_SIZE + 8,
+        scaledIconSize + Math.round(8 * uiScale),
+        scaledIconSize + Math.round(8 * uiScale),
         '#070a0c',
         COLOR_PANEL_HIGHLIGHT,
       );
-      iconFrame.position.set(iconFrameX, iconY - 4);
+      iconFrame.position.set(iconFrameX, iconY - Math.round(4 * uiScale));
       this.add(iconFrame);
     }
 
     this.icon = new ShopIcon(iconId, iconSize, iconAlignment);
-    this.icon.position.set(iconFrameX + 4 + iconPadding, iconY + iconPadding);
+    this.icon.position.set(
+      iconFrameX + Math.round(4 * uiScale) + scaledIconPadding,
+      iconY + scaledIconPadding,
+    );
     this.add(this.icon);
 
     this.title = new ShopText(
@@ -425,7 +471,12 @@ class ShopCard extends GameObject {
     this.add(this.title);
 
     this.detail = new ShopText('', COLOR_YELLOW, detailFontSize, '700', detailMaxWidth);
-    this.detail.position.set(swapBodyLayout ? ICON_SIZE + 24 : 20, detailY);
+    this.detail.position.set(
+      swapBodyLayout
+        ? scaledIconSize + Math.round(24 * uiScale)
+        : Math.round(20 * uiScale),
+      detailY,
+    );
     this.add(this.detail);
 
     this.price = new ShopText(
@@ -544,6 +595,11 @@ export class MainShopScene extends GameScene {
     background.setZIndex(-10);
     this.root.add(background);
 
+    if (config.isMobileTouchViewport()) {
+      this.renderMobileShop(preferredFocusKey);
+      return;
+    }
+
     const originX = Math.max(24, Math.round((this.root.size.width - SHOP_WIDTH) / 2));
     const originY = Math.max(24, TOP_Y);
     this.panelHeight = config.isMobileTouchViewport()
@@ -595,6 +651,363 @@ export class MainShopScene extends GameScene {
     });
 
     this.focusActionByKey(preferredFocusKey);
+  }
+
+  private renderMobileShop(preferredFocusKey: string): void {
+    const originX = Math.round((this.root.size.width - MOBILE_SHOP_WIDTH) / 2);
+    this.panelHeight = this.root.size.height - MOBILE_SHELL_Y - 16;
+
+    const shell = new ShopPanel(
+      MOBILE_SHOP_WIDTH,
+      this.panelHeight,
+      COLOR_PANEL,
+      COLOR_PANEL_LINE,
+    );
+    shell.position.set(originX, MOBILE_SHELL_Y);
+    shell.setZIndex(-2);
+    this.root.add(shell);
+
+    const shellAccent = new ShopPanel(
+      MOBILE_SHOP_WIDTH - 12,
+      2,
+      COLOR_YELLOW_DARK,
+      null,
+    );
+    shellAccent.position.set(originX + 6, MOBILE_SHELL_Y + 5);
+    this.root.add(shellAccent);
+
+    this.addButton(
+      originX,
+      MOBILE_TOP_Y,
+      190,
+      MOBILE_TAB_HEIGHT,
+      'TOKEN SHOP',
+      { key: `market:${ShopMarket.Token}`, kind: 'market', market: ShopMarket.Token },
+      this.view === ShopView.Shop && this.market === ShopMarket.Token,
+      'shop.tab.token',
+    );
+    this.addButton(
+      originX + 198,
+      MOBILE_TOP_Y,
+      170,
+      MOBILE_TAB_HEIGHT,
+      'SOL SHOP',
+      { key: `market:${ShopMarket.Sol}`, kind: 'market', market: ShopMarket.Sol },
+      this.view === ShopView.Shop && this.market === ShopMarket.Sol,
+      'shop.tab.solana',
+    );
+    this.addButton(
+      originX + 376,
+      MOBILE_TOP_Y,
+      180,
+      MOBILE_TAB_HEIGHT,
+      'LOADOUT',
+      { key: `view:${ShopView.Loadout}`, kind: 'view', view: ShopView.Loadout },
+      this.view === ShopView.Loadout,
+      'shop.tab.loadout',
+    );
+    this.addButton(
+      originX + 592,
+      MOBILE_TOP_Y,
+      152,
+      MOBILE_TAB_HEIGHT,
+      '←  BACK',
+      { key: 'back', kind: 'back' },
+    );
+
+    const contentX = originX + MOBILE_PAGE_INSET;
+    this.renderMobileSummary(
+      contentX,
+      MOBILE_SHELL_Y + 16,
+      MOBILE_INNER_WIDTH,
+    );
+    this.renderMobileOwnedItems(contentX, 322, MOBILE_INNER_WIDTH);
+
+    if (this.view === ShopView.Shop) {
+      this.renderMobileShopContent(contentX);
+    } else {
+      this.renderMobileLoadoutContent(contentX);
+    }
+
+    this.focusActionByKey(preferredFocusKey);
+  }
+
+  private renderMobileSummary(x: number, y: number, width: number): void {
+    const panel = new ShopPanel(
+      width,
+      MOBILE_SUMMARY_HEIGHT,
+      COLOR_PAGE,
+      COLOR_PANEL_LINE,
+    );
+    panel.position.set(x, y);
+    this.root.add(panel);
+
+    this.addButton(
+      x + 12,
+      y + 38,
+      154,
+      88,
+      this.shopManager.isWalletConnected() ? 'WALLET' : 'CONNECT',
+      { key: 'wallet', kind: 'wallet' },
+      this.shopManager.isWalletConnected(),
+    );
+
+    [180, 356, 532].forEach((offset) => {
+      const divider = new ShopPanel(2, 116, COLOR_PANEL_LINE, null);
+      divider.position.set(x + offset, y + 29);
+      this.root.add(divider);
+    });
+
+    this.addMobileResource(
+      x + 200,
+      y + 28,
+      'BACT',
+      this.shopManager.getTokenBalance().toString(),
+      'shop.tab.token',
+    );
+    this.addMobileResource(
+      x + 376,
+      y + 28,
+      'SOL',
+      this.formatSol(this.shopManager.getSolBalance()),
+      'shop.tab.solana',
+    );
+    this.addMobileResource(
+      x + 552,
+      y + 28,
+      'FUEL',
+      this.shopManager.getFuelBalance().toString(),
+      'shop.fuel',
+    );
+  }
+
+  private addMobileResource(
+    x: number,
+    y: number,
+    label: string,
+    value: string,
+    iconId: string,
+  ): void {
+    const icon = new ShopIcon(iconId, 64, SpriteAlignment.AspectFit);
+    icon.position.set(x, y + 20);
+    this.root.add(icon);
+
+    const labelText = new ShopText(label, config.COLOR_WHITE, 22, '700', 84);
+    labelText.position.set(x + 76, y + 16);
+    this.root.add(labelText);
+
+    const valueText = new ShopText(value, COLOR_MUTED, 24, '700', 84);
+    valueText.position.set(x + 76, y + 60);
+    this.root.add(valueText);
+  }
+
+  private renderMobileOwnedItems(x: number, y: number, width: number): void {
+    const title = new ShopText('Owned Items', config.COLOR_WHITE, 26, '700', width);
+    title.position.set(x, y);
+    this.root.add(title);
+
+    const ownedItems = [
+      ShopInventoryItemId.Shield,
+      ShopInventoryItemId.BaseDefence,
+      ShopInventoryItemId.Freeze,
+      ShopInventoryItemId.Speed,
+      ShopInventoryItemId.Upgrade,
+      ShopInventoryItemId.ZoomOut,
+      ShopInventoryItemId.Wipeout,
+      ShopInventoryItemId.ExtraLife,
+    ];
+
+    ownedItems.forEach((itemId, index) => {
+      this.addMobileInventoryTile(
+        x + index * (MOBILE_OWNED_TILE_WIDTH + MOBILE_OWNED_GAP),
+        y + 40,
+        itemId,
+      );
+    });
+
+    const divider = new ShopPanel(width, 2, COLOR_PANEL_LINE, null);
+    divider.position.set(x, y + 154);
+    this.root.add(divider);
+  }
+
+  private addMobileInventoryTile(
+    x: number,
+    y: number,
+    itemId: ShopInventoryItemId,
+  ): void {
+    const tile = new ShopPanel(
+      MOBILE_OWNED_TILE_WIDTH,
+      MOBILE_OWNED_TILE_HEIGHT,
+      COLOR_PANEL_ALT,
+      COLOR_PANEL_LINE,
+    );
+    tile.position.set(x, y);
+    this.root.add(tile);
+
+    const iconSize = 68;
+    const icon = new ShopIcon(
+      this.getOwnedInventoryIconId(itemId),
+      iconSize,
+      SpriteAlignment.AspectFit,
+    );
+    icon.position.set(
+      x + Math.floor((MOBILE_OWNED_TILE_WIDTH - iconSize) / 2),
+      y + 5,
+    );
+    this.root.add(icon);
+
+    const count = new ShopText(
+      this.getInventoryCountText(itemId),
+      COLOR_YELLOW,
+      24,
+      '700',
+      MOBILE_OWNED_TILE_WIDTH,
+      'center',
+    );
+    count.position.set(x, y + 75);
+    this.root.add(count);
+  }
+
+  private renderMobileShopContent(x: number): void {
+    const filterY = 494;
+    const categories: Array<[string, ShopCategory]> = [
+      ['ALL', ShopCategory.All],
+      ['FUEL', ShopCategory.Fuel],
+      ['POWER', ShopCategory.Powerups],
+      ['PACKS', ShopCategory.Packs],
+    ];
+    categories.forEach(([label, category], index) => {
+      this.addCategoryButton(
+        x + index * (MOBILE_FILTER_WIDTH + MOBILE_FILTER_GAP),
+        filterY,
+        label,
+        category,
+        MOBILE_FILTER_WIDTH,
+        MOBILE_FILTER_HEIGHT,
+      );
+    });
+
+    const allItems = this.getVisibleCatalogItems();
+    const sectionText = new ShopText(
+      `${this.getCategoryTitle()} ${allItems.length === 0 ? '0' : `1-${allItems.length}`}/${allItems.length}`,
+      config.COLOR_WHITE,
+      26,
+      '700',
+      MOBILE_INNER_WIDTH,
+    );
+    sectionText.position.set(x, 604);
+    this.root.add(sectionText);
+
+    if (allItems.length === 0) {
+      const empty = new ShopText(
+        'No items in this category',
+        COLOR_MUTED,
+        26,
+        '700',
+        MOBILE_INNER_WIDTH,
+        'center',
+      );
+      empty.position.set(x, MOBILE_CARDS_Y + 60);
+      this.root.add(empty);
+      return;
+    }
+
+    const cardRows = Math.max(
+      1,
+      Math.ceil(allItems.length / MOBILE_CARD_COLUMNS),
+    );
+    const heightBudget =
+      this.root.size.height -
+      MOBILE_CARDS_Y -
+      52 -
+      MOBILE_CARD_GAP * (cardRows - 1);
+    const cardHeight = Math.max(
+      MOBILE_CARD_MIN_HEIGHT,
+      Math.min(MOBILE_CARD_MAX_HEIGHT, Math.floor(heightBudget / cardRows)),
+    );
+
+    allItems.forEach((item, index) => {
+      this.addMobileCatalogCard(
+        x + (index % MOBILE_CARD_COLUMNS) * (MOBILE_CARD_WIDTH + MOBILE_CARD_GAP),
+        MOBILE_CARDS_Y +
+          Math.floor(index / MOBILE_CARD_COLUMNS) *
+            (cardHeight + MOBILE_CARD_GAP),
+        item,
+        Math.floor(index / MOBILE_CARD_COLUMNS),
+        index % MOBILE_CARD_COLUMNS,
+        index,
+        cardHeight,
+      );
+    });
+
+    const status = new ShopText(
+      this.statusText === 'CONNECT WALLET' ? 'ALL ITEMS LOADED' : this.statusText,
+      COLOR_MUTED,
+      18,
+      '700',
+      MOBILE_INNER_WIDTH,
+      'center',
+    );
+    status.position.set(x, this.root.size.height - 38);
+    this.root.add(status);
+  }
+
+  private renderMobileLoadoutContent(x: number): void {
+    const title = new ShopText(
+      'Equipped Slots',
+      config.COLOR_WHITE,
+      28,
+      '700',
+      MOBILE_INNER_WIDTH,
+    );
+    title.position.set(x, 510);
+    this.root.add(title);
+
+    const helper = new ShopText(
+      'Select a slot to cycle owned items',
+      COLOR_MUTED,
+      20,
+      '700',
+      MOBILE_INNER_WIDTH,
+    );
+    helper.position.set(x, 548);
+    this.root.add(helper);
+
+    const gap = 12;
+    const cardWidth = Math.floor((MOBILE_INNER_WIDTH - gap) / 2);
+    const cardHeight = Math.min(
+      232,
+      Math.floor((this.root.size.height - 626 - 70 - gap) / 2),
+    );
+    const slots: Array<[ShopLoadoutSlot, string]> = [
+      [ShopLoadoutSlot.ActiveOne, 'SLOT 1'],
+      [ShopLoadoutSlot.ActiveTwo, 'SLOT 2'],
+      [ShopLoadoutSlot.ActiveThree, 'SLOT 3'],
+      [ShopLoadoutSlot.ActiveFour, 'SLOT 4'],
+    ];
+    slots.forEach(([slot, label], index) => {
+      this.addMobileSlotCard(
+        x + (index % 2) * (cardWidth + gap),
+        586 + Math.floor(index / 2) * (cardHeight + gap),
+        cardWidth,
+        cardHeight,
+        slot,
+        label,
+        Math.floor(index / 2),
+        index % 2,
+      );
+    });
+
+    const note = new ShopText(
+      'Use 1-4 in game to consume equipped powers',
+      COLOR_MUTED,
+      20,
+      '700',
+      MOBILE_INNER_WIDTH,
+      'center',
+    );
+    note.position.set(x, this.root.size.height - 42);
+    this.root.add(note);
   }
 
   private renderSidePanel(x: number, y: number): void {
@@ -918,8 +1331,9 @@ export class MainShopScene extends GameScene {
     text: string,
     category: ShopCategory,
     width = 140,
+    height = FILTER_HEIGHT,
   ): void {
-    this.addButton(x, y, width, FILTER_HEIGHT, text, {
+    this.addButton(x, y, width, height, text, {
       key: `category:${category}`,
       kind: 'category',
       category,
@@ -961,6 +1375,98 @@ export class MainShopScene extends GameScene {
       kind: 'catalog',
       itemId: item.id,
       itemIndex,
+      target: card,
+      navLayer: 'items',
+      navRow: row,
+      navCol: col,
+    });
+  }
+
+  private addMobileCatalogCard(
+    x: number,
+    y: number,
+    item: ShopCatalogItem,
+    row: number,
+    col: number,
+    itemIndex: number,
+    height: number,
+  ): void {
+    const isStarterPack = item.id === ShopItemId.StarterPack;
+    const uiScale = Math.max(0.78, Math.min(1.08, height / CARD_HEIGHT));
+    const card = new ShopCard(
+      MOBILE_CARD_WIDTH,
+      height,
+      this.getItemIconId(item.id),
+      isStarterPack ? Math.round(18 * uiScale) : null,
+      isStarterPack ? Math.round(90 * uiScale) : null,
+      'equip',
+      SpriteAlignment.AspectFit,
+      false,
+      true,
+      10,
+      this.market === ShopMarket.Token ? 'shop.tab.token' : 'shop.tab.solana',
+      uiScale,
+    );
+    card.position.set(x, y);
+    card.setContent(
+      this.getItemTitle(item.id),
+      this.getRewardText(item),
+      this.getPriceText(item),
+    );
+    this.root.add(card);
+
+    this.actions.push({
+      key: `catalog:${item.id}`,
+      kind: 'catalog',
+      itemId: item.id,
+      itemIndex,
+      target: card,
+      navLayer: 'items',
+      navRow: row,
+      navCol: col,
+    });
+  }
+
+  private addMobileSlotCard(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slot: ShopLoadoutSlot,
+    title: string,
+    row: number,
+    col: number,
+  ): void {
+    const itemId = this.shopManager.getEquipped(slot);
+    const uiScale = Math.max(0.9, Math.min(1.12, height / CARD_HEIGHT));
+    const card = new ShopCard(
+      width,
+      height,
+      itemId === null
+        ? 'shop.loadout.empty'
+        : this.getOwnedInventoryIconId(itemId),
+      null,
+      null,
+      'equip',
+      SpriteAlignment.AspectFit,
+      false,
+      true,
+      10,
+      null,
+      uiScale,
+    );
+    card.position.set(x, y);
+    card.setContent(
+      title,
+      this.getCompactSlotLabel(this.getSlotLabel(slot)),
+      'EQUIP',
+    );
+    this.root.add(card);
+
+    this.actions.push({
+      key: `slot:${slot}`,
+      kind: 'slot',
+      slot,
       target: card,
       navLayer: 'items',
       navRow: row,

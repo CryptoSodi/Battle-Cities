@@ -106,6 +106,7 @@ function syncMobileCanvasCssSize(): void {
     : document.documentElement.clientHeight;
   const isGameplay = document.body.classList.contains('level-playing');
   const isMainMenu = document.body.classList.contains('main-menu-active');
+  const isShop = document.body.classList.contains('shop-active');
   const stageWidth = Math.max(Math.floor(viewportWidth), 1);
   const stageHeight = Math.max(
     Math.floor(viewportHeight * (isGameplay ? 0.6 : 1)),
@@ -115,7 +116,7 @@ function syncMobileCanvasCssSize(): void {
   const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
   const stageAspect = stageWidth / stageHeight;
   const useHeightAsConstraint =
-    (isMainMenu && !isGameplay) || stageAspect > gameAspect;
+    ((isMainMenu || isShop) && !isGameplay) || stageAspect > gameAspect;
   const width = useHeightAsConstraint ? stageHeight * gameAspect : stageWidth;
   const height = useHeightAsConstraint ? stageHeight : stageWidth / gameAspect;
 
@@ -899,6 +900,10 @@ gameLoop.render.addListener((event) => {
   document.body.classList.toggle(
     'main-menu-active',
     sceneRouter.getCurrentType() === GameSceneType.MainMenu,
+  );
+  document.body.classList.toggle(
+    'shop-active',
+    sceneRouter.getCurrentType() === GameSceneType.MainShop,
   );
   syncMobileCanvasCssSize();
 

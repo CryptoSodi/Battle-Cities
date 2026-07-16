@@ -384,7 +384,8 @@ canvas {
     width: var(--mobile-game-css-width);
   }
 
-  body.game-running.main-menu-active canvas:not(.particle-overlay) {
+  body.game-running.main-menu-active canvas:not(.particle-overlay),
+  body.game-running.shop-active canvas:not(.particle-overlay) {
     top: 0;
     transform: translateX(-50%);
   }
@@ -399,7 +400,8 @@ canvas {
     width: var(--mobile-game-css-width);
   }
 
-  body.game-running.main-menu-active .particle-overlay {
+  body.game-running.main-menu-active .particle-overlay,
+  body.game-running.shop-active .particle-overlay {
     top: 0;
     transform: translateX(-50%);
   }
