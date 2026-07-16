@@ -14,7 +14,7 @@ class GroundFieldPainter extends Painter {
   private readonly destinationRect = new Rect();
 
   public paint(context: RenderContext, renderObject: RenderObject): void {
-    if (this.sprites.length === 0) {
+    if (this.sprites.length === 0 || !this.sprites[0].isImageLoaded()) {
       return;
     }
 
@@ -32,15 +32,9 @@ class GroundFieldPainter extends Painter {
     let endRow = rows;
 
     if (cull !== null) {
-      startCol = Math.max(
-        0,
-        Math.floor((cull.minX - fieldX) / this.tileSize),
-      );
+      startCol = Math.max(0, Math.floor((cull.minX - fieldX) / this.tileSize));
       endCol = Math.min(cols, Math.ceil((cull.maxX - fieldX) / this.tileSize));
-      startRow = Math.max(
-        0,
-        Math.floor((cull.minY - fieldY) / this.tileSize),
-      );
+      startRow = Math.max(0, Math.floor((cull.minY - fieldY) / this.tileSize));
       endRow = Math.min(rows, Math.ceil((cull.maxY - fieldY) / this.tileSize));
       if (startCol >= endCol || startRow >= endRow) {
         return;
