@@ -17,14 +17,17 @@ android {
         applicationId "com.battlecities.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    sourceSets {
+        main.assets.srcDir "$buildDir/generated/battleCityWeb"
     }
     signingConfigs {
         if (hasDappStoreSigning) {
@@ -46,6 +49,37 @@ android {
         }
     }
 }
+
+def battleCityRepoRoot = rootProject.projectDir.parentFile.parentFile
+def battleCityDist = new File(battleCityRepoRoot, 'dist')
+def generatedBattleCityAssets = file("$buildDir/generated/battleCityWeb/public")
+
+tasks.register('buildBattleCityWeb', Exec) {
+    workingDir battleCityRepoRoot
+    commandLine 'cmd', '/c', 'npm', 'run', 'build'
+    inputs.dir new File(battleCityRepoRoot, 'src')
+    inputs.dir new File(battleCityRepoRoot, 'public')
+    inputs.dir new File(battleCityRepoRoot, 'data')
+    inputs.dir new File(battleCityRepoRoot, 'webpack')
+    inputs.file new File(battleCityRepoRoot, 'package.json')
+    inputs.file new File(battleCityRepoRoot, 'package-lock.json')
+    inputs.file new File(battleCityRepoRoot, 'tsconfig.json')
+    outputs.dir battleCityDist
+}
+
+tasks.register('syncBattleCityWeb', Sync) {
+    dependsOn 'buildBattleCityWeb'
+    outputs.upToDateWhen {
+        !file('src/main/assets/public').exists()
+    }
+    doFirst {
+        delete file('src/main/assets/public')
+    }
+    from battleCityDist
+    into generatedBattleCityAssets
+}
+
+preBuild.dependsOn 'syncBattleCityWeb'
 
 gradle.taskGraph.whenReady { taskGraph ->
     def buildsRelease = taskGraph.allTasks.any {

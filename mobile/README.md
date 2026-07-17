@@ -1,6 +1,7 @@
 # Battle Cities Mobile
 
-Capacitor wrapper that opens the production game at `https://www.battlecities.com`.
+Capacitor wrapper that ships a local game build and updates its web assets from
+`https://www.battlecities.com` in the background.
 
 ## Android
 
@@ -15,9 +16,13 @@ The Android app is portrait-only because the mobile game UI is designed as a top
 
 The wrapper loads the existing website, so guest sessions work immediately. Google may reject OAuth inside an embedded WebView. Phantom browser injection is also unavailable in a native WebView. Those flows should be moved to native browser/deep-link handoffs before publishing the app.
 
-## Changing the hosted URL
+## Web bundle updates
 
-Update `server.url` and `server.allowNavigation` in `capacitor.config.json`, then run `npm run sync`.
+Android builds run the root web build automatically and package `dist` as the
+offline baseline. On launch, the app checks `/web-version.json`, downloads only
+changed files into app-private storage, verifies the complete bundle, and uses
+it from the next launch. The previous downloaded bundle is retained for
+rollback.
 
 ## dApp Store release APK
 
@@ -25,22 +30,30 @@ The release build expects the signing key at
 `D:\keys\battle-cities-dappstore.keystore`. Override this location with
 `BATTLE_CITIES_KEYSTORE_PATH` when needed.
 
-Set the signing passwords only in the current terminal session:
+From PowerShell, set the Android Studio JDK and signing passwords only in the
+current terminal session:
 
 ```powershell
+cd C:\repos\BattleCity
+
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+
 $env:BATTLE_CITIES_KEYSTORE_PASSWORD = [System.Net.NetworkCredential]::new(
   '', (Read-Host 'Keystore password' -AsSecureString)
 ).Password
+
 $env:BATTLE_CITIES_KEY_PASSWORD = [System.Net.NetworkCredential]::new(
   '', (Read-Host 'Key password' -AsSecureString)
 ).Password
-```
 
-Then build from `mobile\android`:
-
-```powershell
+cd mobile\android
 .\gradlew.bat assembleRelease
 ```
 
-The signed APK is generated at
-`app\build\outputs\apk\release\app-release.apk`.
+The signed APK is generated at:
+
+`C:\repos\BattleCity\mobile\android\app\build\outputs\apk\release\app-release.apk`
+
+Because the game assets are bundled for fast offline startup, the current APK
+should be roughly 85-90 MB. Do not publish an older 9.4 MB APK; that build
+predates the bundled web assets.

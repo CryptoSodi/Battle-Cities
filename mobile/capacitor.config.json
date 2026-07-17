@@ -2,14 +2,6 @@
   "appId": "com.battlecities.game",
   "appName": "Battle Cities",
   "webDir": "www",
-  "server": {
-    "url": "https://www.battlecities.com",
-    "cleartext": false,
-    "allowNavigation": [
-      "battlecities.com",
-      "*.battlecities.com"
-    ]
-  },
   "android": {
     "allowMixedContent": false,
     "backgroundColor": "#080a08"

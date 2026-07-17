@@ -2,6 +2,7 @@ import * as config from '../../config';
 import { GameUpdateArgs, Session } from '../../game';
 import { SessionPlayer } from '../../game/SessionPlayer';
 import { PlayerIdentity } from '../../auth';
+import { getApiBaseUrl } from '../../network/api';
 import { PointsHighscoreManager } from '../../points';
 import { TankTier } from '../../tank';
 
@@ -23,6 +24,14 @@ interface ResultPlayer {
   name: string;
   rank: number;
   isPrimary: boolean;
+}
+
+interface ResultShareNavigator extends Navigator {
+  share?: (data: {
+    title?: string;
+    text?: string;
+    url?: string;
+  }) => Promise<void>;
 }
 
 export class LevelScoreScene extends PanelScene {
@@ -126,7 +135,15 @@ export class LevelScoreScene extends PanelScene {
     });
 
     const rowsBottom = tableY + 62 + this.players.length * 128;
-    this.renderFooterStats(x + 18, rowsBottom + 12, width - 36, 86, false);
+    const footerY = rowsBottom + 12;
+    this.renderFooterStats(x + 18, footerY, width - 36, 86, false);
+    this.renderShareButton(
+      x + Math.floor((width - 240) / 2),
+      footerY + 102,
+      240,
+      48,
+      24,
+    );
   }
 
   private renderMobile(): void {
@@ -145,7 +162,30 @@ export class LevelScoreScene extends PanelScene {
       this.renderMobilePlayerCard(result, x + 14, rowY, width - 28, 224);
       rowY += 240;
     });
-    this.renderFooterStats(x + 14, rowY + 4, width - 28, 102, true);
+    const footerY = rowY + 4;
+    this.renderFooterStats(x + 14, footerY, width - 28, 102, true);
+    this.renderShareButton(x + 242, footerY + 118, 260, 60, 26);
+  }
+
+  private renderShareButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fontSize: number,
+  ): void {
+    this.addButton(
+      x,
+      y,
+      width,
+      height,
+      'SHARE',
+      'share',
+      () => void this.shareResults(),
+      false,
+      'normal',
+      fontSize,
+    );
   }
 
   private renderTitle(
@@ -733,6 +773,41 @@ export class LevelScoreScene extends PanelScene {
     return `${minutes
       .toString()
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  private async shareResults(): Promise<void> {
+    const primaryResult =
+      this.players.find((result) => result.isPrimary) || this.players[0];
+    const score = primaryResult?.player.getGamePoints() || 0;
+    const defeated = this.session.getLevelEnemiesDefeated();
+    const total = this.getEnemyTotal();
+    const stage = this.session.getLevelNumber();
+    const result = this.session.isGameOver() ? 'Mission failed' : 'Stage clear';
+    const title = `Battle Cities - Stage ${stage} Results`;
+    const text = `${result}! I scored ${score} points and defeated ${defeated}/${total} enemies in ${this.getBattleTime()}.`;
+    const url = new URL('/', getApiBaseUrl()).toString();
+    const shareNavigator = navigator as ResultShareNavigator;
+
+    try {
+      if (typeof shareNavigator.share === 'function') {
+        await shareNavigator.share({ title, text, url });
+        this.setStatus('RESULT SHARED');
+        return;
+      }
+
+      if (navigator.clipboard?.writeText !== undefined) {
+        await navigator.clipboard.writeText(`${title}\n${text}\n${url}`);
+        this.setStatus('RESULT COPIED - SHARE IT ANYWHERE');
+        return;
+      }
+
+      this.setStatus('SHARING IS NOT SUPPORTED ON THIS DEVICE');
+    } catch (error) {
+      if ((error as { name?: string }).name === 'AbortError') {
+        return;
+      }
+      this.setStatus('COULD NOT SHARE RESULT - TRY AGAIN');
+    }
   }
 
   private finish(): void {
