@@ -4,3 +4,4 @@ server-data/
 
 .vercel
 .env*
+.rtk/
