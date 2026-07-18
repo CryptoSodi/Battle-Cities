@@ -1,39 +1,59 @@
 import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../../wiki';
 
-import { PanelScene, UI } from './panelUi';
+import { HeadquartersPanelScene, UI } from './panelUi';
 
 const ENTRIES_PER_PAGE = 4;
 
-// Field Manual, shop-styled after the Mattle wiki: category tabs on top,
-// card grid of entries with role/lore/effect/source detail lines.
-export class MainWikiScene extends PanelScene {
+export class MainWikiScene extends HeadquartersPanelScene {
   private categoryIndex = 0;
   private page = 0;
 
-  protected getTitle(): string {
+  protected getSectionTitle(): string {
     return 'Field Manual';
   }
 
-  protected getTitleIcon(): string {
+  protected getSectionIcon(): string {
     return 'ui.icon.book';
   }
 
+  protected getInitialFocusKey(): string {
+    return `tab-${WIKI_CATEGORIES[this.categoryIndex].id}`;
+  }
+
+  protected getPreferredVerticalNavigationKey(
+    currentKey: string,
+    direction: number,
+  ): string {
+    const selectedTab = `tab-${WIKI_CATEGORIES[this.categoryIndex].id}`;
+    if (direction > 0 && currentKey === 'back') {
+      return selectedTab;
+    }
+    if (direction < 0 && currentKey.startsWith('tab-')) {
+      return 'back';
+    }
+    if (direction < 0 && currentKey === 'pager') {
+      return selectedTab;
+    }
+    return null;
+  }
+
   protected load(): void {
-    // Static content — nothing async to fetch.
+    this.statusText = '';
   }
 
   protected renderContent(): void {
-    const x = this.pageX;
-    const y = this.pageY;
+    const layout = this.renderHeadquartersFrame(760);
+    const { mobile, bodyX, bodyY, bodyWidth } = layout;
+    const gap = mobile ? this.scaleSize(10) : 14;
+    const tabHeight = mobile ? this.scaleSize(52) : 50;
+    const tabWidth = Math.floor((bodyWidth - gap * 3) / 4);
 
-    // Category tabs.
-    const tabWidth = 232;
     WIKI_CATEGORIES.forEach((category, index) => {
       this.addButton(
-        x + index * (tabWidth + 20),
-        y,
+        bodyX + index * (tabWidth + gap),
+        bodyY,
         tabWidth,
-        48,
+        tabHeight,
         category.label,
         `tab-${category.id}`,
         () => {
@@ -43,7 +63,7 @@ export class MainWikiScene extends PanelScene {
         },
         index === this.categoryIndex,
         'normal',
-        22,
+        mobile ? this.scaleSize(20) : 21,
         true,
       );
     });
@@ -52,47 +72,123 @@ export class MainWikiScene extends PanelScene {
     const entries = WIKI_ENTRIES[category.id as WikiCategory];
     const pageCount = Math.max(1, Math.ceil(entries.length / ENTRIES_PER_PAGE));
     const page = Math.min(this.page, pageCount - 1);
-    const visible = entries.slice(page * ENTRIES_PER_PAGE, (page + 1) * ENTRIES_PER_PAGE);
+    const visible = entries.slice(
+      page * ENTRIES_PER_PAGE,
+      (page + 1) * ENTRIES_PER_PAGE,
+    );
+    const headingY = bodyY + tabHeight + (mobile ? this.scaleSize(24) : 24);
 
-    // Entry cards, 2x2 grid.
-    const cardWidth = Math.floor((UI.WIDTH - 24) / 2);
-    const cardHeight = 200;
+    this.addSectionHeading(
+      `${category.label}  ${page + 1}/${pageCount}`,
+      bodyX,
+      headingY,
+      bodyWidth,
+    );
+
+    const cardGap = mobile ? this.scaleSize(14) : 18;
+    const cardWidth = Math.floor((bodyWidth - cardGap) / 2);
+    const cardHeight = mobile ? this.scaleSize(214) : 202;
+    const gridY = headingY + (mobile ? this.scaleSize(58) : 60);
+
     visible.forEach((entry, index) => {
-      const cardX = x + (index % 2) * (cardWidth + 24);
-      const cardY = y + 76 + Math.floor(index / 2) * (cardHeight + 24);
+      const cardX = bodyX + (index % 2) * (cardWidth + cardGap);
+      const cardY = gridY + Math.floor(index / 2) * (cardHeight + cardGap);
+      const padding = mobile ? this.scaleSize(18) : 20;
+      const footerHeight = mobile ? this.scaleSize(40) : 38;
 
-      this.addPanel(cardX, cardY, cardWidth, cardHeight, UI.PANEL, UI.PANEL_LINE);
-      this.addText(entry.name, cardX + 22, cardY + 16, UI.YELLOW, 28, '900', cardWidth - 44);
-      this.addText(entry.role, cardX + 22, cardY + 54, UI.MUTED, 18, '800', cardWidth - 44);
-      this.addText(entry.lore, cardX + 22, cardY + 88, UI.MUTED_LIGHT, 18, '700', cardWidth - 44);
-      this.addText(entry.effect, cardX + 22, cardY + 122, UI.WHITE, 20, '800', cardWidth - 44);
-
-      const footer = this.addPanel(cardX, cardY + cardHeight - 40, cardWidth, 40, UI.PANEL_ALT, null);
-      footer.setZIndex(1);
+      this.addPanel(
+        cardX,
+        cardY,
+        cardWidth,
+        cardHeight,
+        UI.CARD,
+        UI.YELLOW_DARK,
+      );
+      this.addPanel(
+        cardX + (mobile ? this.scaleSize(5) : 5),
+        cardY + (mobile ? this.scaleSize(5) : 5),
+        cardWidth - (mobile ? this.scaleSize(10) : 10),
+        mobile ? this.scaleSize(2) : 2,
+        UI.PANEL_LINE,
+        null,
+      );
+      this.addText(
+        entry.name,
+        cardX + padding,
+        cardY + (mobile ? this.scaleSize(18) : 16),
+        UI.GREEN,
+        mobile ? this.scaleSize(25) : 26,
+        '900',
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addText(
+        entry.role,
+        cardX + padding,
+        cardY + (mobile ? this.scaleSize(56) : 52),
+        UI.YELLOW,
+        mobile ? this.scaleSize(17) : 18,
+        '800',
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addText(
+        entry.lore,
+        cardX + padding,
+        cardY + (mobile ? this.scaleSize(91) : 84),
+        UI.MUTED_LIGHT,
+        mobile ? this.scaleSize(16) : 17,
+        '700',
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addText(
+        entry.effect,
+        cardX + padding,
+        cardY + (mobile ? this.scaleSize(132) : 122),
+        UI.WHITE,
+        mobile ? this.scaleSize(17) : 18,
+        '800',
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addPanel(
+        cardX + 8,
+        cardY + cardHeight - footerHeight - 8,
+        cardWidth - 16,
+        footerHeight,
+        UI.PRICE,
+        UI.PRICE_BORDER,
+      );
       this.addText(
         `SOURCE: ${entry.source}`,
-        cardX + 22,
-        cardY + cardHeight - 30,
-        UI.MUTED_LIGHT,
-        16,
+        cardX + 12,
+        cardY + cardHeight - footerHeight + (mobile ? this.scaleSize(1) : 1),
+        UI.PRICE_TEXT,
+        mobile ? this.scaleSize(16) : 17,
         '800',
-        cardWidth - 44,
-      ).setZIndex(2);
+        cardWidth - 24,
+        'center',
+      );
     });
 
-    // Pager.
     if (pageCount > 1) {
+      const pagerWidth = mobile ? this.scaleSize(220) : 220;
+      const pagerY = gridY + cardHeight * 2 + cardGap + 12;
       this.addButton(
-        x + UI.WIDTH - 200,
-        y + 76 + (cardHeight + 24) * 2 + 8,
-        176,
-        44,
-        `PAGE ${page + 1}/${pageCount}`,
+        bodyX + bodyWidth - pagerWidth,
+        pagerY,
+        pagerWidth,
+        mobile ? this.scaleSize(46) : 46,
+        `NEXT  ${page + 1}/${pageCount}`,
         'pager',
         () => {
           this.page = (this.page + 1) % pageCount;
           this.refresh('pager');
         },
+        false,
+        'purchase',
+        mobile ? this.scaleSize(20) : 21,
       );
     }
   }

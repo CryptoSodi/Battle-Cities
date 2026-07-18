@@ -5,6 +5,15 @@ import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -24,8 +33,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 final class WebBundleUpdater {
     private static final String TAG = "BattleCitiesUpdate";
@@ -36,29 +43,47 @@ final class WebBundleUpdater {
     private static final int TIMEOUT_MS = 30_000;
     private static final long MAX_FILE_SIZE = 150L * 1024L * 1024L;
     private static final long MAX_BUNDLE_SIZE = 500L * 1024L * 1024L;
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final String WORK_NAME = "battle-cities-web-bundle-update";
 
     private WebBundleUpdater() {}
 
-    static void checkForUpdate(Context context) {
-        Context appContext = context.getApplicationContext();
-        EXECUTOR.execute(() -> {
+    static void enqueue(Context context) {
+        Constraints constraints = new Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build();
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(BundleUpdateWorker.class)
+            .setConstraints(constraints)
+            .build();
+        WorkManager.getInstance(context.getApplicationContext()).enqueueUniqueWork(
+            WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            request
+        );
+    }
+
+    public static final class BundleUpdateWorker extends Worker {
+        public BundleUpdateWorker(@NonNull Context context, @NonNull WorkerParameters parameters) {
+            super(context, parameters);
+        }
+
+        @NonNull
+        @Override
+        public Result doWork() {
             try {
-                update(appContext);
+                update(getApplicationContext());
+                return Result.success();
             } catch (Exception error) {
-                Log.w(TAG, "Keeping current web bundle after update failure", error);
+                Log.w(TAG, "Web bundle update attempt failed", error);
+                return getRunAttemptCount() < 3 ? Result.retry() : Result.failure();
             }
-        });
+        }
     }
 
     private static void update(Context context) throws Exception {
         JSONObject remoteJson = fetchManifest();
         Manifest remote = parseManifest(remoteJson);
         CurrentBundle current = readCurrentBundle(context);
-        if (
-            remote.version.equals(current.manifest.version) ||
-            remote.generatedAt.compareTo(current.manifest.generatedAt) <= 0
-        ) {
+        if (remote.version.equals(current.manifest.version)) {
             return;
         }
 

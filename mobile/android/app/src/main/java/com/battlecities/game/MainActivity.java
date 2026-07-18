@@ -18,7 +18,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(GoogleAuthPlugin.class);
         super.onCreate(savedInstanceState);
-        WebBundleUpdater.checkForUpdate(this);
+        WebBundleUpdater.enqueue(this);
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.BLACK);

@@ -48,6 +48,9 @@ export const UI = {
   RED_BORDER: '#d34c3e',
   GREEN: '#35cf06',
   GREEN_PANEL: '#0d2412',
+  PRICE: '#174d11',
+  PRICE_BORDER: '#4d982f',
+  PRICE_TEXT: '#f3e6a6',
   FONT: UI_FONT_FAMILY,
   WIDTH: 1240,
 };
@@ -169,13 +172,13 @@ export class UiButton extends GameObject {
   private label: UiText;
   private active = false;
   private focused = false;
-  private readonly variant: 'normal' | 'back';
+  private readonly variant: 'normal' | 'back' | 'purchase';
 
   constructor(
     width: number,
     height: number,
     text: string,
-    variant: 'normal' | 'back' = 'normal',
+    variant: 'normal' | 'back' | 'purchase' = 'normal',
     fontSize = 26,
   ) {
     super(width, height);
@@ -220,7 +223,7 @@ export class UiButton extends GameObject {
   // brightens to the warm card-focus tone and the label goes yellow, so the
   // cursor is obvious at a glance.
   private refreshStyle(): void {
-    if (this.active) {
+    if (this.active || (this.focused && this.variant === 'purchase')) {
       this.background.fillColor = UI.YELLOW;
       this.background.strokeColor = UI.YELLOW_LIGHT;
       this.highlight.painter.fillColor = UI.YELLOW_LIGHT;
@@ -235,6 +238,11 @@ export class UiButton extends GameObject {
       this.background.strokeColor = UI.YELLOW;
       this.highlight.painter.fillColor = UI.PANEL_HIGHLIGHT;
       this.label.setColor(UI.WHITE);
+    } else if (this.variant === 'purchase') {
+      this.background.fillColor = UI.PRICE;
+      this.background.strokeColor = UI.PRICE_BORDER;
+      this.highlight.painter.fillColor = UI.PRICE_BORDER;
+      this.label.setColor(UI.PRICE_TEXT);
     } else {
       this.background.fillColor = UI.PANEL_ALT;
       this.background.strokeColor = UI.PANEL_LINE;
@@ -396,7 +404,7 @@ export abstract class PanelScene extends GameScene {
     return 'back';
   }
 
-  protected getHeaderActionVariant(): 'normal' | 'back' {
+  protected getHeaderActionVariant(): 'normal' | 'back' | 'purchase' {
     return 'back';
   }
 
@@ -582,7 +590,7 @@ export abstract class PanelScene extends GameScene {
     key: string,
     onSelect: () => void,
     active = false,
-    variant: 'normal' | 'back' = 'normal',
+    variant: 'normal' | 'back' | 'purchase' = 'normal',
     fontSize = 26,
     autoActivate = false,
   ): UiButton {
@@ -829,5 +837,164 @@ export abstract class PanelScene extends GameScene {
     });
 
     return rows;
+  }
+}
+
+const HEADQUARTERS_MOBILE_WIDTH = 744;
+
+export interface HeadquartersLayout {
+  mobile: boolean;
+  x: number;
+  y: number;
+  width: number;
+  inset: number;
+  bodyX: number;
+  bodyY: number;
+  bodyWidth: number;
+}
+
+// Shared chrome for every destination opened from Headquarters. Keeping this
+// here makes the mobile canvas width, header, frame, and Back geometry match
+// the Shop and Headquarters screens without duplicating those rules per page.
+export abstract class HeadquartersPanelScene extends PanelScene {
+  protected abstract getSectionTitle(): string;
+  protected abstract getSectionIcon(): string;
+
+  protected getTitle(): string {
+    return '';
+  }
+
+  protected getContentWidth(): number {
+    return this.isMobileLayout() ? HEADQUARTERS_MOBILE_WIDTH : UI.WIDTH;
+  }
+
+  protected getPageTop(): number {
+    return this.isMobileLayout() ? this.scaleSize(76) : 96;
+  }
+
+  protected getBackButtonY(): number {
+    return this.isMobileLayout() ? this.scaleSize(8) : 44;
+  }
+
+  protected getBackButtonWidth(): number {
+    return this.isMobileLayout() ? this.scaleSize(152) : 140;
+  }
+
+  protected getBackButtonRightInset(): number {
+    return this.isMobileLayout() ? 0 : 12;
+  }
+
+  protected getBackButtonHeight(): number {
+    return this.isMobileLayout() ? this.scaleSize(60) : 48;
+  }
+
+  protected isMobileLayout(): boolean {
+    return config.isMobileTouchViewport();
+  }
+
+  protected scaleSize(value: number): number {
+    return this.isMobileLayout()
+      ? Math.round((value * this.getContentWidth()) / HEADQUARTERS_MOBILE_WIDTH)
+      : value;
+  }
+
+  protected renderHeadquartersFrame(minimumHeight = 680): HeadquartersLayout {
+    const mobile = this.isMobileLayout();
+    const x = this.pageX;
+    const y = this.pageY;
+    const width = this.getContentWidth();
+    const inset = mobile ? this.scaleSize(18) : 24;
+    const headerY = mobile ? this.scaleSize(8) : y - 57;
+    const headerWidth = mobile ? this.scaleSize(420) : 440;
+    const headerHeight = mobile ? this.scaleSize(60) : 58;
+    const iconSize = mobile ? this.scaleSize(42) : 42;
+    const headerX = x + (mobile ? 0 : 12);
+
+    this.addPanel(
+      headerX,
+      headerY,
+      headerWidth,
+      headerHeight,
+      UI.YELLOW,
+      UI.YELLOW_LIGHT,
+    );
+    this.addIcon(
+      this.getSectionIcon(),
+      headerX + (mobile ? this.scaleSize(22) : 22),
+      headerY + Math.floor((headerHeight - iconSize) / 2),
+      iconSize,
+    );
+    this.addText(
+      this.getSectionTitle().toUpperCase(),
+      headerX + (mobile ? this.scaleSize(76) : 76),
+      headerY + (mobile ? this.scaleSize(17) : 15),
+      UI.WHITE,
+      mobile ? this.scaleSize(29) : 30,
+      '900',
+      headerWidth - (mobile ? this.scaleSize(94) : 94),
+      'center',
+    );
+
+    const sideInset = mobile ? 0 : 8;
+    const bottomInset = mobile ? this.scaleSize(12) : 18;
+    const shell = this.addPanel(
+      x - sideInset,
+      y,
+      width + sideInset * 2,
+      Math.max(
+        mobile ? this.scaleSize(minimumHeight) : minimumHeight,
+        this.root.size.height - y - bottomInset,
+      ),
+      UI.PANEL,
+      UI.PANEL_LINE,
+    );
+    shell.setZIndex(-2);
+
+    const accent = this.addPanel(
+      x - sideInset + (mobile ? this.scaleSize(6) : 6),
+      y + (mobile ? this.scaleSize(5) : 5),
+      width + sideInset * 2 - (mobile ? this.scaleSize(12) : 12),
+      mobile ? this.scaleSize(3) : 3,
+      UI.YELLOW,
+      null,
+    );
+    accent.setZIndex(-1);
+
+    return {
+      mobile,
+      x,
+      y,
+      width,
+      inset,
+      bodyX: x + inset,
+      bodyY: y + (mobile ? this.scaleSize(22) : 22),
+      bodyWidth: width - inset * 2,
+    };
+  }
+
+  protected addSectionHeading(
+    text: string,
+    x: number,
+    y: number,
+    width: number,
+  ): void {
+    const mobile = this.isMobileLayout();
+    this.addText(
+      text.toUpperCase(),
+      x,
+      y,
+      UI.WHITE,
+      mobile ? this.scaleSize(26) : 28,
+      '900',
+      width,
+    );
+    this.addPanel(
+      x,
+      y + (mobile ? this.scaleSize(40) : 42),
+      width,
+      mobile ? this.scaleSize(2) : 2,
+      UI.PANEL_LINE,
+      null,
+    );
   }
 }

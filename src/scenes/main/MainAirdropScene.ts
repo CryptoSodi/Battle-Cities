@@ -8,6 +8,7 @@ import {
 import { PanelScene, UI } from './panelUi';
 
 const MOBILE_WIDTH = 744;
+const BATTLE_CITIES_X_URL = 'https://x.com/BattleCitiesHQ';
 
 interface EligibilityStat {
   label: string;
@@ -33,12 +34,15 @@ export class MainAirdropScene extends PanelScene {
   }
 
   protected getPageTop(): number {
-    return config.isMobileTouchViewport() ? 76 : 96;
+    return config.isMobileTouchViewport() ? this.mobileSize(76) : 96;
   }
 
   protected getInitialFocusKey(): string {
     if (this.isClaimAvailable()) {
       return 'claim';
+    }
+    if (!this.isLoading && this.campaigns.length > 0) {
+      return 'quest-x';
     }
     if (!this.isLoading && this.campaigns.length === 0) {
       return 'retry';
@@ -46,12 +50,25 @@ export class MainAirdropScene extends PanelScene {
     return 'back';
   }
 
+  protected getPreferredVerticalNavigationKey(
+    currentKey: string,
+    direction: number,
+  ): string {
+    if (direction > 0 && currentKey === 'back' && this.campaigns.length > 0) {
+      return 'quest-x';
+    }
+    if (direction < 0 && currentKey.startsWith('quest-')) {
+      return 'back';
+    }
+    return null;
+  }
+
   protected getBackButtonY(): number {
-    return config.isMobileTouchViewport() ? 8 : 44;
+    return config.isMobileTouchViewport() ? this.mobileSize(8) : 44;
   }
 
   protected getBackButtonWidth(): number {
-    return config.isMobileTouchViewport() ? 152 : 140;
+    return config.isMobileTouchViewport() ? this.mobileSize(152) : 140;
   }
 
   protected getBackButtonRightInset(): number {
@@ -59,7 +76,11 @@ export class MainAirdropScene extends PanelScene {
   }
 
   protected getBackButtonHeight(): number {
-    return config.isMobileTouchViewport() ? 60 : 48;
+    return config.isMobileTouchViewport() ? this.mobileSize(60) : 48;
+  }
+
+  private mobileSize(value: number): number {
+    return Math.round((value * this.getContentWidth()) / MOBILE_WIDTH);
   }
 
   protected load(): void {
@@ -90,7 +111,7 @@ export class MainAirdropScene extends PanelScene {
 
           this.eligibility = eligibility;
           this.isLoading = false;
-          this.refresh(this.isClaimAvailable() ? 'claim' : 'back');
+          this.refresh(this.isClaimAvailable() ? 'claim' : 'quest-x');
         });
     });
   }
@@ -101,7 +122,7 @@ export class MainAirdropScene extends PanelScene {
     const y = this.pageY;
     const width = this.getContentWidth();
 
-    this.renderHeader(x, mobile ? 8 : y - 57, mobile);
+    this.renderHeader(x, mobile ? this.mobileSize(8) : y - 57, mobile);
     this.renderShell(x, y, width, mobile);
 
     if (this.isLoading) {
@@ -118,20 +139,25 @@ export class MainAirdropScene extends PanelScene {
   }
 
   private renderHeader(x: number, y: number, mobile: boolean): void {
-    const width = mobile ? 360 : 400;
-    const height = mobile ? 60 : 58;
+    const width = mobile ? this.mobileSize(360) : 400;
+    const height = mobile ? this.mobileSize(60) : 58;
     const headerX = x + (mobile ? 0 : 12);
 
     this.addPanel(headerX, y, width, height, UI.YELLOW, UI.YELLOW_LIGHT);
-    this.addIcon('ui.icon.chute', headerX + 24, y + 9, height - 18);
+    this.addIcon(
+      'ui.icon.chute',
+      headerX + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(9) : 9),
+      height - (mobile ? this.mobileSize(18) : 18),
+    );
     this.addText(
       'AIRDROP',
-      headerX + 78,
-      y + (mobile ? 17 : 15),
+      headerX + (mobile ? this.mobileSize(78) : 78),
+      y + (mobile ? this.mobileSize(17) : 15),
       UI.WHITE,
-      mobile ? 31 : 32,
+      mobile ? this.mobileSize(31) : 32,
       '900',
-      width - 102,
+      width - (mobile ? this.mobileSize(102) : 102),
       'center',
     );
   }
@@ -143,21 +169,25 @@ export class MainAirdropScene extends PanelScene {
     mobile: boolean,
   ): void {
     const sideInset = mobile ? 0 : 8;
+    const bottomInset = mobile ? this.mobileSize(12) : 18;
     const shell = this.addPanel(
       x - sideInset,
       y,
       width + sideInset * 2,
-      Math.max(420, this.root.size.height - y - (mobile ? 12 : 18)),
+      Math.max(
+        mobile ? this.mobileSize(420) : 420,
+        this.root.size.height - y - bottomInset,
+      ),
       UI.PANEL,
       UI.PANEL_LINE,
     );
     shell.setZIndex(-2);
 
     const accent = this.addPanel(
-      x - sideInset + 6,
-      y + 5,
-      width + sideInset * 2 - 12,
-      3,
+      x - sideInset + (mobile ? this.mobileSize(6) : 6),
+      y + (mobile ? this.mobileSize(5) : 5),
+      width + sideInset * 2 - (mobile ? this.mobileSize(12) : 12),
+      mobile ? this.mobileSize(3) : 3,
       UI.YELLOW,
       null,
     );
@@ -170,19 +200,19 @@ export class MainAirdropScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
-    const inset = mobile ? 16 : 24;
+    const inset = mobile ? this.mobileSize(16) : 24;
     const innerWidth = width - inset * 2;
-    const heroHeight = mobile ? 190 : 142;
-    const cardGap = mobile ? 12 : 16;
+    const heroHeight = mobile ? this.mobileSize(190) : 142;
+    const cardGap = mobile ? this.mobileSize(12) : 16;
     const columns = mobile ? 2 : 4;
     const cardWidth = Math.floor(
       (innerWidth - cardGap * (columns - 1)) / columns,
     );
-    const cardsY = y + heroHeight + (mobile ? 78 : 90);
+    const cardsY = y + heroHeight + (mobile ? this.mobileSize(78) : 90);
 
     this.addPanel(
       x + inset,
-      y + 20,
+      y + (mobile ? this.mobileSize(20) : 20),
       innerWidth,
       heroHeight,
       UI.PANEL_ALT,
@@ -190,12 +220,12 @@ export class MainAirdropScene extends PanelScene {
     );
     this.addText(
       'LOADING AIRDROP',
-      x + inset + 24,
-      y + 46,
+      x + inset + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(46) : 46),
       UI.MUTED_LIGHT,
-      mobile ? 27 : 30,
+      mobile ? this.mobileSize(27) : 30,
       '900',
-      innerWidth - 48,
+      innerWidth - (mobile ? this.mobileSize(48) : 48),
     );
 
     for (let index = 0; index < 4; index += 1) {
@@ -203,9 +233,9 @@ export class MainAirdropScene extends PanelScene {
       const column = index % columns;
       this.addPanel(
         x + inset + column * (cardWidth + cardGap),
-        cardsY + row * (mobile ? 138 : 134),
+        cardsY + row * (mobile ? this.mobileSize(138) : 134),
         cardWidth,
-        mobile ? 126 : 118,
+        mobile ? this.mobileSize(126) : 118,
         UI.PANEL_ALT,
         UI.PANEL_LINE,
       );
@@ -218,10 +248,11 @@ export class MainAirdropScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
-    const inset = mobile ? 24 : 48;
-    const panelY = y + (mobile ? 34 : 48);
-    const panelHeight = mobile ? 300 : 260;
+    const inset = mobile ? this.mobileSize(24) : 48;
+    const panelY = y + (mobile ? this.mobileSize(34) : 48);
+    const panelHeight = mobile ? this.mobileSize(300) : 260;
     const panelWidth = width - inset * 2;
+    const iconSize = mobile ? this.mobileSize(64) : 64;
 
     this.addPanel(
       x + inset,
@@ -233,41 +264,41 @@ export class MainAirdropScene extends PanelScene {
     );
     this.addIcon(
       'ui.icon.chute',
-      x + Math.floor((width - 64) / 2),
-      panelY + 32,
-      64,
+      x + Math.floor((width - iconSize) / 2),
+      panelY + (mobile ? this.mobileSize(32) : 32),
+      iconSize,
     );
     this.addText(
       'NO ACTIVE AIRDROP',
-      x + inset + 24,
-      panelY + 112,
+      x + inset + (mobile ? this.mobileSize(24) : 24),
+      panelY + (mobile ? this.mobileSize(112) : 112),
       UI.WHITE,
-      mobile ? 30 : 32,
+      mobile ? this.mobileSize(30) : 32,
       '900',
-      panelWidth - 48,
+      panelWidth - (mobile ? this.mobileSize(48) : 48),
       'center',
     );
     this.addText(
       'No campaign is available right now. Check again soon.',
-      x + inset + 24,
-      panelY + 158,
+      x + inset + (mobile ? this.mobileSize(24) : 24),
+      panelY + (mobile ? this.mobileSize(158) : 158),
       UI.MUTED_LIGHT,
-      mobile ? 21 : 22,
+      mobile ? this.mobileSize(21) : 22,
       '700',
-      panelWidth - 48,
+      panelWidth - (mobile ? this.mobileSize(48) : 48),
       'center',
     );
     this.addButton(
-      x + Math.floor((width - 220) / 2),
-      panelY + panelHeight - 68,
-      220,
-      48,
+      x + Math.floor((width - (mobile ? this.mobileSize(220) : 220)) / 2),
+      panelY + panelHeight - (mobile ? this.mobileSize(68) : 68),
+      mobile ? this.mobileSize(220) : 220,
+      mobile ? this.mobileSize(48) : 48,
       'REFRESH',
       'retry',
       () => this.load(),
       true,
       'normal',
-      24,
+      mobile ? this.mobileSize(24) : 24,
     );
   }
 
@@ -278,11 +309,11 @@ export class MainAirdropScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
-    const inset = mobile ? 16 : 24;
+    const inset = mobile ? this.mobileSize(16) : 24;
     const innerX = x + inset;
     const innerWidth = width - inset * 2;
-    const heroY = y + 20;
-    const heroHeight = mobile ? 190 : 142;
+    const heroY = y + (mobile ? this.mobileSize(20) : 20);
+    const heroHeight = mobile ? this.mobileSize(190) : 142;
 
     this.renderCampaignHero(
       campaign,
@@ -293,7 +324,14 @@ export class MainAirdropScene extends PanelScene {
       mobile,
     );
 
-    const eligibilityY = heroY + heroHeight + (mobile ? 30 : 34);
+    const questsY = heroY + heroHeight + (mobile ? this.mobileSize(28) : 30);
+    const questsBottom = this.renderSocialQuests(
+      innerX,
+      questsY,
+      innerWidth,
+      mobile,
+    );
+    const eligibilityY = questsBottom + (mobile ? this.mobileSize(30) : 32);
     if (this.eligibility === null) {
       this.renderSignedOut(innerX, eligibilityY, innerWidth, mobile);
       return;
@@ -306,6 +344,170 @@ export class MainAirdropScene extends PanelScene {
       eligibilityY,
       innerWidth,
       mobile,
+    );
+  }
+
+  private renderSocialQuests(
+    x: number,
+    y: number,
+    width: number,
+    mobile: boolean,
+  ): number {
+    const cardGap = mobile ? this.mobileSize(12) : 16;
+    const columns = 3;
+    const cardWidth = Math.floor((width - cardGap * (columns - 1)) / columns);
+    const cardHeight = mobile ? this.mobileSize(202) : 188;
+    const cardY = y + (mobile ? this.mobileSize(56) : 54);
+    const quests: Array<{
+      key: string;
+      label: string;
+      mark: string;
+      detail: string;
+      action: string;
+      url?: string;
+    }> = [
+      {
+        key: 'x',
+        label: 'FOLLOW X',
+        mark: 'X',
+        detail: '@BattleCitiesHQ',
+        action: 'OPEN X',
+        url: BATTLE_CITIES_X_URL,
+      },
+      {
+        key: 'discord',
+        label: 'JOIN DISCORD',
+        mark: 'D',
+        detail: 'COMMUNITY QUEST',
+        action: 'COMING SOON',
+      },
+      {
+        key: 'telegram',
+        label: 'JOIN TELEGRAM',
+        mark: 'T',
+        detail: 'COMMUNITY QUEST',
+        action: 'COMING SOON',
+      },
+    ];
+
+    this.addText(
+      'SOCIAL QUESTS',
+      x,
+      y,
+      UI.WHITE,
+      mobile ? this.mobileSize(27) : 29,
+      '900',
+      width - (mobile ? this.mobileSize(120) : 120),
+    );
+    this.addText(
+      '0 / 1',
+      x + width - (mobile ? this.mobileSize(120) : 120),
+      y + (mobile ? this.mobileSize(4) : 4),
+      UI.MUTED,
+      mobile ? this.mobileSize(21) : 22,
+      '800',
+      mobile ? this.mobileSize(120) : 120,
+      'right',
+    );
+
+    quests.forEach((quest, index) => {
+      this.renderSocialQuestCard(
+        quest,
+        x + index * (cardWidth + cardGap),
+        cardY,
+        cardWidth,
+        cardHeight,
+        mobile,
+      );
+    });
+
+    return cardY + cardHeight;
+  }
+
+  private renderSocialQuestCard(
+    quest: {
+      key: string;
+      label: string;
+      mark: string;
+      detail: string;
+      action: string;
+      url?: string;
+    },
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    mobile: boolean,
+  ): void {
+    const sidePadding = mobile ? this.mobileSize(12) : 14;
+    const markSize = mobile ? this.mobileSize(52) : 52;
+    const buttonInset = mobile ? this.mobileSize(8) : 8;
+    const buttonHeight = mobile ? this.mobileSize(44) : 44;
+
+    this.addPanel(x, y, width, height, UI.CARD, UI.YELLOW_DARK);
+    this.addPanel(
+      x + (mobile ? this.mobileSize(5) : 5),
+      y + (mobile ? this.mobileSize(5) : 5),
+      width - (mobile ? this.mobileSize(10) : 10),
+      mobile ? this.mobileSize(2) : 2,
+      UI.PANEL_LINE,
+      null,
+    );
+    this.addText(
+      quest.label,
+      x + sidePadding,
+      y + (mobile ? this.mobileSize(15) : 15),
+      UI.GREEN,
+      mobile ? this.mobileSize(22) : 24,
+      '900',
+      width - sidePadding * 2,
+      'center',
+    );
+    this.addPanel(
+      x + Math.floor((width - markSize) / 2),
+      y + (mobile ? this.mobileSize(50) : 48),
+      markSize,
+      markSize,
+      UI.PANEL_ALT,
+      UI.PANEL_LINE,
+    );
+    this.addText(
+      quest.mark,
+      x + Math.floor((width - markSize) / 2),
+      y + (mobile ? this.mobileSize(61) : 59),
+      UI.WHITE,
+      mobile ? this.mobileSize(27) : 27,
+      '900',
+      markSize,
+      'center',
+    );
+    this.addText(
+      quest.detail,
+      x + sidePadding,
+      y + (mobile ? this.mobileSize(112) : 108),
+      UI.MUTED_LIGHT,
+      mobile ? this.mobileSize(17) : 18,
+      '700',
+      width - sidePadding * 2,
+      'center',
+    );
+    this.addButton(
+      x + buttonInset,
+      y + height - buttonHeight - buttonInset,
+      width - buttonInset * 2,
+      buttonHeight,
+      quest.action,
+      `quest-${quest.key}`,
+      () => {
+        if (quest.url !== undefined) {
+          this.openSocialQuest(quest.url, quest.mark);
+          return;
+        }
+        this.setStatus(`${quest.label} LINK COMING SOON`);
+      },
+      false,
+      'purchase',
+      mobile ? this.mobileSize(19) : 20,
     );
   }
 
@@ -334,56 +536,64 @@ export class MainAirdropScene extends PanelScene {
     );
     this.addText(
       campaign.name.toUpperCase(),
-      x + 24,
-      y + 18,
+      x + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(18) : 18),
       UI.WHITE,
-      mobile ? 27 : 31,
+      mobile ? this.mobileSize(27) : 31,
       '900',
-      width - (mobile ? 190 : 360),
+      width - (mobile ? this.mobileSize(190) : 360),
     );
 
-    const badgeWidth = mobile ? 126 : 136;
+    const badgeWidth = mobile ? this.mobileSize(126) : 136;
     this.addPanel(
-      x + width - badgeWidth - 22,
-      y + 18,
+      x + width - badgeWidth - (mobile ? this.mobileSize(22) : 22),
+      y + (mobile ? this.mobileSize(18) : 18),
       badgeWidth,
-      38,
+      mobile ? this.mobileSize(38) : 38,
       live ? UI.GREEN_PANEL : UI.PANEL_ALT,
       statusColor,
     );
     this.addText(
       campaign.status.toUpperCase(),
-      x + width - badgeWidth - 22,
-      y + 27,
+      x + width - badgeWidth - (mobile ? this.mobileSize(22) : 22),
+      y + (mobile ? this.mobileSize(27) : 27),
       statusColor,
-      18,
+      mobile ? this.mobileSize(18) : 18,
       '900',
       badgeWidth,
       'center',
     );
 
-    this.addText('CAMPAIGN WINDOW', x + 24, y + 72, UI.MUTED, 17, '800', 260);
+    this.addText(
+      'CAMPAIGN WINDOW',
+      x + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(72) : 72),
+      UI.MUTED,
+      mobile ? this.mobileSize(17) : 17,
+      '800',
+      mobile ? this.mobileSize(260) : 260,
+    );
     this.addText(
       `${this.formatDate(campaign.startsAt)} - ${this.formatDate(
         campaign.endsAt,
       )}`,
-      x + 24,
-      y + 96,
+      x + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(96) : 96),
       UI.MUTED_LIGHT,
-      mobile ? 20 : 21,
+      mobile ? this.mobileSize(20) : 21,
       '800',
-      mobile ? width - 48 : 560,
+      mobile ? width - this.mobileSize(48) : 560,
     );
 
     if (mobile) {
       this.addText(
         `POOL  ${this.formatNumber(campaign.allocationPool)} BACT`,
-        x + 24,
-        y + 130,
+        x + this.mobileSize(24),
+        y + this.mobileSize(130),
         UI.YELLOW,
-        22,
+        this.mobileSize(22),
         '900',
-        width - 48,
+        width - this.mobileSize(48),
         'right',
       );
     } else {
@@ -409,14 +619,15 @@ export class MainAirdropScene extends PanelScene {
       );
     }
 
-    const progressX = x + 24;
-    const progressY = y + height - 18;
-    const progressWidth = width - 48;
+    const progressX = x + (mobile ? this.mobileSize(24) : 24);
+    const progressY = y + height - (mobile ? this.mobileSize(18) : 18);
+    const progressWidth = width - (mobile ? this.mobileSize(48) : 48);
+    const progressHeight = mobile ? this.mobileSize(6) : 6;
     this.addPanel(
       progressX,
       progressY,
       progressWidth,
-      6,
+      progressHeight,
       UI.PANEL_RAISED,
       null,
     );
@@ -424,10 +635,10 @@ export class MainAirdropScene extends PanelScene {
       progressX,
       progressY,
       Math.max(
-        6,
+        progressHeight,
         Math.floor(progressWidth * this.getCampaignProgress(campaign)),
       ),
-      6,
+      progressHeight,
       live ? UI.GREEN : UI.YELLOW,
       null,
     );
@@ -439,26 +650,26 @@ export class MainAirdropScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
-    const height = mobile ? 174 : 150;
+    const height = mobile ? this.mobileSize(174) : 150;
     this.addPanel(x, y, width, height, UI.PAGE, UI.PANEL_LINE);
     this.addText(
       'SIGN IN TO VIEW ELIGIBILITY',
-      x + 24,
-      y + 32,
+      x + (mobile ? this.mobileSize(24) : 24),
+      y + (mobile ? this.mobileSize(32) : 32),
       UI.WHITE,
-      mobile ? 28 : 30,
+      mobile ? this.mobileSize(28) : 30,
       '900',
-      width - 48,
+      width - (mobile ? this.mobileSize(48) : 48),
       'center',
     );
     this.addText(
       'Use Google or your Phantom wallet from the main menu to view your allocation.',
-      x + 32,
-      y + 82,
+      x + (mobile ? this.mobileSize(32) : 32),
+      y + (mobile ? this.mobileSize(82) : 82),
       UI.MUTED_LIGHT,
-      mobile ? 20 : 21,
+      mobile ? this.mobileSize(20) : 21,
       '700',
-      width - 64,
+      width - (mobile ? this.mobileSize(64) : 64),
       'center',
     );
   }
@@ -476,7 +687,7 @@ export class MainAirdropScene extends PanelScene {
       x,
       y,
       UI.WHITE,
-      mobile ? 27 : 29,
+      mobile ? this.mobileSize(27) : 29,
       '900',
       width,
     );
@@ -485,15 +696,15 @@ export class MainAirdropScene extends PanelScene {
         ? 'Campaign scoring is locked.'
         : 'Your allocation grows with your contribution.',
       x,
-      y + 38,
+      y + (mobile ? this.mobileSize(38) : 38),
       UI.MUTED,
-      mobile ? 18 : 19,
+      mobile ? this.mobileSize(18) : 19,
       '700',
       width,
     );
 
     const stats = this.getEligibilityStats(eligibility);
-    const cardsY = y + 78;
+    const cardsY = y + (mobile ? this.mobileSize(78) : 78);
     const cardsBottom = this.renderEligibilityCards(
       stats,
       x,
@@ -503,7 +714,12 @@ export class MainAirdropScene extends PanelScene {
     );
 
     if (!eligibility.frozen) {
-      this.renderWeightNotice(x, cardsBottom + 20, width, mobile);
+      this.renderWeightNotice(
+        x,
+        cardsBottom + (mobile ? this.mobileSize(20) : 20),
+        width,
+        mobile,
+      );
       return;
     }
 
@@ -511,7 +727,7 @@ export class MainAirdropScene extends PanelScene {
       campaign,
       eligibility,
       x,
-      cardsBottom + 22,
+      cardsBottom + (mobile ? this.mobileSize(22) : 22),
       width,
       mobile,
     );
@@ -569,9 +785,9 @@ export class MainAirdropScene extends PanelScene {
     mobile: boolean,
   ): number {
     const columns = mobile ? 2 : stats.length;
-    const gap = mobile ? 12 : 16;
-    const cardHeight = mobile ? 126 : 118;
-    const rowGap = mobile ? 12 : 16;
+    const gap = mobile ? this.mobileSize(12) : 16;
+    const cardHeight = mobile ? this.mobileSize(126) : 118;
+    const rowGap = mobile ? this.mobileSize(12) : 16;
     const cardWidth = Math.floor((width - gap * (columns - 1)) / columns);
 
     stats.forEach((stat, index) => {
@@ -584,33 +800,62 @@ export class MainAirdropScene extends PanelScene {
         cardY,
         cardWidth,
         cardHeight,
-        UI.PAGE,
-        UI.PANEL_LINE,
+        UI.CARD,
+        UI.YELLOW_DARK,
       );
       this.addText(
         stat.label,
-        cardX + 18,
-        cardY + 17,
-        UI.MUTED,
-        mobile ? 18 : 19,
-        '800',
-        cardWidth - 36,
+        cardX + (mobile ? this.mobileSize(12) : 12),
+        cardY + (mobile ? this.mobileSize(14) : 14),
+        UI.GREEN,
+        mobile ? this.mobileSize(19) : 20,
+        '900',
+        cardWidth - (mobile ? this.mobileSize(24) : 24),
+        'center',
       );
 
-      const iconSpace = stat.iconId !== undefined ? 48 : 0;
+      const valueBarHeight = mobile ? this.mobileSize(40) : 38;
+      const valueBarY = cardY + cardHeight - valueBarHeight;
+      this.addPanel(
+        cardX + (mobile ? this.mobileSize(8) : 8),
+        valueBarY,
+        cardWidth - (mobile ? this.mobileSize(16) : 16),
+        valueBarHeight - (mobile ? this.mobileSize(8) : 8),
+        UI.GREEN_PANEL,
+        UI.GREEN,
+      );
+
+      if (stat.iconId !== undefined) {
+        const iconSize = mobile ? this.mobileSize(40) : 40;
+        this.addIcon(
+          stat.iconId,
+          cardX + Math.floor((cardWidth - iconSize) / 2),
+          cardY + (mobile ? this.mobileSize(42) : 42),
+          iconSize,
+        );
+      } else {
+        this.addText(
+          'CURRENT',
+          cardX + (mobile ? this.mobileSize(12) : 12),
+          cardY + (mobile ? this.mobileSize(51) : 51),
+          UI.MUTED,
+          mobile ? this.mobileSize(17) : 18,
+          '800',
+          cardWidth - (mobile ? this.mobileSize(24) : 24),
+          'center',
+        );
+      }
+
       this.addText(
         stat.value,
-        cardX + 18,
-        cardY + 59,
-        stat.color || UI.WHITE,
-        mobile ? 29 : 31,
+        cardX + (mobile ? this.mobileSize(16) : 16),
+        valueBarY + (mobile ? this.mobileSize(7) : 6),
+        stat.color || UI.YELLOW_LIGHT,
+        mobile ? this.mobileSize(22) : 23,
         '900',
-        cardWidth - 36 - iconSpace,
-        'right',
+        cardWidth - (mobile ? this.mobileSize(32) : 32),
+        'center',
       );
-      if (stat.iconId !== undefined) {
-        this.addIcon(stat.iconId, cardX + cardWidth - 54, cardY + 56, 36);
-      }
     });
 
     const rows = Math.ceil(stats.length / columns);
@@ -623,25 +868,25 @@ export class MainAirdropScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
-    const height = mobile ? 112 : 88;
+    const height = mobile ? this.mobileSize(112) : 88;
     this.addPanel(x, y, width, height, UI.PANEL_ALT, UI.PANEL_LINE);
     this.addText(
       'HOW TO GROW YOUR SHARE',
-      x + 22,
-      y + 18,
+      x + (mobile ? this.mobileSize(22) : 22),
+      y + (mobile ? this.mobileSize(18) : 18),
       UI.YELLOW,
-      mobile ? 20 : 21,
+      mobile ? this.mobileSize(20) : 21,
       '900',
-      width - 44,
+      width - (mobile ? this.mobileSize(44) : 44),
     );
     this.addText(
       'Keep playing, staking, and trading before the campaign closes. Final allocations lock when scoring ends.',
-      x + 22,
-      y + (mobile ? 51 : 50),
+      x + (mobile ? this.mobileSize(22) : 22),
+      y + (mobile ? this.mobileSize(51) : 50),
       UI.MUTED_LIGHT,
-      mobile ? 18 : 19,
+      mobile ? this.mobileSize(18) : 19,
       '700',
-      width - 44,
+      width - (mobile ? this.mobileSize(44) : 44),
     );
   }
 
@@ -654,37 +899,51 @@ export class MainAirdropScene extends PanelScene {
     mobile: boolean,
   ): void {
     if (eligibility.claimedAt !== null) {
-      this.addPanel(x, y, width, mobile ? 92 : 78, UI.GREEN_PANEL, UI.GREEN);
+      this.addPanel(
+        x,
+        y,
+        width,
+        mobile ? this.mobileSize(92) : 78,
+        UI.GREEN_PANEL,
+        UI.GREEN,
+      );
       this.addText(
         `CLAIMED ${this.formatNumber(eligibility.allocation || 0)} BACT`,
-        x + 24,
-        y + (mobile ? 29 : 23),
+        x + (mobile ? this.mobileSize(24) : 24),
+        y + (mobile ? this.mobileSize(29) : 23),
         UI.GREEN,
-        mobile ? 25 : 27,
+        mobile ? this.mobileSize(25) : 27,
         '900',
-        width - 48,
+        width - (mobile ? this.mobileSize(48) : 48),
         'center',
       );
       return;
     }
 
     if ((eligibility.allocation || 0) <= 0) {
-      this.addPanel(x, y, width, mobile ? 92 : 78, UI.PANEL_ALT, UI.PANEL_LINE);
+      this.addPanel(
+        x,
+        y,
+        width,
+        mobile ? this.mobileSize(92) : 78,
+        UI.PANEL_ALT,
+        UI.PANEL_LINE,
+      );
       this.addText(
         'NO CLAIMABLE ALLOCATION FOR THIS CAMPAIGN',
-        x + 24,
-        y + (mobile ? 29 : 23),
+        x + (mobile ? this.mobileSize(24) : 24),
+        y + (mobile ? this.mobileSize(29) : 23),
         UI.MUTED_LIGHT,
-        mobile ? 22 : 24,
+        mobile ? this.mobileSize(22) : 24,
         '800',
-        width - 48,
+        width - (mobile ? this.mobileSize(48) : 48),
         'center',
       );
       return;
     }
 
-    const buttonWidth = mobile ? 360 : 320;
-    const buttonHeight = mobile ? 60 : 54;
+    const buttonWidth = mobile ? this.mobileSize(360) : 320;
+    const buttonHeight = mobile ? this.mobileSize(60) : 54;
     const buttonX = x + Math.floor((width - buttonWidth) / 2);
     if (this.isClaiming) {
       this.addPanel(
@@ -698,9 +957,9 @@ export class MainAirdropScene extends PanelScene {
       this.addText(
         'CLAIMING...',
         buttonX,
-        y + (mobile ? 17 : 15),
+        y + (mobile ? this.mobileSize(17) : 15),
         UI.MUTED_LIGHT,
-        mobile ? 25 : 24,
+        mobile ? this.mobileSize(25) : 24,
         '900',
         buttonWidth,
         'center',
@@ -718,7 +977,7 @@ export class MainAirdropScene extends PanelScene {
       () => this.claim(campaign.slug),
       true,
       'normal',
-      mobile ? 24 : 23,
+      mobile ? this.mobileSize(24) : 23,
     );
   }
 
@@ -740,6 +999,16 @@ export class MainAirdropScene extends PanelScene {
       this.setStatus(`CLAIMED ${result.allocation || 0} BACT`);
       this.load();
     });
+  }
+
+  private openSocialQuest(url: string, platform: string): void {
+    const opened = window.open(url, '_blank');
+    if (opened === null) {
+      window.location.href = url;
+      return;
+    }
+    opened.opener = null;
+    this.setStatus(`${platform} OPENED - RETURN AFTER COMPLETING THE QUEST`);
   }
 
   private isClaimAvailable(): boolean {

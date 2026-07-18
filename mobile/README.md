@@ -19,10 +19,11 @@ The wrapper loads the existing website, so guest sessions work immediately. Goog
 ## Web bundle updates
 
 Android builds run the root web build automatically and package `dist` as the
-offline baseline. On launch, the app checks `/web-version.json`, downloads only
-changed files into app-private storage, verifies the complete bundle, and uses
-it from the next launch. The previous downloaded bundle is retained for
-rollback.
+offline baseline. Persistent Android background work checks `/web-version.json`,
+downloads only changed files into app-private storage, verifies the complete
+bundle, and uses it from the next launch after the update finishes. The work
+continues if the app is closed, and the previous downloaded bundle is retained
+for rollback.
 
 ## dApp Store release APK
 

@@ -396,7 +396,8 @@ canvas {
   body.game-running.main-menu-active canvas:not(.particle-overlay),
   body.game-running.shop-active canvas:not(.particle-overlay),
   body.game-running.ranking-active canvas:not(.particle-overlay),
-  body.game-running.settings-active canvas:not(.particle-overlay) {
+  body.game-running.settings-active canvas:not(.particle-overlay),
+  body.game-running.panel-screen-active canvas:not(.particle-overlay) {
     top: 0;
     transform: translateX(-50%);
   }
@@ -414,7 +415,8 @@ canvas {
   body.game-running.main-menu-active .particle-overlay,
   body.game-running.shop-active .particle-overlay,
   body.game-running.ranking-active .particle-overlay,
-  body.game-running.settings-active .particle-overlay {
+  body.game-running.settings-active .particle-overlay,
+  body.game-running.panel-screen-active .particle-overlay {
     top: 0;
     transform: translateX(-50%);
   }

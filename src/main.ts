@@ -119,6 +119,7 @@ function syncMobileCanvasCssSize(): void {
   const isRanking = document.body.classList.contains('ranking-active');
   const isSettings = document.body.classList.contains('settings-active');
   const isResults = document.body.classList.contains('results-active');
+  const isPanelScreen = document.body.classList.contains('panel-screen-active');
   const stageWidth = Math.max(Math.floor(viewportWidth), 1);
   const stageHeight = Math.max(
     Math.floor(viewportHeight * (isGameplay ? 0.6 : 1)),
@@ -128,7 +129,12 @@ function syncMobileCanvasCssSize(): void {
   const gameAspect = config.CANVAS_WIDTH / config.CANVAS_HEIGHT;
   const stageAspect = stageWidth / stageHeight;
   const useHeightAsConstraint =
-    ((isMainMenu || isShop || isRanking || isSettings || isResults) &&
+    ((isMainMenu ||
+      isShop ||
+      isRanking ||
+      isSettings ||
+      isResults ||
+      isPanelScreen) &&
       !isGameplay) ||
     stageAspect > gameAspect;
   const width = useHeightAsConstraint ? stageHeight * gameAspect : stageWidth;
@@ -912,25 +918,37 @@ gameLoop.update.addListener((event) => {
 // Presentation: runs exactly once per animation frame.
 gameLoop.render.addListener((event) => {
   stats.begin();
+  const currentSceneType = sceneRouter.getCurrentType();
   document.body.classList.toggle(
     'main-menu-active',
-    sceneRouter.getCurrentType() === GameSceneType.MainMenu,
+    currentSceneType === GameSceneType.MainMenu,
   );
   document.body.classList.toggle(
     'shop-active',
-    sceneRouter.getCurrentType() === GameSceneType.MainShop,
+    currentSceneType === GameSceneType.MainShop,
   );
   document.body.classList.toggle(
     'ranking-active',
-    sceneRouter.getCurrentType() === GameSceneType.MainRanking,
+    currentSceneType === GameSceneType.MainRanking,
   );
   document.body.classList.toggle(
     'settings-active',
-    sceneRouter.getCurrentType() === GameSceneType.SettingsMenu,
+    currentSceneType === GameSceneType.SettingsMenu,
   );
   document.body.classList.toggle(
     'results-active',
-    sceneRouter.getCurrentType() === GameSceneType.LevelScore,
+    currentSceneType === GameSceneType.LevelScore,
+  );
+  document.body.classList.toggle(
+    'panel-screen-active',
+    currentSceneType === GameSceneType.MainAirdrop ||
+      currentSceneType === GameSceneType.MainBoost ||
+      currentSceneType === GameSceneType.MainEvents ||
+      currentSceneType === GameSceneType.MainMore ||
+      currentSceneType === GameSceneType.MainStaking ||
+      currentSceneType === GameSceneType.MainTrading ||
+      currentSceneType === GameSceneType.MainTreasury ||
+      currentSceneType === GameSceneType.MainWiki,
   );
   syncMobileCanvasCssSize();
 

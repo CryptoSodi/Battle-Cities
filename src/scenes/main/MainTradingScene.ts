@@ -1,27 +1,54 @@
 import { TokenCatalogItem, TradingClient } from '../../trading';
 
-import { PanelScene, UI } from './panelUi';
+import { HeadquartersPanelScene, UI } from './panelUi';
 
-// Trade & Boost, shop-styled after the Mattle reference: explanation panel on
-// top, token-to-trait catalog table below with a swap action per row. Swaps
-// stay DEV MOCKS until the BACT testnet mint + Raydium terminal are live —
-// the server still enforces signature idempotency and eligibility.
-export class MainTradingScene extends PanelScene {
+function createDevSignature(): string {
+  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let signature = '';
+  for (let i = 0; i < 44; i += 1) {
+    signature += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return signature;
+}
+
+export class MainTradingScene extends HeadquartersPanelScene {
   private tradingClient = new TradingClient();
   private tokens: TokenCatalogItem[] = [];
   private isLoading = false;
 
-  protected getTitle(): string {
-    return 'Trade and Boost';
+  protected getSectionTitle(): string {
+    return 'Trading';
   }
 
-  protected getTitleIcon(): string {
+  protected getSectionIcon(): string {
     return 'ui.icon.swap';
+  }
+
+  protected getInitialFocusKey(): string {
+    return this.tokens.length > 0 ? `swap-${this.tokens[0].mint}` : 'back';
+  }
+
+  protected getPreferredVerticalNavigationKey(
+    currentKey: string,
+    direction: number,
+  ): string {
+    const firstKey =
+      this.tokens.length > 0 ? `swap-${this.tokens[0].mint}` : null;
+    if (direction > 0 && currentKey === 'back') {
+      return firstKey;
+    }
+    if (direction < 0 && currentKey.startsWith('swap-')) {
+      const index = this.tokens.findIndex(
+        (token) => `swap-${token.mint}` === currentKey,
+      );
+      const columns = this.isMobileLayout() ? 2 : 4;
+      return index >= 0 && index < columns ? 'back' : null;
+    }
+    return null;
   }
 
   protected load(): void {
     this.isLoading = true;
-
     this.tradingClient.listTokens().then((tokens) => {
       this.tokens = tokens.filter((token) => token.group !== 'stable');
       this.isLoading = false;
@@ -30,81 +57,151 @@ export class MainTradingScene extends PanelScene {
   }
 
   protected renderContent(): void {
-    const x = this.pageX;
-    const y = this.pageY;
+    const mobile = this.isMobileLayout();
+    const layout = this.renderHeadquartersFrame(mobile ? 1160 : 720);
+    const { bodyX, bodyY, bodyWidth } = layout;
+    const overviewHeight = mobile ? this.scaleSize(112) : 104;
 
-    // Explanation panel (reference: swap terminal + short explanation).
-    this.addPanel(x, y, UI.WIDTH, 96, UI.PANEL, UI.PANEL_LINE);
-    this.addText(
-      'LISTED TOKENS BOOST SPECIFIC TRAITS VIA TRADING VOLUME.',
-      x + 24,
-      y + 16,
-      UI.WHITE,
-      22,
-      '800',
-      UI.WIDTH - 300,
+    this.addPanel(
+      bodyX,
+      bodyY,
+      bodyWidth,
+      overviewHeight,
+      UI.PAGE,
+      UI.YELLOW_DARK,
     );
     this.addText(
-      'UNLISTED TOKEN VOLUME COMBINES TO BOOST ARMOR. SWAPS RUN ON RAYDIUM.',
-      x + 24,
-      y + 52,
+      'RAYDIUM MARKET BOOSTS',
+      bodyX + this.scaleSize(22),
+      bodyY + this.scaleSize(16),
+      UI.GREEN,
+      this.scaleSize(23),
+      '900',
+      bodyWidth - this.scaleSize(44),
+    );
+    this.addText(
+      'TRADE LISTED ASSETS TO BUILD 30-DAY BATTLE TRAIT BOOSTS.',
+      bodyX + this.scaleSize(22),
+      bodyY + this.scaleSize(51),
       UI.MUTED_LIGHT,
-      20,
+      this.scaleSize(18),
       '700',
-      UI.WIDTH - 300,
+      bodyWidth - this.scaleSize(220),
     );
-    this.addText('DEV MODE', x + UI.WIDTH - 170, y + 32, UI.MUTED, 22, '900', 150, 'center');
+    this.addText(
+      'DEV MODE',
+      bodyX + bodyWidth - this.scaleSize(174),
+      bodyY + this.scaleSize(50),
+      UI.MUTED,
+      this.scaleSize(18),
+      '900',
+      this.scaleSize(150),
+      'center',
+    );
+
+    const headingY = bodyY + overviewHeight + this.scaleSize(24);
+    this.addSectionHeading('Swap Catalog', bodyX, headingY, bodyWidth);
 
     if (this.isLoading) {
-      this.addText('LOADING...', x + 16, y + 140, UI.MUTED_LIGHT, 26, '800', 400);
+      this.addText(
+        'LOADING MARKET...',
+        bodyX,
+        headingY + this.scaleSize(86),
+        UI.MUTED_LIGHT,
+        this.scaleSize(24),
+        '800',
+        bodyWidth,
+        'center',
+      );
       return;
     }
-
-    // Token catalog table.
-    const tableY = y + 128;
-    this.addTableHeader(x, tableY, UI.WIDTH, [
-      { label: 'TOKEN', offset: 24, width: 240 },
-      { label: 'NAME', offset: 280, width: 360 },
-      { label: 'BOOSTS', offset: 680, width: 220 },
-      { label: 'ACTION', offset: UI.WIDTH - 204, width: 180, align: 'right' },
-    ]);
-
     if (this.tokens.length === 0) {
-      this.addText('CATALOG UNAVAILABLE', x + 24, tableY + 72, UI.MUTED_LIGHT, 24, '800', 400);
+      this.addText(
+        'CATALOG UNAVAILABLE',
+        bodyX,
+        headingY + this.scaleSize(86),
+        UI.MUTED_LIGHT,
+        this.scaleSize(24),
+        '800',
+        bodyWidth,
+        'center',
+      );
       return;
     }
+
+    const columns = mobile ? 2 : 4;
+    const gap = mobile ? this.scaleSize(14) : 16;
+    const cardWidth = Math.floor((bodyWidth - gap * (columns - 1)) / columns);
+    const cardHeight = mobile ? this.scaleSize(214) : 208;
+    const gridY = headingY + this.scaleSize(60);
 
     this.tokens.slice(0, 8).forEach((token, index) => {
-      const rowY = tableY + 60 + index * 56;
-      if (index % 2 === 1) {
-        this.addPanel(x, rowY - 10, UI.WIDTH, 52, '#0f0e0a', null);
-      }
-
+      const cardX = bodyX + (index % columns) * (cardWidth + gap);
+      const cardY = gridY + Math.floor(index / columns) * (cardHeight + gap);
+      const padding = this.scaleSize(16);
       const isNative = token.group === 'native';
-      this.addText(token.symbol, x + 24, rowY, isNative ? UI.YELLOW : UI.WHITE, 26, '900', 240);
-      this.addText(token.name, x + 280, rowY + 4, UI.MUTED_LIGHT, 20, '700', 380);
+      const trait =
+        token.trait === 'all'
+          ? 'ALL STATS'
+          : (token.trait || 'armor').toUpperCase();
+
+      this.addPanel(
+        cardX,
+        cardY,
+        cardWidth,
+        cardHeight,
+        UI.CARD,
+        UI.YELLOW_DARK,
+      );
+      this.addPanel(
+        cardX + this.scaleSize(5),
+        cardY + this.scaleSize(5),
+        cardWidth - this.scaleSize(10),
+        this.scaleSize(2),
+        UI.PANEL_LINE,
+        null,
+      );
       this.addText(
-        token.trait === 'all' ? 'ALL STATS' : (token.trait || 'armor').toUpperCase(),
-        x + 680,
-        rowY + 2,
-        isNative ? UI.YELLOW : UI.WHITE,
-        22,
+        token.symbol,
+        cardX + padding,
+        cardY + this.scaleSize(18),
+        isNative ? UI.GREEN : UI.YELLOW,
+        this.scaleSize(27),
+        '900',
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addText(
+        token.name.toUpperCase(),
+        cardX + padding,
+        cardY + this.scaleSize(61),
+        UI.WHITE,
+        this.scaleSize(19),
         '800',
-        220,
+        cardWidth - padding * 2,
+        'center',
+      );
+      this.addText(
+        `BOOSTS  ${trait}`,
+        cardX + padding,
+        cardY + this.scaleSize(102),
+        UI.MUTED_LIGHT,
+        this.scaleSize(19),
+        '800',
+        cardWidth - padding * 2,
+        'center',
       );
       this.addButton(
-        x + UI.WIDTH - 204,
-        rowY - 6,
-        180,
-        44,
+        cardX + this.scaleSize(8),
+        cardY + cardHeight - this.scaleSize(52),
+        cardWidth - this.scaleSize(16),
+        this.scaleSize(44),
         'SWAP $100',
         `swap-${token.mint}`,
-        () => {
-          this.swap(token);
-        },
+        () => this.swap(token),
         false,
-        'normal',
-        20,
+        'purchase',
+        this.scaleSize(20),
       );
     });
   }
@@ -113,7 +210,7 @@ export class MainTradingScene extends PanelScene {
     this.tradingClient
       .verifySwap({
         signature: createDevSignature(),
-        fromMint: 'So11111111111111111111111111111111111111112', // SOL
+        fromMint: 'So11111111111111111111111111111111111111112',
         toMint: token.mint,
         volumeUsd: 100,
       })
@@ -125,15 +222,4 @@ export class MainTradingScene extends PanelScene {
         );
       });
   }
-}
-
-// Dev-mode stand-in for a real transaction signature (base58 alphabet).
-// Replaced by the wallet's actual signature once real swaps exist.
-function createDevSignature(): string {
-  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let signature = '';
-  for (let i = 0; i < 44; i += 1) {
-    signature += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return signature;
 }
