@@ -161,7 +161,7 @@ export class UiIcon extends GameObject {
   protected setup({ spriteLoader }: GameUpdateArgs): void {
     this.painter = new SpritePainter(
       spriteLoader.load(this.spriteId),
-      SpriteAlignment.Stretch,
+      SpriteAlignment.AspectFit,
     );
   }
 }
