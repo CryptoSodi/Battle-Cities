@@ -2,7 +2,9 @@ import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../../wiki';
 
 import { HeadquartersPanelScene, UI } from './panelUi';
 
-const ENTRIES_PER_PAGE = 4;
+const CARD_COLUMNS = 2;
+const DESKTOP_VISIBLE_ROWS = 2;
+const MOBILE_VISIBLE_ROWS = 4;
 
 const ENTRY_ARTWORK: Record<WikiCategory, Record<string, string>> = {
   tanks: {
@@ -37,7 +39,12 @@ const ENTRY_ARTWORK: Record<WikiCategory, Record<string, string>> = {
 
 export class MainWikiScene extends HeadquartersPanelScene {
   private categoryIndex = 0;
-  private page = 0;
+  private readonly scrollRows: Record<WikiCategory, number> = {
+    tanks: 0,
+    weapons: 0,
+    powerups: 0,
+    enemies: 0,
+  };
 
   protected getSectionTitle(): string {
     return 'Field Manual';
@@ -55,17 +62,66 @@ export class MainWikiScene extends HeadquartersPanelScene {
     currentKey: string,
     direction: number,
   ): string {
-    const selectedTab = `tab-${WIKI_CATEGORIES[this.categoryIndex].id}`;
+    const category = WIKI_CATEGORIES[this.categoryIndex];
+    const categoryId = category.id as WikiCategory;
+    const entries = WIKI_ENTRIES[categoryId];
+    const selectedTab = `tab-${category.id}`;
+
     if (direction > 0 && currentKey === 'back') {
       return selectedTab;
     }
     if (direction < 0 && currentKey.startsWith('tab-')) {
       return 'back';
     }
-    if (direction < 0 && currentKey === 'pager') {
+
+    if (direction > 0 && currentKey.startsWith('tab-')) {
+      const firstVisibleIndex = this.scrollRows[categoryId] * CARD_COLUMNS;
+      const firstVisible = entries[firstVisibleIndex];
+      return firstVisible === undefined
+        ? null
+        : this.getEntryKey(firstVisible.slug);
+    }
+
+    const currentIndex = entries.findIndex(
+      (entry) => this.getEntryKey(entry.slug) === currentKey,
+    );
+    if (currentIndex < 0) {
+      return null;
+    }
+
+    const currentRow = Math.floor(currentIndex / CARD_COLUMNS);
+    const currentColumn = currentIndex % CARD_COLUMNS;
+    const nextRow = currentRow + direction;
+    const totalRows = Math.ceil(entries.length / CARD_COLUMNS);
+
+    if (nextRow < 0) {
       return selectedTab;
     }
-    return null;
+    if (nextRow >= totalRows) {
+      return null;
+    }
+
+    const targetIndex = Math.min(
+      entries.length - 1,
+      nextRow * CARD_COLUMNS + currentColumn,
+    );
+    const targetKey = this.getEntryKey(entries[targetIndex].slug);
+    const currentScrollRow = this.scrollRows[categoryId];
+    const visibleRows = this.getVisibleRows();
+    let nextScrollRow = currentScrollRow;
+
+    if (nextRow < currentScrollRow) {
+      nextScrollRow = nextRow;
+    } else if (nextRow >= currentScrollRow + visibleRows) {
+      nextScrollRow = nextRow - visibleRows + 1;
+    }
+
+    if (nextScrollRow !== currentScrollRow) {
+      this.scrollRows[categoryId] = nextScrollRow;
+      this.refresh(targetKey);
+    }
+
+    return targetKey;
   }
 
   protected load(): void {
@@ -89,7 +145,6 @@ export class MainWikiScene extends HeadquartersPanelScene {
         `tab-${category.id}`,
         () => {
           this.categoryIndex = index;
-          this.page = 0;
           this.refresh(`tab-${category.id}`);
         },
         index === this.categoryIndex,
@@ -100,17 +155,28 @@ export class MainWikiScene extends HeadquartersPanelScene {
     });
 
     const category = WIKI_CATEGORIES[this.categoryIndex];
-    const entries = WIKI_ENTRIES[category.id as WikiCategory];
-    const pageCount = Math.max(1, Math.ceil(entries.length / ENTRIES_PER_PAGE));
-    const page = Math.min(this.page, pageCount - 1);
+    const categoryId = category.id as WikiCategory;
+    const entries = WIKI_ENTRIES[categoryId];
+    const visibleRows = mobile ? MOBILE_VISIBLE_ROWS : DESKTOP_VISIBLE_ROWS;
+    const totalRows = Math.ceil(entries.length / CARD_COLUMNS);
+    const maxScrollRow = Math.max(0, totalRows - visibleRows);
+    const scrollRow = Math.min(this.scrollRows[categoryId], maxScrollRow);
+    this.scrollRows[categoryId] = scrollRow;
+    const firstVisibleIndex = scrollRow * CARD_COLUMNS;
     const visible = entries.slice(
-      page * ENTRIES_PER_PAGE,
-      (page + 1) * ENTRIES_PER_PAGE,
+      firstVisibleIndex,
+      firstVisibleIndex + CARD_COLUMNS * visibleRows,
+    );
+    const lastVisibleIndex = Math.min(
+      entries.length,
+      firstVisibleIndex + visible.length,
     );
     const headingY = bodyY + tabHeight + (mobile ? this.scaleSize(24) : 24);
 
     this.addSectionHeading(
-      `${category.label}  ${page + 1}/${pageCount}`,
+      `${category.label}  ${firstVisibleIndex + 1}-${lastVisibleIndex}/${
+        entries.length
+      }`,
       bodyX,
       headingY,
       bodyWidth,
@@ -193,44 +259,27 @@ export class MainWikiScene extends HeadquartersPanelScene {
         '800',
         detailsWidth,
       );
-      this.addPanel(
+      this.addButton(
         cardX + 8,
         cardY + cardHeight - footerHeight - 8,
         cardWidth - 16,
         footerHeight,
-        UI.PRICE,
-        UI.PRICE_BORDER,
-      );
-      this.addText(
         `SOURCE: ${entry.source}`,
-        cardX + 12,
-        cardY + cardHeight - footerHeight + (mobile ? this.scaleSize(1) : 1),
-        UI.PRICE_TEXT,
-        mobile ? this.scaleSize(16) : 17,
-        '800',
-        cardWidth - 24,
-        'center',
-      );
-    });
-
-    if (pageCount > 1) {
-      const pagerWidth = mobile ? this.scaleSize(220) : 220;
-      const pagerY = gridY + cardHeight * 2 + cardGap + 12;
-      this.addButton(
-        bodyX + bodyWidth - pagerWidth,
-        pagerY,
-        pagerWidth,
-        mobile ? this.scaleSize(46) : 46,
-        `NEXT  ${page + 1}/${pageCount}`,
-        'pager',
-        () => {
-          this.page = (this.page + 1) % pageCount;
-          this.refresh('pager');
-        },
+        this.getEntryKey(entry.slug),
+        () => undefined,
         false,
         'purchase',
-        mobile ? this.scaleSize(20) : 21,
+        mobile ? this.scaleSize(16) : 17,
+        true,
       );
-    }
+    });
+  }
+
+  private getEntryKey(slug: string): string {
+    return `entry-${slug}`;
+  }
+
+  private getVisibleRows(): number {
+    return this.isMobileLayout() ? MOBILE_VISIBLE_ROWS : DESKTOP_VISIBLE_ROWS;
   }
 }

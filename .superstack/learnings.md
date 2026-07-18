@@ -18,6 +18,20 @@
 - **Files:** src/scenes/main/panelUi.ts, src/scenes/main/MainShopScene.ts, src/scenes/main/MainRankingScene.ts
 - **Date:** 2026-07-19
 
+### responsive-list-capacity
+- **Insight:** List and card views must use the available screen height before introducing overflow or pagination, with tall Android layouts displaying more rows than compact desktop layouts when space permits.
+- **Confidence:** 10/10
+- **Source:** manual
+- **Files:** src/scenes/main/MainWikiScene.ts
+- **Date:** 2026-07-19
+
+### focus-driven-auto-scroll
+- **Insight:** Directional keypad navigation must reach off-screen list items by automatically scrolling the target row into view while preserving the user's column and focus context; do not use Next-page buttons for this flow.
+- **Confidence:** 10/10
+- **Source:** manual
+- **Files:** src/scenes/main/MainWikiScene.ts, src/scenes/main/panelUi.ts
+- **Date:** 2026-07-19
+
 ## Pitfalls
 
 ### mobile-canvas-width-compensation
