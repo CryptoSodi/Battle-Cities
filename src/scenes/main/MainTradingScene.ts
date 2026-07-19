@@ -2,6 +2,11 @@ import { TokenCatalogItem, TradingClient } from '../../trading';
 
 import { HeadquartersPanelScene, UI } from './panelUi';
 
+const DESKTOP_COLUMNS = 4;
+const DESKTOP_VISIBLE_ROWS = 2;
+const MOBILE_COLUMNS = 2;
+const MOBILE_VISIBLE_ROWS = 4;
+
 function createDevSignature(): string {
   const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   let signature = '';
@@ -15,6 +20,7 @@ export class MainTradingScene extends HeadquartersPanelScene {
   private tradingClient = new TradingClient();
   private tokens: TokenCatalogItem[] = [];
   private isLoading = false;
+  private scrollRow = 0;
 
   protected getSectionTitle(): string {
     return 'Trading';
@@ -32,28 +38,83 @@ export class MainTradingScene extends HeadquartersPanelScene {
     currentKey: string,
     direction: number,
   ): string {
-    const firstKey =
-      this.tokens.length > 0 ? `swap-${this.tokens[0].mint}` : null;
+    const columns = this.getColumnCount();
+    const visibleRows = this.getVisibleRowCount();
+    const firstVisible = this.tokens[this.scrollRow * columns];
     if (direction > 0 && currentKey === 'back') {
-      return firstKey;
+      return firstVisible === undefined ? null : this.getTokenKey(firstVisible);
     }
-    if (direction < 0 && currentKey.startsWith('swap-')) {
-      const index = this.tokens.findIndex(
-        (token) => `swap-${token.mint}` === currentKey,
-      );
-      const columns = this.isMobileLayout() ? 2 : 4;
-      return index >= 0 && index < columns ? 'back' : null;
+
+    const currentIndex = this.tokens.findIndex(
+      (token) => this.getTokenKey(token) === currentKey,
+    );
+    if (currentIndex < 0) {
+      return null;
     }
-    return null;
+
+    const currentRow = Math.floor(currentIndex / columns);
+    const currentColumn = currentIndex % columns;
+    const nextRow = currentRow + direction;
+    const totalRows = Math.ceil(this.tokens.length / columns);
+    if (nextRow < 0) {
+      return 'back';
+    }
+    if (nextRow >= totalRows) {
+      return null;
+    }
+
+    const targetIndex = Math.min(
+      this.tokens.length - 1,
+      nextRow * columns + currentColumn,
+    );
+    const targetKey = this.getTokenKey(this.tokens[targetIndex]);
+    let nextScrollRow = this.scrollRow;
+    if (nextRow < this.scrollRow) {
+      nextScrollRow = nextRow;
+    } else if (nextRow >= this.scrollRow + visibleRows) {
+      nextScrollRow = nextRow - visibleRows + 1;
+    }
+
+    if (nextScrollRow !== this.scrollRow) {
+      this.scrollRow = nextScrollRow;
+      this.refresh(targetKey);
+    }
+
+    return targetKey;
   }
 
   protected load(): void {
     this.isLoading = true;
     this.tradingClient.listTokens().then((tokens) => {
       this.tokens = tokens.filter((token) => token.group !== 'stable');
+      this.scrollRow = 0;
       this.isLoading = false;
       this.refresh();
     });
+  }
+
+  protected handleTouchScroll(direction: number): boolean {
+    if (!this.isMobileLayout()) {
+      return false;
+    }
+
+    const columns = this.getColumnCount();
+    const totalRows = Math.ceil(this.tokens.length / columns);
+    const maxScrollRow = Math.max(0, totalRows - this.getVisibleRowCount());
+    const nextScrollRow = Math.max(
+      0,
+      Math.min(this.scrollRow + direction, maxScrollRow),
+    );
+    if (nextScrollRow === this.scrollRow) {
+      return false;
+    }
+
+    this.scrollRow = nextScrollRow;
+    const firstVisible = this.tokens[nextScrollRow * columns];
+    this.refresh(
+      firstVisible === undefined ? null : this.getTokenKey(firstVisible),
+    );
+    return true;
   }
 
   protected renderContent(): void {
@@ -61,6 +122,16 @@ export class MainTradingScene extends HeadquartersPanelScene {
     const layout = this.renderHeadquartersFrame(mobile ? 1160 : 720);
     const { bodyX, bodyY, bodyWidth } = layout;
     const overviewHeight = mobile ? this.scaleSize(112) : 104;
+    const columns = this.getColumnCount();
+    const visibleRows = this.getVisibleRowCount();
+    const totalRows = Math.ceil(this.tokens.length / columns);
+    const maxScrollRow = Math.max(0, totalRows - visibleRows);
+    this.scrollRow = Math.max(0, Math.min(this.scrollRow, maxScrollRow));
+    const firstVisibleIndex = this.scrollRow * columns;
+    const visibleTokens = this.tokens.slice(
+      firstVisibleIndex,
+      firstVisibleIndex + columns * visibleRows,
+    );
 
     this.addPanel(
       bodyX,
@@ -100,7 +171,17 @@ export class MainTradingScene extends HeadquartersPanelScene {
     );
 
     const headingY = bodyY + overviewHeight + this.scaleSize(24);
-    this.addSectionHeading('Swap Catalog', bodyX, headingY, bodyWidth);
+    const range =
+      this.tokens.length === 0
+        ? '0/0'
+        : `${firstVisibleIndex + 1}-${firstVisibleIndex +
+            visibleTokens.length}/${this.tokens.length}`;
+    this.addSectionHeading(
+      `Swap Catalog  ${range}`,
+      bodyX,
+      headingY,
+      bodyWidth,
+    );
 
     if (this.isLoading) {
       this.addText(
@@ -129,13 +210,12 @@ export class MainTradingScene extends HeadquartersPanelScene {
       return;
     }
 
-    const columns = mobile ? 2 : 4;
     const gap = mobile ? this.scaleSize(14) : 16;
     const cardWidth = Math.floor((bodyWidth - gap * (columns - 1)) / columns);
     const cardHeight = mobile ? this.scaleSize(214) : 208;
     const gridY = headingY + this.scaleSize(60);
 
-    this.tokens.slice(0, 8).forEach((token, index) => {
+    visibleTokens.forEach((token, index) => {
       const cardX = bodyX + (index % columns) * (cardWidth + gap);
       const cardY = gridY + Math.floor(index / columns) * (cardHeight + gap);
       const padding = this.scaleSize(16);
@@ -197,13 +277,25 @@ export class MainTradingScene extends HeadquartersPanelScene {
         cardWidth - this.scaleSize(16),
         this.scaleSize(44),
         'SWAP $100',
-        `swap-${token.mint}`,
+        this.getTokenKey(token),
         () => this.swap(token),
         false,
         'purchase',
         this.scaleSize(20),
       );
     });
+  }
+
+  private getColumnCount(): number {
+    return this.isMobileLayout() ? MOBILE_COLUMNS : DESKTOP_COLUMNS;
+  }
+
+  private getVisibleRowCount(): number {
+    return this.isMobileLayout() ? MOBILE_VISIBLE_ROWS : DESKTOP_VISIBLE_ROWS;
+  }
+
+  private getTokenKey(token: TokenCatalogItem): string {
+    return `swap-${token.mint}`;
   }
 
   private swap(token: TokenCatalogItem): void {

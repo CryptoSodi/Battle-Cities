@@ -426,6 +426,11 @@ export abstract class PanelScene extends GameScene {
     return null;
   }
 
+  protected handleTouchScroll(_direction: number): boolean {
+    void _direction;
+    return false;
+  }
+
   // Optional sprite drawn left of the page title (see data/graphics/ui/).
   protected getTitleIcon(): string {
     return null;
@@ -443,10 +448,16 @@ export abstract class PanelScene extends GameScene {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
-    const { inputManager, pointerClick } = updateArgs;
+    const { inputManager, pointerClick, pointerSwipe } = updateArgs;
     const inputMethod = inputManager.getActiveMethod();
 
-    if (pointerClick !== null && this.handlePointer(pointerClick)) {
+    if (
+      pointerSwipe !== null &&
+      config.isMobileTouchViewport() &&
+      this.handleTouchScroll(pointerSwipe)
+    ) {
+      updateArgs.pointerSwipe = null;
+    } else if (pointerClick !== null && this.handlePointer(pointerClick)) {
       updateArgs.pointerClick = null;
     } else if (inputMethod.isDownAny(MenuInputContext.HorizontalPrev)) {
       this.focusDirection(-1, 0);

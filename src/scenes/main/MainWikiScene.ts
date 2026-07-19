@@ -128,6 +128,31 @@ export class MainWikiScene extends HeadquartersPanelScene {
     this.statusText = '';
   }
 
+  protected handleTouchScroll(direction: number): boolean {
+    if (!this.isMobileLayout()) {
+      return false;
+    }
+
+    const categoryId = WIKI_CATEGORIES[this.categoryIndex].id as WikiCategory;
+    const entries = WIKI_ENTRIES[categoryId];
+    const totalRows = Math.ceil(entries.length / CARD_COLUMNS);
+    const maxScrollRow = Math.max(0, totalRows - this.getVisibleRows());
+    const nextScrollRow = Math.max(
+      0,
+      Math.min(this.scrollRows[categoryId] + direction, maxScrollRow),
+    );
+    if (nextScrollRow === this.scrollRows[categoryId]) {
+      return false;
+    }
+
+    this.scrollRows[categoryId] = nextScrollRow;
+    const firstVisible = entries[nextScrollRow * CARD_COLUMNS];
+    this.refresh(
+      firstVisible === undefined ? null : this.getEntryKey(firstVisible.slug),
+    );
+    return true;
+  }
+
   protected renderContent(): void {
     const layout = this.renderHeadquartersFrame(760);
     const { mobile, bodyX, bodyY, bodyWidth } = layout;

@@ -562,10 +562,16 @@ export class MainShopScene extends GameScene {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
-    const { inputManager, pointerClick } = updateArgs;
+    const { inputManager, pointerClick, pointerSwipe } = updateArgs;
     const inputMethod = inputManager.getActiveMethod();
 
-    if (pointerClick !== null && this.handlePointer(pointerClick)) {
+    if (
+      pointerSwipe !== null &&
+      config.isMobileTouchViewport() &&
+      this.handleCatalogSwipe(pointerSwipe)
+    ) {
+      updateArgs.pointerSwipe = null;
+    } else if (pointerClick !== null && this.handlePointer(pointerClick)) {
       updateArgs.pointerClick = null;
     } else if (inputMethod.isDownAny(MenuInputContext.HorizontalPrev)) {
       this.focusDirection(-1, 0);
@@ -2059,6 +2065,34 @@ export class MainShopScene extends GameScene {
     const itemIndex = Math.min(allItems.length - 1, row * columns + navCol);
     this.catalogScrollRow = nextScrollRow;
     this.renderShop(`catalog:${allItems[itemIndex].id}`);
+    return true;
+  }
+
+  private handleCatalogSwipe(direction: number): boolean {
+    if (this.view !== ShopView.Shop) {
+      return false;
+    }
+
+    const allItems = this.getVisibleCatalogItems();
+    const columns = this.getCatalogColumnCount();
+    const totalRows = Math.ceil(allItems.length / columns);
+    const maxScrollRow = Math.max(
+      0,
+      totalRows - this.getCatalogVisibleRows(),
+    );
+    const nextScrollRow = Math.max(
+      0,
+      Math.min(this.catalogScrollRow + direction, maxScrollRow),
+    );
+    if (nextScrollRow === this.catalogScrollRow) {
+      return false;
+    }
+
+    this.catalogScrollRow = nextScrollRow;
+    const firstVisible = allItems[nextScrollRow * columns];
+    this.renderShop(
+      firstVisible === undefined ? null : `catalog:${firstVisible.id}`,
+    );
     return true;
   }
 

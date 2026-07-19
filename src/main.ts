@@ -206,7 +206,13 @@ document.body.classList.toggle('scanlines-disabled', !showScanlines);
 const inputManager = new InputManager(gameStorage);
 inputManager.listen();
 
+const POINTER_TAP_SLOP = 24;
+const POINTER_SWIPE_THRESHOLD = 48;
+
 let pendingPointerClick: Vector = null;
+let pendingPointerSwipe: number = null;
+let activeCanvasPointerId: number = null;
+let canvasPointerStart: Vector = null;
 // Wall-clock timestamp of the last particle update, for real-time (not fixed
 // sim step) cosmetic animation.
 let lastParticleTime: number = null;
@@ -232,9 +238,60 @@ function getCanvasPointerPosition(event: PointerEvent): Vector {
   return new Vector(x, y);
 }
 
-gameRenderer.getDomElement().addEventListener('pointerdown', (event) => {
+const canvasElement = gameRenderer.getDomElement();
+
+canvasElement.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 || activeCanvasPointerId !== null) {
+    return;
+  }
+
   event.preventDefault();
-  pendingPointerClick = getCanvasPointerPosition(event);
+  activeCanvasPointerId = event.pointerId;
+  canvasPointerStart = getCanvasPointerPosition(event);
+  canvasElement.setPointerCapture(event.pointerId);
+});
+
+canvasElement.addEventListener('pointermove', (event) => {
+  if (event.pointerId === activeCanvasPointerId) {
+    event.preventDefault();
+  }
+});
+
+const finishCanvasPointer = (event: PointerEvent, cancelled = false): void => {
+  if (
+    event.pointerId !== activeCanvasPointerId ||
+    canvasPointerStart === null
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  const end = getCanvasPointerPosition(event);
+  const deltaX = end.x - canvasPointerStart.x;
+  const deltaY = end.y - canvasPointerStart.y;
+  const absoluteX = Math.abs(deltaX);
+  const absoluteY = Math.abs(deltaY);
+
+  if (!cancelled) {
+    if (absoluteY >= POINTER_SWIPE_THRESHOLD && absoluteY > absoluteX * 1.2) {
+      pendingPointerSwipe = deltaY < 0 ? 1 : -1;
+    } else if (absoluteX <= POINTER_TAP_SLOP && absoluteY <= POINTER_TAP_SLOP) {
+      pendingPointerClick = end;
+    }
+  }
+
+  if (canvasElement.hasPointerCapture(event.pointerId)) {
+    canvasElement.releasePointerCapture(event.pointerId);
+  }
+  activeCanvasPointerId = null;
+  canvasPointerStart = null;
+};
+
+canvasElement.addEventListener('pointerup', (event) => {
+  finishCanvasPointer(event);
+});
+canvasElement.addEventListener('pointercancel', (event) => {
+  finishCanvasPointer(event, true);
 });
 
 const mobileGamepadStyle = document.createElement('style');
@@ -587,6 +644,7 @@ const updateArgs: GameUpdateArgs = {
   playerIdentity,
   pointsHighscoreManager,
   pointerClick: null,
+  pointerSwipe: null,
   rng,
   rectFontLoader,
   session,
@@ -901,7 +959,9 @@ gameLoop.update.addListener((event) => {
 
   updateArgs.deltaTime = event.deltaTime;
   updateArgs.pointerClick = pendingPointerClick;
+  updateArgs.pointerSwipe = pendingPointerSwipe;
   pendingPointerClick = null;
+  pendingPointerSwipe = null;
 
   const scene = sceneRouter.getCurrentScene();
   // Snapshot positions before the step moves anything, so the renderer can

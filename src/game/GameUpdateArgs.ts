@@ -39,6 +39,7 @@ export interface GameUpdateArgs {
   playerIdentity: PlayerIdentity;
   pointsHighscoreManager: PointsHighscoreManager;
   pointerClick?: Vector;
+  pointerSwipe?: number;
   rng: Prng;
   rectFontLoader: RectFontLoader;
   session: Session;

@@ -4,7 +4,7 @@ import { RankingClient, RankingResponse, RankingScope } from '../../ranking';
 import { PanelScene, UI } from './panelUi';
 
 const MOBILE_WIDTH = 744;
-const LEADERBOARD_ROWS = 6;
+const FALLBACK_LEADERBOARD_ROWS = 6;
 
 // Responsive Hall of Fame built from the same native-font panels, buttons,
 // focus colors, and arrow navigation as the shop.
@@ -18,6 +18,8 @@ export class MainRankingScene extends PanelScene {
   private data: RankingResponse = null;
   private isLoading = false;
   private loadRequestId = 0;
+  private leaderboardScrollRow = 0;
+  private leaderboardVisibleRows = FALLBACK_LEADERBOARD_ROWS;
 
   protected getTitle(): string {
     return '';
@@ -65,13 +67,48 @@ export class MainRankingScene extends PanelScene {
     ) {
       return this.scope === 'gaming' ? 'tab-gaming' : 'tab-trading';
     }
-    return null;
+
+    if (!currentKey.startsWith('rank-row:') || this.data === null) {
+      return null;
+    }
+
+    const currentIndex = Number(currentKey.slice('rank-row:'.length));
+    if (!Number.isInteger(currentIndex)) {
+      return null;
+    }
+
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0) {
+      return 'season';
+    }
+    if (targetIndex >= this.data.rows.length) {
+      return null;
+    }
+
+    const targetKey = this.getRankRowKey(targetIndex);
+    let nextScrollRow = this.leaderboardScrollRow;
+    if (targetIndex < this.leaderboardScrollRow) {
+      nextScrollRow = targetIndex;
+    } else if (
+      targetIndex >=
+      this.leaderboardScrollRow + this.leaderboardVisibleRows
+    ) {
+      nextScrollRow = targetIndex - this.leaderboardVisibleRows + 1;
+    }
+
+    if (nextScrollRow !== this.leaderboardScrollRow) {
+      this.leaderboardScrollRow = nextScrollRow;
+      this.refresh(targetKey);
+    }
+
+    return targetKey;
   }
 
   protected load(): void {
     const requestId = ++this.loadRequestId;
     this.isLoading = true;
     this.data = null;
+    this.leaderboardScrollRow = 0;
 
     this.rankingClient
       .getRankings(
@@ -101,6 +138,28 @@ export class MainRankingScene extends PanelScene {
 
         this.refresh();
       });
+  }
+
+  protected handleTouchScroll(direction: number): boolean {
+    if (!config.isMobileTouchViewport() || this.data === null) {
+      return false;
+    }
+
+    const maxScrollRow = Math.max(
+      0,
+      this.data.rows.length - this.leaderboardVisibleRows,
+    );
+    const nextScrollRow = Math.max(
+      0,
+      Math.min(this.leaderboardScrollRow + direction, maxScrollRow),
+    );
+    if (nextScrollRow === this.leaderboardScrollRow) {
+      return false;
+    }
+
+    this.leaderboardScrollRow = nextScrollRow;
+    this.refresh(this.getRankRowKey(nextScrollRow));
+    return true;
   }
 
   protected renderContent(): void {
@@ -396,6 +455,13 @@ export class MainRankingScene extends PanelScene {
     width: number,
     mobile: boolean,
   ): void {
+    const rowHeight = mobile ? 92 : 62;
+    const bottomInset = mobile ? 24 : 22;
+    this.leaderboardVisibleRows = Math.max(
+      1,
+      Math.floor((this.root.size.height - y - bottomInset) / rowHeight),
+    );
+
     if (this.isLoading) {
       this.renderLoadingState(x, y, width, mobile);
       return;
@@ -425,16 +491,33 @@ export class MainRankingScene extends PanelScene {
       return;
     }
 
-    const rowHeight = mobile ? 92 : 62;
-    this.data.rows.slice(0, LEADERBOARD_ROWS).forEach((row, index) => {
+    const maxScrollRow = Math.max(
+      0,
+      this.data.rows.length - this.leaderboardVisibleRows,
+    );
+    this.leaderboardScrollRow = Math.max(
+      0,
+      Math.min(this.leaderboardScrollRow, maxScrollRow),
+    );
+    const visibleRows = this.data.rows.slice(
+      this.leaderboardScrollRow,
+      this.leaderboardScrollRow + this.leaderboardVisibleRows,
+    );
+
+    visibleRows.forEach((row, index) => {
+      const rowIndex = this.leaderboardScrollRow + index;
       const rowY = y + index * rowHeight;
-      this.addPanel(
+      this.addButton(
         x,
         rowY,
         width,
         rowHeight - (mobile ? 8 : 2),
-        index % 2 === 0 ? UI.PAGE : UI.PANEL,
-        UI.PANEL_LINE,
+        '',
+        this.getRankRowKey(rowIndex),
+        () => undefined,
+        false,
+        'normal',
+        1,
       );
 
       const rankColor =
@@ -481,7 +564,7 @@ export class MainRankingScene extends PanelScene {
     mobile: boolean,
   ): void {
     const rowHeight = mobile ? 92 : 62;
-    for (let index = 0; index < LEADERBOARD_ROWS; index += 1) {
+    for (let index = 0; index < this.leaderboardVisibleRows; index += 1) {
       this.addPanel(
         x,
         y + index * rowHeight,
@@ -598,6 +681,10 @@ export class MainRankingScene extends PanelScene {
       (candidate) => candidate.id === this.seasonScope,
     );
     return option === undefined ? 'CURRENT' : option.label;
+  }
+
+  private getRankRowKey(index: number): string {
+    return `rank-row:${index}`;
   }
 
   private switchScope(scope: RankingScope): void {
