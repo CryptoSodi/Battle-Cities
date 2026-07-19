@@ -148,6 +148,7 @@ const MOBILE_FILTER_WIDTH = Math.floor(
     FILTER_TAB_COLUMNS,
 );
 const MOBILE_CARD_COLUMNS = 3;
+const MOBILE_CATALOG_VISIBLE_ROWS = 4;
 const MOBILE_CARD_GAP = 12;
 const MOBILE_CARD_WIDTH = Math.floor(
   (MOBILE_INNER_WIDTH - MOBILE_CARD_GAP * (MOBILE_CARD_COLUMNS - 1)) /
@@ -897,17 +898,17 @@ export class MainShopScene extends GameScene {
     });
 
     const allItems = this.getVisibleCatalogItems();
-    const sectionText = new ShopText(
-      `${this.getCategoryTitle()} ${allItems.length === 0 ? '0' : `1-${allItems.length}`}/${allItems.length}`,
-      config.COLOR_WHITE,
-      26,
-      '700',
-      MOBILE_INNER_WIDTH,
-    );
-    sectionText.position.set(x, 458);
-    this.root.add(sectionText);
-
     if (allItems.length === 0) {
+      const sectionText = new ShopText(
+        `${this.getCategoryTitle()} 0/0`,
+        config.COLOR_WHITE,
+        26,
+        '700',
+        MOBILE_INNER_WIDTH,
+      );
+      sectionText.position.set(x, 458);
+      this.root.add(sectionText);
+
       const empty = new ShopText(
         'No items in this category',
         COLOR_MUTED,
@@ -921,10 +922,29 @@ export class MainShopScene extends GameScene {
       return;
     }
 
-    const cardRows = Math.max(
+    const totalRows = Math.max(
       1,
       Math.ceil(allItems.length / MOBILE_CARD_COLUMNS),
     );
+    const maxScrollRow = Math.max(0, totalRows - MOBILE_CATALOG_VISIBLE_ROWS);
+    this.catalogScrollRow = Math.max(0, Math.min(this.catalogScrollRow, maxScrollRow));
+    const firstVisibleIndex = this.catalogScrollRow * MOBILE_CARD_COLUMNS;
+    const visibleItems = allItems.slice(
+      firstVisibleIndex,
+      firstVisibleIndex + MOBILE_CARD_COLUMNS * MOBILE_CATALOG_VISIBLE_ROWS,
+    );
+    const lastVisibleIndex = firstVisibleIndex + visibleItems.length;
+    const sectionText = new ShopText(
+      `${this.getCategoryTitle()} ${firstVisibleIndex + 1}-${lastVisibleIndex}/${allItems.length}`,
+      config.COLOR_WHITE,
+      26,
+      '700',
+      MOBILE_INNER_WIDTH,
+    );
+    sectionText.position.set(x, 458);
+    this.root.add(sectionText);
+
+    const cardRows = Math.min(totalRows, MOBILE_CATALOG_VISIBLE_ROWS);
     const heightBudget =
       this.root.size.height -
       MOBILE_CARDS_Y -
@@ -935,16 +955,17 @@ export class MainShopScene extends GameScene {
       Math.min(MOBILE_CARD_MAX_HEIGHT, Math.floor(heightBudget / cardRows)),
     );
 
-    allItems.forEach((item, index) => {
+    visibleItems.forEach((item, index) => {
+      const itemIndex = firstVisibleIndex + index;
       this.addMobileCatalogCard(
         x + (index % MOBILE_CARD_COLUMNS) * (MOBILE_CARD_WIDTH + MOBILE_CARD_GAP),
         MOBILE_CARDS_Y +
           Math.floor(index / MOBILE_CARD_COLUMNS) *
             (cardHeight + MOBILE_CARD_GAP),
         item,
-        Math.floor(index / MOBILE_CARD_COLUMNS),
-        index % MOBILE_CARD_COLUMNS,
-        index,
+        Math.floor(itemIndex / MOBILE_CARD_COLUMNS),
+        itemIndex % MOBILE_CARD_COLUMNS,
+        itemIndex,
         cardHeight,
       );
     });
@@ -2018,14 +2039,16 @@ export class MainShopScene extends GameScene {
 
   private scrollCatalogToRow(row: number, navCol: number): boolean {
     const allItems = this.getVisibleCatalogItems();
-    const totalRows = Math.max(1, Math.ceil(allItems.length / CARD_COLUMNS));
-    const maxScrollRow = Math.max(0, totalRows - CATALOG_VISIBLE_ROWS);
+    const columns = this.getCatalogColumnCount();
+    const visibleRows = this.getCatalogVisibleRows();
+    const totalRows = Math.max(1, Math.ceil(allItems.length / columns));
+    const maxScrollRow = Math.max(0, totalRows - visibleRows);
     let nextScrollRow = this.catalogScrollRow;
 
     if (row < this.catalogScrollRow) {
       nextScrollRow = row;
-    } else if (row >= this.catalogScrollRow + CATALOG_VISIBLE_ROWS) {
-      nextScrollRow = row - CATALOG_VISIBLE_ROWS + 1;
+    } else if (row >= this.catalogScrollRow + visibleRows) {
+      nextScrollRow = row - visibleRows + 1;
     }
 
     nextScrollRow = Math.max(0, Math.min(nextScrollRow, maxScrollRow));
@@ -2033,10 +2056,20 @@ export class MainShopScene extends GameScene {
       return false;
     }
 
-    const itemIndex = Math.min(allItems.length - 1, row * CARD_COLUMNS + navCol);
+    const itemIndex = Math.min(allItems.length - 1, row * columns + navCol);
     this.catalogScrollRow = nextScrollRow;
     this.renderShop(`catalog:${allItems[itemIndex].id}`);
     return true;
+  }
+
+  private getCatalogColumnCount(): number {
+    return config.isMobileTouchViewport() ? MOBILE_CARD_COLUMNS : CARD_COLUMNS;
+  }
+
+  private getCatalogVisibleRows(): number {
+    return config.isMobileTouchViewport()
+      ? MOBILE_CATALOG_VISIBLE_ROWS
+      : CATALOG_VISIBLE_ROWS;
   }
 
   private focusChildLayer(currentAction: ShopAction, layer: ShopNavLayer): void {
