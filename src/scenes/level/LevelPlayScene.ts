@@ -14,15 +14,16 @@ import {
   EnemyTank,
   GroundField,
   Tank,
+  TerrainTile,
   WallShadowField,
 } from '../../gameObjects';
 import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame, saveReplay } from '../../replay';
 import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
-import { TankDeathReason } from '../../tank';
+import { TankDeathReason, TankTier } from '../../tank';
 import { TerrainFactory, TerrainType } from '../../terrain';
-import { ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
+import { GameObject, ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
 import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
@@ -108,6 +109,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private cameraFocusTimer = new Timer();
   private particles: ParticleSystem;
   private requestHitStop: (seconds: number) => void = () => undefined;
+  private applyingRemoteBoardMutation = false;
 
   private allScripts: LevelScript[] = [];
   private alwaysUpdateScripts: LevelScript[] = [];
@@ -284,6 +286,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           position: tile.position.clone(),
           size: tile.size.clone(),
         });
+        if (
+          !this.applyingRemoteBoardMutation &&
+          !(tile instanceof BrickSuperTerrainTile)
+        ) {
+          updateArgs.magicBlockMovement.recordBoardCellDestroyed(
+            tile.position.x + tile.size.width / 2,
+            tile.position.y + tile.size.height / 2,
+          );
+        }
       });
 
       // Bricks are nested super-tiles: the super-tile's `destroyed` only fires
@@ -292,6 +303,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       if (tile instanceof BrickSuperTerrainTile) {
         tile.subTileDestroyed.addListener((center) => {
           this.spawnDebrisAt(center.x, center.y);
+          if (!this.applyingRemoteBoardMutation) {
+            updateArgs.magicBlockMovement.recordBoardCellDestroyed(
+              center.x,
+              center.y,
+            );
+          }
         });
       }
     }
@@ -453,6 +470,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected update(updateArgs: GameUpdateArgs): void {
     this.session.recordLevelTick();
+    this.applyRemoteBoardMutations(updateArgs);
     const { collisionSystem, gameState } = updateArgs;
     this.zoomOutTimer.update(updateArgs.deltaTime);
     this.cameraFocusTimer.update(updateArgs.deltaTime);
@@ -495,6 +513,53 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     collisionSystem.collide();
     this.clampTanksToFieldBounds();
 
+    if (this.params.replay === undefined) {
+      const playerTanks = this.world.getPlayerTanks();
+      const primaryTank = playerTanks[0];
+      if (updateArgs.magicBlockMovement.isOnlineMatch()) {
+        updateArgs.magicBlockMovement.updateMatch(
+          playerTanks,
+          updateArgs.deltaTime,
+          updateArgs.session.getLevelNumber(),
+          this.world.field.size.width,
+          this.world.field.size.height,
+          this.params.mapConfig.getEnemySpawnPositions(),
+          this.params.mapConfig
+            .getEnemySpawnList()
+            .map((type) => (type.tier === TankTier.B ? 1 : 0)),
+          this.params.mapConfig.getEnemySpawnList().map((type) => {
+            return [TankTier.A, TankTier.B, TankTier.C, TankTier.D].indexOf(
+              type.tier,
+            );
+          }),
+          this.params.mapConfig
+            .getEnemySpawnList()
+            .map((type) => type.hasDrop),
+          this.params.mapConfig.getBasePosition(),
+          this.params.mapConfig.getTerrainRegions(),
+        );
+        this.enemyScript.syncNetworkEnemyCount(
+          updateArgs.magicBlockMovement.getActiveEnemyIds(),
+        );
+        updateArgs.magicBlockMovement.updateEnemies(
+          this.enemyScript.getAliveTanks(),
+          playerTanks,
+          this.params.mapConfig.getBasePosition(),
+          updateArgs.deltaTime,
+        );
+        this.powerupScript.syncNetworkPowerup(
+          updateArgs.magicBlockMovement.getLocalPowerup(),
+        );
+        this.applyLocalMatchEvents(updateArgs);
+      } else if (primaryTank !== undefined && primaryTank !== null) {
+        updateArgs.magicBlockMovement.update(
+          primaryTank,
+          updateArgs.deltaTime,
+          updateArgs.session.getLevelNumber(),
+        );
+      }
+    }
+
     // Enemy replay recording (see the note in setup()): capture each alive
     // enemy's fully-settled position for this tick -- after movement AND
     // collision resolution above, so replay re-enacts exactly what was drawn,
@@ -517,8 +582,86 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     }
   }
 
+  private applyRemoteBoardMutations(updateArgs: GameUpdateArgs): void {
+    const mutations = updateArgs.magicBlockMovement.drainRemoteBoardMutations();
+    mutations.forEach((mutation) => {
+      const tile = this.findTerrainTileAtCell(mutation.x, mutation.y);
+      if (tile === null) {
+        return;
+      }
+      this.applyingRemoteBoardMutation = true;
+      try {
+        tile.destroy();
+      } finally {
+        this.applyingRemoteBoardMutation = false;
+      }
+    });
+  }
+
+  private applyLocalMatchEvents(updateArgs: GameUpdateArgs): void {
+    updateArgs.magicBlockMovement.drainLocalMatchEvents().forEach((event) => {
+      if (event.kind === 'base_died' && !this.session.isGameOver()) {
+        this.handleBaseDied();
+        return;
+      }
+      if (event.kind === 'match_won') {
+        this.handleEnemyAllDied();
+        return;
+      }
+      if (event.kind === 'match_lost' && !this.session.isGameOver()) {
+        this.session.setGameOver();
+        this.pauseScript.disable();
+        this.playerScript.disable();
+        this.gameOverScript.enable();
+        this.winScript.disable();
+        return;
+      }
+      if (event.kind === 'powerup_picked') {
+        this.eventBus.powerupPicked.notify({
+          type: event.powerup,
+          centerPosition: new Vector(event.x + 32, event.y + 32),
+          partyIndex: event.player,
+        });
+      }
+    });
+  }
+
+  private findTerrainTileAtCell(cellX: number, cellY: number): TerrainTile {
+    const find = (
+      node: GameObject,
+      parentX: number,
+      parentY: number,
+    ): TerrainTile => {
+      const x = parentX + node.position.x;
+      const y = parentY + node.position.y;
+      for (const child of node.children) {
+        const found = find(child, x, y);
+        if (found !== null) {
+          return found;
+        }
+      }
+      if (
+        node instanceof TerrainTile &&
+        Math.floor((x + node.size.width / 2) / config.TILE_SIZE_SMALL) === cellX &&
+        Math.floor((y + node.size.height / 2) / config.TILE_SIZE_SMALL) === cellY
+      ) {
+        return node;
+      }
+      return null;
+    };
+
+    for (const child of this.world.field.children) {
+      const tile = find(child, 0, 0);
+      if (tile !== null) {
+        return tile;
+      }
+    }
+    return null;
+  }
+
   private updateCamera(deltaTime: number): void {
-    const targetTank = this.world.getPlayerTanks()[0];
+    const targetTank =
+      this.world.getPlayerTanks()[this.params.localPlayerIndex ?? 0];
     const fieldWidth = this.world.field.size.width;
     const fieldHeight = this.world.field.size.height;
     const viewportWidth =
@@ -553,8 +696,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.world.field.cameraCullPivotY = pivotY;
 
     // Camera target: a temporary focus override (holding on the death blast, or
-    // panning to the destroyed base) takes priority; otherwise follow player 1,
-    // falling back to the spawn point when there is no player tank.
+    // panning to the destroyed base) takes priority; otherwise follow this
+    // client's player, falling back to the spawn point when there is no tank.
     const following =
       this.cameraFocus === null &&
       targetTank !== null &&

@@ -292,13 +292,16 @@ export class Tank extends GameObject {
     this.collideBullets(collision);
   }
 
-  public fire(): boolean {
-    if (this.bullets.length >= this.attributes.bulletMaxCount) {
+  public fire(ignoreLocalLimits = false): boolean {
+    if (
+      !ignoreLocalLimits &&
+      this.bullets.length >= this.attributes.bulletMaxCount
+    ) {
       return;
     }
 
     // Throttle how fast next bullet comes out during rapid fire
-    if (this.lastFireTimer.isActive()) {
+    if (!ignoreLocalLimits && this.lastFireTimer.isActive()) {
       return;
     }
 
@@ -308,7 +311,6 @@ export class Tank extends GameObject {
       this.attributes.bulletTankDamage,
       this.attributes.bulletWallDamage,
     );
-
     // First, add bullet inside a tank and position it at the north center
     // of the tank (where the gun is). Bullet will inherit tank's rotation.
 
@@ -342,9 +344,34 @@ export class Tank extends GameObject {
 
     this.fired.notify(null);
 
-    this.lastFireTimer.reset(this.attributes.bulletRapidFireDelay);
+    if (!ignoreLocalLimits) {
+      this.lastFireTimer.reset(this.attributes.bulletRapidFireDelay);
+    }
 
     return true;
+  }
+
+  public fireFromNetwork(
+    x: number,
+    y: number,
+    rotation: Rotation,
+  ): Bullet {
+    const localPosition = this.position.clone();
+    const localRotation = this.rotation;
+    try {
+      this.position.set(x, y);
+      this.rotation = rotation;
+      this.updateMatrix(true);
+      const bulletCount = this.bullets.length;
+      if (!this.fire(true) || this.bullets.length === bulletCount) {
+        return null;
+      }
+      return this.bullets[this.bullets.length - 1];
+    } finally {
+      this.position.copyFrom(localPosition);
+      this.rotation = localRotation;
+      this.updateMatrix(true);
+    }
   }
 
   public move(deltaTime: number): void {

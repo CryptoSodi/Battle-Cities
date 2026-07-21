@@ -23,14 +23,21 @@ export class LevelLoadScene extends GameScene {
   private log = new Logger(LevelLoadScene.name, Logger.Level.Warn);
   private mapConfig: MapConfig = null;
   private tankSpritesLoaded = false;
+  private isMagicBlockWatcher = false;
+  private isMagicBlockMatch = false;
+  private magicBlockLocalPlayerIndex = 0;
 
   protected setup({
     inputHintSettings,
+    magicBlockMovement,
     mapLoader,
     session,
     spriteLoader,
   }: GameUpdateArgs): void {
     this.inputHintSettings = inputHintSettings;
+    this.isMagicBlockWatcher = magicBlockMovement.isWatching();
+    this.isMagicBlockMatch = magicBlockMovement.isOnlineMatch();
+    this.magicBlockLocalPlayerIndex = magicBlockMovement.getLocalPlayerIndex();
     this.session = session;
 
     const levelNumber = this.session.getLevelNumber();
@@ -93,7 +100,11 @@ export class LevelLoadScene extends GameScene {
       return;
     }
 
-    if (this.inputHintSettings.shouldShowLevelHint()) {
+    if (
+      !this.isMagicBlockWatcher &&
+      !this.isMagicBlockMatch &&
+      this.inputHintSettings.shouldShowLevelHint()
+    ) {
       const params: LevelControlsLocationParams = {
         canSelectVariant: false,
         mapConfig: this.mapConfig,
@@ -105,10 +116,27 @@ export class LevelLoadScene extends GameScene {
 
     this.navigator.replace(GameSceneType.LevelPlay, {
       mapConfig: this.mapConfig,
+      localPlayerIndex: this.isMagicBlockMatch
+        ? this.magicBlockLocalPlayerIndex
+        : 0,
     });
   }
 
   private ensureDefaultMultiplayerInputVariants(): void {
+    if (this.isMagicBlockMatch) {
+      this.session.primaryPlayer.setInputVariant(
+        this.magicBlockLocalPlayerIndex === 0
+          ? InputVariant.SecondaryKeyboard0
+          : InputVariant.TertiaryKeyboard0,
+      );
+      this.session.secondaryPlayer.setInputVariant(
+        this.magicBlockLocalPlayerIndex === 1
+          ? InputVariant.SecondaryKeyboard0
+          : InputVariant.TertiaryKeyboard0,
+      );
+      return;
+    }
+
     if (this.session.primaryPlayer.getInputVariant() === null) {
       this.session.primaryPlayer.setInputVariant(
         InputVariant.SecondaryKeyboard0,

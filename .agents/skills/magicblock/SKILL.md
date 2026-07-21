@@ -40,6 +40,14 @@ the delegation program on base, owned by the original program on the ER endpoint
 returned by router `getDelegationStatus`, and cloned into the ER with
 `delegated=true`.
 
+**Reused delegated gameplay accounts retain state across logical sessions.**
+Before a new match becomes ready, read the account from the router-selected ER
+and align/reset its authoritative state to the new session's spawn/config. Prefer
+one ER-side `reset`/`start_session` instruction with an epoch guard. If the deployed
+program only supports bounded relative updates, apply confirmed, sequence-safe
+steps on the ER until the exact target is reached. Do not hide stale state with a
+render-only client offset. See [delegation.md](delegation.md#reused-delegated-gameplay-accounts-session-alignment).
+
 **MagicIntentBundleBuilder** (SDK 0.11+) is the current way to schedule commit and commit-and-undelegate intents. The free functions `commit_accounts` and `commit_and_undelegate_accounts` are deprecated.
 
 **Private Ephemeral Rollups (PER)** add a permission account that gates who can interact with a delegated account inside a TEE-backed validator. The recommended pattern is to delegate the permission account itself alongside the permissioned account, so member updates execute on the ER in milliseconds instead of base-layer round-trips.
@@ -116,6 +124,8 @@ Always be explicit about:
 - PDA seeds matching between delegate call and account definition
 - Using `skipPreflight: true` for ER transactions
 - Waiting for state propagation after delegate/undelegate
+- Aligning or resetting reused delegated gameplay accounts on the ER before
+  declaring the new session ready or sharing spectator links
 - For Ephemeral SPL Token flows, keeping the `idempotent` mode consistent across delegate/undelegate/withdraw, waiting for undelegation commits before withdrawing, and using `ephemeral-spl-api` exports (not copied bytes or guessed seeds) for direct CPI
 
 ### 4. Debug live delegation/routing failures

@@ -29,6 +29,8 @@ export class Bullet extends GameObject {
   private consumed = false;
   private hitBrickSound: Sound;
   private hitSteelSound: Sound;
+  private networkControlled = false;
+  private networkMovementControlled = false;
 
   constructor(
     ownerPartyIndex: number,
@@ -44,6 +46,16 @@ export class Bullet extends GameObject {
     this.wallDamage = wallDamage;
 
     this.pivot.set(0.5, 0.5);
+  }
+
+  public setNetworkControlled(networkControlled: boolean): void {
+    this.networkControlled = networkControlled;
+    this.networkMovementControlled = networkControlled;
+  }
+
+  public setNetworkCollisionControlled(networkControlled: boolean): void {
+    this.networkControlled = networkControlled;
+    this.networkMovementControlled = false;
   }
 
   protected setup({
@@ -82,12 +94,15 @@ export class Bullet extends GameObject {
     this.updateMatrix();
     const center = this.getCenter();
     emitMuzzleFlash(particles, center.x, center.y, dirX, dirY);
+
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
     this.dirtyPaintBox();
 
-    this.translateY(this.speed * updateArgs.deltaTime);
+    if (!this.networkMovementControlled) {
+      this.translateY(this.speed * updateArgs.deltaTime);
+    }
     this.updateMatrix();
 
     this.collider.update();
@@ -95,6 +110,11 @@ export class Bullet extends GameObject {
   }
 
   protected collide(collision: Collision): void {
+    // Local-server bullets are render replicas. The Rust simulation owns all
+    // hits, terrain damage, and projectile cancellation.
+    if (this.networkControlled) {
+      return;
+    }
     this.collideBullets(collision);
     this.collideWalls(collision);
   }

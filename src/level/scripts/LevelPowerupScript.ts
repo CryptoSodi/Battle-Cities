@@ -6,6 +6,7 @@ import { PowerupFactory, PowerupGrid, PowerupType } from '../../powerup';
 import { PowerupSpawnFrame } from '../../replay';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
+import type { LocalPowerupSnapshot } from '../../network/local';
 
 import { LevelScript } from '../LevelScript';
 import {
@@ -15,6 +16,9 @@ import {
 } from '../events';
 
 export class LevelPowerupScript extends LevelScript {
+  private readonly isLocalServerMatch =
+    new URLSearchParams(window.location.search).get('mode') === 'local';
+  private networkPowerupId: number = null;
   private timer: Timer;
   private activePowerup: Powerup = null;
   private grid: PowerupGrid;
@@ -37,6 +41,33 @@ export class LevelPowerupScript extends LevelScript {
 
   public getRecordedPowerupSpawns(): PowerupSpawnFrame[] {
     return this.recordedPowerupSpawns;
+  }
+
+  public syncNetworkPowerup(snapshot: LocalPowerupSnapshot | null): void {
+    if (!this.isLocalServerMatch) {
+      return;
+    }
+    if (snapshot === null) {
+      if (this.networkPowerupId !== null) {
+        this.revoke();
+        this.networkPowerupId = null;
+      }
+      return;
+    }
+    if (snapshot.id === this.networkPowerupId) {
+      return;
+    }
+    this.revoke();
+    const powerup = PowerupFactory.create(snapshot.kind);
+    powerup.position.set(snapshot.x, snapshot.y);
+    powerup.setNetworkControlled(true);
+    this.activePowerup = powerup;
+    this.networkPowerupId = snapshot.id;
+    this.world.field.add(powerup);
+    this.eventBus.powerupSpawned.notify({
+      type: powerup.type,
+      position: powerup.position.clone(),
+    });
   }
 
   protected setup(updateArgs: GameUpdateArgs): void {
@@ -74,6 +105,9 @@ export class LevelPowerupScript extends LevelScript {
   }
 
   private handleEnemyHit = (event: LevelEnemyHitEvent): void => {
+    if (this.isLocalServerMatch) {
+      return;
+    }
     const { type: tankType } = event;
 
     // Ignore if tank does not have droppable powerup
@@ -88,6 +122,9 @@ export class LevelPowerupScript extends LevelScript {
   private handleEnemySpawnCompleted = (
     event: LevelEnemySpawnCompletedEvent,
   ): void => {
+    if (this.isLocalServerMatch) {
+      return;
+    }
     const { type: tankType } = event;
 
     // Tanks without drops don't affect powerups

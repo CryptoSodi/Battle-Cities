@@ -15,10 +15,27 @@ export class PlayerTankBehavior extends TankBehavior {
   public update(tank: PlayerTank, updateArgs: GameUpdateArgs): void {
     const { deltaTime, inputManager, session } = updateArgs;
 
+    if (tank.partyIndex === 0 && updateArgs.magicBlockMovement.isWatching()) {
+      tank.idle(false);
+      return;
+    }
+
+    if (updateArgs.magicBlockMovement.isRemoteTank(tank.partyIndex)) {
+      tank.idle(false);
+      return;
+    }
+
+    if (updateArgs.magicBlockMovement.isLocalServerMatchWaitingForStart()) {
+      tank.idle(false);
+      return;
+    }
+
     let inputMethod = inputManager.getActiveMethod();
 
-    // If multiplayer - use user-specific input variant based on player index
-    if (session.isMultiplayer()) {
+    // Same-screen multiplayer needs separate input variants. In an online
+    // MagicBlock match each browser owns only one tank, so both player one and
+    // player two must keep that browser's standard controls.
+    if (session.isMultiplayer() && !updateArgs.magicBlockMovement.isOnlineMatch()) {
       const playerSession = session.getPlayer(tank.partyIndex);
       const playerInputVariant = playerSession.getInputVariant();
       inputMethod = inputManager.getMethodByVariant(playerInputVariant);
@@ -31,10 +48,18 @@ export class PlayerTankBehavior extends TankBehavior {
     // can be fixed by adding some post-collide callback and place fire code
     // in there.
     if (inputMethod.isDownAny(LevelPlayInputContext.Fire)) {
-      tank.fire();
+      if (updateArgs.magicBlockMovement.isLocalServerMatch()) {
+        updateArgs.magicBlockMovement.recordLocalFire(tank);
+      } else if (tank.fire()) {
+        updateArgs.magicBlockMovement.recordLocalFire(tank);
+      }
     }
     if (inputMethod.isHoldAny(LevelPlayInputContext.RapidFire)) {
-      tank.fire();
+      if (updateArgs.magicBlockMovement.isLocalServerMatch()) {
+        updateArgs.magicBlockMovement.recordLocalFire(tank);
+      } else if (tank.fire()) {
+        updateArgs.magicBlockMovement.recordLocalFire(tank);
+      }
     }
 
     if (!tank.isSliding() && !tank.isStunned()) {

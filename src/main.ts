@@ -34,7 +34,9 @@ import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
 import { PlayerIdentity } from './auth';
+import { getPhantomProvider } from './wallet';
 import { apiFetch, getApiUrl } from './network/api';
+import { MagicBlockMovementSync } from './network/magicblock';
 
 import * as config from './config';
 
@@ -60,20 +62,6 @@ const googleLoginButton = document.querySelector(
 const authStatusElement = document.querySelector(
   '[data-auth-status]',
 ) as HTMLElement;
-
-type PhantomProvider = {
-  isPhantom?: boolean;
-  connect: () => Promise<{ publicKey: { toString: () => string } }>;
-  signMessage: (
-    message: Uint8Array,
-    display?: string,
-  ) => Promise<{ signature: Uint8Array } | Uint8Array>;
-};
-
-type PhantomWindow = Window & {
-  phantom?: { solana?: PhantomProvider };
-  solana?: PhantomProvider;
-};
 
 const log = new Logger('main', Logger.Level.Debug);
 
@@ -587,6 +575,7 @@ audioManager.loadSettings();
 const session = new Session();
 const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
+const magicBlockMovement = new MagicBlockMovementSync(playerIdentity);
 
 const inputHintSettings = new InputHintSettings(gameStorage);
 
@@ -595,7 +584,24 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
-sceneRouter.start(GameSceneType.MainMenu);
+if (
+  magicBlockMovement.isWatching() ||
+  magicBlockMovement.isOnlineMatch()
+) {
+  const requestedLevel = Number(
+    new URLSearchParams(window.location.search).get('level'),
+  );
+  const levelNumber = Number.isInteger(requestedLevel)
+    ? Math.min(Math.max(requestedLevel, 1), mapLoader.getItemsCount())
+    : 1;
+  if (magicBlockMovement.isOnlineMatch()) {
+    session.setMultiplayer();
+  }
+  session.start(levelNumber, mapLoader.getItemsCount());
+  sceneRouter.start(GameSceneType.LevelLoad);
+} else {
+  sceneRouter.start(GameSceneType.MainMenu);
+}
 sceneRouter.transitionStarted.addListener(() => {
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
@@ -640,6 +646,7 @@ const updateArgs: GameUpdateArgs = {
   inputManager,
   gameState,
   mapLoader,
+  magicBlockMovement,
   particles,
   playerIdentity,
   pointsHighscoreManager,
@@ -681,13 +688,6 @@ function waitForLogin(): Promise<void> {
         walletLoginButton.disabled = busy;
         walletLoginButton.setAttribute('aria-busy', busy ? 'true' : 'false');
       }
-    };
-
-    const getPhantomProvider = (): PhantomProvider | null => {
-      const phantomWindow = window as PhantomWindow;
-      const provider = phantomWindow.phantom?.solana || phantomWindow.solana;
-
-      return provider?.isPhantom === true ? provider : null;
     };
 
     const refreshPlayerIdentity = async (): Promise<void> => {

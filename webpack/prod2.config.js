@@ -1,4 +1,5 @@
-const merge = require('webpack-merge');
+const path = require('path');
+const { merge } = require('webpack-merge');
 
 const baseConfig = require('./local-prod.config');
 
@@ -6,10 +7,12 @@ module.exports = merge(baseConfig, {
   mode: 'production',
 
   devServer: {
-    contentBase: './dist',
+    static: {
+      directory: path.resolve(__dirname, '../dist'),
+    },
     host: '192.168.1.15',
-    https: true,
+    server: 'https',
     port: 8081,
-    public: '192.168.1.15:8081',
+    allowedHosts: 'all',
   },
 });

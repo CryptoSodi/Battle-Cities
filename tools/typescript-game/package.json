@@ -1,8 +1,0 @@
-{
-  "name": "battle-city-typescript-game",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "typescript": "3.7.4"
-  }
-}

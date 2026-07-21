@@ -259,6 +259,112 @@ pub struct UndelegatePrivately<'info> {
 }
 ```
 
+## Reused Delegated Gameplay Accounts: Session Alignment
+
+A delegated account is long-lived state, even when the application calls each
+match, room, or round a new session. Reopening the same PDA does **not** rerun its
+initializer. Its ER copy can therefore begin a new match at the previous match's
+final position, sequence, direction, health, or other gameplay state.
+
+This commonly looks like a networking or interpolation bug: a spectator joins
+the correct ER but renders an object far from its spawn, or the first movement
+of a new match preserves a constant offset. The root cause is stale authoritative
+ER state, not the rendering client.
+
+### Preferred design: reset atomically on the ER
+
+Add an authority-checked `reset` or `start_session` program instruction that:
+
+- runs against the delegated account on the router-selected ER;
+- validates the new spawn/config and any map bounds;
+- resets all session-scoped fields atomically;
+- increments or records a match/session epoch so delayed transactions from the
+  previous session are rejected;
+- preserves fields that are intentionally lifetime-scoped.
+
+Route this instruction to the ER with `skipPreflight: true`, wait for its
+confirmation, refetch and verify the exact state, and only then mark the client
+ready or publish spectator/join links. Commit afterward only if the reset must
+also become visible on base layer; an ER-only reset does not itself require a
+commit.
+
+Match-scoped PDAs are often cleaner when historical sessions must remain
+independent. Reuse a PDA only when the program has an explicit, authorized
+session-transition rule.
+
+### Compatibility fallback: bounded relative alignment
+
+If an already-deployed program exposes only a bounded relative update such as
+`move(direction, distance, sequence)`, align through that instruction instead
+of applying a visual offset. Read the current state from the assigned ER, then
+send confirmed steps no larger than the program's maximum delta until every
+authoritative coordinate equals the new target.
+
+```typescript
+async function alignPosition(
+  state: { x: number; y: number; sequence: number },
+  target: { x: number; y: number },
+): Promise<void> {
+  for (const axis of ['x', 'y'] as const) {
+    while (state[axis] !== target[axis]) {
+      const delta = target[axis] - state[axis];
+      const distance = Math.min(MAX_STEP, Math.abs(delta));
+      const direction = directionFor(axis, Math.sign(delta));
+      const sequence = state.sequence + 1;
+
+      await sendMoveOnAssignedEr({
+        direction,
+        distance,
+        sequence,
+        skipPreflight: true,
+      });
+
+      state[axis] += Math.sign(delta) * distance;
+      state.sequence = sequence;
+    }
+  }
+
+  const verified = await fetchStateFromAssignedEr();
+  if (verified.x !== target.x || verified.y !== target.y) {
+    throw new Error('Delegated account alignment did not reach its target');
+  }
+}
+```
+
+Alignment transactions are normal operations on a delegated account:
+
+- resolve `getDelegationStatus` first and use its `fqdn`;
+- send to the ER, never the base-layer connection;
+- initialize the next sequence from the ER account, not local storage;
+- await each confirmation when instructions require an exact `sequence + 1`;
+- pause gameplay writes until alignment completes;
+- on a sequence conflict, refetch and either retry from authoritative state or
+  abort—never continue from a guessed sequence;
+- verify exact final state before enabling writers or observers.
+
+The relative-update fallback may require many transactions and exposes
+intermediate states. Prefer a single atomic reset instruction in the next
+program upgrade.
+
+### Do not use a client-only offset as the fix
+
+A render-only offset can make one screen look correct while leaving the ER
+state stale. Other players, collision checks, bounds validation, projectiles,
+and newly joined observers will still use the wrong authoritative position.
+Interpolation should smooth verified ER snapshots; it must not redefine their
+coordinate system.
+
+### Minimum regression coverage
+
+Test at least:
+
+1. finish a session away from spawn while leaving the account delegated;
+2. reconnect with the same PDA and start a new session;
+3. verify reset/alignment runs before `Ready`;
+4. assert exact coordinates and a monotonic sequence on the ER;
+5. join an observer after readiness and confirm it needs no local offset;
+6. inject a concurrent/stale sequence and verify refetch-or-abort behavior.
+
 ## Common Gotchas
 
 ### Method Name Convention
@@ -308,6 +414,7 @@ on the ER and confirm in milliseconds.
 - Use dual connections - Base layer for delegate, ER for operations/undelegate
 - Verify delegation status - Check `accountInfo.owner.equals(DELEGATION_PROGRAM_ID)`
 - Wait for state propagation - Add a 3 second sleep after delegate/undelegate in tests before proceeding to the next step
+- Reset or align reused delegated gameplay state on the assigned ER before a new session becomes ready
 - Use `GetCommitmentSignature` - Verify commits reached base layer
 - For PER: delegate the permission account alongside the permissioned account so member updates execute on the ER
 
@@ -319,6 +426,7 @@ on the ER and confirm in milliseconds.
 - Don't skip the `#[commit]` macro - Required for undelegate context
 - Don't call deprecated `commit_accounts` / `commit_and_undelegate_accounts` - Use `MagicIntentBundleBuilder` instead
 - Don't update PER permissions on base layer when the permission account is delegated - Update on the ER for sub-second latency
+- Don't mask stale authoritative gameplay state with a spectator-only or render-only coordinate offset
 
 ## Commit Sponsorship & Fee Vault
 

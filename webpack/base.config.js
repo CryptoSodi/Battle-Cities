@@ -1,7 +1,4 @@
-// `CheckerPlugin` is optional. Use it if you want async error reporting.
-// We need this plugin to detect a `--watch` mode. It may be removed later
-// after https://github.com/webpack/webpack/issues/3460 will be resolved.
-const { CheckerPlugin } = require('awesome-typescript-loader');
+const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
@@ -15,25 +12,33 @@ module.exports = {
 
   resolve: {
     extensions: ['.js', '.ts'],
+    fallback: {
+      buffer: require.resolve('buffer/'),
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+    },
   },
 
   module: {
     rules: [
       {
         test: /\.ts$/,
-        loader: 'awesome-typescript-loader',
-        options: {
-          compiler: 'typescript-game/node_modules/typescript',
-        },
+        exclude: /node_modules/,
+        loader: 'ts-loader',
       },
     ],
   },
 
   plugins: [
-    new CheckerPlugin(),
-    new CopyWebpackPlugin([
-      { from: 'public/' },
-      { from: 'data/', to: 'data/' },
-    ]),
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+      process: 'process/browser',
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'public/', to: '.' },
+        { from: 'data/', to: 'data/' },
+      ],
+    }),
   ],
 };

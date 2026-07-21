@@ -26,14 +26,6 @@ interface ResultPlayer {
   isPrimary: boolean;
 }
 
-interface ResultShareNavigator extends Navigator {
-  share?: (data: {
-    title?: string;
-    text?: string;
-    url?: string;
-  }) => Promise<void>;
-}
-
 export class LevelScoreScene extends PanelScene {
   private session: Session;
   private playerIdentity: PlayerIdentity;
@@ -786,11 +778,9 @@ export class LevelScoreScene extends PanelScene {
     const title = `Battle Cities - Stage ${stage} Results`;
     const text = `${result}! I scored ${score} points and defeated ${defeated}/${total} enemies in ${this.getBattleTime()}.`;
     const url = new URL('/', getApiBaseUrl()).toString();
-    const shareNavigator = navigator as ResultShareNavigator;
-
     try {
-      if (typeof shareNavigator.share === 'function') {
-        await shareNavigator.share({ title, text, url });
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title, text, url });
         this.setStatus('RESULT SHARED');
         return;
       }

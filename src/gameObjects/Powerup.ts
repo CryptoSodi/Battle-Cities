@@ -23,6 +23,7 @@ export class Powerup extends GameObject {
   public picked = new Subject<{ partyIndex: number }>();
   public type: PowerupType;
   private animation: Animation<Sprite>;
+  private networkControlled = false;
 
   constructor(type: PowerupType) {
     super(64, 64);
@@ -34,6 +35,10 @@ export class Powerup extends GameObject {
     this.dirtyPaintBox();
     this.removeSelf();
     this.collider.unregister();
+  }
+
+  public setNetworkControlled(controlled: boolean): void {
+    this.networkControlled = controlled;
   }
 
   protected setup({ collisionSystem, spriteLoader }: GameUpdateArgs): void {
@@ -57,6 +62,9 @@ export class Powerup extends GameObject {
   }
 
   protected collide(collision: Collision): void {
+    if (this.networkControlled) {
+      return;
+    }
     const playerTankContacts = collision.contacts.filter((contact) => {
       return (
         contact.collider.object.tags.includes(Tag.Tank) &&

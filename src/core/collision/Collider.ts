@@ -19,6 +19,10 @@ export abstract class Collider {
   abstract getPrevBox(): BoundingBox;
   abstract getCurrentBox(): BoundingBox;
 
+  public isInitialized(): boolean {
+    return this.getCurrentBox() !== undefined;
+  }
+
   public unregister(): void {
     this.unregisterRequested.notify(null);
   }

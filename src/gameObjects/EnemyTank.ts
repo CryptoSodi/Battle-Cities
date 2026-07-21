@@ -12,6 +12,27 @@ export class EnemyTank extends Tank {
   private healthSkinAnimations = new Map<number, TankSkinAnimation>();
   private hitSound: Sound;
   private dropBlinkElapsed = 0;
+  private networkControlled = false;
+
+  public setNetworkControlled(controlled: boolean): this {
+    this.networkControlled = controlled;
+    return this;
+  }
+
+  public applyNetworkHealth(health: number): void {
+    const wasHit = health < this.attributes.health;
+    this.attributes.health = Math.max(0, health);
+    const animation = this.healthSkinAnimations.get(this.attributes.health);
+    if (animation !== undefined) {
+      this.skinAnimation = animation;
+    }
+    if (wasHit) {
+      this.hit.notify(null);
+      if (this.type.hasDrop) {
+        this.discardDrop();
+      }
+    }
+  }
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { audioLoader, spriteLoader } = updateArgs;
@@ -92,6 +113,9 @@ export class EnemyTank extends Tank {
   }
 
   protected receiveHit(damage: number, hitterPartyIndex: number): void {
+    if (this.networkControlled) {
+      return;
+    }
     super.receiveHit(damage, hitterPartyIndex);
 
     if (!this.isAlive()) {

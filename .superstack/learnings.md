@@ -32,6 +32,13 @@
 - **Files:** src/scenes/main/MainWikiScene.ts, src/scenes/main/panelUi.ts
 - **Date:** 2026-07-19
 
+### android-swipe-scroll
+- **Insight:** Scrollable Android canvas lists must support vertical thumb swipes as well as keypad navigation. A swipe moves one bounded row and must cancel the underlying tap so cards and purchase actions are never triggered during scrolling.
+- **Confidence:** 10/10
+- **Source:** manual
+- **Files:** src/main.ts, src/scenes/main/MainShopScene.ts, src/scenes/main/MainWikiScene.ts, src/scenes/main/MainRankingScene.ts, src/scenes/main/MainTradingScene.ts
+- **Date:** 2026-07-19
+
 ## Pitfalls
 
 ### mobile-canvas-width-compensation

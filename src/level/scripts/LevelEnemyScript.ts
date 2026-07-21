@@ -1,10 +1,15 @@
 import { Subject, Timer, Vector } from '../../core';
+import { DebugLevelEnemyMenu } from '../../debug';
 import { GameUpdateArgs, Rotation } from '../../game';
 import { EnemyTank } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame } from '../../replay';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
-import { AiTankBehavior, RecordedTankBehavior } from '../../tank/behaviors';
+import {
+  AiTankBehavior,
+  RecordedTankBehavior,
+  StandStillTankBehavior,
+} from '../../tank/behaviors';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
@@ -14,6 +19,10 @@ import {
 } from '../events';
 
 export class LevelEnemyScript extends LevelScript {
+  private readonly isMagicBlockMatch =
+    ['match', 'local'].includes(
+      new URLSearchParams(window.location.search).get('mode'),
+    );
   private list: TankType[] = [];
   private listIndex = 0;
   private aliveTanks: EnemyTank[] = [];
@@ -21,6 +30,7 @@ export class LevelEnemyScript extends LevelScript {
   private positionIndex = 0;
   private spawnTimer = new Timer();
   private freezeTimer = new Timer();
+  private debugMovementStopped = false;
   private spawningCount = 0;
   // Dev-only match replay (see src/replay): when set, newly spawned enemies
   // re-enact this recorded movement instead of deciding for themselves (see
@@ -47,6 +57,16 @@ export class LevelEnemyScript extends LevelScript {
     return this.aliveTanks;
   }
 
+  public syncNetworkEnemyCount(activeIds: number[]): void {
+    if (!this.isMagicBlockMatch || activeIds.length === 0) {
+      return;
+    }
+    const desiredCount = Math.max(...activeIds) + 1;
+    while (this.listIndex < desiredCount && this.listIndex < this.list.length) {
+      this.requestSpawn();
+    }
+  }
+
   protected setup(): void {
     this.eventBus.enemySpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
@@ -55,14 +75,30 @@ export class LevelEnemyScript extends LevelScript {
 
     this.positions = this.mapConfig.getEnemySpawnPositions();
 
-    this.spawnTimer.reset(config.ENEMY_FIRST_SPAWN_DELAY);
+    if (!this.isMagicBlockMatch) {
+      this.spawnTimer.reset(config.ENEMY_FIRST_SPAWN_DELAY);
+    }
     this.spawnTimer.done.addListener(this.handleSpawnTimer);
 
     this.freezeTimer.done.addListener(this.handleFreezeTimer);
+
+    if (config.IS_DEV) {
+      const debugMenu = new DebugLevelEnemyMenu({
+        top: 365,
+        left: 0,
+        right: null,
+      });
+      debugMenu.attach();
+      debugMenu.movementToggleRequest.addListener(
+        this.handleDebugMovementToggle,
+      );
+    }
   }
 
   protected update({ deltaTime }: GameUpdateArgs): void {
-    this.spawnTimer.update(deltaTime);
+    if (!this.isMagicBlockMatch) {
+      this.spawnTimer.update(deltaTime);
+    }
     this.freezeTimer.update(deltaTime);
   }
 
@@ -96,11 +132,13 @@ export class LevelEnemyScript extends LevelScript {
       return;
     }
 
-    const behavior =
-      this.replayEnemyTraces !== null
-        ? new RecordedTankBehavior(this.replayEnemyTraces[event.partyIndex] ?? [])
+    const behavior = this.replayEnemyTraces !== null
+      ? new RecordedTankBehavior(this.replayEnemyTraces[event.partyIndex] ?? [])
+      : this.isMagicBlockMatch
+        ? new StandStillTankBehavior()
         : new AiTankBehavior();
     const tank = TankFactory.createEnemy(event.partyIndex, type, behavior);
+    tank.setNetworkControlled(this.isMagicBlockMatch);
     if (tank.behavior instanceof AiTankBehavior) {
       tank.behavior.setBasePosition(this.mapConfig.getBasePosition());
     }
@@ -109,7 +147,7 @@ export class LevelEnemyScript extends LevelScript {
     tank.setCenter(event.centerPosition);
     tank.updateMatrix();
 
-    if (this.freezeTimer.isActive()) {
+    if (this.freezeTimer.isActive() || this.debugMovementStopped) {
       tank.freezeState.set(true);
     }
 
@@ -136,7 +174,7 @@ export class LevelEnemyScript extends LevelScript {
 
       // If timer was stopped because max count of alive enemies has been
       // reached, restart it, because one of alive tanks has just been killed
-      if (!this.spawnTimer.isActive()) {
+      if (!this.isMagicBlockMatch && !this.spawnTimer.isActive()) {
         this.spawnTimer.reset(config.ENEMY_SPAWN_DELAY);
       }
 
@@ -195,7 +233,14 @@ export class LevelEnemyScript extends LevelScript {
 
   private handleFreezeTimer = (): void => {
     this.aliveTanks.forEach((tank) => {
-      tank.freezeState.set(false);
+      tank.freezeState.set(this.debugMovementStopped);
+    });
+  };
+
+  private handleDebugMovementToggle = (stopped: boolean): void => {
+    this.debugMovementStopped = stopped;
+    this.aliveTanks.forEach((tank) => {
+      tank.freezeState.set(stopped || this.freezeTimer.isActive());
     });
   };
 

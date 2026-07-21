@@ -1,4 +1,5 @@
-const merge = require('webpack-merge');
+const path = require('path');
+const { merge } = require('webpack-merge');
 
 require('../server/loadLocalEnv').loadLocalEnv();
 process.env.BATTLECITY_STORAGE_MODE = 'local';
@@ -553,11 +554,26 @@ module.exports = merge(baseConfig, {
   devtool: 'source-map',
 
   devServer: {
-    contentBase: './dist',
+    client: {
+      overlay: false,
+    },
+    static: {
+      directory: path.resolve(__dirname, '../dist'),
+    },
     host: '0.0.0.0',
-    https: true,
-    public: 'localhost:8080',
-    before: attachReplayApi,
-    after: attachReplayApi,
+    server: 'https',
+    allowedHosts: 'all',
+    proxy: [
+      {
+        context: ['/local-game'],
+        target: 'ws://127.0.0.1:8787',
+        ws: true,
+        pathRewrite: { '^/local-game': '/ws' },
+      },
+    ],
+    setupMiddlewares: (middlewares, devServer) => {
+      attachReplayApi(devServer.app);
+      return middlewares;
+    },
   },
 });
