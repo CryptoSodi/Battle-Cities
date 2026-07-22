@@ -31,6 +31,7 @@ export class LevelEnemyScript extends LevelScript {
   private spawnTimer = new Timer();
   private freezeTimer = new Timer();
   private debugMovementStopped = false;
+  private debugPlayerMirrorBulletsHidden = false;
   private spawningCount = 0;
   // Dev-only match replay (see src/replay): when set, newly spawned enemies
   // re-enact this recorded movement instead of deciding for themselves (see
@@ -92,10 +93,17 @@ export class LevelEnemyScript extends LevelScript {
       debugMenu.movementToggleRequest.addListener(
         this.handleDebugMovementToggle,
       );
+      debugMenu.playerMirrorBulletsToggleRequest.addListener(
+        this.handleDebugPlayerMirrorBulletsToggle,
+      );
     }
   }
 
-  protected update({ deltaTime }: GameUpdateArgs): void {
+  protected update(updateArgs: GameUpdateArgs): void {
+    const { deltaTime } = updateArgs;
+    updateArgs.magicBlockMovement.setPlayerMirrorBulletsSuppressed(
+      this.debugPlayerMirrorBulletsHidden,
+    );
     if (!this.isMagicBlockMatch) {
       this.spawnTimer.update(deltaTime);
     }
@@ -242,6 +250,10 @@ export class LevelEnemyScript extends LevelScript {
     this.aliveTanks.forEach((tank) => {
       tank.freezeState.set(stopped || this.freezeTimer.isActive());
     });
+  };
+
+  private handleDebugPlayerMirrorBulletsToggle = (hidden: boolean): void => {
+    this.debugPlayerMirrorBulletsHidden = hidden;
   };
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {

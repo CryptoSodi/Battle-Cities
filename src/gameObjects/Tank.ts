@@ -1011,6 +1011,10 @@ export class Tank extends GameObject {
         return;
       }
 
+      if (bullet.isLocalDamageDisabled()) {
+        return;
+      }
+
       // If tank has shield - swallow the bullet
       if (this.shield !== null) {
         bullet.nullify();

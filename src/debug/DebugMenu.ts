@@ -23,6 +23,7 @@ export class DebugMenu {
     this.container.setAttribute(
       'style',
       `background: white;
+      color: black;
       position: absolute;
       left: ${this.getOffsetStyle(this.options.left)};
       right: ${this.getOffsetStyle(this.options.right)};

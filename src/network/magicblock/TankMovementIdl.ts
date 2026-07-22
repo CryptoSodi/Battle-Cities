@@ -46,6 +46,7 @@ export const TANK_MOVEMENT_IDL: Idl = {
       accounts: [
         { name: 'authority', signer: true, writable: true },
         { name: 'matchState', writable: true },
+        { name: 'terrainState', writable: true },
         { name: 'systemProgram' },
       ],
       args: [
@@ -69,6 +70,7 @@ export const TANK_MOVEMENT_IDL: Idl = {
           name: 'basePosition',
           type: { defined: { name: 'position' } },
         },
+        { name: 'debugDisableEnemyShooting', type: 'bool' },
       ],
     },
     {
@@ -77,11 +79,13 @@ export const TANK_MOVEMENT_IDL: Idl = {
       accounts: [
         { name: 'authority', signer: true },
         { name: 'matchState', writable: true },
+        { name: 'terrainState', writable: true },
       ],
       args: [
         { name: 'matchId', type: 'u64' },
         { name: 'offset', type: 'u16' },
         { name: 'bytes', type: { vec: 'u8' } },
+        { name: 'steelBytes', type: { vec: 'u8' } },
       ],
     },
     {
@@ -90,6 +94,7 @@ export const TANK_MOVEMENT_IDL: Idl = {
       accounts: [
         { name: 'authority', signer: true },
         { name: 'matchState', writable: true },
+        { name: 'terrainState', writable: true },
       ],
       args: [{ name: 'matchId', type: 'u64' }],
     },
@@ -109,11 +114,18 @@ export const TANK_MOVEMENT_IDL: Idl = {
       args: [{ name: 'matchId', type: 'u64' }],
     },
     {
+      name: 'delegateTerrain',
+      discriminator: [176, 150, 146, 191, 249, 190, 114, 14],
+      accounts: [],
+      args: [{ name: 'matchId', type: 'u64' }],
+    },
+    {
       name: 'startMatch',
       discriminator: [100, 246, 223, 181, 176, 101, 255, 19],
       accounts: [
         { name: 'authority', signer: true },
         { name: 'matchState', writable: true },
+        { name: 'terrainState', writable: true },
       ],
       args: [{ name: 'matchId', type: 'u64' }],
     },
@@ -123,6 +135,8 @@ export const TANK_MOVEMENT_IDL: Idl = {
       accounts: [
         { name: 'payer', signer: true, writable: true },
         { name: 'matchState', writable: true },
+        { name: 'terrainState' },
+        { name: 'magicContext', writable: true },
         { name: 'magicProgram' },
       ],
       args: [
@@ -133,7 +147,10 @@ export const TANK_MOVEMENT_IDL: Idl = {
     {
       name: 'tickSimulation',
       discriminator: [131, 24, 16, 152, 73, 152, 89, 63],
-      accounts: [{ name: 'matchState', writable: true }],
+      accounts: [
+        { name: 'matchState', writable: true },
+        { name: 'terrainState' },
+      ],
       args: [
         { name: 'matchId', type: 'u64' },
         { name: 'epoch', type: 'u64' },
@@ -188,6 +205,7 @@ export const TANK_MOVEMENT_IDL: Idl = {
           name: 'boardMutations',
           type: { vec: { defined: { name: 'boardMutation' } } },
         },
+        { name: 'bulletWallDamage', type: 'u8' },
         { name: 'sequence', type: 'u64' },
       ],
     },
@@ -242,6 +260,7 @@ export const TANK_MOVEMENT_IDL: Idl = {
             name: 'direction',
             type: { defined: { name: 'direction' } },
           },
+          { name: 'wallDamage', type: 'u8' },
         ],
       },
     },
@@ -252,6 +271,23 @@ export const TANK_MOVEMENT_IDL: Idl = {
         fields: [
           { name: 'x', type: 'u8' },
           { name: 'y', type: 'u8' },
+        ],
+      },
+    },
+    {
+      name: 'enemyFireEvent',
+      type: {
+        kind: 'struct',
+        fields: [
+          { name: 'sequence', type: 'u64' },
+          { name: 'enemyId', type: 'u16' },
+          { name: 'x', type: 'i32' },
+          { name: 'y', type: 'i32' },
+          {
+            name: 'direction',
+            type: { defined: { name: 'direction' } },
+          },
+          { name: 'simulationTick', type: 'u64' },
         ],
       },
     },

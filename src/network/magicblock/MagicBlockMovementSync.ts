@@ -224,6 +224,10 @@ export class MagicBlockMovementSync {
     return this.localServerMatchSync.getPowerup();
   }
 
+  public setPlayerMirrorBulletsSuppressed(suppressed: boolean): void {
+    this.matchSync.setPlayerMirrorBulletsSuppressed(suppressed);
+  }
+
   public updateMatch(
     tanks: PlayerTank[],
     deltaTime: number,

@@ -1,4 +1,4 @@
-import { Storage } from '../Storage';
+import { Storage } from './Storage';
 
 export class LocalStorage implements Storage {
   private namespace: string;

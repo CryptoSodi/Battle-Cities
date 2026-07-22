@@ -68,6 +68,10 @@ export class BaseHeart extends GameObject {
       const firstBulletContact = bulletContacts[0];
       const bullet = firstBulletContact.collider.object as Bullet;
 
+      if (bullet.isLocalDamageDisabled()) {
+        return;
+      }
+
       bullet.explode();
       this.explode();
     }

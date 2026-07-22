@@ -32,6 +32,9 @@ const PROGRAM_ID = new PublicKey(
 );
 const BASE_RPC = 'https://rpc.magicblock.app/devnet';
 const ROUTER_RPC = 'https://devnet-router.magicblock.app';
+const MAGIC_CONTEXT_ID = new PublicKey(
+  'MagicContext1111111111111111111111111111111',
+);
 const MAINNET_ER_ENDPOINTS = [
   'https://as.magicblock.app',
   'https://eu.magicblock.app',
@@ -39,6 +42,7 @@ const MAINNET_ER_ENDPOINTS = [
   'https://mainnet-tee.magicblock.app',
 ] as const;
 const MATCH_SEED = Buffer.from('match');
+const TERRAIN_SEED = Buffer.from('terrain');
 const SESSION_TARGET_BALANCE = 0.05 * LAMPORTS_PER_SOL;
 const UNITS_PER_PIXEL = 1000 / 64;
 const SEND_INTERVAL_MS = 16;
@@ -57,7 +61,7 @@ const MAX_FIRE_AGE_MS = 500;
 const MATCH_ACCOUNT_BASE_SIZE = 188;
 const INPUT_RECEIPT_SIZE = 113;
 const MAX_PROJECTILES_PER_PLAYER = 4;
-const PROJECTILE_SNAPSHOT_SIZE = 11;
+const PROJECTILE_SNAPSHOT_SIZE = 12;
 const MATCH_ACCOUNT_PROJECTILES_OFFSET =
   MATCH_ACCOUNT_BASE_SIZE + INPUT_RECEIPT_SIZE * 2;
 const MATCH_ACCOUNT_SIZE =
@@ -65,16 +69,26 @@ const MATCH_ACCOUNT_SIZE =
   PROJECTILE_SNAPSHOT_SIZE * MAX_PROJECTILES_PER_PLAYER * 2 +
   2;
 const MAX_BOARD_MUTATIONS = 256;
-const MAX_BOARD_MUTATIONS_PER_BATCH = 16;
 const BOARD_MUTATION_SIZE = 2;
 const MATCH_ACCOUNT_WITH_BOARD_SIZE =
   MATCH_ACCOUNT_SIZE + MAX_BOARD_MUTATIONS * BOARD_MUTATION_SIZE + 2;
+const MAX_ENEMY_FIRE_EVENTS = 16;
+const ENEMY_FIRE_EVENT_SIZE = 27;
+const MATCH_ACCOUNT_ENEMY_FIRE_EVENTS_OFFSET = MATCH_ACCOUNT_WITH_BOARD_SIZE;
+const MATCH_ACCOUNT_WITH_ENEMY_FIRE_EVENTS_SIZE =
+  MATCH_ACCOUNT_ENEMY_FIRE_EVENTS_OFFSET +
+  MAX_ENEMY_FIRE_EVENTS * ENEMY_FIRE_EVENT_SIZE +
+  2 +
+  8;
 const ENEMY_SPAWN_COUNT = 3;
 const MAX_ENEMY_TOTAL = 20;
 const MAX_ACTIVE_ENEMIES = 6;
 const ENEMY_STATE_SIZE = 21;
 const MATCH_ACCOUNT_ENEMIES_OFFSET =
-  MATCH_ACCOUNT_WITH_BOARD_SIZE + ENEMY_SPAWN_COUNT * 8 + 1 + MAX_ENEMY_TOTAL;
+  MATCH_ACCOUNT_WITH_ENEMY_FIRE_EVENTS_SIZE +
+  ENEMY_SPAWN_COUNT * 8 +
+  1 +
+  MAX_ENEMY_TOTAL;
 const MATCH_ACCOUNT_WITH_ENEMIES_SIZE =
   MATCH_ACCOUNT_ENEMIES_OFFSET +
   MAX_ACTIVE_ENEMIES * ENEMY_STATE_SIZE +
@@ -114,6 +128,7 @@ interface MatchAccountState {
   inputReceipts: [MatchInputReceipt, MatchInputReceipt];
   boardMutations: BoardMutation[];
   enemies: MatchEnemySnapshot[];
+  enemyFireEvents: EnemyFireEvent[];
   simulationTick: number;
   tick: number;
 }
@@ -128,6 +143,15 @@ interface MatchEnemySnapshot {
 export interface BoardMutation {
   x: number;
   y: number;
+}
+
+interface EnemyFireEvent {
+  sequence: number;
+  enemyId: number;
+  x: number;
+  y: number;
+  direction: number;
+  simulationTick: number;
 }
 
 interface MatchInputFrame {
@@ -185,6 +209,7 @@ export class MagicBlockMatchSync {
   private state = MatchSyncState.Idle;
   private matchId: number = null;
   private matchPda: PublicKey = null;
+  private terrainPda: PublicKey = null;
   private session: Keypair = null;
   private erConnection: Connection = null;
   private target: MatchAccountState = null;
@@ -196,6 +221,7 @@ export class MagicBlockMatchSync {
   private lastLocalX = 0;
   private lastLocalY = 0;
   private lastSendAt = 0;
+  private localBulletWallDamage = 1;
   private remoteStateInitialized = false;
   private readonly remoteWaypoints: RemoteWaypoint[] = [];
   private lastQueuedRemoteSequence = -1;
@@ -203,9 +229,12 @@ export class MagicBlockMatchSync {
   private localTankWasRemoved = false;
   private pendingRespawnTank: PlayerTank = null;
   private readonly pendingInputFrames: MatchInputFrame[] = [];
-  private readonly pendingBoardMutations: BoardMutation[] = [];
   private readonly knownBoardMutations = new Set<string>();
   private readonly remoteBoardMutations: BoardMutation[] = [];
+  private readonly pendingEnemyFireEvents: EnemyFireEvent[] = [];
+  private readonly debugDisableEnemyShooting: boolean;
+  private playerMirrorBulletsSuppressed = false;
+  private lastEnemyFireSequence = 0;
   private capturedLocalX = 0;
   private capturedLocalY = 0;
   private lastCapturedDirection: number = null;
@@ -223,6 +252,7 @@ export class MagicBlockMatchSync {
     const params = new URLSearchParams(window.location.search);
     this.enabled = params.get('mode') === 'match';
     this.localPlayerIndex = params.get('join') === '1' ? 1 : 0;
+    this.debugDisableEnemyShooting = params.get('debugNoEnemyShooting') === '1';
     this.matchId = this.parseMatchId(params.get('match'));
     if (this.enabled) {
       this.showStatus(
@@ -312,7 +342,14 @@ export class MagicBlockMatchSync {
       this.localTankWasRemoved = false;
     }
 
+    if (this.target.phase !== 1) {
+      this.pendingInputFrames.length = 0;
+      this.applyRemoteState(remoteTank, deltaTime);
+      return;
+    }
+
     this.captureLocalInput(localTank);
+    this.localBulletWallDamage = localTank.attributes.bulletWallDamage;
     this.applyRemoteState(remoteTank, deltaTime);
     this.capturePendingBoardMutations(localTank);
 
@@ -351,19 +388,9 @@ export class MagicBlockMatchSync {
   }
 
   public recordBoardCellDestroyed(centerX: number, centerY: number): void {
-    if (this.state !== MatchSyncState.Ready) {
-      return;
-    }
-    const mutation = {
-      x: Math.floor(centerX / BOARD_CELL_SIZE_PX),
-      y: Math.floor(centerY / BOARD_CELL_SIZE_PX),
-    };
-    const key = this.boardMutationKey(mutation);
-    if (this.knownBoardMutations.has(key)) {
-      return;
-    }
-    this.knownBoardMutations.add(key);
-    this.pendingBoardMutations.push(mutation);
+    // Local bullet terrain damage is cosmetic only. Authoritative board
+    // mutations must come from the ER/server state, otherwise a replayed mirror
+    // bullet can submit the same wall destruction as a second canonical hit.
   }
 
   public drainRemoteBoardMutations(): BoardMutation[] {
@@ -405,10 +432,15 @@ export class MagicBlockMatchSync {
         tank.collider.update();
       }
     });
+    this.applyPendingEnemyFireEvents(tanks);
   }
 
   public getActiveEnemyIds(): number[] {
     return this.target?.enemies.map((enemy) => enemy.id) ?? [];
+  }
+
+  public setPlayerMirrorBulletsSuppressed(suppressed: boolean): void {
+    this.playerMirrorBulletsSuppressed = suppressed;
   }
 
   private getEnemyReplayState(
@@ -552,6 +584,37 @@ export class MagicBlockMatchSync {
     }
   }
 
+  private applyPendingEnemyFireEvents(tanks: EnemyTank[]): void {
+    if (this.pendingEnemyFireEvents.length === 0) {
+      return;
+    }
+    if (this.debugDisableEnemyShooting) {
+      this.pendingEnemyFireEvents.length = 0;
+      return;
+    }
+    const remaining: EnemyFireEvent[] = [];
+    this.pendingEnemyFireEvents.forEach((event) => {
+      const tank = tanks.find(
+        (candidate) =>
+          candidate !== null &&
+          candidate !== undefined &&
+          candidate.partyIndex === event.enemyId,
+      );
+      if (tank === undefined) {
+        remaining.push(event);
+        return;
+      }
+      const bullet = tank.fireFromNetwork(
+        this.fromChainUnits(event.x),
+        this.fromChainUnits(event.y),
+        this.toGameRotation(event.direction),
+      );
+      bullet?.setLocalDamageDisabled(true);
+    });
+    this.pendingEnemyFireEvents.length = 0;
+    this.pendingEnemyFireEvents.push(...remaining);
+  }
+
   private positionAfterMove(
     x: number,
     y: number,
@@ -594,22 +657,26 @@ export class MagicBlockMatchSync {
     }
     if (
       playerTanks.some((playerTank) =>
+        playerTank !== null &&
+        playerTank !== undefined &&
         this.rectsOverlap(
-          x,
-          y,
-          movingTank.size.width,
-          movingTank.size.height,
-          playerTank.position.x,
-          playerTank.position.y,
-          playerTank.size.width,
-          playerTank.size.height,
-        ),
+            x,
+            y,
+            movingTank.size.width,
+            movingTank.size.height,
+            playerTank.position.x,
+            playerTank.position.y,
+            playerTank.size.width,
+            playerTank.size.height,
+          ),
       )
     ) {
       return true;
     }
     return enemyTanks.some((enemyTank) => {
       return (
+        enemyTank !== null &&
+        enemyTank !== undefined &&
         enemyTank !== movingTank &&
         this.rectsOverlap(
           x,
@@ -693,6 +760,7 @@ export class MagicBlockMatchSync {
 
     this.session = this.loadOrCreateSession();
     this.matchPda = this.deriveMatchPda(this.matchId);
+    this.terrainPda = this.deriveTerrainPda(this.matchId);
     await this.fundSession(walletPublicKey);
 
     if (this.localPlayerIndex === 0) {
@@ -743,6 +811,7 @@ export class MagicBlockMatchSync {
       this.state = MatchSyncState.Waiting;
       this.showJoinControl();
       await this.waitForSecondPlayer();
+      await this.delegateTerrain();
       await this.delegateMatch();
     } else if (!account.owner.equals(DELEGATION_PROGRAM_ID)) {
       throw new Error('The match PDA has an unexpected owner.');
@@ -834,6 +903,7 @@ export class MagicBlockMatchSync {
         x: this.toChainUnits(basePosition.x),
         y: this.toChainUnits(basePosition.y),
       },
+      debugDisableEnemyShooting: this.debugDisableEnemyShooting,
     });
     await this.sendWithSession(
       this.baseConnection,
@@ -842,26 +912,29 @@ export class MagicBlockMatchSync {
         keys: [
           { pubkey: this.session.publicKey, isSigner: true, isWritable: true },
           { pubkey: this.matchPda, isSigner: false, isWritable: true },
+          { pubkey: this.terrainPda, isSigner: false, isWritable: true },
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
         ],
         data,
       }),
       false,
+      'createMatch',
     );
-    await this.uploadTerrain(terrain.bytes);
+    await this.uploadTerrain(terrain.bytes, terrain.steelBytes);
   }
 
   private encodeTerrain(
     fieldWidth: number,
     fieldHeight: number,
     regions: TerrainRegionConfig[],
-  ): { width: number; height: number; bytes: Uint8Array } {
+  ): { width: number; height: number; bytes: Uint8Array; steelBytes: Uint8Array } {
     const width = Math.ceil(fieldWidth / BOARD_CELL_SIZE_PX);
     const height = Math.ceil(fieldHeight / BOARD_CELL_SIZE_PX);
     if (width > 108 || height > 108) {
       throw new Error(`Map terrain grid ${width}x${height} exceeds 108x108.`);
     }
     const bytes = new Uint8Array(Math.ceil((width * height) / 8));
+    const steelBytes = new Uint8Array(bytes.length);
     const solidTypes = new Set([
       TerrainType.Brick,
       TerrainType.BrickSuper,
@@ -883,16 +956,22 @@ export class MagicBlockMatchSync {
         for (let x = minX; x < maxX; x += 1) {
           const bitIndex = y * width + x;
           bytes[bitIndex >> 3] |= 1 << (bitIndex & 7);
+          if (region.type === TerrainType.Steel) {
+            steelBytes[bitIndex >> 3] |= 1 << (bitIndex & 7);
+          }
         }
       }
     });
-    return { width, height, bytes };
+    return { width, height, bytes, steelBytes };
   }
 
-  private async uploadTerrain(bytes: Uint8Array): Promise<void> {
+  private async uploadTerrain(bytes: Uint8Array, steelBytes: Uint8Array): Promise<void> {
     for (let offset = 0; offset < bytes.length; offset += TERRAIN_CHUNK_BYTES) {
       const chunk = Array.from(
         bytes.subarray(offset, offset + TERRAIN_CHUNK_BYTES),
+      );
+      const steelChunk = Array.from(
+        steelBytes.subarray(offset, offset + TERRAIN_CHUNK_BYTES),
       );
       await this.sendWithSession(
         this.baseConnection,
@@ -901,14 +980,17 @@ export class MagicBlockMatchSync {
           keys: [
             { pubkey: this.session.publicKey, isSigner: true, isWritable: false },
             { pubkey: this.matchPda, isSigner: false, isWritable: true },
+            { pubkey: this.terrainPda, isSigner: false, isWritable: true },
           ],
           data: this.instructionCoder.encode('initializeTerrainChunk', {
             matchId: new BN(this.matchId),
             offset,
             bytes: chunk,
+            steelBytes: steelChunk,
           }),
         }),
         false,
+        `initializeTerrainChunk(${offset})`,
       );
     }
     await this.sendWithSession(
@@ -918,12 +1000,14 @@ export class MagicBlockMatchSync {
         keys: [
           { pubkey: this.session.publicKey, isSigner: true, isWritable: false },
           { pubkey: this.matchPda, isSigner: false, isWritable: true },
+          { pubkey: this.terrainPda, isSigner: false, isWritable: true },
         ],
         data: this.instructionCoder.encode('finalizeTerrain', {
           matchId: new BN(this.matchId),
         }),
       }),
       false,
+      'finalizeTerrain',
     );
     this.log.info(`Uploaded ${bytes.length} bytes of authoritative terrain.`);
   }
@@ -942,6 +1026,7 @@ export class MagicBlockMatchSync {
         }),
       }),
       false,
+      'joinMatch',
     );
   }
 
@@ -986,6 +1071,41 @@ export class MagicBlockMatchSync {
         }),
       }),
       false,
+      'delegateMatch',
+    );
+  }
+
+  private async delegateTerrain(): Promise<void> {
+    const buffer = delegateBufferPdaFromDelegatedAccountAndOwnerProgram(
+      this.terrainPda,
+      PROGRAM_ID,
+    );
+    const delegationRecord = delegationRecordPdaFromDelegatedAccount(
+      this.terrainPda,
+    );
+    const delegationMetadata = delegationMetadataPdaFromDelegatedAccount(
+      this.terrainPda,
+    );
+    await this.sendWithSession(
+      this.baseConnection,
+      new TransactionInstruction({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: this.session.publicKey, isSigner: true, isWritable: true },
+          { pubkey: buffer, isSigner: false, isWritable: true },
+          { pubkey: delegationRecord, isSigner: false, isWritable: true },
+          { pubkey: delegationMetadata, isSigner: false, isWritable: true },
+          { pubkey: this.terrainPda, isSigner: false, isWritable: true },
+          { pubkey: PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: DELEGATION_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ],
+        data: this.instructionCoder.encode('delegateTerrain', {
+          matchId: new BN(this.matchId),
+        }),
+      }),
+      false,
+      'delegateTerrain',
     );
   }
 
@@ -997,12 +1117,14 @@ export class MagicBlockMatchSync {
         keys: [
           { pubkey: this.session.publicKey, isSigner: true, isWritable: false },
           { pubkey: this.matchPda, isSigner: false, isWritable: true },
+          { pubkey: this.terrainPda, isSigner: false, isWritable: true },
         ],
         data: this.instructionCoder.encode('startMatch', {
           matchId: new BN(this.matchId),
         }),
       }),
       true,
+      'startMatch',
     );
   }
 
@@ -1014,6 +1136,8 @@ export class MagicBlockMatchSync {
         keys: [
           { pubkey: this.session.publicKey, isSigner: true, isWritable: true },
           { pubkey: this.matchPda, isSigner: false, isWritable: true },
+          { pubkey: this.terrainPda, isSigner: false, isWritable: false },
+          { pubkey: MAGIC_CONTEXT_ID, isSigner: false, isWritable: true },
           { pubkey: MAGIC_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         data: this.instructionCoder.encode('scheduleMatchCrank', {
@@ -1022,6 +1146,7 @@ export class MagicBlockMatchSync {
         }),
       }),
       true,
+      'scheduleMatchCrank',
     );
     this.log.info('Scheduled authoritative enemy crank at 20 Hz.');
   }
@@ -1073,8 +1198,11 @@ export class MagicBlockMatchSync {
     this.capturedLocalY = this.lastLocalY;
     this.remoteWaypoints.length = 0;
     this.lastQueuedRemoteSequence = -1;
+    this.pendingEnemyFireEvents.length = 0;
+    this.lastEnemyFireSequence = 0;
     this.queueRemoteSnapshot(this.target.players[1 - this.localPlayerIndex]);
     this.queueBoardMutations(this.target.boardMutations);
+    this.queueEnemyFireEvents(this.target.enemyFireEvents);
     this.state = MatchSyncState.Ready;
     this.joinButtonElement?.remove();
     this.joinButtonElement = null;
@@ -1120,12 +1248,8 @@ export class MagicBlockMatchSync {
   }
 
   private capturePendingBoardMutations(tank: PlayerTank): void {
-    if (
-      this.pendingBoardMutations.length > 0 &&
-      this.pendingInputFrames.length === 0
-    ) {
-      this.enqueueInputFrame(this.fromGameRotation(tank.rotation), 0);
-    }
+    // Board mutations are no longer client-authoritative. Keep this hook as a
+    // no-op so callers do not force empty movement sends for cosmetic damage.
   }
 
   private enqueueInputFrame(
@@ -1207,10 +1331,7 @@ export class MagicBlockMatchSync {
           )
         : 0,
     }));
-    const boardMutations = this.pendingBoardMutations.splice(
-      0,
-      MAX_BOARD_MUTATIONS_PER_BATCH,
-    );
+    const boardMutations: BoardMutation[] = [];
     const nextSequence = this.sequence + 1;
     this.sending = true;
     this.lastSendAt = Date.now();
@@ -1238,6 +1359,7 @@ export class MagicBlockMatchSync {
             })),
             projectiles: [],
             boardMutations,
+            bulletWallDamage: this.localBulletWallDamage,
             sequence: new BN(nextSequence),
           }),
         }),
@@ -1247,10 +1369,12 @@ export class MagicBlockMatchSync {
       this.sequence = nextSequence;
     } catch (error) {
       const accepted = await this.recoverInputBatch(nextSequence);
+      if (accepted) {
+        return;
+      }
       const rejected = (error as Error).message.startsWith('Transaction failed');
       if (!accepted && !rejected) {
         this.pendingInputFrames.unshift(...frames);
-        this.pendingBoardMutations.unshift(...boardMutations);
       }
       throw error;
     } finally {
@@ -1262,6 +1386,10 @@ export class MagicBlockMatchSync {
     try {
       const next = await this.fetchMatchState(this.erConnection);
       this.updateTarget(next);
+      if (next.phase !== 1) {
+        this.pendingInputFrames.length = 0;
+        return true;
+      }
       const local = next.players[this.localPlayerIndex];
       if (local.sequence < attemptedSequence) {
         return false;
@@ -1329,6 +1457,9 @@ export class MagicBlockMatchSync {
   private applyRemoteState(tank: PlayerTank, deltaTime: number): void {
     if (tank === null || tank === undefined) {
       return;
+    }
+    if (this.playerMirrorBulletsSuppressed) {
+      tank.bullets.slice().forEach((bullet) => bullet.nullify());
     }
     if (this.remoteWaypoints.length === 0) {
       return;
@@ -1414,6 +1545,7 @@ export class MagicBlockMatchSync {
   private updateTarget(next: MatchAccountState): void {
     this.target = next;
     this.queueBoardMutations(next.boardMutations);
+    this.queueEnemyFireEvents(next.enemyFireEvents);
     if (this.state === MatchSyncState.Ready) {
       const remoteIndex = 1 - this.localPlayerIndex;
       this.queueRemoteReceipt(
@@ -1431,6 +1563,16 @@ export class MagicBlockMatchSync {
       }
       this.knownBoardMutations.add(key);
       this.remoteBoardMutations.push(mutation);
+    });
+  }
+
+  private queueEnemyFireEvents(events: EnemyFireEvent[]): void {
+    events.forEach((event) => {
+      if (event.sequence <= this.lastEnemyFireSequence) {
+        return;
+      }
+      this.pendingEnemyFireEvents.push(event);
+      this.lastEnemyFireSequence = event.sequence;
     });
   }
 
@@ -1528,11 +1670,15 @@ export class MagicBlockMatchSync {
     tank.position.set(waypoint.x, waypoint.y);
     tank.rotation = this.toGameRotation(waypoint.direction);
     if (waypoint.fire) {
+      if (this.playerMirrorBulletsSuppressed) {
+        return;
+      }
       const bullet = tank.fireFromNetwork(
         waypoint.x,
         waypoint.y,
         this.toGameRotation(waypoint.direction),
       );
+      bullet?.setLocalDamageDisabled(true);
     }
   }
 
@@ -1667,6 +1813,10 @@ export class MagicBlockMatchSync {
         data.length >= MATCH_ACCOUNT_WITH_ENEMIES_SIZE
           ? this.decodeEnemies(data)
           : [],
+      enemyFireEvents:
+        data.length >= MATCH_ACCOUNT_WITH_ENEMY_FIRE_EVENTS_SIZE
+          ? this.decodeEnemyFireEvents(data)
+          : [],
       simulationTick:
         data.length >= MATCH_ACCOUNT_WITH_ENEMIES_SIZE
           ? this.readU64(
@@ -1695,6 +1845,29 @@ export class MagicBlockMatchSync {
       });
     }
     return enemies;
+  }
+
+  private decodeEnemyFireEvents(data: Buffer): EnemyFireEvent[] {
+    const countOffset =
+      MATCH_ACCOUNT_ENEMY_FIRE_EVENTS_OFFSET +
+      MAX_ENEMY_FIRE_EVENTS * ENEMY_FIRE_EVENT_SIZE;
+    const count = Math.min(MAX_ENEMY_FIRE_EVENTS, data.readUInt16LE(countOffset));
+    const events: EnemyFireEvent[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const offset =
+        MATCH_ACCOUNT_ENEMY_FIRE_EVENTS_OFFSET + index * ENEMY_FIRE_EVENT_SIZE;
+      events.push({
+        sequence: this.readU64(data, offset),
+        enemyId: data.readUInt16LE(offset + 8),
+        x: data.readInt32LE(offset + 10),
+        y: data.readInt32LE(offset + 14),
+        direction: data.readUInt8(offset + 18),
+        simulationTick: this.readU64(data, offset + 19),
+      });
+    }
+    return events
+      .filter((event) => event.sequence > 0)
+      .sort((first, second) => first.sequence - second.sequence);
   }
 
   private decodeBoardMutations(data: Buffer): BoardMutation[] {
@@ -1808,6 +1981,7 @@ export class MagicBlockMatchSync {
     connection: Connection,
     instruction: TransactionInstruction,
     skipPreflight: boolean,
+    label = 'transaction',
   ): Promise<string> {
     const commitment = skipPreflight ? 'processed' : 'confirmed';
     const latest = await connection.getLatestBlockhash(commitment);
@@ -1826,7 +2000,7 @@ export class MagicBlockMatchSync {
     );
     if (confirmation.value.err !== null) {
       throw new Error(
-        `Transaction failed: ${JSON.stringify(confirmation.value.err)}`,
+        `${label} failed (${signature}): ${JSON.stringify(confirmation.value.err)}`,
       );
     }
     return signature;
@@ -1835,6 +2009,13 @@ export class MagicBlockMatchSync {
   private deriveMatchPda(matchId: number): PublicKey {
     return PublicKey.findProgramAddressSync(
       [MATCH_SEED, new BN(matchId).toArrayLike(Buffer, 'le', 8)],
+      PROGRAM_ID,
+    )[0];
+  }
+
+  private deriveTerrainPda(matchId: number): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [TERRAIN_SEED, new BN(matchId).toArrayLike(Buffer, 'le', 8)],
       PROGRAM_ID,
     )[0];
   }
@@ -2087,7 +2268,10 @@ export class MagicBlockMatchSync {
   }
 
   private toGameRotation(direction: number): Rotation {
-    return [Rotation.Up, Rotation.Right, Rotation.Down, Rotation.Left][direction];
+    return (
+      [Rotation.Up, Rotation.Right, Rotation.Down, Rotation.Left][direction] ??
+      Rotation.Down
+    );
   }
 
   private fromGameRotation(rotation: Rotation): number {

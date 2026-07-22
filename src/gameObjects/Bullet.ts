@@ -31,6 +31,7 @@ export class Bullet extends GameObject {
   private hitSteelSound: Sound;
   private networkControlled = false;
   private networkMovementControlled = false;
+  private localDamageDisabled = false;
 
   constructor(
     ownerPartyIndex: number,
@@ -56,6 +57,14 @@ export class Bullet extends GameObject {
   public setNetworkCollisionControlled(networkControlled: boolean): void {
     this.networkControlled = networkControlled;
     this.networkMovementControlled = false;
+  }
+
+  public setLocalDamageDisabled(disabled: boolean): void {
+    this.localDamageDisabled = disabled;
+  }
+
+  public isLocalDamageDisabled(): boolean {
+    return this.localDamageDisabled;
   }
 
   protected setup({
