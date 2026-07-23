@@ -934,6 +934,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (event.reason === TankDeathReason.WipeoutPowerup) {
       return;
     }
+    if (event.hitterPartyIndex === null || event.hitterPartyIndex === undefined) {
+      return;
+    }
 
     const playerSession = this.session.getPlayer(event.hitterPartyIndex);
 

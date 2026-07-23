@@ -59,13 +59,25 @@ export class LevelEnemyScript extends LevelScript {
   }
 
   public syncNetworkEnemyCount(activeIds: number[]): void {
-    if (!this.isMagicBlockMatch || activeIds.length === 0) {
+    if (!this.isMagicBlockMatch) {
+      return;
+    }
+    const activeIdSet = new Set(activeIds);
+    this.aliveTanks
+      .filter((tank) => !activeIdSet.has(tank.partyIndex))
+      .forEach((tank) => this.removeNetworkEnemy(tank));
+
+    if (activeIds.length === 0) {
       return;
     }
     const desiredCount = Math.max(...activeIds) + 1;
     while (this.listIndex < desiredCount && this.listIndex < this.list.length) {
       this.requestSpawn();
     }
+  }
+
+  private removeNetworkEnemy(tank: EnemyTank): void {
+    tank.die(TankDeathReason.Bullet);
   }
 
   protected setup(): void {

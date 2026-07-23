@@ -866,12 +866,9 @@ export class MagicBlockMatchSync {
     this.showStatus('Joined; waiting for player one to start...');
     const delegation = await this.waitForDelegation();
     await this.connectToEr(delegation);
-    for (let attempt = 0; attempt < 120 && this.target.phase !== 1; attempt += 1) {
+    while (this.target.phase !== 1) {
       await this.delay(500);
       this.updateTarget(await this.fetchMatchState(this.erConnection));
-    }
-    if (this.target.phase !== 1) {
-      throw new Error('Timed out waiting for the match to start.');
     }
     this.finishReady();
   }
@@ -1070,14 +1067,13 @@ export class MagicBlockMatchSync {
   }
 
   private async waitForSecondPlayer(): Promise<void> {
-    for (let attempt = 0; attempt < 120; attempt += 1) {
+    while (true) {
       const state = await this.fetchMatchState(this.baseConnection);
       if (state.players[1].joined) {
         return;
       }
       await this.delay(1000);
     }
-    throw new Error('Timed out waiting for player two.');
   }
 
   private async delegateMatch(): Promise<void> {
