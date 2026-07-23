@@ -2,25 +2,6 @@ import { Rotation } from '../../game';
 import { TankState } from '../../gameObjects';
 import { TankTier } from '../../tank';
 
-interface PeerConnection {
-  on(eventName: string, callback: (event?: any) => void): void;
-  close(): void;
-  send(data: any): void;
-  open?: boolean;
-}
-
-interface PeerInstance {
-  on(eventName: string, callback: (event?: any) => void): void;
-  connect?(peerId: string): PeerConnection;
-  destroy?(): void;
-  disconnected?: boolean;
-  destroyed?: boolean;
-}
-
-interface PeerConstructor {
-  new (id?: string): PeerInstance;
-}
-
 export interface WebRtcGhostTankSnapshot {
   partyIndex: number;
   x: number;
@@ -40,15 +21,52 @@ interface WebRtcGhostPacket {
   tank: WebRtcGhostTankSnapshot;
 }
 
-const PEER_JS_URL = 'https://unpkg.com/peerjs@1.4.7/dist/peerjs.js';
+interface SignalCode {
+  type: 'battlecity-ghost-signal';
+  version: 1;
+  room: string;
+  signalSessionId: string;
+  createdAt: number;
+  fromPlayerIndex: number;
+  description: RTCSessionDescriptionInit;
+}
+
+export type WebRtcGhostSignalKind = 'offer' | 'answer';
+
+export interface WebRtcGhostSignalTransport {
+  publishSignal(code: string, kind: WebRtcGhostSignalKind): Promise<void>;
+  subscribe(
+    callback: (code: string, kind: WebRtcGhostSignalKind) => void,
+  ): () => void;
+}
+
+interface GhostMirrorConsoleApi {
+  createOfferCode(): Promise<string>;
+  pasteOfferCode(code: string): Promise<string>;
+  pasteAnswerCode(code: string): Promise<void>;
+  close(): void;
+  status(): {
+    enabled: boolean;
+    room: string;
+    localPlayerIndex: number;
+    connected: boolean;
+    channelState: string;
+  };
+}
+
+declare global {
+  interface Window {
+    battleCityGhostMirror?: GhostMirrorConsoleApi;
+  }
+}
+
 const GHOST_PARAM = 'ghostMirror';
 const GHOST_PARAM_LOWERCASE = 'ghostmirror';
 const GHOST_PARAM_LEGACY_TYPO = 'ghosmirror';
 const MATCH_PARAM = 'match';
-const PEER_PREFIX = 'battlecity-ghost';
 const BROADCAST_PREFIX = 'battlecity-ghost-channel';
-const RECONNECT_MS = 1000;
-const PEER_RESTART_MS = 1500;
+const DATA_CHANNEL_LABEL = 'battlecity-ghost';
+const RECONNECT_DELAY_MS = 1500;
 
 function log(message: string, data?: any): void {
   if (data === undefined) {
@@ -59,21 +77,6 @@ function log(message: string, data?: any): void {
   console.log(`[webrtc-ghost] ${message}`, data);
 }
 
-function loadScript(src: string, globalName: string): Promise<any> {
-  const existingGlobal = window[globalName];
-  if (existingGlobal !== undefined) {
-    return Promise.resolve(existingGlobal);
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.onload = () => resolve(window[globalName]);
-    script.onerror = reject;
-    script.src = src;
-    document.body.appendChild(script);
-  });
-}
-
 function normalizeRoom(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
 }
@@ -82,8 +85,59 @@ function isEnabledValue(value: string): boolean {
   return value === '' || value === '1' || value === 'true';
 }
 
-function getPeerId(room: string, playerIndex: number): string {
-  return `${PEER_PREFIX}-${room}-player-${playerIndex}`;
+function encodeSignalCode(signal: SignalCode): string {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(signal))));
+}
+
+function decodeSignalCode(code: string): SignalCode {
+  const signal = JSON.parse(
+    decodeURIComponent(escape(atob(code.trim()))),
+  ) as SignalCode;
+
+  if (
+    signal?.type !== 'battlecity-ghost-signal' ||
+    signal.version !== 1 ||
+    signal.description === undefined
+  ) {
+    throw new Error('Invalid ghost mirror signal code.');
+  }
+
+  return signal;
+}
+
+function createPeerConnection(): RTCPeerConnection {
+  return new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  });
+}
+
+function createSignalSessionId(room: string, playerIndex: number): string {
+  const bytes = new Uint8Array(8);
+  window.crypto.getRandomValues(bytes);
+  return `${room}-${playerIndex}-${Date.now()}-${Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')}`;
+}
+
+function waitForIceGatheringComplete(
+  peerConnection: RTCPeerConnection,
+): Promise<void> {
+  if (peerConnection.iceGatheringState === 'complete') {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const listener = (): void => {
+      if (peerConnection.iceGatheringState !== 'complete') {
+        return;
+      }
+
+      peerConnection.removeEventListener('icegatheringstatechange', listener);
+      resolve();
+    };
+
+    peerConnection.addEventListener('icegatheringstatechange', listener);
+  });
 }
 
 export class WebRtcGhostSync {
@@ -92,21 +146,23 @@ export class WebRtcGhostSync {
   private enabled = false;
   private room = '';
   private localPlayerIndex = 0;
-  private Peer: PeerConstructor = null;
-  private peer: PeerInstance = null;
-  private localPeerId = '';
-  private remotePeerId = '';
   private connected = false;
   private startPromise: Promise<void> = null;
-  private connections: PeerConnection[] = [];
+  private peerConnection: RTCPeerConnection = null;
+  private dataChannel: RTCDataChannel = null;
   private broadcastChannel: BroadcastChannel = null;
   private latestSnapshot: WebRtcGhostTankSnapshot = null;
   private seq = 0;
   private lastReceivedSeq = 0;
   private lastSendLogAt = 0;
   private lastReceiveLogAt = 0;
+  private signalTransport: WebRtcGhostSignalTransport = null;
+  private unsubscribeSignalTransport: (() => void) = null;
+  private activeOfferSessionId = '';
+  private acceptedAnswerSessionId = '';
+  private readonly answeredOfferSessionIds = new Set<string>();
   private reconnectTimer: number = null;
-  private peerRestartTimer: number = null;
+  private publishingOffer = false;
 
   public static getInstance(): WebRtcGhostSync {
     if (WebRtcGhostSync.instance === null) {
@@ -134,6 +190,7 @@ export class WebRtcGhostSync {
     this.room = this.enabled ? matchRoom : '';
     this.localPlayerIndex = localPlayerIndex;
     this.configureBroadcastChannel();
+    this.configureConsoleApi();
   }
 
   public isEnabled(): boolean {
@@ -160,10 +217,6 @@ export class WebRtcGhostSync {
     }
 
     this.start();
-    if (this.connections.length === 0) {
-      return;
-    }
-
     const packet: WebRtcGhostPacket = {
       type: 'battlecity-ghost',
       seq: ++this.seq,
@@ -174,30 +227,24 @@ export class WebRtcGhostSync {
 
     this.broadcastChannel?.postMessage(packet);
 
+    if (
+      this.dataChannel === null ||
+      this.dataChannel.readyState !== 'open'
+    ) {
+      return;
+    }
+
     const now = Date.now();
     if (now - this.lastSendLogAt > 1000) {
       this.lastSendLogAt = now;
       log('snapshot sent', {
         player: tank.partyIndex,
         seq: packet.seq,
-        peerConnections: this.connections.length,
-        openPeerConnections: this.connections.filter(
-          (connection) => connection.open === true,
-        ).length,
+        channelState: this.dataChannel.readyState,
       });
     }
 
-    this.connections = this.connections.filter((connection) => {
-      if (connection.open !== true) {
-        return true;
-      }
-      try {
-        connection.send(packet);
-        return true;
-      } catch {
-        return false;
-      }
-    });
+    this.dataChannel.send(JSON.stringify(packet));
   }
 
   public getLatestSnapshot(): WebRtcGhostTankSnapshot {
@@ -208,146 +255,215 @@ export class WebRtcGhostSync {
     return this.latestSnapshot;
   }
 
+  public setSignalTransport(transport: WebRtcGhostSignalTransport): void {
+    this.unsubscribeSignalTransport?.();
+    this.signalTransport = transport;
+    this.unsubscribeSignalTransport = transport.subscribe((code, kind) => {
+      this.handleTransportSignal(code, kind);
+    });
+    this.startTransportSignaling();
+  }
+
+  public async createOfferCode(): Promise<string> {
+    this.assertEnabled();
+    this.activeOfferSessionId = createSignalSessionId(
+      this.room,
+      this.localPlayerIndex,
+    );
+    this.acceptedAnswerSessionId = '';
+    this.resetPeerConnection();
+
+    const peerConnection = this.ensurePeerConnection();
+    const dataChannel = peerConnection.createDataChannel(DATA_CHANNEL_LABEL, {
+      ordered: true,
+    });
+    this.attachDataChannel(dataChannel);
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    await waitForIceGatheringComplete(peerConnection);
+
+    const code = this.createSignalCode(
+      peerConnection.localDescription,
+      this.activeOfferSessionId,
+    );
+    log('offer code created', {
+      room: this.room,
+      localPlayerIndex: this.localPlayerIndex,
+      signalSessionId: this.activeOfferSessionId,
+    });
+
+    return code;
+  }
+
+  public async pasteOfferCode(code: string): Promise<string> {
+    this.assertEnabled();
+    const signal = decodeSignalCode(code);
+    this.validateSignal(signal, 'offer');
+    this.resetPeerConnection();
+
+    const peerConnection = this.ensurePeerConnection();
+    await peerConnection.setRemoteDescription(signal.description);
+
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    await waitForIceGatheringComplete(peerConnection);
+
+    const answerCode = this.createSignalCode(
+      peerConnection.localDescription,
+      signal.signalSessionId,
+    );
+    log('answer code created', {
+      room: this.room,
+      localPlayerIndex: this.localPlayerIndex,
+      remotePlayerIndex: signal.fromPlayerIndex,
+      signalSessionId: signal.signalSessionId,
+    });
+
+    return answerCode;
+  }
+
+  public async pasteAnswerCode(code: string): Promise<void> {
+    this.assertEnabled();
+    const signal = decodeSignalCode(code);
+    this.validateSignal(signal, 'answer');
+
+    if (this.peerConnection === null) {
+      throw new Error('Create an offer code before pasting an answer code.');
+    }
+    if (signal.signalSessionId !== this.activeOfferSessionId) {
+      throw new Error('Answer code does not match the active offer.');
+    }
+
+    await this.peerConnection.setRemoteDescription(signal.description);
+    log('answer code accepted', {
+      room: this.room,
+      localPlayerIndex: this.localPlayerIndex,
+      remotePlayerIndex: signal.fromPlayerIndex,
+      signalSessionId: signal.signalSessionId,
+    });
+  }
+
   private async startInternal(): Promise<void> {
-    this.localPeerId = getPeerId(this.room, this.localPlayerIndex);
-    this.remotePeerId = getPeerId(this.room, 1 - this.localPlayerIndex);
-    this.Peer = (await loadScript(PEER_JS_URL, 'Peer')) as PeerConstructor;
-
-    this.createPeer();
+    this.configureConsoleApi();
+    log('manual signaling ready', {
+      room: this.room,
+      localPlayerIndex: this.localPlayerIndex,
+      api: 'window.battleCityGhostMirror',
+    });
+    this.startTransportSignaling();
   }
 
-  private createPeer(): void {
-    if (!this.isEnabled() || this.Peer === null) {
+  private startTransportSignaling(): void {
+    if (
+      !this.isEnabled() ||
+      this.signalTransport === null
+    ) {
       return;
     }
 
-    this.closeConnections();
-    this.connected = false;
-    this.peer = new this.Peer(this.localPeerId);
+    if (this.localPlayerIndex !== 0) {
+      log('waiting for MagicBlock offer');
+      return;
+    }
 
-    this.peer.on('open', () => {
-      log('open', {
-        room: this.room,
-        localPlayerIndex: this.localPlayerIndex,
-        localPeerId: this.localPeerId,
-        remotePeerId: this.remotePeerId,
-      });
-      this.connectToRemote();
-    });
-
-    this.peer.on('connection', (connection: PeerConnection) => {
-      this.handleConnection(connection);
-    });
-
-    this.peer.on('error', (event) => {
-      log('peer error', event);
-      console.error(event);
-      if (event?.type === 'peer-unavailable') {
-        this.scheduleReconnect();
-      } else {
-        this.schedulePeerRestart();
-      }
-    });
-
-    this.peer.on('disconnected', () => {
-      log('peer disconnected');
-      this.schedulePeerRestart();
-    });
+    this.startOfferCycle('initial');
   }
 
-  private connectToRemote(): void {
-    if (this.peer === null || this.connected) {
-      return;
-    }
-    if (this.peer.destroyed === true || this.peer.disconnected === true) {
-      this.schedulePeerRestart();
-      return;
-    }
-
+  private async handleTransportSignal(
+    code: string,
+    kind: WebRtcGhostSignalKind,
+  ): Promise<void> {
     try {
-      const connection = this.peer.connect(this.remotePeerId);
-      this.handleConnection(connection);
-    } catch (error) {
-      log('connect failed', error);
-      this.schedulePeerRestart();
-    }
-  }
-
-  private handleConnection(connection: PeerConnection): void {
-    if (this.connections.includes(connection)) {
-      return;
-    }
-
-    this.connections.push(connection);
-
-    connection.on('open', () => {
-      this.connected = true;
-      this.clearReconnect();
-      log('connected', {
-        room: this.room,
-        localPlayerIndex: this.localPlayerIndex,
-      });
-    });
-
-    connection.on('data', (data) => {
-      if (data?.type !== 'battlecity-ghost') {
+      const signal = decodeSignalCode(code);
+      if (kind === 'offer') {
+        if (
+          this.localPlayerIndex !== 1 ||
+          signal.description.type !== 'offer' ||
+          this.answeredOfferSessionIds.has(signal.signalSessionId)
+        ) {
+          return;
+        }
+        const answer = await this.pasteOfferCode(code);
+        await this.publishTransportSignal(answer, 'answer');
+        this.answeredOfferSessionIds.add(signal.signalSessionId);
         return;
       }
-      this.acceptPacket(data);
-    });
 
-    connection.on('close', () => {
-      this.connections = this.connections.filter((item) => item !== connection);
-      this.connected = this.connections.some((item) => item.open === true);
-      if (!this.connected) {
-        this.scheduleReconnect();
+      if (
+        this.localPlayerIndex !== 0 ||
+        signal.description.type !== 'answer' ||
+        signal.signalSessionId !== this.activeOfferSessionId ||
+        signal.signalSessionId === this.acceptedAnswerSessionId ||
+        this.peerConnection === null
+      ) {
+        return;
       }
-    });
+      await this.pasteAnswerCode(code);
+      this.acceptedAnswerSessionId = signal.signalSessionId;
+    } catch (error) {
+      log('MagicBlock signal handling failed', error);
+    }
+  }
 
-    connection.on('error', () => {
-      this.connections = this.connections.filter((item) => item !== connection);
-      this.connected = this.connections.some((item) => item.open === true);
-      if (!this.connected) {
+  private async publishTransportSignal(
+    code: string,
+    kind: WebRtcGhostSignalKind,
+  ): Promise<void> {
+    if (this.signalTransport === null) {
+      return;
+    }
+
+    await this.signalTransport.publishSignal(code, kind);
+    log(`MagicBlock ${kind} published`);
+  }
+
+  private startOfferCycle(reason: string): void {
+    if (
+      this.localPlayerIndex !== 0 ||
+      this.signalTransport === null ||
+      this.publishingOffer
+    ) {
+      return;
+    }
+
+    this.publishingOffer = true;
+    this.clearReconnectTimer();
+    this.createOfferCode()
+      .then((code) => this.publishTransportSignal(code, 'offer'))
+      .then(() => {
+        log('MagicBlock offer cycle started', {
+          reason,
+          signalSessionId: this.activeOfferSessionId,
+        });
+      })
+      .catch((error) => {
+        log('MagicBlock offer cycle failed', error);
         this.scheduleReconnect();
-      }
-    });
+      })
+      .finally(() => {
+        this.publishingOffer = false;
+      });
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectTimer !== null) {
+    if (
+      this.localPlayerIndex !== 0 ||
+      this.signalTransport === null ||
+      this.reconnectTimer !== null
+    ) {
       return;
     }
 
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null;
       if (!this.connected) {
-        if (this.peer?.destroyed === true || this.peer?.disconnected === true) {
-          this.schedulePeerRestart();
-        } else {
-          this.connectToRemote();
-        }
+        this.startOfferCycle('reconnect');
       }
-    }, RECONNECT_MS);
+    }, RECONNECT_DELAY_MS);
   }
 
-  private schedulePeerRestart(): void {
-    if (this.peerRestartTimer !== null) {
-      return;
-    }
-
-    this.closeConnections();
-    this.clearReconnect();
-
-    this.peerRestartTimer = window.setTimeout(() => {
-      this.peerRestartTimer = null;
-      if (!this.connected) {
-        this.peer?.destroy?.();
-        this.createPeer();
-      }
-    }, PEER_RESTART_MS);
-  }
-
-  private clearReconnect(): void {
+  private clearReconnectTimer(): void {
     if (this.reconnectTimer === null) {
       return;
     }
@@ -356,16 +472,150 @@ export class WebRtcGhostSync {
     this.reconnectTimer = null;
   }
 
-  private closeConnections(): void {
-    this.connections.forEach((connection) => {
-      try {
-        connection.close();
-      } catch {
-        return;
+  private ensurePeerConnection(): RTCPeerConnection {
+    if (this.peerConnection !== null) {
+      return this.peerConnection;
+    }
+
+    const peerConnection = createPeerConnection();
+    this.peerConnection = peerConnection;
+
+    peerConnection.ondatachannel = (event): void => {
+      this.attachDataChannel(event.channel);
+    };
+
+    peerConnection.onconnectionstatechange = (): void => {
+      this.connected = peerConnection.connectionState === 'connected';
+      log('peer connection state', {
+        state: peerConnection.connectionState,
+        iceState: peerConnection.iceConnectionState,
+      });
+      if (
+        peerConnection.connectionState === 'failed' ||
+        peerConnection.connectionState === 'disconnected'
+      ) {
+        this.connected = false;
+        this.scheduleReconnect();
       }
+    };
+
+    peerConnection.oniceconnectionstatechange = (): void => {
+      this.connected = peerConnection.iceConnectionState === 'connected';
+      log('ice connection state', {
+        state: peerConnection.iceConnectionState,
+      });
+      if (
+        peerConnection.iceConnectionState === 'failed' ||
+        peerConnection.iceConnectionState === 'disconnected'
+      ) {
+        this.connected = false;
+        this.scheduleReconnect();
+      }
+    };
+
+    return peerConnection;
+  }
+
+  private attachDataChannel(dataChannel: RTCDataChannel): void {
+    this.dataChannel = dataChannel;
+
+    dataChannel.onopen = (): void => {
+      this.connected = true;
+      this.clearReconnectTimer();
+      log('data channel open', {
+        room: this.room,
+        localPlayerIndex: this.localPlayerIndex,
+      });
+    };
+
+    dataChannel.onmessage = (event): void => {
+      try {
+        this.acceptPacket(JSON.parse(event.data));
+      } catch (error) {
+        log('data channel packet parse failed', error);
+      }
+    };
+
+    dataChannel.onclose = (): void => {
+      this.connected = false;
+      log('data channel closed');
+      this.scheduleReconnect();
+    };
+
+    dataChannel.onerror = (event): void => {
+      log('data channel error', event);
+      this.scheduleReconnect();
+    };
+  }
+
+  private createSignalCode(
+    description: RTCSessionDescription | RTCSessionDescriptionInit,
+    signalSessionId: string,
+  ): string {
+    if (description === null || description === undefined) {
+      throw new Error('Missing local WebRTC description.');
+    }
+
+    return encodeSignalCode({
+      type: 'battlecity-ghost-signal',
+      version: 1,
+      room: this.room,
+      signalSessionId,
+      createdAt: Date.now(),
+      fromPlayerIndex: this.localPlayerIndex,
+      description: {
+        type: description.type,
+        sdp: description.sdp,
+      },
     });
-    this.connections = [];
+  }
+
+  private validateSignal(signal: SignalCode, expectedType: RTCSdpType): void {
+    if (signal.room !== this.room) {
+      throw new Error(
+        `Signal code is for room ${signal.room}, current room is ${this.room}.`,
+      );
+    }
+    if (signal.fromPlayerIndex === this.localPlayerIndex) {
+      throw new Error('Signal code was created by this same player.');
+    }
+    if (signal.description.type !== expectedType) {
+      throw new Error(
+        `Expected ${expectedType} code, got ${signal.description.type}.`,
+      );
+    }
+    if (
+      typeof signal.signalSessionId !== 'string' ||
+      signal.signalSessionId === ''
+    ) {
+      throw new Error('Signal code is missing signalSessionId.');
+    }
+  }
+
+  private resetPeerConnection(): void {
+    this.clearReconnectTimer();
+    if (this.dataChannel !== null) {
+      this.dataChannel.onopen = null;
+      this.dataChannel.onmessage = null;
+      this.dataChannel.onclose = null;
+      this.dataChannel.onerror = null;
+      this.dataChannel.close();
+    }
+    if (this.peerConnection !== null) {
+      this.peerConnection.ondatachannel = null;
+      this.peerConnection.onconnectionstatechange = null;
+      this.peerConnection.oniceconnectionstatechange = null;
+      this.peerConnection.close();
+    }
+    this.dataChannel = null;
+    this.peerConnection = null;
     this.connected = false;
+  }
+
+  private assertEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new Error('Ghost mirror is not enabled. Add ghostMirror=1.');
+    }
   }
 
   private configureBroadcastChannel(): void {
@@ -386,6 +636,29 @@ export class WebRtcGhostSync {
       room: this.room,
       localPlayerIndex: this.localPlayerIndex,
     });
+  }
+
+  private configureConsoleApi(): void {
+    if (!this.isEnabled()) {
+      if (window.battleCityGhostMirror !== undefined) {
+        delete window.battleCityGhostMirror;
+      }
+      return;
+    }
+
+    window.battleCityGhostMirror = {
+      createOfferCode: () => this.createOfferCode(),
+      pasteOfferCode: (code: string) => this.pasteOfferCode(code),
+      pasteAnswerCode: (code: string) => this.pasteAnswerCode(code),
+      close: () => this.resetPeerConnection(),
+      status: () => ({
+        enabled: this.isEnabled(),
+        room: this.room,
+        localPlayerIndex: this.localPlayerIndex,
+        connected: this.connected,
+        channelState: this.dataChannel?.readyState ?? 'none',
+      }),
+    };
   }
 
   private acceptPacket(data: any): void {
