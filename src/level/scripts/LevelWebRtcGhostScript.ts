@@ -17,6 +17,7 @@ export class LevelWebRtcGhostScript extends LevelScript {
   private observedTanks = new WeakSet<PlayerTank>();
   private lastRemoteFireSeq = new Map<number, number>();
   private lastServerSnapshot: WebRtcGhostTankSnapshot = null;
+  private serverPathBulletsBefore: unknown[] = [];
   private mirrorX = 0;
   private mirrorY = 0;
   private hasMirrorPosition = false;
@@ -45,6 +46,7 @@ export class LevelWebRtcGhostScript extends LevelScript {
       return;
     }
 
+    this.serverPathBulletsBefore = remoteTank.bullets.slice();
     this.applySnapshotToTank(remoteTank, this.lastServerSnapshot, false);
   }
 
@@ -58,7 +60,8 @@ export class LevelWebRtcGhostScript extends LevelScript {
       return;
     }
 
-    this.updateServerGhost(remoteTank);
+    const ghost = this.updateServerGhost(remoteTank);
+    this.replaceServerBulletsWithGhostBullets(remoteTank, ghost);
     this.lastServerSnapshot = this.createSnapshot(
       remoteTank,
       remoteTank.partyIndex,
@@ -152,7 +155,7 @@ export class LevelWebRtcGhostScript extends LevelScript {
     return ghost;
   }
 
-  private updateServerGhost(remoteTank: PlayerTank): void {
+  private updateServerGhost(remoteTank: PlayerTank): GhostTank {
     const ghost = this.getGhost(remoteTank.partyIndex);
     ghost.applySnapshot(
       remoteTank.position.x,
@@ -161,6 +164,23 @@ export class LevelWebRtcGhostScript extends LevelScript {
       remoteTank.state,
       remoteTank.type.tier,
     );
+
+    return ghost;
+  }
+
+  private replaceServerBulletsWithGhostBullets(
+    remoteTank: PlayerTank,
+    ghost: GhostTank,
+  ): void {
+    const serverBullets = remoteTank.bullets.filter((bullet) => {
+      return !this.serverPathBulletsBefore.includes(bullet);
+    });
+
+    serverBullets.forEach((bullet) => {
+      bullet.nullify();
+      ghost.spawnGhostFire();
+    });
+    this.serverPathBulletsBefore = remoteTank.bullets.slice();
   }
 
   private applySnapshotToTank(
