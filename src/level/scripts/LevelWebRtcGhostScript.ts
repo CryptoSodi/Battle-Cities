@@ -6,6 +6,7 @@ import { TankTier } from '../../tank';
 import { LevelScript } from '../LevelScript';
 
 const SEND_INTERVAL_SECONDS = 1 / 20;
+const MIRROR_SMOOTHING = 0.45;
 
 export class LevelWebRtcGhostScript extends LevelScript {
   private sync = WebRtcGhostSync.getInstance();
@@ -15,6 +16,10 @@ export class LevelWebRtcGhostScript extends LevelScript {
   private localFireSeq = 0;
   private observedTanks = new WeakSet<PlayerTank>();
   private lastRemoteFireSeq = new Map<number, number>();
+  private lastServerSnapshot: WebRtcGhostTankSnapshot = null;
+  private mirrorX = 0;
+  private mirrorY = 0;
+  private hasMirrorPosition = false;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.localPlayerIndex = updateArgs.magicBlockMovement.getLocalPlayerIndex();
@@ -28,7 +33,37 @@ export class LevelWebRtcGhostScript extends LevelScript {
     }
 
     this.updateSource(deltaTime);
-    this.updateMirror();
+  }
+
+  public prepareRemoteTankForServerPath(): void {
+    if (!this.sync.isEnabled() || this.lastServerSnapshot === null) {
+      return;
+    }
+
+    const remoteTank = this.world.getPlayerTanks()[1 - this.localPlayerIndex];
+    if (remoteTank === null || remoteTank === undefined) {
+      return;
+    }
+
+    this.applySnapshotToTank(remoteTank, this.lastServerSnapshot, false);
+  }
+
+  public switchRemoteTankCommandPath(): void {
+    if (!this.sync.isEnabled()) {
+      return;
+    }
+
+    const remoteTank = this.world.getPlayerTanks()[1 - this.localPlayerIndex];
+    if (remoteTank === null || remoteTank === undefined) {
+      return;
+    }
+
+    this.updateServerGhost(remoteTank);
+    this.lastServerSnapshot = this.createSnapshot(
+      remoteTank,
+      remoteTank.partyIndex,
+    );
+    this.updateMirrorTankFromWebRtc(remoteTank);
   }
 
   private updateSource(deltaTime: number): void {
@@ -44,30 +79,22 @@ export class LevelWebRtcGhostScript extends LevelScript {
     this.sync.sendSnapshot(this.createSnapshot(tank, this.localPlayerIndex));
   }
 
-  private updateMirror(): void {
+  private updateMirrorTankFromWebRtc(remoteTank: PlayerTank): void {
     const snapshot = this.sync.getLatestSnapshot();
 
     if (snapshot === null) {
       return;
     }
     if (!snapshot.alive) {
-      this.removeGhost(snapshot.partyIndex);
       return;
     }
 
-    const ghost = this.getGhost(snapshot.partyIndex);
-    ghost.applySnapshot(
-      snapshot.x,
-      snapshot.y,
-      snapshot.rotation,
-      snapshot.state,
-      snapshot.tier,
-    );
+    this.applySnapshotToTank(remoteTank, snapshot, true);
 
     const lastFireSeq = this.lastRemoteFireSeq.get(snapshot.partyIndex) || 0;
     if (snapshot.fireSeq > lastFireSeq) {
       this.lastRemoteFireSeq.set(snapshot.partyIndex, snapshot.fireSeq);
-      ghost.spawnGhostFire();
+      this.spawnMirrorFire(remoteTank);
     }
   }
 
@@ -123,6 +150,58 @@ export class LevelWebRtcGhostScript extends LevelScript {
     this.world.field.add(ghost);
 
     return ghost;
+  }
+
+  private updateServerGhost(remoteTank: PlayerTank): void {
+    const ghost = this.getGhost(remoteTank.partyIndex);
+    ghost.applySnapshot(
+      remoteTank.position.x,
+      remoteTank.position.y,
+      remoteTank.rotation,
+      remoteTank.state,
+      remoteTank.type.tier,
+    );
+  }
+
+  private applySnapshotToTank(
+    tank: PlayerTank,
+    snapshot: WebRtcGhostTankSnapshot,
+    smooth: boolean,
+  ): void {
+    let nextX = snapshot.x;
+    let nextY = snapshot.y;
+
+    if (smooth) {
+      if (!this.hasMirrorPosition) {
+        this.mirrorX = snapshot.x;
+        this.mirrorY = snapshot.y;
+        this.hasMirrorPosition = true;
+      } else {
+        this.mirrorX += (snapshot.x - this.mirrorX) * MIRROR_SMOOTHING;
+        this.mirrorY += (snapshot.y - this.mirrorY) * MIRROR_SMOOTHING;
+      }
+      nextX = this.mirrorX;
+      nextY = this.mirrorY;
+    }
+
+    tank.position.set(nextX, nextY);
+    tank.rotation = snapshot.rotation;
+    tank.state = snapshot.state;
+    if (tank.type.tier !== snapshot.tier) {
+      tank.upgrade(snapshot.tier, false);
+    }
+    tank.updateMatrix(true);
+    tank.collider.update();
+    tank.setNeedsPaint();
+  }
+
+  private spawnMirrorFire(remoteTank: PlayerTank): void {
+    const bullet = remoteTank.fireFromNetwork(
+      remoteTank.position.x,
+      remoteTank.position.y,
+      remoteTank.rotation,
+    );
+    bullet?.setLocalDamageDisabled(true);
   }
 
   private removeGhost(partyIndex: number): void {

@@ -532,6 +532,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       const playerTanks = this.world.getPlayerTanks();
       const primaryTank = playerTanks[0];
       if (updateArgs.magicBlockMovement.isOnlineMatch()) {
+        this.webRtcGhostScript.prepareRemoteTankForServerPath();
         updateArgs.magicBlockMovement.updateMatch(
           playerTanks,
           updateArgs.deltaTime,
@@ -569,6 +570,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           updateArgs.magicBlockMovement.getLocalPowerup(),
         );
         this.applyLocalMatchEvents(updateArgs);
+        this.webRtcGhostScript.switchRemoteTankCommandPath();
       } else if (primaryTank !== undefined && primaryTank !== null) {
         updateArgs.magicBlockMovement.update(
           primaryTank,
