@@ -15,6 +15,11 @@ const PLAYER_SNAP_EPSILON_PX = 0.5;
 const LOCAL_PLAYER_HARD_RECONCILE_DISTANCE_PX = 48;
 const REMOTE_PLAYER_SMOOTHING_SPEED = 18;
 const REMOTE_PLAYER_HARD_SNAP_DISTANCE_PX = 128;
+const BASE_WALL_TERRAIN_REGIONS = [
+  { x: 0, y: 0, width: 128, height: 32 },
+  { x: 0, y: 32, width: 32, height: 64 },
+  { x: 96, y: 32, width: 32, height: 64 },
+] as const;
 
 enum LocalSyncState {
   Disabled,
@@ -367,7 +372,11 @@ export class LocalServerMatchSync {
     if (this.roomId === null) {
       throw new Error('The local player-two link is missing its room ID.');
     }
-    const terrain = this.encodeTerrain(fieldWidth, fieldHeight, terrainRegions);
+    const terrain = this.encodeTerrain(
+      fieldWidth,
+      fieldHeight,
+      this.withBaseWallTerrainRegions(terrainRegions, basePosition),
+    );
     this.socket = await this.openSocket();
     this.socket.addEventListener('message', this.handleMessage);
     this.socket.addEventListener('close', this.handleClose);
@@ -731,6 +740,22 @@ export class LocalServerMatchSync {
       }
     });
     return { width, height, cells };
+  }
+
+  private withBaseWallTerrainRegions(
+    regions: TerrainRegionConfig[],
+    basePosition: { x: number; y: number },
+  ): TerrainRegionConfig[] {
+    return [
+      ...regions,
+      ...BASE_WALL_TERRAIN_REGIONS.map((region) => ({
+        type: TerrainType.Brick,
+        x: basePosition.x + region.x,
+        y: basePosition.y + region.y,
+        width: region.width,
+        height: region.height,
+      })),
+    ];
   }
 
   private queueBoardMutations(mutations: LocalBoardMutation[] = []): void {

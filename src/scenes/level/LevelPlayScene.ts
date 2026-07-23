@@ -22,7 +22,7 @@ import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame, saveReplay } from '../../replay';
 import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
 import { TankDeathReason, TankTier } from '../../tank';
-import { TerrainFactory, TerrainType } from '../../terrain';
+import { TerrainFactory, TerrainRegionConfig, TerrainType } from '../../terrain';
 import { GameObject, ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
@@ -55,6 +55,12 @@ import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
 import { LevelPlayLocationParams } from './params';
+
+const BASE_WALL_TERRAIN_REGIONS = [
+  { x: 0, y: 0, width: 128, height: 32 },
+  { x: 0, y: 32, width: 32, height: 64 },
+  { x: 96, y: 32, width: 32, height: 64 },
+] as const;
 
 export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private world: LevelWorld;
@@ -272,8 +278,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       config.BASE_DEFAULT_SIZE.width,
       config.BASE_DEFAULT_SIZE.height,
     );
-    const tiles = TerrainFactory.createMapFromRegionConfigs(
+    const terrainRegionsWithBaseWalls = this.withBaseWallTerrainRegions(
       terrainRegions,
+      basePosition,
+    );
+    const tiles = TerrainFactory.createMapFromRegionConfigs(
+      terrainRegionsWithBaseWalls,
       fieldWidth,
       fieldHeight,
       [baseRect],
@@ -536,7 +546,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
             .getEnemySpawnList()
             .map((type) => type.hasDrop),
           this.params.mapConfig.getBasePosition(),
-          this.params.mapConfig.getTerrainRegions(),
+          this.withBaseWallTerrainRegions(
+            this.params.mapConfig.getTerrainRegions(),
+            this.params.mapConfig.getBasePosition(),
+          ),
         );
         this.enemyScript.syncNetworkEnemyCount(
           updateArgs.magicBlockMovement.getActiveEnemyIds(),
@@ -596,6 +609,22 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         this.applyingRemoteBoardMutation = false;
       }
     });
+  }
+
+  private withBaseWallTerrainRegions(
+    regions: TerrainRegionConfig[],
+    basePosition: { x: number; y: number },
+  ): TerrainRegionConfig[] {
+    return [
+      ...regions,
+      ...BASE_WALL_TERRAIN_REGIONS.map((region) => ({
+        type: TerrainType.Brick,
+        x: basePosition.x + region.x,
+        y: basePosition.y + region.y,
+        width: region.width,
+        height: region.height,
+      })),
+    ];
   }
 
   private applyLocalMatchEvents(updateArgs: GameUpdateArgs): void {

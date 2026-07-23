@@ -22,6 +22,8 @@ const MAX_BATCH_DISTANCE: u32 = 2_000;
 const MAX_FIRE_EVENTS_PER_BATCH: usize = 4;
 const MAX_FIRE_AGE_MS: u16 = 500;
 const MAX_PROJECTILES_PER_PLAYER: usize = 4;
+const MAX_DESTROYER_MUTATIONS: usize = 4;
+const MAX_TERRAIN_HIT_MUTATIONS: usize = MAX_DESTROYER_MUTATIONS;
 const PROJECTILE_STEP_UNITS: i32 = 250;
 const PROJECTILE_SIZE: i32 = 188;
 const PROJECTILE_LENGTH: i32 = 250;
@@ -38,7 +40,13 @@ const MAX_ENEMY_FIRE_EVENTS: usize = 16;
 const BOARD_CELL_UNITS: u16 = 250;
 const TANK_SIZE: i32 = 1_000;
 const BASE_WIDTH: i32 = 2_000;
-const BASE_HEIGHT: i32 = 1_500;
+const BASE_HEART_OFFSET_X: i32 = 500;
+const BASE_HEART_OFFSET_Y: i32 = 500;
+const BASE_HEART_SIZE: i32 = 1_000;
+const BASE_WALL_TOP_HEIGHT: i32 = 500;
+const BASE_WALL_SIDE_WIDTH: i32 = 500;
+const BASE_WALL_SIDE_TOP: i32 = 500;
+const BASE_WALL_SIDE_HEIGHT: i32 = 1_000;
 const MAX_TERRAIN_CELLS_PER_AXIS: usize = 108;
 const MAX_TERRAIN_BYTES: usize = (MAX_TERRAIN_CELLS_PER_AXIS * MAX_TERRAIN_CELLS_PER_AXIS + 7) / 8;
 const MAX_TERRAIN_CHUNK_BYTES: usize = 512;
@@ -287,6 +295,7 @@ pub mod tank_movement {
             terrain_byte_len(state.terrain_width, state.terrain_height),
             MatchError::TerrainIncomplete
         );
+        mark_base_wall_cells(state);
         state.terrain_initialized = true;
         Ok(())
     }
@@ -382,6 +391,7 @@ pub mod tank_movement {
         match_state.next_enemy_spawn_tick = FIRST_ENEMY_SPAWN_TICK;
         match_state.rng_state = match_id ^ match_state.epoch ^ 0x9e37_79b9_7f4a_7c15;
         match_state.last_simulation_slot = 0;
+        mark_base_wall_cells(match_state);
         Ok(())
     }
 
@@ -1302,9 +1312,12 @@ fn base_blocks_tank(state: &MatchState, position: Position) -> bool {
         position,
         TANK_SIZE,
         TANK_SIZE,
-        state.base_position,
-        BASE_WIDTH,
-        BASE_HEIGHT,
+        Position {
+            x: state.base_position.x + BASE_HEART_OFFSET_X,
+            y: state.base_position.y + BASE_HEART_OFFSET_Y,
+        },
+        BASE_HEART_SIZE,
+        BASE_HEART_SIZE,
     )
 }
 
@@ -1400,6 +1413,52 @@ fn terrain_cell_steel(state: &MatchState, terrain: &TerrainState, x: usize, y: u
     }
     let bit_index = y * width + x;
     terrain.steel[bit_index / 8] & (1 << (bit_index % 8)) != 0
+}
+
+fn mark_terrain_cell(state: &mut MatchState, x: i32, y: i32) {
+    if x < 0 || y < 0 {
+        return;
+    }
+    let width = usize::from(state.terrain_width);
+    let x = x as usize;
+    let y = y as usize;
+    if x >= width || y >= usize::from(state.terrain_height) {
+        return;
+    }
+    let bit_index = y * width + x;
+    state.terrain_occupancy[bit_index / 8] |= 1 << (bit_index % 8);
+}
+
+fn mark_terrain_rect(state: &mut MatchState, x: i32, y: i32, width: i32, height: i32) {
+    let cell_units = i32::from(BOARD_CELL_UNITS);
+    let min_x = x.div_euclid(cell_units);
+    let min_y = y.div_euclid(cell_units);
+    let max_x = (x + width - 1).div_euclid(cell_units);
+    let max_y = (y + height - 1).div_euclid(cell_units);
+    for cell_y in min_y..=max_y {
+        for cell_x in min_x..=max_x {
+            mark_terrain_cell(state, cell_x, cell_y);
+        }
+    }
+}
+
+fn mark_base_wall_cells(state: &mut MatchState) {
+    let base = state.base_position;
+    mark_terrain_rect(state, base.x, base.y, BASE_WIDTH, BASE_WALL_TOP_HEIGHT);
+    mark_terrain_rect(
+        state,
+        base.x,
+        base.y + BASE_WALL_SIDE_TOP,
+        BASE_WALL_SIDE_WIDTH,
+        BASE_WALL_SIDE_HEIGHT,
+    );
+    mark_terrain_rect(
+        state,
+        base.x + BASE_WIDTH - BASE_WALL_SIDE_WIDTH,
+        base.y + BASE_WALL_SIDE_TOP,
+        BASE_WALL_SIDE_WIDTH,
+        BASE_WALL_SIDE_HEIGHT,
+    );
 }
 
 fn clear_terrain_cell(state: &mut MatchState, x: u8, y: u8) {
@@ -1664,7 +1723,7 @@ fn terrain_hits_between(
     terrain: &TerrainState,
     projectile: ProjectileSnapshot,
     next: Position,
-) -> Option<[Option<BoardMutation>; 4]> {
+) -> Option<[Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS]> {
     let steps = (PROJECTILE_STEP_UNITS / (i32::from(BOARD_CELL_UNITS) / 2)).max(1);
     for step in 1..=steps {
         let x = projectile.x + (next.x - projectile.x) * step / steps;
@@ -1715,7 +1774,7 @@ fn projectile_terrain_hits_at(
     projectile: ProjectileSnapshot,
     x: i32,
     y: i32,
-) -> [Option<BoardMutation>; 4] {
+) -> [Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS] {
     let cell_units = i32::from(BOARD_CELL_UNITS);
     let min_projectile_cell_x = x.div_euclid(cell_units);
     let max_projectile_cell_x = (x + PROJECTILE_SIZE - 1).div_euclid(cell_units);
@@ -1737,7 +1796,7 @@ fn projectile_terrain_hits_at(
     }
 
     if occupied_contact_count == 0 {
-        return [None; 4];
+        return [None; MAX_TERRAIN_HIT_MUTATIONS];
     }
 
     let front_line = match projectile.direction {
@@ -1855,9 +1914,9 @@ fn filter_destroyer_contacts_to_mutations(
     direction: Direction,
     center_x: i32,
     center_y: i32,
-) -> [Option<BoardMutation>; 4] {
+) -> [Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS] {
     if contact_count == 0 {
-        return [None; 4];
+        return [None; MAX_TERRAIN_HIT_MUTATIONS];
     }
 
     let cell_units = i32::from(BOARD_CELL_UNITS);
@@ -1912,9 +1971,10 @@ fn filter_destroyer_contacts_to_mutations(
         }
     }
 
-    let mut mutations: [Option<BoardMutation>; 4] = [None; 4];
+    let mut mutations: [Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS] =
+        [None; MAX_TERRAIN_HIT_MUTATIONS];
     let mut mutation_count = 0_usize;
-    while mutation_count < mutations.len() {
+    while mutation_count < MAX_DESTROYER_MUTATIONS {
         let mut best_index = None;
         let mut best_distance = i32::MAX;
         for (index, included_cell) in included.iter().enumerate().take(included_count) {
@@ -1960,7 +2020,7 @@ fn destroyer_cells_touch(direction: Direction, first: (i32, i32), second: (i32, 
 
 fn append_board_mutations(
     state: &mut MatchState,
-    mutations: &[Option<BoardMutation>; 4],
+    mutations: &[Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS],
 ) -> Result<()> {
     for mutation in mutations.iter().flatten().copied() {
         append_board_mutation(state, mutation)?;
@@ -1968,7 +2028,11 @@ fn append_board_mutations(
     Ok(())
 }
 
-fn resolve_enemy_fire(state: &mut MatchState, terrain: &TerrainState, enemy: EnemyState) -> Result<()> {
+fn resolve_enemy_fire(
+    state: &mut MatchState,
+    terrain: &TerrainState,
+    enemy: EnemyState,
+) -> Result<()> {
     let mut projectile = offset_projectile_spawn(ProjectileSnapshot {
         id: enemy.id.wrapping_add(1),
         x: enemy.x,
@@ -2015,7 +2079,15 @@ fn resolve_enemy_fire(state: &mut MatchState, terrain: &TerrainState, enemy: Ene
 }
 
 fn projectile_hits_base(state: &MatchState, projectile: Position) -> bool {
-    projectile_rect_hits(projectile, state.base_position, BASE_WIDTH, BASE_HEIGHT)
+    projectile_rect_hits(
+        projectile,
+        Position {
+            x: state.base_position.x + BASE_HEART_OFFSET_X,
+            y: state.base_position.y + BASE_HEART_OFFSET_Y,
+        },
+        BASE_HEART_SIZE,
+        BASE_HEART_SIZE,
+    )
 }
 
 fn projectile_rect_hits(
@@ -2034,7 +2106,11 @@ fn projectile_rect_hits(
     )
 }
 
-fn record_enemy_fire_event(state: &mut MatchState, terrain: &TerrainState, enemy: EnemyState) -> Result<()> {
+fn record_enemy_fire_event(
+    state: &mut MatchState,
+    terrain: &TerrainState,
+    enemy: EnemyState,
+) -> Result<()> {
     state.enemy_fire_sequence = state
         .enemy_fire_sequence
         .checked_add(1)
@@ -2547,7 +2623,7 @@ mod tests {
     }
 
     #[test]
-    fn base_blocks_tank_footprint() {
+    fn base_heart_blocks_tank_but_outer_wall_frame_does_not() {
         let host = Pubkey::new_unique();
         let mut state = MatchState {
             match_id: 9,
@@ -2593,47 +2669,394 @@ mod tests {
         assert!(base_blocks_tank(
             &state,
             Position {
-                x: 11_500,
-                y: 24_500
+                x: 12_000,
+                y: 25_000,
             },
         ));
         assert!(base_blocks_tank(
             &state,
             Position {
-                x: 13_999,
-                y: 25_999
+                x: 13_499,
+                y: 25_999,
             },
         ));
         assert!(!base_blocks_tank(
             &state,
             Position {
-                x: 10_999,
+                x: 11_500,
                 y: 24_500
             },
         ));
         assert!(!base_blocks_tank(
             &state,
             Position {
-                x: 14_000,
+                x: 13_999,
                 y: 24_500
             },
         ));
 
         state.enemies[0] = EnemyState {
             id: 0,
-            x: 11_000,
-            y: 24_500,
+            x: 11_500,
+            y: 25_000,
             direction: Direction::Right,
             active: true,
             movement_remainder: 0,
             next_turn_tick: 0,
         };
         simulate_enemy_step(&mut state, &test_terrain_state()).unwrap();
-        assert_eq!(state.enemies[0].x, 11_000);
+        assert_eq!(state.enemies[0].x, 11_500);
         assert_eq!(
             enemy_ai_state(state.enemies[0].movement_remainder),
             EnemyAiState::Thinking
         );
+    }
+
+    #[test]
+    fn base_wall_cells_are_authoritative_destructible_terrain() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let base_cell_x = state.base_position.x / i32::from(BOARD_CELL_UNITS);
+        let base_cell_y = state.base_position.y / i32::from(BOARD_CELL_UNITS);
+
+        assert!(terrain_cell_occupied(
+            &state,
+            base_cell_x as usize,
+            base_cell_y as usize,
+        ));
+
+        let mutation = BoardMutation {
+            x: base_cell_x as u8,
+            y: base_cell_y as u8,
+        };
+        append_board_mutation(&mut state, mutation).unwrap();
+
+        assert_eq!(state.board_mutation_count, 1);
+        assert_eq!(state.board_mutations[0], mutation);
+        assert!(!terrain_cell_occupied(
+            &state,
+            base_cell_x as usize,
+            base_cell_y as usize,
+        ));
+    }
+
+    #[test]
+    fn projectile_can_mutate_base_side_wall_cells() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let base_cell_x = state.base_position.x / i32::from(BOARD_CELL_UNITS);
+        let side_cell_y =
+            (state.base_position.y + BASE_WALL_SIDE_TOP) / i32::from(BOARD_CELL_UNITS);
+        let impact_y =
+            state.base_position.y + BASE_WALL_SIDE_TOP + TANK_SIZE / 2 - PROJECTILE_SIZE / 2;
+        let approach_position = Position {
+            x: state.base_position.x - BASE_WALL_SIDE_WIDTH,
+            y: state.base_position.y + BASE_WALL_SIDE_TOP,
+        };
+
+        assert!(terrain_blocks_tank(&state, approach_position));
+
+        let hits = projectile_terrain_hits_at(
+            &state,
+            &test_terrain_state(),
+            ProjectileSnapshot {
+                id: 1,
+                x: state.base_position.x,
+                y: impact_y,
+                direction: Direction::Right,
+                wall_damage: BULLET_WALL_DAMAGE_LOW,
+            },
+            state.base_position.x,
+            impact_y,
+        );
+
+        let mutations: Vec<BoardMutation> = hits.iter().flatten().copied().collect();
+        assert_eq!(mutations.len(), 4);
+        for y in side_cell_y..side_cell_y + 4 {
+            assert!(
+                mutations
+                    .iter()
+                    .any(|mutation| { mutation.x == base_cell_x as u8 && mutation.y == y as u8 }),
+                "expected outer side-wall mutation at ({base_cell_x}, {y}), got {mutations:?}",
+            );
+        }
+
+        append_board_mutations(&mut state, &hits).unwrap();
+        assert!(terrain_blocks_tank(&state, approach_position));
+
+        let second_hits = projectile_terrain_hits_at(
+            &state,
+            &test_terrain_state(),
+            ProjectileSnapshot {
+                id: 2,
+                x: state.base_position.x + i32::from(BOARD_CELL_UNITS),
+                y: impact_y,
+                direction: Direction::Right,
+                wall_damage: BULLET_WALL_DAMAGE_LOW,
+            },
+            state.base_position.x + i32::from(BOARD_CELL_UNITS),
+            impact_y,
+        );
+        let second_mutations: Vec<BoardMutation> = second_hits.iter().flatten().copied().collect();
+        assert_eq!(second_mutations.len(), 4);
+        for y in side_cell_y..side_cell_y + 4 {
+            assert!(
+                second_mutations.iter().any(|mutation| {
+                    mutation.x == (base_cell_x + 1) as u8 && mutation.y == y as u8
+                }),
+                "expected inner side-wall mutation at ({}, {y}), got {second_mutations:?}",
+                base_cell_x + 1,
+            );
+        }
+
+        append_board_mutations(&mut state, &second_hits).unwrap();
+        assert!(!terrain_blocks_tank(&state, approach_position));
+    }
+
+    #[test]
+    fn projectile_can_mutate_right_base_side_wall_cells() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let right_wall_cell_x = (state.base_position.x + BASE_WIDTH - BASE_WALL_SIDE_WIDTH)
+            / i32::from(BOARD_CELL_UNITS);
+        let side_cell_y =
+            (state.base_position.y + BASE_WALL_SIDE_TOP) / i32::from(BOARD_CELL_UNITS);
+        let impact_y =
+            state.base_position.y + BASE_WALL_SIDE_TOP + TANK_SIZE / 2 - PROJECTILE_SIZE / 2;
+
+        let hits = projectile_terrain_hits_at(
+            &state,
+            &test_terrain_state(),
+            ProjectileSnapshot {
+                id: 1,
+                x: state.base_position.x + BASE_WIDTH - PROJECTILE_SIZE,
+                y: impact_y,
+                direction: Direction::Left,
+                wall_damage: BULLET_WALL_DAMAGE_LOW,
+            },
+            state.base_position.x + BASE_WIDTH - PROJECTILE_SIZE,
+            impact_y,
+        );
+
+        let mutations: Vec<BoardMutation> = hits.iter().flatten().copied().collect();
+        assert_eq!(mutations.len(), 4);
+        let outer_wall_cell_x = right_wall_cell_x + 1;
+        for y in side_cell_y..side_cell_y + 4 {
+            assert!(
+                mutations.iter().any(|mutation| {
+                    mutation.x == outer_wall_cell_x as u8 && mutation.y == y as u8
+                }),
+                "expected outer side-wall mutation at ({outer_wall_cell_x}, {y}), got {mutations:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn projectile_can_mutate_bottom_edge_of_base_side_wall() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let base_cell_x = state.base_position.x / i32::from(BOARD_CELL_UNITS);
+        let bottom_cell_y = (state.base_position.y + BASE_WALL_SIDE_TOP + BASE_WALL_SIDE_HEIGHT
+            - 1)
+            / i32::from(BOARD_CELL_UNITS);
+
+        let projectile = ProjectileSnapshot {
+            id: 1,
+            x: state.base_position.x + BOARD_CELL_UNITS as i32,
+            y: state.base_position.y + BASE_WALL_SIDE_TOP + BASE_WALL_SIDE_HEIGHT,
+            direction: Direction::Up,
+            wall_damage: BULLET_WALL_DAMAGE_LOW,
+        };
+        let next = apply_projectile_movement(
+            Position {
+                x: projectile.x,
+                y: projectile.y,
+            },
+            projectile.direction,
+            PROJECTILE_STEP_UNITS,
+        )
+        .unwrap();
+        let hits = terrain_hits_between(&state, &test_terrain_state(), projectile, next).unwrap();
+
+        let mutations: Vec<BoardMutation> = hits.iter().flatten().copied().collect();
+        assert!(
+            mutations.contains(&BoardMutation {
+                x: base_cell_x as u8,
+                y: bottom_cell_y as u8,
+            }),
+            "expected lower side-wall bottom edge mutation, got {mutations:?}",
+        );
+        assert!(
+            mutations.contains(&BoardMutation {
+                x: (base_cell_x + 1) as u8,
+                y: bottom_cell_y as u8,
+            }),
+            "expected inner lower side-wall bottom edge mutation, got {mutations:?}",
+        );
+    }
+
+    #[test]
+    fn live_side_shots_clear_both_depth_columns_of_base_side_wall() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let approach_position = Position {
+            x: state.base_position.x - TANK_SIZE,
+            y: state.base_position.y + BASE_WALL_SIDE_TOP,
+        };
+        let mut projectile = offset_projectile_spawn(ProjectileSnapshot {
+            id: 1,
+            x: approach_position.x,
+            y: approach_position.y,
+            direction: Direction::Right,
+            wall_damage: BULLET_WALL_DAMAGE_LOW,
+        })
+        .unwrap();
+
+        let next = next_projectile_position(&state, projectile)
+            .unwrap()
+            .unwrap();
+        let hits = terrain_hits_between(&state, &test_terrain_state(), projectile, next).unwrap();
+        append_board_mutations(&mut state, &hits).unwrap();
+        assert!(
+            terrain_blocks_tank(
+                &state,
+                Position {
+                    x: state.base_position.x,
+                    y: state.base_position.y + BASE_WALL_SIDE_TOP,
+                }
+            ),
+            "the inner side-wall depth should still block after one side shot",
+        );
+
+        projectile = ProjectileSnapshot {
+            id: 2,
+            x: next.x,
+            y: next.y,
+            ..projectile
+        };
+        let next = next_projectile_position(&state, projectile)
+            .unwrap()
+            .unwrap();
+        let hits = terrain_hits_between(&state, &test_terrain_state(), projectile, next).unwrap();
+        append_board_mutations(&mut state, &hits).unwrap();
+        assert!(
+            !terrain_blocks_tank(
+                &state,
+                Position {
+                    x: state.base_position.x,
+                    y: state.base_position.y + BASE_WALL_SIDE_TOP,
+                }
+            ),
+            "both side-wall depth columns must be clear after the second side shot",
+        );
+    }
+
+    fn advance_projectile_until_terrain_hit(
+        state: &MatchState,
+        terrain: &TerrainState,
+        projectile: &mut ProjectileSnapshot,
+    ) -> [Option<BoardMutation>; MAX_TERRAIN_HIT_MUTATIONS] {
+        for _ in 0..32 {
+            let Some(next) = next_projectile_position(state, *projectile).unwrap() else {
+                break;
+            };
+            if let Some(hits) = terrain_hits_between(state, terrain, *projectile, next) {
+                projectile.x = next.x;
+                projectile.y = next.y;
+                return hits;
+            }
+            projectile.x = next.x;
+            projectile.y = next.y;
+        }
+        panic!("projectile did not hit terrain");
+    }
+
+    #[test]
+    fn repeated_top_shots_clear_base_side_wall_rows() {
+        let mut state = test_match_state();
+        mark_base_wall_cells(&mut state);
+
+        let base_cell_x = state.base_position.x / i32::from(BOARD_CELL_UNITS);
+        let base_cell_y = state.base_position.y / i32::from(BOARD_CELL_UNITS);
+        let side_cell_y =
+            (state.base_position.y + BASE_WALL_SIDE_TOP) / i32::from(BOARD_CELL_UNITS);
+        for y in base_cell_y..side_cell_y {
+            clear_terrain_cell(&mut state, base_cell_x as u8, y as u8);
+            clear_terrain_cell(&mut state, (base_cell_x + 1) as u8, y as u8);
+        }
+        let shooter_position = Position {
+            x: state.base_position.x - (TANK_SIZE - PROJECTILE_SIZE) / 2,
+            y: state.base_position.y + BASE_WALL_SIDE_TOP - TANK_SIZE,
+        };
+
+        for row_offset in 0..4 {
+            let mut projectile = offset_projectile_spawn(ProjectileSnapshot {
+                id: (row_offset + 1) as u16,
+                x: shooter_position.x,
+                y: shooter_position.y,
+                direction: Direction::Down,
+                wall_damage: BULLET_WALL_DAMAGE_LOW,
+            })
+            .unwrap();
+            let hits = advance_projectile_until_terrain_hit(
+                &state,
+                &test_terrain_state(),
+                &mut projectile,
+            );
+            let mutations: Vec<BoardMutation> = hits.iter().flatten().copied().collect();
+            assert!(
+                mutations.iter().any(|mutation| {
+                    mutation.x == base_cell_x as u8
+                        && mutation.y == (side_cell_y + row_offset) as u8
+                }),
+                "expected top-down shot to clear side-wall row {}, got {mutations:?}",
+                side_cell_y + row_offset,
+            );
+            append_board_mutations(&mut state, &hits).unwrap();
+        }
+
+        assert!(
+            !terrain_blocks_tank(
+                &state,
+                Position {
+                    x: state.base_position.x,
+                    y: state.base_position.y + BASE_WALL_SIDE_TOP,
+                }
+            ),
+            "top-down shots must eventually clear the side-wall approach area",
+        );
+    }
+
+    #[test]
+    fn projectile_only_kills_base_heart_not_outer_wall_frame() {
+        let state = test_match_state();
+
+        assert!(!projectile_hits_base(
+            &state,
+            Position {
+                x: state.base_position.x,
+                y: state.base_position.y,
+            },
+        ));
+        assert!(!projectile_hits_base(
+            &state,
+            Position {
+                x: state.base_position.x + BASE_WALL_SIDE_WIDTH,
+                y: state.base_position.y,
+            },
+        ));
+        assert!(projectile_hits_base(
+            &state,
+            Position {
+                x: state.base_position.x + BASE_HEART_OFFSET_X,
+                y: state.base_position.y + BASE_HEART_OFFSET_Y,
+            },
+        ));
     }
 
     #[test]

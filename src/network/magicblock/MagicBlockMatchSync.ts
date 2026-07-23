@@ -97,6 +97,11 @@ const MATCH_ACCOUNT_WITH_ENEMIES_SIZE =
 const BOARD_CELL_SIZE_PX = 16;
 const TERRAIN_CHUNK_BYTES = 512;
 const REMOTE_PROJECTILE_CATCH_UP_MULTIPLIER = 2;
+const BASE_WALL_TERRAIN_REGIONS = [
+  { x: 0, y: 0, width: 128, height: 32 },
+  { x: 0, y: 32, width: 32, height: 64 },
+  { x: 96, y: 32, width: 32, height: 64 },
+] as const;
 
 enum MatchSyncState {
   Idle,
@@ -169,6 +174,14 @@ interface MatchInputReceipt {
   frames: MatchInputFrame[];
 }
 
+interface InputLatencyProbe {
+  sequence: number;
+  startedAtMs: number;
+  resolve: (elapsedMs: number) => void;
+  reject: (error: Error) => void;
+  timeoutId: number;
+}
+
 interface RemoteWaypoint {
   x: number;
   y: number;
@@ -231,6 +244,7 @@ export class MagicBlockMatchSync {
   private readonly pendingInputFrames: MatchInputFrame[] = [];
   private readonly knownBoardMutations = new Set<string>();
   private readonly remoteBoardMutations: BoardMutation[] = [];
+  private knownBoardMutationEpoch = -1;
   private readonly pendingEnemyFireEvents: EnemyFireEvent[] = [];
   private readonly debugDisableEnemyShooting: boolean;
   private playerMirrorBulletsSuppressed = false;
@@ -243,7 +257,9 @@ export class MagicBlockMatchSync {
   private statusMessageElement: HTMLDivElement = null;
   private joinButtonElement: HTMLButtonElement = null;
   private latencyButtonElement: HTMLButtonElement = null;
+  private inputLatencyButtonElement: HTMLButtonElement = null;
   private mainnetLatencyButtonElement: HTMLButtonElement = null;
+  private inputLatencyProbe: InputLatencyProbe = null;
   private erEndpoint: string = null;
   private readonly initializedEnemies = new Set<number>();
   private readonly enemyReplayStates = new Map<number, EnemyReplayState>();
@@ -875,7 +891,11 @@ export class MagicBlockMatchSync {
       { length: MAX_ENEMY_TOTAL },
       (_, index) => enemySpeedClasses[index] ?? 0,
     );
-    const terrain = this.encodeTerrain(fieldWidth, fieldHeight, terrainRegions);
+    const terrain = this.encodeTerrain(
+      fieldWidth,
+      fieldHeight,
+      this.withBaseWallTerrainRegions(terrainRegions, basePosition),
+    );
     const data = this.instructionCoder.encode('createMatch', {
       matchId: new BN(this.matchId),
       mapId: this.currentLevelNumber,
@@ -963,6 +983,22 @@ export class MagicBlockMatchSync {
       }
     });
     return { width, height, bytes, steelBytes };
+  }
+
+  private withBaseWallTerrainRegions(
+    regions: TerrainRegionConfig[],
+    basePosition: { x: number; y: number },
+  ): TerrainRegionConfig[] {
+    return [
+      ...regions,
+      ...BASE_WALL_TERRAIN_REGIONS.map((region) => ({
+        type: TerrainType.Brick,
+        x: basePosition.x + region.x,
+        y: basePosition.y + region.y,
+        width: region.width,
+        height: region.height,
+      })),
+    ];
   }
 
   private async uploadTerrain(bytes: Uint8Array, steelBytes: Uint8Array): Promise<void> {
@@ -1200,6 +1236,9 @@ export class MagicBlockMatchSync {
     this.lastQueuedRemoteSequence = -1;
     this.pendingEnemyFireEvents.length = 0;
     this.lastEnemyFireSequence = 0;
+    this.knownBoardMutations.clear();
+    this.remoteBoardMutations.length = 0;
+    this.knownBoardMutationEpoch = this.target.epoch;
     this.queueRemoteSnapshot(this.target.players[1 - this.localPlayerIndex]);
     this.queueBoardMutations(this.target.boardMutations);
     this.queueEnemyFireEvents(this.target.enemyFireEvents);
@@ -1210,6 +1249,7 @@ export class MagicBlockMatchSync {
       `MagicBlock match live - player ${this.localPlayerIndex + 1}\nER: ${this.formatErEndpoint()}`,
     );
     this.showLatencyControl();
+    this.showInputLatencyControl();
     this.showMainnetLatencyControl();
   }
 
@@ -1382,6 +1422,80 @@ export class MagicBlockMatchSync {
     }
   }
 
+  private async testInputUpdateLatency(): Promise<{
+    elapsedMs: number;
+    submitMs: number;
+    sequence: number;
+  }> {
+    if (
+      this.state !== MatchSyncState.Ready ||
+      this.target === null ||
+      this.erConnection === null
+    ) {
+      throw new Error('MagicBlock match is not ready.');
+    }
+    const localState = this.target.players[this.localPlayerIndex];
+    if (this.sending || this.pendingInputFrames.length > 0) {
+      throw new Error('Release controls and wait for pending input first.');
+    }
+    if (localState.sequence < this.sequence) {
+      throw new Error('Waiting for the previous input update to appear.');
+    }
+
+    const startedAtMs = performance.now();
+    this.sequence = localState.sequence;
+    const nextSequence = localState.sequence + 1;
+    const observed = this.waitForInputLatencyProbe(nextSequence, startedAtMs);
+    this.sending = true;
+    this.lastSendAt = Date.now();
+    try {
+      await this.sendWithSession(
+        this.erConnection,
+        new TransactionInstruction({
+          programId: PROGRAM_ID,
+          keys: [
+            {
+              pubkey: this.session.publicKey,
+              isSigner: true,
+              isWritable: false,
+            },
+            { pubkey: this.matchPda, isSigner: false, isWritable: true },
+          ],
+          data: this.instructionCoder.encode('submitInputBatch', {
+            matchId: new BN(this.matchId),
+            epoch: new BN(this.target.epoch),
+            frames: [
+              {
+                direction: this.toAnchorDirection(localState.direction),
+                distance: 0,
+                fire: false,
+                fireAgeMs: 0,
+              },
+            ],
+            projectiles: [],
+            boardMutations: [],
+            bulletWallDamage: this.localBulletWallDamage,
+            sequence: new BN(nextSequence),
+          }),
+        }),
+        true,
+        'input update latency probe',
+      );
+      const submitMs = Math.round(performance.now() - startedAtMs);
+      this.sequence = nextSequence;
+      return {
+        elapsedMs: await observed,
+        submitMs,
+        sequence: nextSequence,
+      };
+    } catch (error) {
+      this.cancelInputLatencyProbe((error as Error).message);
+      throw error;
+    } finally {
+      this.sending = false;
+    }
+  }
+
   private async recoverInputBatch(attemptedSequence: number): Promise<boolean> {
     try {
       const next = await this.fetchMatchState(this.erConnection);
@@ -1543,7 +1657,13 @@ export class MagicBlockMatchSync {
   }
 
   private updateTarget(next: MatchAccountState): void {
+    if (this.knownBoardMutationEpoch !== next.epoch) {
+      this.knownBoardMutations.clear();
+      this.remoteBoardMutations.length = 0;
+      this.knownBoardMutationEpoch = next.epoch;
+    }
     this.target = next;
+    this.resolveInputLatencyProbe(next);
     this.queueBoardMutations(next.boardMutations);
     this.queueEnemyFireEvents(next.enemyFireEvents);
     if (this.state === MatchSyncState.Ready) {
@@ -1553,6 +1673,57 @@ export class MagicBlockMatchSync {
         next.inputReceipts[remoteIndex],
       );
     }
+  }
+
+  private resolveInputLatencyProbe(next: MatchAccountState): void {
+    const probe = this.inputLatencyProbe;
+    if (probe === null) {
+      return;
+    }
+    if (next.players[this.localPlayerIndex].sequence < probe.sequence) {
+      return;
+    }
+    window.clearTimeout(probe.timeoutId);
+    this.inputLatencyProbe = null;
+    probe.resolve(Math.round(performance.now() - probe.startedAtMs));
+  }
+
+  private waitForInputLatencyProbe(
+    sequence: number,
+    startedAtMs: number,
+  ): Promise<number> {
+    if (this.inputLatencyProbe !== null) {
+      this.cancelInputLatencyProbe('A previous input update test was replaced.');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        if (this.inputLatencyProbe?.sequence === sequence) {
+          this.inputLatencyProbe = null;
+        }
+        reject(new Error('Timed out waiting for the match account update.'));
+      }, 5000);
+      this.inputLatencyProbe = {
+        sequence,
+        startedAtMs,
+        resolve,
+        reject,
+        timeoutId,
+      };
+      if (this.target !== null) {
+        this.resolveInputLatencyProbe(this.target);
+      }
+    });
+  }
+
+  private cancelInputLatencyProbe(message: string): void {
+    if (this.inputLatencyProbe === null) {
+      return;
+    }
+    window.clearTimeout(this.inputLatencyProbe.timeoutId);
+    const { reject } = this.inputLatencyProbe;
+    this.inputLatencyProbe = null;
+    reject(new Error(message));
   }
 
   private queueBoardMutations(mutations: BoardMutation[]): void {
@@ -2098,6 +2269,37 @@ export class MagicBlockMatchSync {
     };
   }
 
+  private showInputLatencyControl(): void {
+    const button = this.ensureStatusButton('input-latency');
+    button.type = 'button';
+    button.textContent = 'Test input update';
+    button.onclick = async (): Promise<void> => {
+      button.disabled = true;
+      button.textContent = 'Testing input update...';
+      try {
+        const result = await this.testInputUpdateLatency();
+        button.textContent = `Input update (${result.elapsedMs} ms)`;
+        this.showStatus(
+          `MagicBlock input update latency: ${result.elapsedMs} ms\n` +
+            `ER submit/processed: ${result.submitMs} ms\n` +
+            `Observed sequence: ${result.sequence}\n` +
+            `ER: ${this.formatErEndpoint()}`,
+        );
+        this.log.info(
+          `MagicBlock input update latency: ${result.elapsedMs} ms ` +
+            `(submit ${result.submitMs} ms, sequence ${result.sequence})`,
+        );
+      } catch (error) {
+        const message = (error as Error).message;
+        button.textContent = 'Input update test failed';
+        this.showStatus(`MagicBlock input update test failed\n${message}`);
+        this.log.warn('MagicBlock input update test failed.', error);
+      } finally {
+        button.disabled = false;
+      }
+    };
+  }
+
   private showMainnetLatencyControl(): void {
     const button = this.ensureStatusButton('mainnet-latency');
     button.type = 'button';
@@ -2196,14 +2398,16 @@ export class MagicBlockMatchSync {
   }
 
   private ensureStatusButton(
-    kind: 'join' | 'latency' | 'mainnet-latency',
+    kind: 'join' | 'latency' | 'input-latency' | 'mainnet-latency',
   ): HTMLButtonElement {
     const existing =
       kind === 'join'
         ? this.joinButtonElement
         : kind === 'latency'
           ? this.latencyButtonElement
-          : this.mainnetLatencyButtonElement;
+          : kind === 'input-latency'
+            ? this.inputLatencyButtonElement
+            : this.mainnetLatencyButtonElement;
     if (existing !== null) {
       return existing;
     }
@@ -2215,6 +2419,8 @@ export class MagicBlockMatchSync {
       this.joinButtonElement = button;
     } else if (kind === 'latency') {
       this.latencyButtonElement = button;
+    } else if (kind === 'input-latency') {
+      this.inputLatencyButtonElement = button;
     } else {
       this.mainnetLatencyButtonElement = button;
     }

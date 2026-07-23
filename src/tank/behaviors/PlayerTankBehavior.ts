@@ -51,6 +51,7 @@ export class PlayerTankBehavior extends TankBehavior {
       if (updateArgs.magicBlockMovement.isLocalServerMatch()) {
         updateArgs.magicBlockMovement.recordLocalFire(tank);
       } else if (tank.fire()) {
+        this.disableLocalBulletDamageInAuthoritativeMatch(tank, updateArgs);
         updateArgs.magicBlockMovement.recordLocalFire(tank);
       }
     }
@@ -58,6 +59,7 @@ export class PlayerTankBehavior extends TankBehavior {
       if (updateArgs.magicBlockMovement.isLocalServerMatch()) {
         updateArgs.magicBlockMovement.recordLocalFire(tank);
       } else if (tank.fire()) {
+        this.disableLocalBulletDamageInAuthoritativeMatch(tank, updateArgs);
         updateArgs.magicBlockMovement.recordLocalFire(tank);
       }
     }
@@ -96,5 +98,15 @@ export class PlayerTankBehavior extends TankBehavior {
     ) {
       tank.idle();
     }
+  }
+
+  private disableLocalBulletDamageInAuthoritativeMatch(
+    tank: PlayerTank,
+    updateArgs: GameUpdateArgs,
+  ): void {
+    if (!updateArgs.magicBlockMovement.isOnlineMatch()) {
+      return;
+    }
+    tank.bullets[tank.bullets.length - 1]?.setLocalDamageDisabled(true);
   }
 }
