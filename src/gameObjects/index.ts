@@ -18,6 +18,8 @@ export * from './Explosion';
 export * from './explosionEffect';
 export * from './Field';
 export * from './GameOverNotice';
+export * from './GhostBullet';
+export * from './GhostTank';
 export * from './GroundField';
 export * from './LevelInputHint';
 export * from './LevelSelector';

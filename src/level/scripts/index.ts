@@ -13,4 +13,5 @@ export * from './LevelPlayerScript';
 export * from './LevelPointsScript';
 export * from './LevelPowerupScript';
 export * from './LevelSpawnScript';
+export * from './LevelWebRtcGhostScript';
 export * from './LevelWinScript';

@@ -2213,6 +2213,15 @@ export class MagicBlockMatchSync {
     url.searchParams.set('match', this.matchId.toString());
     url.searchParams.set('join', '1');
     url.searchParams.set('level', this.currentLevelNumber.toString());
+    if (
+      url.searchParams.has('ghostMirror') ||
+      url.searchParams.has('ghostmirror') ||
+      url.searchParams.has('ghosmirror')
+    ) {
+      url.searchParams.delete('ghostmirror');
+      url.searchParams.delete('ghosmirror');
+      url.searchParams.set('ghostMirror', '1');
+    }
     const button = this.ensureStatusButton('join');
     button.type = 'button';
     button.textContent = 'Copy player-two link';

@@ -48,6 +48,7 @@ import {
   LevelPointsScript,
   LevelPowerupScript,
   LevelSpawnScript,
+  LevelWebRtcGhostScript,
   LevelWinScript,
 } from '../../level/scripts';
 
@@ -136,6 +137,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private powerupScript: LevelPowerupScript;
   private pauseScript: LevelPauseScript;
   private spawnScript: LevelSpawnScript;
+  private webRtcGhostScript: LevelWebRtcGhostScript;
   private winScript: LevelWinScript;
 
   protected setup(updateArgs: GameUpdateArgs): void {
@@ -346,6 +348,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.powerupScript.startRecordingPowerups();
     }
     this.spawnScript = new LevelSpawnScript();
+    this.webRtcGhostScript = new LevelWebRtcGhostScript();
     this.winScript = new LevelWinScript();
 
     this.allScripts = [
@@ -364,6 +367,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.pointsScript,
       this.powerupScript,
       this.spawnScript,
+      this.webRtcGhostScript,
       this.winScript,
     ];
 
@@ -394,6 +398,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         this.playerScript,
         this.pointsScript,
         this.powerupScript,
+        this.webRtcGhostScript,
       );
     });
 
