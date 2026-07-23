@@ -80,11 +80,6 @@ export class Tank extends GameObject {
   public state = TankState.Uninitialized;
   public freezeState = new State<boolean>(false);
   public isOnIce = false;
-  // Momentum: the tank accelerates up to its move speed rather than snapping to
-  // it, giving movement weight ("tread grip"). Infinity = instant (the default,
-  // so enemy AI is unchanged); PlayerTank lowers it. Deterministic — no rng.
-  protected moveAcceleration = Infinity;
-  private currentSpeed = 0;
   // Per-sprite hit flash [0..1], set to full on receiveHit and decayed in
   // updateAnimation. Render-only cosmetic (see SpritePainter.flash) — never read
   // by the sim, so it can't affect replay determinism.
@@ -379,19 +374,7 @@ export class Tank extends GameObject {
       this.state = TankState.Moving;
     }
 
-    // Accelerate toward full speed (tread grip). Instant when acceleration is
-    // Infinity (enemies), a short ramp for the player.
-    const maxSpeed = this.attributes.moveSpeed;
-    if (this.moveAcceleration === Infinity) {
-      this.currentSpeed = maxSpeed;
-    } else {
-      this.currentSpeed = Math.min(
-        maxSpeed,
-        this.currentSpeed + this.moveAcceleration * deltaTime,
-      );
-    }
-
-    this.translateY(this.currentSpeed * deltaTime);
+    this.translateY(this.attributes.moveSpeed * deltaTime);
     this.updateMatrix(true);
   }
 
@@ -399,9 +382,6 @@ export class Tank extends GameObject {
     if (this.state !== TankState.Idle) {
       this.state = TankState.Idle;
     }
-
-    // Stopping resets built-up speed so the next move ramps from zero again.
-    this.currentSpeed = 0;
 
     // Whenever player lets go of his input controls, we check if tank is on ice
     // and if it should slide.

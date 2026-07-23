@@ -254,11 +254,6 @@ export const JUNGLE_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const WATER_TILE_SIZE = TILE_SIZE_MEDIUM;
 export const ICE_TILE_SIZE = TILE_SIZE_MEDIUM;
 
-// Player tank movement momentum: acceleration toward full move speed, in
-// units/s^2 (move speeds are ~120-240 u/s). Higher = snappier; Infinity would
-// be the classic instant response. Enemies always use instant.
-export const PLAYER_MOVE_ACCELERATION = 1400;
-
 export const BULLET_WIDTH = 12;
 
 export const PLAYER_FIRST_SPAWN_DELAY = 0;
