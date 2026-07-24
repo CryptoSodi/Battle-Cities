@@ -77,7 +77,10 @@ export class LevelEnemyScript extends LevelScript {
   }
 
   private removeNetworkEnemy(tank: EnemyTank): void {
-    tank.die(TankDeathReason.Bullet);
+    tank.removeSelf();
+    this.aliveTanks = this.aliveTanks.filter((aliveTank) => {
+      return aliveTank !== tank;
+    });
   }
 
   protected setup(): void {

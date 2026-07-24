@@ -172,6 +172,10 @@ export class MagicBlockMovementSync {
     return this.matchSync.isEnabled() || this.localServerMatchSync.isEnabled();
   }
 
+  public isObserverMatch(): boolean {
+    return this.matchSync.isObserver();
+  }
+
   public isLocalServerMatch(): boolean {
     return this.localServerMatchSync.isEnabled();
   }
@@ -195,6 +199,9 @@ export class MagicBlockMovementSync {
   }
 
   public recordLocalFire(tank: PlayerTank): void {
+    if (this.matchSync.isObserver()) {
+      return;
+    }
     if (this.localServerMatchSync.isEnabled()) {
       this.localServerMatchSync.recordLocalFire();
       return;
@@ -203,6 +210,9 @@ export class MagicBlockMovementSync {
   }
 
   public recordBoardCellDestroyed(centerX: number, centerY: number): void {
+    if (this.matchSync.isObserver()) {
+      return;
+    }
     if (this.localServerMatchSync.isEnabled()) {
       return;
     }

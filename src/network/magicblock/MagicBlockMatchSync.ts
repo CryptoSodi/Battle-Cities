@@ -220,6 +220,7 @@ export class MagicBlockMatchSync {
     TANK_MOVEMENT_IDL,
   );
   private readonly localPlayerIndex: number;
+  private readonly observerMode: boolean;
   private readonly enabled: boolean;
   private state = MatchSyncState.Idle;
   private matchId: number = null;
@@ -240,6 +241,15 @@ export class MagicBlockMatchSync {
   private remoteStateInitialized = false;
   private readonly remoteWaypoints: RemoteWaypoint[] = [];
   private lastQueuedRemoteSequence = -1;
+  private readonly observerRemoteStateInitialized: [boolean, boolean] = [
+    false,
+    false,
+  ];
+  private readonly observerRemoteWaypoints: [RemoteWaypoint[], RemoteWaypoint[]] = [
+    [],
+    [],
+  ];
+  private readonly observerLastQueuedRemoteSequence: [number, number] = [-1, -1];
   private localTankIdentity: PlayerTank = null;
   private localTankWasRemoved = false;
   private pendingRespawnTank: PlayerTank = null;
@@ -270,12 +280,16 @@ export class MagicBlockMatchSync {
   constructor() {
     const params = new URLSearchParams(window.location.search);
     this.enabled = params.get('mode') === 'match';
-    this.localPlayerIndex = params.get('join') === '1' ? 1 : 0;
+    this.observerMode = params.get('observer') === '1';
+    this.localPlayerIndex =
+      !this.observerMode && params.get('join') === '1' ? 1 : 0;
     this.debugDisableEnemyShooting = params.get('debugNoEnemyShooting') === '1';
     this.matchId = this.parseMatchId(params.get('match'));
     if (this.enabled) {
       this.showStatus(
-        this.localPlayerIndex === 0
+        this.observerMode
+          ? 'Opening MagicBlock observer...'
+          : this.localPlayerIndex === 0
           ? 'Preparing MagicBlock match...'
           : 'Joining MagicBlock match...',
       );
@@ -290,8 +304,12 @@ export class MagicBlockMatchSync {
     return this.localPlayerIndex;
   }
 
+  public isObserver(): boolean {
+    return this.enabled && this.observerMode;
+  }
+
   public isRemoteTank(partyIndex: number): boolean {
-    return this.enabled && partyIndex !== this.localPlayerIndex;
+    return this.enabled && (this.observerMode || partyIndex !== this.localPlayerIndex);
   }
 
   public update(
@@ -309,9 +327,12 @@ export class MagicBlockMatchSync {
       return;
     }
 
+    const firstTank = tanks[0];
+    const secondTank = tanks[1];
     const localTank = tanks[this.localPlayerIndex];
     const remoteTank = tanks[1 - this.localPlayerIndex];
-    if (localTank === null || localTank === undefined) {
+    const requiredTank = this.observerMode ? firstTank : localTank;
+    if (requiredTank === null || requiredTank === undefined) {
       if (this.state === MatchSyncState.Ready) {
         this.localTankWasRemoved = true;
       }
@@ -319,18 +340,16 @@ export class MagicBlockMatchSync {
     }
 
     if (this.state === MatchSyncState.Idle) {
-      const firstTank = tanks[0];
-      const secondTank = tanks[1];
       if (firstTank === null || firstTank === undefined || secondTank === null || secondTank === undefined) {
         return;
       }
       this.currentLevelNumber = levelNumber;
-      this.lastLocalX = localTank.position.x;
-      this.lastLocalY = localTank.position.y;
-      this.capturedLocalX = localTank.position.x;
-      this.capturedLocalY = localTank.position.y;
-      this.lastCapturedDirection = this.fromGameRotation(localTank.rotation);
-      this.localTankIdentity = localTank;
+      this.lastLocalX = requiredTank.position.x;
+      this.lastLocalY = requiredTank.position.y;
+      this.capturedLocalX = requiredTank.position.x;
+      this.capturedLocalY = requiredTank.position.y;
+      this.lastCapturedDirection = this.fromGameRotation(requiredTank.rotation);
+      this.localTankIdentity = requiredTank;
       this.state = MatchSyncState.Starting;
       void this.start(
         firstTank,
@@ -346,6 +365,12 @@ export class MagicBlockMatchSync {
     }
 
     if (this.state !== MatchSyncState.Ready || this.target === null) {
+      return;
+    }
+
+    if (this.observerMode) {
+      this.applyObserverState(tanks, deltaTime);
+      this.refreshIfStale();
       return;
     }
 
@@ -383,9 +408,7 @@ export class MagicBlockMatchSync {
 
     this.reconcileLocalState(localTank, deltaTime);
 
-    if (!this.polling && Date.now() - this.lastPollAt >= POLL_INTERVAL_MS) {
-      void this.refreshTarget().catch(this.handleRefreshError);
-    }
+    this.refreshIfStale();
 
     if (!this.sending && Date.now() - this.lastSendAt >= SEND_INTERVAL_MS) {
       void this.sendPendingInputBatch().catch(this.handleMovementError);
@@ -394,6 +417,7 @@ export class MagicBlockMatchSync {
 
   public recordLocalFire(tank: PlayerTank): void {
     if (
+      this.observerMode ||
       this.state !== MatchSyncState.Ready ||
       tank !== this.localTankIdentity ||
       this.pendingRespawnTank !== null
@@ -777,9 +801,15 @@ export class MagicBlockMatchSync {
       throw new Error('The player-two link is missing its match ID.');
     }
 
-    this.session = this.loadOrCreateSession();
     this.matchPda = this.deriveMatchPda(this.matchId);
     this.terrainPda = this.deriveTerrainPda(this.matchId);
+
+    if (this.observerMode) {
+      await this.startObserver();
+      return;
+    }
+
+    this.session = this.loadOrCreateSession();
     await this.fundSession(walletPublicKey);
 
     if (this.localPlayerIndex === 0) {
@@ -871,6 +901,25 @@ export class MagicBlockMatchSync {
       this.updateTarget(await this.fetchMatchState(this.erConnection));
     }
     this.finishReady();
+  }
+
+  private async startObserver(): Promise<void> {
+    const account = await this.baseConnection.getAccountInfo(this.matchPda);
+    if (account === null) {
+      throw new Error('Match not found. Ask player one for an observer link.');
+    }
+    if (
+      !account.owner.equals(PROGRAM_ID) &&
+      !account.owner.equals(DELEGATION_PROGRAM_ID)
+    ) {
+      throw new Error('The match PDA has an unexpected owner.');
+    }
+
+    this.state = MatchSyncState.Waiting;
+    this.showStatus('Observer waiting for MagicBlock ER...');
+    const delegation = await this.waitForDelegation();
+    await this.connectToEr(delegation);
+    this.finishObserverReady();
   }
 
   private async createMatch(
@@ -1077,6 +1126,18 @@ export class MagicBlockMatchSync {
   }
 
   private async delegateMatch(): Promise<void> {
+    const account = await this.baseConnection.getAccountInfo(this.matchPda);
+    if (account === null) {
+      throw new Error('The match account does not exist.');
+    }
+    if (account.owner.equals(DELEGATION_PROGRAM_ID)) {
+      this.log.info('Match account already delegated; skipping delegateMatch.');
+      return;
+    }
+    if (!account.owner.equals(PROGRAM_ID)) {
+      throw new Error('The match PDA has an unexpected owner.');
+    }
+
     const buffer = delegateBufferPdaFromDelegatedAccountAndOwnerProgram(
       this.matchPda,
       PROGRAM_ID,
@@ -1111,6 +1172,18 @@ export class MagicBlockMatchSync {
   }
 
   private async delegateTerrain(): Promise<void> {
+    const account = await this.baseConnection.getAccountInfo(this.terrainPda);
+    if (account === null) {
+      throw new Error('The terrain account does not exist.');
+    }
+    if (account.owner.equals(DELEGATION_PROGRAM_ID)) {
+      this.log.info('Terrain account already delegated; skipping delegateTerrain.');
+      return;
+    }
+    if (!account.owner.equals(PROGRAM_ID)) {
+      throw new Error('The terrain PDA has an unexpected owner.');
+    }
+
     const buffer = delegateBufferPdaFromDelegatedAccountAndOwnerProgram(
       this.terrainPda,
       PROGRAM_ID,
@@ -1251,6 +1324,37 @@ export class MagicBlockMatchSync {
     this.showInputLatencyControl();
     this.showMainnetLatencyControl();
     this.configureGhostSignalTransport();
+  }
+
+  private finishObserverReady(): void {
+    this.pendingInputFrames.length = 0;
+    this.remoteWaypoints.length = 0;
+    this.lastQueuedRemoteSequence = -1;
+    this.observerRemoteWaypoints.forEach((waypoints) => {
+      waypoints.length = 0;
+    });
+    this.observerRemoteStateInitialized[0] = false;
+    this.observerRemoteStateInitialized[1] = false;
+    this.observerLastQueuedRemoteSequence[0] = -1;
+    this.observerLastQueuedRemoteSequence[1] = -1;
+    this.pendingEnemyFireEvents.length = 0;
+    this.lastEnemyFireSequence = 0;
+    this.knownBoardMutations.clear();
+    this.remoteBoardMutations.length = 0;
+    this.knownBoardMutationEpoch = this.target.epoch;
+    this.target.players.forEach((player, index) => {
+      this.queueObserverSnapshot(index, player);
+    });
+    this.queueBoardMutations(this.target.boardMutations);
+    this.queueEnemyFireEvents(this.target.enemyFireEvents);
+    this.state = MatchSyncState.Ready;
+    this.joinButtonElement?.remove();
+    this.joinButtonElement = null;
+    this.showStatus(
+      `MagicBlock observer live\nER: ${this.formatErEndpoint()}`,
+    );
+    this.showLatencyControl();
+    this.showMainnetLatencyControl();
   }
 
   private configureGhostSignalTransport(): void {
@@ -1596,29 +1700,45 @@ export class MagicBlockMatchSync {
     if (this.playerMirrorBulletsSuppressed) {
       tank.bullets.slice().forEach((bullet) => bullet.nullify());
     }
-    if (this.remoteWaypoints.length === 0) {
-      return;
+
+    this.remoteStateInitialized = this.applyWaypointState(
+      tank,
+      deltaTime,
+      this.remoteWaypoints,
+      this.remoteStateInitialized,
+    );
+  }
+
+  private applyWaypointState(
+    tank: PlayerTank,
+    deltaTime: number,
+    waypoints: RemoteWaypoint[],
+    initialized: boolean,
+  ): boolean {
+    if (waypoints.length === 0) {
+      return initialized;
     }
 
-    if (!this.remoteStateInitialized) {
-      const initial = this.remoteWaypoints.shift();
+    let nextInitialized = initialized;
+    if (!nextInitialized) {
+      const initial = waypoints.shift();
       tank.position.set(initial.x, initial.y);
       tank.rotation = this.toGameRotation(initial.direction);
-      this.remoteStateInitialized = true;
+      nextInitialized = true;
     }
 
     let movementBudget =
       tank.attributes.moveSpeed *
-      (this.remoteWaypoints.length > REMOTE_INPUT_BACKLOG_CATCH_UP_THRESHOLD
+      (waypoints.length > REMOTE_INPUT_BACKLOG_CATCH_UP_THRESHOLD
         ? REMOTE_CATCH_UP_SPEED_MULTIPLIER
         : 1) *
       deltaTime;
 
-    while (movementBudget > 0 && this.remoteWaypoints.length > 0) {
-      const waypoint = this.remoteWaypoints[0];
+    while (movementBudget > 0 && waypoints.length > 0) {
+      const waypoint = waypoints[0];
       if (waypoint.teleport) {
         this.consumeRemoteWaypoint(tank, waypoint);
-        this.remoteWaypoints.shift();
+        waypoints.shift();
         continue;
       }
       if (
@@ -1628,7 +1748,7 @@ export class MagicBlockMatchSync {
         tank.rotation = this.toGameRotation(waypoint.direction);
         if (waypoint.remainingDistance <= LOCAL_PREDICTION_EPSILON) {
           this.consumeRemoteWaypoint(tank, waypoint);
-          this.remoteWaypoints.shift();
+          waypoints.shift();
           continue;
         }
         const inputStep = Math.min(
@@ -1644,7 +1764,7 @@ export class MagicBlockMatchSync {
         movementBudget -= inputStep;
         if (waypoint.remainingDistance <= LOCAL_PREDICTION_EPSILON) {
           this.consumeRemoteWaypoint(tank, waypoint);
-          this.remoteWaypoints.shift();
+          waypoints.shift();
         }
         continue;
       }
@@ -1655,7 +1775,7 @@ export class MagicBlockMatchSync {
 
       if (distance <= LOCAL_PREDICTION_EPSILON) {
         this.consumeRemoteWaypoint(tank, waypoint);
-        this.remoteWaypoints.shift();
+        waypoints.shift();
         continue;
       }
 
@@ -1669,12 +1789,60 @@ export class MagicBlockMatchSync {
 
       if (step >= distance) {
         this.consumeRemoteWaypoint(tank, waypoint);
-        this.remoteWaypoints.shift();
+        waypoints.shift();
       }
     }
 
     tank.updateMatrix(true);
-    tank.collider.update();
+    if (tank.collider.isInitialized()) {
+      tank.collider.update();
+    }
+    tank.setNeedsPaint();
+    return nextInitialized;
+  }
+
+  private applyObserverState(tanks: PlayerTank[], deltaTime: number): void {
+    this.target.players.forEach((state, index) => {
+      if (!state.joined) {
+        return;
+      }
+      const tank = tanks[index];
+      if (tank === null || tank === undefined) {
+        return;
+      }
+      this.observerRemoteStateInitialized[index] = this.applyWaypointState(
+        tank,
+        deltaTime,
+        this.observerRemoteWaypoints[index],
+        this.observerRemoteStateInitialized[index],
+      );
+    });
+  }
+
+  private applyServerPlayerState(
+    tank: PlayerTank,
+    state: MatchPlayerState,
+  ): void {
+    if (tank === null || tank === undefined) {
+      return;
+    }
+
+    tank.position.set(
+      this.fromChainUnits(state.x),
+      this.fromChainUnits(state.y),
+    );
+    tank.rotation = this.toGameRotation(state.direction);
+    tank.updateMatrix(true);
+    if (tank.collider.isInitialized()) {
+      tank.collider.update();
+    }
+    tank.setNeedsPaint();
+  }
+
+  private refreshIfStale(): void {
+    if (!this.polling && Date.now() - this.lastPollAt >= POLL_INTERVAL_MS) {
+      void this.refreshTarget().catch(this.handleRefreshError);
+    }
   }
 
   private updateTarget(next: MatchAccountState): void {
@@ -1688,6 +1856,12 @@ export class MagicBlockMatchSync {
     this.queueBoardMutations(next.boardMutations);
     this.queueEnemyFireEvents(next.enemyFireEvents);
     if (this.state === MatchSyncState.Ready) {
+      if (this.observerMode) {
+        next.players.forEach((player, index) => {
+          this.queueObserverReceipt(index, player, next.inputReceipts[index]);
+        });
+        return;
+      }
       const remoteIndex = 1 - this.localPlayerIndex;
       this.queueRemoteReceipt(
         next.players[remoteIndex],
@@ -1776,14 +1950,32 @@ export class MagicBlockMatchSync {
     if (!state.joined) {
       return;
     }
-    this.remoteWaypoints.push({
+    this.queueSnapshotToWaypoints(state, this.remoteWaypoints);
+    this.lastQueuedRemoteSequence = state.sequence;
+  }
+
+  private queueObserverSnapshot(
+    index: number,
+    state: MatchPlayerState,
+  ): void {
+    if (!state.joined) {
+      return;
+    }
+    this.queueSnapshotToWaypoints(state, this.observerRemoteWaypoints[index]);
+    this.observerLastQueuedRemoteSequence[index] = state.sequence;
+  }
+
+  private queueSnapshotToWaypoints(
+    state: MatchPlayerState,
+    waypoints: RemoteWaypoint[],
+  ): void {
+    waypoints.push({
       x: this.fromChainUnits(state.x),
       y: this.fromChainUnits(state.y),
       direction: state.direction,
       sequence: state.sequence,
       teleport: true,
     });
-    this.lastQueuedRemoteSequence = state.sequence;
   }
 
   private queueRemoteReceipt(
@@ -1793,15 +1985,45 @@ export class MagicBlockMatchSync {
     if (!state.joined || state.sequence <= this.lastQueuedRemoteSequence) {
       return;
     }
+    this.lastQueuedRemoteSequence = this.queueReceiptToWaypoints(
+      state,
+      receipt,
+      this.remoteWaypoints,
+      this.lastQueuedRemoteSequence,
+    );
+  }
 
+  private queueObserverReceipt(
+    index: number,
+    state: MatchPlayerState,
+    receipt: MatchInputReceipt,
+  ): void {
+    const lastQueuedSequence = this.observerLastQueuedRemoteSequence[index];
+    if (!state.joined || state.sequence <= lastQueuedSequence) {
+      return;
+    }
+    this.observerLastQueuedRemoteSequence[index] = this.queueReceiptToWaypoints(
+      state,
+      receipt,
+      this.observerRemoteWaypoints[index],
+      lastQueuedSequence,
+    );
+  }
+
+  private queueReceiptToWaypoints(
+    state: MatchPlayerState,
+    receipt: MatchInputReceipt,
+    waypoints: RemoteWaypoint[],
+    lastQueuedSequence: number,
+  ): number {
     const missedBatch =
-      this.lastQueuedRemoteSequence >= 0 &&
-      receipt.batchSequence !== this.lastQueuedRemoteSequence + 1;
+      lastQueuedSequence >= 0 &&
+      receipt.batchSequence !== lastQueuedSequence + 1;
     let x = receipt.startX;
     let y = receipt.startY;
 
     if (missedBatch) {
-      this.remoteWaypoints.push({
+      waypoints.push({
         x: this.fromChainUnits(x),
         y: this.fromChainUnits(y),
         direction: receipt.frames[0]?.direction ?? state.direction,
@@ -1827,7 +2049,7 @@ export class MagicBlockMatchSync {
       } else {
         x -= frame.distance;
       }
-      this.remoteWaypoints.push({
+      waypoints.push({
         x: this.fromChainUnits(x),
         y: this.fromChainUnits(y),
         direction: frame.direction,
@@ -1844,7 +2066,7 @@ export class MagicBlockMatchSync {
     });
 
     if (receipt.frames.length === 0) {
-      this.remoteWaypoints.push({
+      waypoints.push({
         x: this.fromChainUnits(state.x),
         y: this.fromChainUnits(state.y),
         direction: state.direction,
@@ -1852,7 +2074,7 @@ export class MagicBlockMatchSync {
         teleport: true,
       });
     }
-    this.lastQueuedRemoteSequence = state.sequence;
+    return state.sequence;
   }
 
   private consumeRemoteWaypoint(
@@ -2228,21 +2450,7 @@ export class MagicBlockMatchSync {
   }
 
   private showJoinControl(): void {
-    const url = new URL(window.location.href);
-    url.searchParams.set('magicblock', '1');
-    url.searchParams.set('mode', 'match');
-    url.searchParams.set('match', this.matchId.toString());
-    url.searchParams.set('join', '1');
-    url.searchParams.set('level', this.currentLevelNumber.toString());
-    if (
-      url.searchParams.has('ghostMirror') ||
-      url.searchParams.has('ghostmirror') ||
-      url.searchParams.has('ghosmirror')
-    ) {
-      url.searchParams.delete('ghostmirror');
-      url.searchParams.delete('ghosmirror');
-      url.searchParams.set('ghostMirror', '1');
-    }
+    const url = this.createMatchLink('join');
     const button = this.ensureStatusButton('join');
     button.type = 'button';
     button.textContent = 'Copy player-two link';
@@ -2258,6 +2466,55 @@ export class MagicBlockMatchSync {
       }
     };
     this.log.info(`Player-two link: ${url.toString()}`);
+    this.showObserverControl();
+  }
+
+  private showObserverControl(): void {
+    const url = this.createMatchLink('observer');
+    const button = this.ensureStatusButton('observer');
+    button.type = 'button';
+    button.textContent = 'Copy observer link';
+    button.onclick = async (): Promise<void> => {
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        button.textContent = 'Observer link copied';
+        window.setTimeout(() => {
+          button.textContent = 'Copy observer link';
+        }, 2000);
+      } catch {
+        button.textContent = 'Copy failed - check DevTools';
+      }
+    };
+    this.log.info(`Observer link: ${url.toString()}`);
+  }
+
+  private createMatchLink(kind: 'join' | 'observer'): URL {
+    const url = new URL(window.location.href);
+    url.searchParams.set('magicblock', '1');
+    url.searchParams.set('mode', 'match');
+    url.searchParams.set('match', this.matchId.toString());
+    url.searchParams.set('level', this.currentLevelNumber.toString());
+    if (kind === 'join') {
+      url.searchParams.set('join', '1');
+      url.searchParams.delete('observer');
+    } else {
+      url.searchParams.set('observer', '1');
+      url.searchParams.delete('join');
+      url.searchParams.delete('ghostMirror');
+      url.searchParams.delete('ghostmirror');
+      url.searchParams.delete('ghosmirror');
+      return url;
+    }
+    if (
+      url.searchParams.has('ghostMirror') ||
+      url.searchParams.has('ghostmirror') ||
+      url.searchParams.has('ghosmirror')
+    ) {
+      url.searchParams.delete('ghostmirror');
+      url.searchParams.delete('ghosmirror');
+      url.searchParams.set('ghostMirror', '1');
+    }
+    return url;
   }
 
   private showStatus(message: string): void {
@@ -2428,11 +2685,13 @@ export class MagicBlockMatchSync {
   }
 
   private ensureStatusButton(
-    kind: 'join' | 'latency' | 'input-latency' | 'mainnet-latency',
+    kind: 'join' | 'observer' | 'latency' | 'input-latency' | 'mainnet-latency',
   ): HTMLButtonElement {
     const existing =
       kind === 'join'
         ? this.joinButtonElement
+        : kind === 'observer'
+          ? null
         : kind === 'latency'
           ? this.latencyButtonElement
           : kind === 'input-latency'
@@ -2447,6 +2706,9 @@ export class MagicBlockMatchSync {
     this.ensureStatusContainer().appendChild(button);
     if (kind === 'join') {
       this.joinButtonElement = button;
+    } else if (kind === 'observer') {
+      // Observer link is shown only while hosting before delegation; it does not
+      // need to be kept after the host panel is rebuilt.
     } else if (kind === 'latency') {
       this.latencyButtonElement = button;
     } else if (kind === 'input-latency') {
