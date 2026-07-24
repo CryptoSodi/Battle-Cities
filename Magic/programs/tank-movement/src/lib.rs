@@ -9,7 +9,7 @@ use ephemeral_rollups_sdk::cpi::DelegateConfig;
 use ephemeral_rollups_sdk::ephem::MagicIntentBundleBuilder;
 use magicblock_magic_program_api::{args::ScheduleTaskArgs, instruction::MagicBlockInstruction};
 
-declare_id!("DSZ915qqBHFJHdN8TwLKVsWQxTs3b8J2drwrtm74ktP3");
+declare_id!("Aaxx2EcXQA5My5isrPw35FWPGUve4jaiW8u3ER9c9tRu");
 
 const TANK_SEED: &[u8] = b"tank";
 const MATCH_SEED: &[u8] = b"match";
@@ -70,6 +70,12 @@ const ENEMY_AI_STATE_SHIFT: u8 = 2;
 const CRANK_INTERVAL_MS: i64 = 50;
 const CRANK_ITERATIONS: i64 = 36_000;
 const ASIA_DEVNET_VALIDATOR: Pubkey = pubkey!("MAS1Dt9qreoRMQ14YQuhg8UTZMMzDdKhmkZMECCzk57");
+const MATCH_ID_OFFSET: usize = 8;
+const MATCH_EPOCH_OFFSET: usize = 16;
+const MATCH_HOST_OFFSET: usize = 24;
+const MATCH_PHASE_OFFSET: usize = 56;
+const MATCH_SECOND_PLAYER_JOINED_OFFSET: usize = 178;
+const MATCH_TERRAIN_INITIALIZED_OFFSET: usize = 3_134;
 
 #[ephemeral]
 #[program]
@@ -319,18 +325,24 @@ pub mod tank_movement {
 
     pub fn delegate_match(ctx: Context<DelegateMatch>, match_id: u64) -> Result<()> {
         let data = ctx.accounts.match_state.try_borrow_data()?;
-        let match_state = MatchState::try_deserialize(&mut data.as_ref())?;
-        require_eq!(match_state.match_id, match_id, MatchError::WrongMatch);
+        require_eq!(
+            read_u64_at(&data, MATCH_ID_OFFSET)?,
+            match_id,
+            MatchError::WrongMatch
+        );
         require_keys_eq!(
-            match_state.host,
+            read_pubkey_at(&data, MATCH_HOST_OFFSET)?,
             ctx.accounts.authority.key(),
             MatchError::UnauthorizedHost
         );
         require!(
-            match_state.terrain_initialized,
+            read_bool_at(&data, MATCH_TERRAIN_INITIALIZED_OFFSET)?,
             MatchError::TerrainIncomplete
         );
-        require!(match_state.players[1].joined, MatchError::WaitingForPlayer);
+        require!(
+            read_bool_at(&data, MATCH_SECOND_PLAYER_JOINED_OFFSET)?,
+            MatchError::WaitingForPlayer
+        );
         drop(data);
 
         ctx.accounts.delegate_match_state(
@@ -401,16 +413,23 @@ pub mod tank_movement {
         epoch: u64,
     ) -> Result<()> {
         let data = ctx.accounts.match_state.try_borrow_data()?;
-        let state = MatchState::try_deserialize(&mut data.as_ref())?;
-        require_eq!(state.match_id, match_id, MatchError::WrongMatch);
-        require_eq!(state.epoch, epoch, MatchError::StaleEpoch);
+        require_eq!(
+            read_u64_at(&data, MATCH_ID_OFFSET)?,
+            match_id,
+            MatchError::WrongMatch
+        );
+        require_eq!(
+            read_u64_at(&data, MATCH_EPOCH_OFFSET)?,
+            epoch,
+            MatchError::StaleEpoch
+        );
         require_keys_eq!(
-            state.host,
+            read_pubkey_at(&data, MATCH_HOST_OFFSET)?,
             ctx.accounts.payer.key(),
             MatchError::UnauthorizedHost
         );
         require!(
-            state.phase == MatchPhase::Active,
+            read_u8_at(&data, MATCH_PHASE_OFFSET)? == MatchPhase::Active as u8,
             MatchError::MatchNotActive
         );
         drop(data);
@@ -1214,6 +1233,38 @@ pub struct CommitMatch<'info> {
         constraint = terrain_state.match_id == match_id @ MatchError::WrongMatch
     )]
     pub terrain_state: Box<Account<'info, TerrainState>>,
+}
+
+fn read_u8_at(data: &[u8], offset: usize) -> Result<u8> {
+    data.get(offset)
+        .copied()
+        .ok_or_else(|| ProgramError::InvalidAccountData.into())
+}
+
+fn read_bool_at(data: &[u8], offset: usize) -> Result<bool> {
+    Ok(read_u8_at(data, offset)? != 0)
+}
+
+fn read_u64_at(data: &[u8], offset: usize) -> Result<u64> {
+    let bytes = data
+        .get(offset..offset + 8)
+        .ok_or(ProgramError::InvalidAccountData)?;
+    Ok(u64::from_le_bytes(
+        bytes
+            .try_into()
+            .map_err(|_| ProgramError::InvalidAccountData)?,
+    ))
+}
+
+fn read_pubkey_at(data: &[u8], offset: usize) -> Result<Pubkey> {
+    let bytes = data
+        .get(offset..offset + 32)
+        .ok_or(ProgramError::InvalidAccountData)?;
+    Ok(Pubkey::new_from_array(
+        bytes
+            .try_into()
+            .map_err(|_| ProgramError::InvalidAccountData)?,
+    ))
 }
 
 fn validate_field(field_width: u16, field_height: u16) -> Result<()> {
@@ -2496,6 +2547,28 @@ mod tests {
             steel: [0; MAX_TERRAIN_BYTES],
             bump: 1,
         }
+    }
+
+    #[test]
+    fn raw_match_offsets_track_serialized_layout() {
+        let mut state = test_match_state();
+        state.players[1].joined = true;
+        let mut data = Vec::new();
+        state.try_serialize(&mut data).unwrap();
+
+        assert_eq!(data.len(), 8 + MatchState::INIT_SPACE);
+        assert_eq!(read_u64_at(&data, MATCH_ID_OFFSET).unwrap(), state.match_id);
+        assert_eq!(read_u64_at(&data, MATCH_EPOCH_OFFSET).unwrap(), state.epoch);
+        assert_eq!(
+            read_pubkey_at(&data, MATCH_HOST_OFFSET).unwrap(),
+            state.host
+        );
+        assert_eq!(
+            read_u8_at(&data, MATCH_PHASE_OFFSET).unwrap(),
+            MatchPhase::Active as u8
+        );
+        assert!(read_bool_at(&data, MATCH_SECOND_PLAYER_JOINED_OFFSET).unwrap());
+        assert!(read_bool_at(&data, MATCH_TERRAIN_INITIALIZED_OFFSET).unwrap());
     }
 
     #[test]

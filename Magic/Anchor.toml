@@ -3,7 +3,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-tank_movement = "DSZ915qqBHFJHdN8TwLKVsWQxTs3b8J2drwrtm74ktP3"
+tank_movement = "Aaxx2EcXQA5My5isrPw35FWPGUve4jaiW8u3ER9c9tRu"
 
 [provider]
 cluster = "https://rpc.magicblock.app/devnet"

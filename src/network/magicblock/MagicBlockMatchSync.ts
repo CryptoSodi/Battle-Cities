@@ -30,7 +30,7 @@ import { MagicBlockGhostSignalTransport } from './MagicBlockGhostSignalTransport
 import { TANK_MOVEMENT_IDL } from './TankMovementIdl';
 
 const PROGRAM_ID = new PublicKey(
-  'DSZ915qqBHFJHdN8TwLKVsWQxTs3b8J2drwrtm74ktP3',
+  'Aaxx2EcXQA5My5isrPw35FWPGUve4jaiW8u3ER9c9tRu',
 );
 const BASE_RPC = 'https://rpc.magicblock.app/devnet';
 const ROUTER_RPC = 'https://devnet-router.magicblock.app';

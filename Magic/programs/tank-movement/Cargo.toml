@@ -5,7 +5,7 @@ description = "Server-authoritative tank movement state for MagicBlock Ephemeral
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib"]
 name = "tank_movement"
 
 [features]
