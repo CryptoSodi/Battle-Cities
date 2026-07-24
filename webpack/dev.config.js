@@ -22,6 +22,11 @@ const { attachDevApiExtras } = require('../server/devApiExtras');
 const walletAuth = require('../server/walletAuth');
 const googleAuth = require('../server/googleAuth');
 
+const WEBRTC_SIGNAL_TTL_MS = 5 * 60 * 1000;
+const WEBRTC_SIGNAL_MAX_BYTES = 256 * 1024;
+const webrtcSignals = new Map();
+let nextWebRtcSignalId = 1;
+
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -63,6 +68,30 @@ async function resolveSessionPlayer(request) {
   }
 
   return playerStore.readPlayer(session.playerId);
+}
+
+function webRtcSignalKey(matchId, playerIndex, kind) {
+  return `${matchId}:${playerIndex}:${kind}`;
+}
+
+function cleanupWebRtcSignals(now = Date.now()) {
+  for (const [key, signal] of webrtcSignals.entries()) {
+    if (now - signal.createdAt > WEBRTC_SIGNAL_TTL_MS) {
+      webrtcSignals.delete(key);
+    }
+  }
+}
+
+function isValidWebRtcMatchId(value) {
+  return typeof value === 'string' && /^[0-9A-Za-z_-]{1,64}$/.test(value);
+}
+
+function isValidWebRtcPlayerIndex(value) {
+  return value === '0' || value === '1';
+}
+
+function isValidWebRtcSignalKind(value) {
+  return value === 'offer' || value === 'answer';
 }
 
 function attachReplayApi(app) {
@@ -381,6 +410,92 @@ function attachReplayApi(app) {
       result: matchResultStore.toPublicResult(result),
     });
   });
+
+  app.post(
+    '/api/webrtc/matches/:matchId/players/:playerIndex/signals/:kind',
+    async (request, response) => {
+      const { matchId, playerIndex, kind } = request.params;
+      if (
+        !isValidWebRtcMatchId(matchId) ||
+        !isValidWebRtcPlayerIndex(playerIndex) ||
+        !isValidWebRtcSignalKind(kind)
+      ) {
+        sendJson(response, 400, { ok: false, error: 'Invalid signal route' });
+        return;
+      }
+
+      let body;
+      try {
+        body = await readJsonBody(request);
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: 'Invalid JSON' });
+        return;
+      }
+
+      if (
+        typeof body.code !== 'string' ||
+        body.code.length === 0 ||
+        Buffer.byteLength(body.code, 'utf8') > WEBRTC_SIGNAL_MAX_BYTES
+      ) {
+        sendJson(response, 400, { ok: false, error: 'Invalid signal code' });
+        return;
+      }
+
+      cleanupWebRtcSignals();
+      const createdAt = Date.now();
+      const signal = {
+        id: nextWebRtcSignalId,
+        matchId,
+        playerIndex: Number(playerIndex),
+        kind,
+        code: body.code,
+        createdAt,
+      };
+      nextWebRtcSignalId += 1;
+      webrtcSignals.set(webRtcSignalKey(matchId, playerIndex, kind), signal);
+      sendJson(response, 201, { ok: true, id: signal.id, createdAt });
+    },
+  );
+
+  app.get(
+    '/api/webrtc/matches/:matchId/players/:playerIndex/signals/:kind',
+    (request, response) => {
+      const { matchId, playerIndex, kind } = request.params;
+      if (
+        !isValidWebRtcMatchId(matchId) ||
+        !isValidWebRtcPlayerIndex(playerIndex) ||
+        !isValidWebRtcSignalKind(kind)
+      ) {
+        sendJson(response, 400, { ok: false, error: 'Invalid signal route' });
+        return;
+      }
+
+      cleanupWebRtcSignals();
+      const after =
+        typeof request.query.after === 'string'
+          ? Number(request.query.after)
+          : 0;
+      const signal = webrtcSignals.get(
+        webRtcSignalKey(matchId, playerIndex, kind),
+      );
+      if (signal === undefined || signal.id <= after) {
+        sendJson(response, 200, { ok: true, signal: null });
+        return;
+      }
+
+      sendJson(response, 200, {
+        ok: true,
+        signal: {
+          id: signal.id,
+          matchId: signal.matchId,
+          playerIndex: signal.playerIndex,
+          kind: signal.kind,
+          code: signal.code,
+          createdAt: signal.createdAt,
+        },
+      });
+    },
+  );
 
   app.get('/api/rankings', async (request, response) => {
     const scope = request.query.scope === 'trading' ? 'trading' : 'gaming';

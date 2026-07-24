@@ -363,7 +363,7 @@ export class WebRtcGhostSync {
     }
 
     if (this.localPlayerIndex !== 0) {
-      log('waiting for MagicBlock offer');
+      log('waiting for signaling offer');
       return;
     }
 
@@ -402,7 +402,7 @@ export class WebRtcGhostSync {
       await this.pasteAnswerCode(code);
       this.acceptedAnswerSessionId = signal.signalSessionId;
     } catch (error) {
-      log('MagicBlock signal handling failed', error);
+      log('signaling message handling failed', error);
     }
   }
 
@@ -415,7 +415,7 @@ export class WebRtcGhostSync {
     }
 
     await this.signalTransport.publishSignal(code, kind);
-    log(`MagicBlock ${kind} published`);
+    log(`signaling ${kind} published`);
   }
 
   private startOfferCycle(reason: string): void {
@@ -432,13 +432,13 @@ export class WebRtcGhostSync {
     this.createOfferCode()
       .then((code) => this.publishTransportSignal(code, 'offer'))
       .then(() => {
-        log('MagicBlock offer cycle started', {
+        log('signaling offer cycle started', {
           reason,
           signalSessionId: this.activeOfferSessionId,
         });
       })
       .catch((error) => {
-        log('MagicBlock offer cycle failed', error);
+        log('signaling offer cycle failed', error);
         this.scheduleReconnect();
       })
       .finally(() => {

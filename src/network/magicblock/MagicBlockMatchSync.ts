@@ -24,9 +24,12 @@ import { EnemyTank, PlayerTank, Tank } from '../../gameObjects';
 import { TerrainRegionConfig, TerrainType } from '../../terrain';
 import { getPhantomProvider } from '../../wallet';
 import * as config from '../../config';
-import { WebRtcGhostSync } from '../webrtc';
+import {
+  HttpGhostSignalTransport,
+  WebRtcGhostSignalTransport,
+  WebRtcGhostSync,
+} from '../webrtc';
 
-import { MagicBlockGhostSignalTransport } from './MagicBlockGhostSignalTransport';
 import { TANK_MOVEMENT_IDL } from './TankMovementIdl';
 
 const PROGRAM_ID = new PublicKey(
@@ -275,7 +278,7 @@ export class MagicBlockMatchSync {
   private erEndpoint: string = null;
   private readonly initializedEnemies = new Set<number>();
   private readonly enemyReplayStates = new Map<number, EnemyReplayState>();
-  private ghostSignalTransport: MagicBlockGhostSignalTransport = null;
+  private ghostSignalTransport: WebRtcGhostSignalTransport = null;
 
   constructor() {
     const params = new URLSearchParams(window.location.search);
@@ -293,6 +296,7 @@ export class MagicBlockMatchSync {
           ? 'Preparing MagicBlock match...'
           : 'Joining MagicBlock match...',
       );
+      this.configureGhostSignalTransport();
     }
   }
 
@@ -800,6 +804,7 @@ export class MagicBlockMatchSync {
     if (this.matchId === null) {
       throw new Error('The player-two link is missing its match ID.');
     }
+    this.configureGhostSignalTransport();
 
     this.matchPda = this.deriveMatchPda(this.matchId);
     this.terrainPda = this.deriveTerrainPda(this.matchId);
@@ -1359,23 +1364,27 @@ export class MagicBlockMatchSync {
 
   private configureGhostSignalTransport(): void {
     if (
-      this.erConnection === null ||
-      this.session === null ||
-      this.target === null
+      !this.enabled ||
+      this.observerMode ||
+      this.matchId === null ||
+      this.ghostSignalTransport !== null
     ) {
       return;
     }
 
-    const remoteAuthority = this.target.players[1 - this.localPlayerIndex].authority;
-    this.ghostSignalTransport = new MagicBlockGhostSignalTransport(
-      this.erConnection,
-      this.session,
-      remoteAuthority,
+    const ghostSync = WebRtcGhostSync.getInstance();
+    ghostSync.configureFromLocation(this.localPlayerIndex);
+    if (!ghostSync.isEnabled()) {
+      return;
+    }
+
+    this.ghostSignalTransport = new HttpGhostSignalTransport(
       this.matchId.toString(),
       this.localPlayerIndex,
     );
-    WebRtcGhostSync.getInstance().setSignalTransport(this.ghostSignalTransport);
-    this.log.info('MagicBlock WebRTC ghost signaling enabled.');
+    ghostSync.setSignalTransport(this.ghostSignalTransport);
+    ghostSync.start();
+    this.log.info('HTTP WebRTC ghost signaling enabled.');
   }
 
   private captureLocalInput(tank: PlayerTank): void {
