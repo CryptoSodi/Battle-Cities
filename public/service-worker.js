@@ -38,6 +38,10 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
+  if (request.headers.has('range')) {
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request));
     return;
@@ -51,9 +55,9 @@ self.addEventListener('fetch', function (event) {
 function networkFirst(request) {
   return fetch(request)
     .then(function (response) {
-      if (response.ok) {
+      if (isCacheableResponse(response)) {
         caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(request, response.clone());
+          cache.put(request, response.clone()).catch(function () {});
         });
       }
       return response;
@@ -70,8 +74,8 @@ function staleWhileRevalidate(request) {
     return cache.match(request).then(function (cached) {
       var updated = fetch(request)
         .then(function (response) {
-          if (response.ok) {
-            cache.put(request, response.clone());
+          if (isCacheableResponse(response)) {
+            cache.put(request, response.clone()).catch(function () {});
           }
           return response;
         })
@@ -82,4 +86,8 @@ function staleWhileRevalidate(request) {
       return cached || updated;
     });
   });
+}
+
+function isCacheableResponse(response) {
+  return response.status === 200;
 }

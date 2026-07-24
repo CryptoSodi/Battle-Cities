@@ -21,11 +21,7 @@ const rateLimiter = require('../server/rateLimiter');
 const { attachDevApiExtras } = require('../server/devApiExtras');
 const walletAuth = require('../server/walletAuth');
 const googleAuth = require('../server/googleAuth');
-
-const WEBRTC_SIGNAL_TTL_MS = 5 * 60 * 1000;
-const WEBRTC_SIGNAL_MAX_BYTES = 256 * 1024;
-const webrtcSignals = new Map();
-let nextWebRtcSignalId = 1;
+const webrtcSignalStore = require('../server/webrtcSignalStore');
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -68,30 +64,6 @@ async function resolveSessionPlayer(request) {
   }
 
   return playerStore.readPlayer(session.playerId);
-}
-
-function webRtcSignalKey(matchId, playerIndex, kind) {
-  return `${matchId}:${playerIndex}:${kind}`;
-}
-
-function cleanupWebRtcSignals(now = Date.now()) {
-  for (const [key, signal] of webrtcSignals.entries()) {
-    if (now - signal.createdAt > WEBRTC_SIGNAL_TTL_MS) {
-      webrtcSignals.delete(key);
-    }
-  }
-}
-
-function isValidWebRtcMatchId(value) {
-  return typeof value === 'string' && /^[0-9A-Za-z_-]{1,64}$/.test(value);
-}
-
-function isValidWebRtcPlayerIndex(value) {
-  return value === '0' || value === '1';
-}
-
-function isValidWebRtcSignalKind(value) {
-  return value === 'offer' || value === 'answer';
 }
 
 function attachReplayApi(app) {
@@ -416,9 +388,9 @@ function attachReplayApi(app) {
     async (request, response) => {
       const { matchId, playerIndex, kind } = request.params;
       if (
-        !isValidWebRtcMatchId(matchId) ||
-        !isValidWebRtcPlayerIndex(playerIndex) ||
-        !isValidWebRtcSignalKind(kind)
+        !webrtcSignalStore.isValidMatchId(matchId) ||
+        !webrtcSignalStore.isValidPlayerIndex(playerIndex) ||
+        !webrtcSignalStore.isValidSignalKind(kind)
       ) {
         sendJson(response, 400, { ok: false, error: 'Invalid signal route' });
         return;
@@ -432,68 +404,48 @@ function attachReplayApi(app) {
         return;
       }
 
-      if (
-        typeof body.code !== 'string' ||
-        body.code.length === 0 ||
-        Buffer.byteLength(body.code, 'utf8') > WEBRTC_SIGNAL_MAX_BYTES
-      ) {
-        sendJson(response, 400, { ok: false, error: 'Invalid signal code' });
-        return;
+      try {
+        const signal = await webrtcSignalStore.publishSignal(
+          matchId,
+          playerIndex,
+          kind,
+          body.code,
+        );
+        sendJson(response, 201, {
+          ok: true,
+          id: signal.id,
+          createdAt: signal.createdAt,
+        });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error.message });
       }
-
-      cleanupWebRtcSignals();
-      const createdAt = Date.now();
-      const signal = {
-        id: nextWebRtcSignalId,
-        matchId,
-        playerIndex: Number(playerIndex),
-        kind,
-        code: body.code,
-        createdAt,
-      };
-      nextWebRtcSignalId += 1;
-      webrtcSignals.set(webRtcSignalKey(matchId, playerIndex, kind), signal);
-      sendJson(response, 201, { ok: true, id: signal.id, createdAt });
     },
   );
 
   app.get(
     '/api/webrtc/matches/:matchId/players/:playerIndex/signals/:kind',
-    (request, response) => {
+    async (request, response) => {
       const { matchId, playerIndex, kind } = request.params;
       if (
-        !isValidWebRtcMatchId(matchId) ||
-        !isValidWebRtcPlayerIndex(playerIndex) ||
-        !isValidWebRtcSignalKind(kind)
+        !webrtcSignalStore.isValidMatchId(matchId) ||
+        !webrtcSignalStore.isValidPlayerIndex(playerIndex) ||
+        !webrtcSignalStore.isValidSignalKind(kind)
       ) {
         sendJson(response, 400, { ok: false, error: 'Invalid signal route' });
         return;
       }
 
-      cleanupWebRtcSignals();
       const after =
         typeof request.query.after === 'string'
           ? Number(request.query.after)
           : 0;
-      const signal = webrtcSignals.get(
-        webRtcSignalKey(matchId, playerIndex, kind),
+      const signal = await webrtcSignalStore.readSignal(
+        matchId,
+        playerIndex,
+        kind,
+        after,
       );
-      if (signal === undefined || signal.id <= after) {
-        sendJson(response, 200, { ok: true, signal: null });
-        return;
-      }
-
-      sendJson(response, 200, {
-        ok: true,
-        signal: {
-          id: signal.id,
-          matchId: signal.matchId,
-          playerIndex: signal.playerIndex,
-          kind: signal.kind,
-          code: signal.code,
-          createdAt: signal.createdAt,
-        },
-      });
+      sendJson(response, 200, { ok: true, signal });
     },
   );
 
