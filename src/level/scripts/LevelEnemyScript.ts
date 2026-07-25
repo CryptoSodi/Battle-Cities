@@ -27,7 +27,7 @@ export class LevelEnemyScript extends LevelScript {
     return (
       mode === 'match' ||
       mode === 'local' ||
-      (mode === 'webrtc' && params.get('join') === '1')
+      (mode === 'webrtc' && params.get('broadcaster') !== '1')
     );
   })();
   private list: TankType[] = [];
@@ -98,7 +98,15 @@ export class LevelEnemyScript extends LevelScript {
     this.activeEnemyIds.delete(tank.partyIndex);
     const explosion = new Explosion();
     explosion.updateMatrix();
-    explosion.setCenter(tank.getCenter());
+    const centerPosition = tank.getCenter();
+    explosion.setCenter(centerPosition);
+    explosion.completed.addListener(() => {
+      this.eventBus.enemyExploded.notify({
+        type: tank.type,
+        centerPosition,
+        reason: TankDeathReason.Bullet,
+      });
+    });
     this.world.field.add(explosion);
     tank.beginNetworkDeathGrace();
     this.pendingNetworkRemovals.push({

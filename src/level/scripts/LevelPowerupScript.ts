@@ -34,9 +34,12 @@ export interface NetworkPowerupPickup {
 export class LevelPowerupScript extends LevelScript {
   private readonly isLocalServerMatch =
     new URLSearchParams(window.location.search).get('mode') === 'local';
-  private readonly isWebRtcJoin = (() => {
+  private readonly isWebRtcClient = (() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'webrtc' && params.get('join') === '1';
+    return (
+      params.get('mode') === 'webrtc' &&
+      params.get('broadcaster') !== '1'
+    );
   })();
   private networkPowerupId: number = null;
   private activePowerupId: number = null;
@@ -76,7 +79,7 @@ export class LevelPowerupScript extends LevelScript {
   }
 
   public syncWebRtcPowerup(snapshot: NetworkPowerupSnapshot | null): void {
-    if (!this.isWebRtcJoin) {
+    if (!this.isWebRtcClient) {
       return;
     }
     this.applyNetworkPowerup(snapshot);
@@ -84,7 +87,7 @@ export class LevelPowerupScript extends LevelScript {
 
   public syncWebRtcPickup(snapshot: NetworkPowerupPickup | null): void {
     if (
-      !this.isWebRtcJoin ||
+      !this.isWebRtcClient ||
       snapshot === null ||
       snapshot.seq <= this.lastNetworkPickupSequence
     ) {
@@ -172,14 +175,14 @@ export class LevelPowerupScript extends LevelScript {
   }
 
   protected update({ deltaTime }: GameUpdateArgs): void {
-    if (this.isWebRtcJoin) {
+    if (this.isWebRtcClient) {
       return;
     }
     this.timer.update(deltaTime);
   }
 
   private handleEnemyHit = (event: LevelEnemyHitEvent): void => {
-    if (this.isLocalServerMatch || this.isWebRtcJoin) {
+    if (this.isLocalServerMatch || this.isWebRtcClient) {
       return;
     }
     const { type: tankType } = event;
@@ -196,7 +199,7 @@ export class LevelPowerupScript extends LevelScript {
   private handleEnemySpawnCompleted = (
     event: LevelEnemySpawnCompletedEvent,
   ): void => {
-    if (this.isLocalServerMatch || this.isWebRtcJoin) {
+    if (this.isLocalServerMatch || this.isWebRtcClient) {
       return;
     }
     const { type: tankType } = event;

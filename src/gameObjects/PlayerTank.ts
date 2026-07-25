@@ -115,10 +115,6 @@ export class PlayerTank extends Tank {
   }
 
   protected receiveHit(damage: number, hitterPartyIndex: number): void {
-    if (this.networkControlled) {
-      return;
-    }
-
     const wasMaxTier = this.type.isMaxTier();
 
     this.attributes.health = Math.max(0, this.attributes.health - damage);
