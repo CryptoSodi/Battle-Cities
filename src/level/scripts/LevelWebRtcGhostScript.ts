@@ -23,6 +23,10 @@ export class LevelWebRtcGhostScript extends LevelScript {
   private hasMirrorPosition = false;
 
   protected setup(updateArgs: GameUpdateArgs): void {
+    if (updateArgs.webRtcMatch.isEnabled()) {
+      return;
+    }
+
     this.localPlayerIndex = updateArgs.magicBlockMovement.getLocalPlayerIndex();
     this.sync.configureFromLocation(this.localPlayerIndex);
     this.sync.start();

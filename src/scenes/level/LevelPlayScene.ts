@@ -506,6 +506,19 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       });
     }
 
+    if (
+      this.params.replay === undefined &&
+      updateArgs.webRtcMatch.isEnabled()
+    ) {
+      this.enemyScript.syncNetworkEnemyCount(
+        updateArgs.webRtcMatch.getActiveEnemyIds(),
+      );
+      updateArgs.webRtcMatch.prepareNetworkTicks(
+        this.world.getPlayerTanks(),
+        this.enemyScript.getAliveTanks(),
+      );
+    }
+
     // Update all objects on the scene
     this.root.traverseDescedants((node) => {
       const shouldUpdate = gameState.is(GameState.Playing) || node.ignorePause;
@@ -531,7 +544,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (this.params.replay === undefined) {
       const playerTanks = this.world.getPlayerTanks();
       const primaryTank = playerTanks[0];
-      if (updateArgs.magicBlockMovement.isOnlineMatch()) {
+      if (updateArgs.webRtcMatch.isEnabled()) {
+        updateArgs.webRtcMatch.updateMatch(
+          playerTanks,
+          this.enemyScript.getAliveTanks(),
+          this.enemyScript.getActiveEnemyIds(),
+          updateArgs.deltaTime,
+        );
+      } else if (updateArgs.magicBlockMovement.isOnlineMatch()) {
         this.webRtcGhostScript.prepareRemoteTankForServerPath();
         updateArgs.magicBlockMovement.updateMatch(
           playerTanks,

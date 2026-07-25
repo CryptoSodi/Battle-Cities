@@ -1,4 +1,4 @@
-import { Sound } from '../core';
+import { Collision, Sound } from '../core';
 import { SpritePainter } from '../core';
 import { GameUpdateArgs, GameState, Tag } from '../game';
 import { TankColor, TankSkinAnimation, TankTier } from '../tank';
@@ -17,6 +17,16 @@ export class EnemyTank extends Tank {
   public setNetworkControlled(controlled: boolean): this {
     this.networkControlled = controlled;
     return this;
+  }
+
+  public beginNetworkDeathGrace(): void {
+    this.tags = [Tag.Enemy];
+    this.setVisible(false);
+  }
+
+  public finishNetworkRemoval(): void {
+    this.collider.unregister();
+    this.removeSelf();
   }
 
   public applyNetworkHealth(health: number): void {
@@ -84,6 +94,14 @@ export class EnemyTank extends Tank {
   protected update(updateArgs: GameUpdateArgs): void {
     const { gameState } = updateArgs;
 
+    if (this.networkControlled) {
+      this.updateCollisionStates();
+      this.collider.update();
+      this.updateAnimation(updateArgs.deltaTime);
+      this.setNeedsPaint();
+      return;
+    }
+
     const shouldIdle =
       this.freezeState.hasChangedTo(true) ||
       gameState.hasChangedTo(GameState.Paused);
@@ -132,6 +150,14 @@ export class EnemyTank extends Tank {
 
     // Change skin based on number of health left
     this.skinAnimation = this.healthSkinAnimations.get(this.attributes.health);
+  }
+
+  protected collide(collision: Collision): void {
+    if (this.networkControlled) {
+      this.collideBullets(collision);
+      return;
+    }
+    super.collide(collision);
   }
 
   public discardDrop(): this {

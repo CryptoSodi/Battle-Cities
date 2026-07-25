@@ -21,6 +21,8 @@ interface WebRtcGhostPacket {
   tank: WebRtcGhostTankSnapshot;
 }
 
+export type WebRtcDataPacket = Record<string, any>;
+
 interface SignalCode {
   type: 'battlecity-ghost-signal';
   version: 1;
@@ -67,6 +69,7 @@ const MATCH_PARAM = 'match';
 const BROADCAST_PREFIX = 'battlecity-ghost-channel';
 const DATA_CHANNEL_LABEL = 'battlecity-ghost';
 const RECONNECT_DELAY_MS = 1500;
+const MAX_BUFFERED_AMOUNT_BYTES = 256 * 1024;
 
 function log(message: string, data?: any): void {
   if (data === undefined) {
@@ -163,6 +166,8 @@ export class WebRtcGhostSync {
   private readonly answeredOfferSessionIds = new Set<string>();
   private reconnectTimer: number = null;
   private publishingOffer = false;
+  private readonly packetListeners = new Set<(packet: WebRtcDataPacket) => void>();
+  private readonly connectionListeners = new Set<(connected: boolean) => void>();
 
   public static getInstance(): WebRtcGhostSync {
     if (WebRtcGhostSync.instance === null) {
@@ -193,8 +198,28 @@ export class WebRtcGhostSync {
     this.configureConsoleApi();
   }
 
+  public configureDirect(
+    enabled: boolean,
+    room: string,
+    localPlayerIndex: number,
+  ): void {
+    this.enabled = enabled && room !== '';
+    this.room = this.enabled ? normalizeRoom(room) : '';
+    this.localPlayerIndex = localPlayerIndex;
+    this.configureBroadcastChannel();
+    this.configureConsoleApi();
+  }
+
   public isEnabled(): boolean {
     return this.enabled && this.room !== '';
+  }
+
+  public isConnected(): boolean {
+    return (
+      this.isEnabled() &&
+      this.connected &&
+      this.dataChannel?.readyState === 'open'
+    );
   }
 
   public start(): void {
@@ -225,8 +250,29 @@ export class WebRtcGhostSync {
       tank,
     };
 
-    this.broadcastChannel?.postMessage(packet);
+    this.sendPacket(packet);
+  }
 
+  public sendPacket(packet: WebRtcDataPacket): void {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    this.start();
+    this.broadcastChannel?.postMessage(packet);
+    this.sendDataChannelPacket(packet);
+  }
+
+  public sendWebRtcPacket(packet: WebRtcDataPacket): void {
+    if (!this.isEnabled()) {
+      return;
+    }
+
+    this.start();
+    this.sendDataChannelPacket(packet);
+  }
+
+  private sendDataChannelPacket(packet: WebRtcDataPacket): void {
     if (
       this.dataChannel === null ||
       this.dataChannel.readyState !== 'open'
@@ -234,14 +280,15 @@ export class WebRtcGhostSync {
       return;
     }
 
-    const now = Date.now();
-    if (now - this.lastSendLogAt > 1000) {
-      this.lastSendLogAt = now;
-      log('snapshot sent', {
-        player: tank.partyIndex,
-        seq: packet.seq,
-        channelState: this.dataChannel.readyState,
-      });
+    if (this.dataChannel.bufferedAmount > MAX_BUFFERED_AMOUNT_BYTES) {
+      const now = Date.now();
+      if (now - this.lastSendLogAt > 1000) {
+        this.lastSendLogAt = now;
+        log('data channel congested; dropping realtime packet', {
+          bufferedAmount: this.dataChannel.bufferedAmount,
+        });
+      }
+      return;
     }
 
     this.dataChannel.send(JSON.stringify(packet));
@@ -262,6 +309,27 @@ export class WebRtcGhostSync {
       this.handleTransportSignal(code, kind);
     });
     this.startTransportSignaling();
+  }
+
+  public subscribePackets(
+    callback: (packet: WebRtcDataPacket) => void,
+  ): () => void {
+    this.packetListeners.add(callback);
+
+    return (): void => {
+      this.packetListeners.delete(callback);
+    };
+  }
+
+  public subscribeConnection(
+    callback: (connected: boolean) => void,
+  ): () => void {
+    this.connectionListeners.add(callback);
+    callback(this.isConnected());
+
+    return (): void => {
+      this.connectionListeners.delete(callback);
+    };
   }
 
   public async createOfferCode(): Promise<string> {
@@ -526,6 +594,7 @@ export class WebRtcGhostSync {
         room: this.room,
         localPlayerIndex: this.localPlayerIndex,
       });
+      this.notifyConnectionChanged();
     };
 
     dataChannel.onmessage = (event): void => {
@@ -540,12 +609,21 @@ export class WebRtcGhostSync {
       this.connected = false;
       log('data channel closed');
       this.scheduleReconnect();
+      this.notifyConnectionChanged();
     };
 
     dataChannel.onerror = (event): void => {
       log('data channel error', event);
       this.scheduleReconnect();
+      this.notifyConnectionChanged();
     };
+  }
+
+  private notifyConnectionChanged(): void {
+    const connected = this.isConnected();
+    this.connectionListeners.forEach((listener) => {
+      listener(connected);
+    });
   }
 
   private createSignalCode(
@@ -610,6 +688,7 @@ export class WebRtcGhostSync {
     this.dataChannel = null;
     this.peerConnection = null;
     this.connected = false;
+    this.notifyConnectionChanged();
   }
 
   private assertEnabled(): void {
@@ -662,6 +741,12 @@ export class WebRtcGhostSync {
   }
 
   private acceptPacket(data: any): void {
+    if (data === null || typeof data !== 'object') {
+      return;
+    }
+    this.packetListeners.forEach((listener) => {
+      listener(data);
+    });
     if (data?.type !== 'battlecity-ghost') {
       return;
     }

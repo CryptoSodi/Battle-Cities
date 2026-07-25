@@ -15,6 +15,10 @@ export class PlayerTankBehavior extends TankBehavior {
   public update(tank: PlayerTank, updateArgs: GameUpdateArgs): void {
     const { deltaTime, inputManager, session } = updateArgs;
 
+    if (updateArgs.webRtcMatch.handlePlayerTank(tank, updateArgs)) {
+      return;
+    }
+
     if (tank.partyIndex === 0 && updateArgs.magicBlockMovement.isWatching()) {
       tank.idle(false);
       return;
@@ -35,7 +39,11 @@ export class PlayerTankBehavior extends TankBehavior {
     // Same-screen multiplayer needs separate input variants. In an online
     // MagicBlock match each browser owns only one tank, so both player one and
     // player two must keep that browser's standard controls.
-    if (session.isMultiplayer() && !updateArgs.magicBlockMovement.isOnlineMatch()) {
+    if (
+      session.isMultiplayer() &&
+      !updateArgs.magicBlockMovement.isOnlineMatch() &&
+      !updateArgs.webRtcMatch.isEnabled()
+    ) {
       const playerSession = session.getPlayer(tank.partyIndex);
       const playerInputVariant = playerSession.getInputVariant();
       inputMethod = inputManager.getMethodByVariant(playerInputVariant);

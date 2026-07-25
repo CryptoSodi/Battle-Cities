@@ -16,6 +16,7 @@ import { MapLoader } from '../map';
 import { PointsHighscoreManager } from '../points';
 import { PlayerIdentity } from '../auth';
 import { MagicBlockMovementSync } from '../network/magicblock';
+import type { WebRtcHostMatchSync } from '../network/webrtc';
 
 import { AudioManager } from './AudioManager';
 import { GameState } from './GameState';
@@ -37,6 +38,7 @@ export interface GameUpdateArgs {
   gameStorage: GameStorage;
   mapLoader: MapLoader;
   magicBlockMovement: MagicBlockMovementSync;
+  webRtcMatch: WebRtcHostMatchSync;
   particles: ParticleSystem;
   playerIdentity: PlayerIdentity;
   pointsHighscoreManager: PointsHighscoreManager;

@@ -41,8 +41,14 @@ export class AiTankBehavior extends TankBehavior {
 
   public update(tank: Tank, updateArgs: GameUpdateArgs): void {
     this.rng = updateArgs.rng;
+    const shootingDisabled =
+      updateArgs.webRtcMatch.shouldDisableEnemyShooting();
 
-    if (this.fireTimer.isDone()) {
+    if (shootingDisabled && this.state === State.Firing) {
+      this.state = State.Moving;
+    }
+
+    if (this.fireTimer.isDone() && !shootingDisabled) {
       const hasFired = tank.fire();
       if (hasFired) {
         this.log.debug('Fire!');
@@ -58,6 +64,8 @@ export class AiTankBehavior extends TankBehavior {
 
       // Fire next bullet in some random interval
       this.attemptFire();
+    } else if (this.fireTimer.isDone()) {
+      this.attemptFire();
     } else {
       this.fireTimer.update(updateArgs.deltaTime);
     }
@@ -72,7 +80,11 @@ export class AiTankBehavior extends TankBehavior {
         // When tank is done thinking, he can either fire in his current
         // direction or rotate and move to another direction. First, find out
         // if he wants to fire.
-        if (this.state === State.Thinking && this.shouldFireWhenStuck()) {
+        if (
+          !shootingDisabled &&
+          this.state === State.Thinking &&
+          this.shouldFireWhenStuck()
+        ) {
           this.log.debug('I am done thinking. I want to fire!');
           this.state = State.Firing;
           return;

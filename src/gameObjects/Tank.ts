@@ -378,6 +378,21 @@ export class Tank extends GameObject {
     this.updateMatrix(true);
   }
 
+  public applyNetworkMovement(
+    rotation: Rotation,
+    moving: boolean,
+    deltaX: number,
+    deltaY: number,
+  ): void {
+    this.rotation = rotation;
+    this.state = moving ? TankState.Moving : TankState.Idle;
+    this.position.set(
+      this.position.x + deltaX,
+      this.position.y + deltaY,
+    );
+    this.updateMatrix(true);
+  }
+
   public idle(checkIce = true): void {
     if (this.state !== TankState.Idle) {
       this.state = TankState.Idle;

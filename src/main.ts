@@ -37,6 +37,7 @@ import { PlayerIdentity } from './auth';
 import { getPhantomProvider } from './wallet';
 import { apiFetch, getApiUrl } from './network/api';
 import { MagicBlockMovementSync } from './network/magicblock';
+import { WebRtcHostMatchSync } from './network/webrtc';
 
 import * as config from './config';
 
@@ -576,6 +577,7 @@ const session = new Session();
 const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
 const magicBlockMovement = new MagicBlockMovementSync(playerIdentity);
+const webRtcMatch = new WebRtcHostMatchSync();
 
 const inputHintSettings = new InputHintSettings(gameStorage);
 
@@ -586,7 +588,8 @@ const collisionSystem = new CollisionSystem();
 const sceneRouter = new GameSceneRouter();
 if (
   magicBlockMovement.isWatching() ||
-  magicBlockMovement.isOnlineMatch()
+  magicBlockMovement.isOnlineMatch() ||
+  webRtcMatch.isEnabled()
 ) {
   const requestedLevel = Number(
     new URLSearchParams(window.location.search).get('level'),
@@ -594,7 +597,7 @@ if (
   const levelNumber = Number.isInteger(requestedLevel)
     ? Math.min(Math.max(requestedLevel, 1), mapLoader.getItemsCount())
     : 1;
-  if (magicBlockMovement.isOnlineMatch()) {
+  if (magicBlockMovement.isOnlineMatch() || webRtcMatch.isEnabled()) {
     session.setMultiplayer();
   }
   session.start(levelNumber, mapLoader.getItemsCount());
@@ -647,6 +650,7 @@ const updateArgs: GameUpdateArgs = {
   gameState,
   mapLoader,
   magicBlockMovement,
+  webRtcMatch,
   particles,
   playerIdentity,
   pointsHighscoreManager,

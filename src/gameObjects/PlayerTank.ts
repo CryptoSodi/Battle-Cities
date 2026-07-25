@@ -1,4 +1,4 @@
-import { Subject, Timer } from '../core';
+import { Collision, Subject, Timer } from '../core';
 import { GameUpdateArgs, SessionRunBoosts, Tag } from '../game';
 import {
   TankAttributesFactory,
@@ -21,6 +21,7 @@ export class PlayerTank extends Tank {
   private colors: TankColor[] = [];
   private speedBoostTimer = new Timer();
   private speedBoostMultiplier = 1;
+  private networkControlled = false;
   // Run-long trait boosts (trading/staking), applied deterministically:
   // hull/armor add flat bonus health, engine multiplies move speed for the
   // whole run (unlike the temporary powerup speedBoostMultiplier). Values
@@ -59,9 +60,26 @@ export class PlayerTank extends Tank {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
+    if (this.networkControlled) {
+      this.updateCollisionStates();
+      this.shieldTimer.update(updateArgs.deltaTime);
+      this.behavior.update(this, updateArgs);
+      this.lastFireTimer.update(updateArgs.deltaTime);
+      this.updateAnimation(updateArgs.deltaTime);
+      this.collider.update();
+      this.speedBoostTimer.update(updateArgs.deltaTime);
+      this.setNeedsPaint();
+      return;
+    }
+
     super.update(updateArgs);
 
     this.speedBoostTimer.update(updateArgs.deltaTime);
+  }
+
+  public setNetworkControlled(controlled: boolean): this {
+    this.networkControlled = controlled;
+    return this;
   }
 
   // If tier is provided - it means that specific tier needs to be activated
@@ -96,6 +114,10 @@ export class PlayerTank extends Tank {
   }
 
   protected receiveHit(damage: number, hitterPartyIndex: number): void {
+    if (this.networkControlled) {
+      return;
+    }
+
     const wasMaxTier = this.type.isMaxTier();
 
     this.attributes.health = Math.max(0, this.attributes.health - damage);
@@ -112,6 +134,14 @@ export class PlayerTank extends Tank {
     }
 
     this.die(TankDeathReason.Bullet, hitterPartyIndex);
+  }
+
+  protected collide(collision: Collision): void {
+    if (this.networkControlled) {
+      this.collideBullets(collision);
+      return;
+    }
+    super.collide(collision);
   }
 
   private applyTier(notify: boolean): void {

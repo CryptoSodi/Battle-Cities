@@ -33,8 +33,12 @@ export class LevelIntroScript extends LevelScript {
     this.world.sceneRoot.add(this.title);
   }
 
-  protected update({ deltaTime }: GameUpdateArgs): void {
-    this.timer.update(deltaTime);
+  protected update(updateArgs: GameUpdateArgs): void {
+    if (updateArgs.webRtcMatch.isWaitingForPeer()) {
+      return;
+    }
+
+    this.timer.update(updateArgs.deltaTime);
   }
 
   private handleTimer = (): void => {

@@ -1,7 +1,7 @@
 import { Subject, Timer, Vector } from '../../core';
 import { DebugLevelEnemyMenu } from '../../debug';
 import { GameUpdateArgs, Rotation } from '../../game';
-import { EnemyTank } from '../../gameObjects';
+import { EnemyTank, Explosion } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame } from '../../replay';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
@@ -18,11 +18,18 @@ import {
   LevelPowerupPickedEvent,
 } from '../events';
 
+const NETWORK_DEATH_COLLISION_GRACE = 0.2;
+
 export class LevelEnemyScript extends LevelScript {
-  private readonly isMagicBlockMatch =
-    ['match', 'local'].includes(
-      new URLSearchParams(window.location.search).get('mode'),
+  private readonly isNetworkEnemyMirror = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    return (
+      mode === 'match' ||
+      mode === 'local' ||
+      (mode === 'webrtc' && params.get('join') === '1')
     );
+  })();
   private list: TankType[] = [];
   private listIndex = 0;
   private aliveTanks: EnemyTank[] = [];
@@ -33,6 +40,11 @@ export class LevelEnemyScript extends LevelScript {
   private debugMovementStopped = false;
   private debugPlayerMirrorBulletsHidden = false;
   private spawningCount = 0;
+  private activeEnemyIds = new Set<number>();
+  private pendingNetworkRemovals: {
+    tank: EnemyTank;
+    remaining: number;
+  }[] = [];
   // Dev-only match replay (see src/replay): when set, newly spawned enemies
   // re-enact this recorded movement instead of deciding for themselves (see
   // RecordedTankBehavior) -- keyed by partyIndex, same as the saved replay's
@@ -58,26 +70,41 @@ export class LevelEnemyScript extends LevelScript {
     return this.aliveTanks;
   }
 
+  public getActiveEnemyIds(): number[] {
+    return Array.from(this.activeEnemyIds);
+  }
+
   public syncNetworkEnemyCount(activeIds: number[]): void {
-    if (!this.isMagicBlockMatch) {
+    if (!this.isNetworkEnemyMirror) {
       return;
     }
-    const activeIdSet = new Set(activeIds);
+    const activeIdSet = new Set(activeIds.filter((id) => {
+      return Number.isInteger(id) && id >= 0 && id < this.list.length;
+    }));
     this.aliveTanks
       .filter((tank) => !activeIdSet.has(tank.partyIndex))
       .forEach((tank) => this.removeNetworkEnemy(tank));
 
-    if (activeIds.length === 0) {
+    if (activeIdSet.size === 0) {
       return;
     }
-    const desiredCount = Math.max(...activeIds) + 1;
+    const desiredCount = Math.max(...Array.from(activeIdSet)) + 1;
     while (this.listIndex < desiredCount && this.listIndex < this.list.length) {
       this.requestSpawn();
     }
   }
 
   private removeNetworkEnemy(tank: EnemyTank): void {
-    tank.removeSelf();
+    this.activeEnemyIds.delete(tank.partyIndex);
+    const explosion = new Explosion();
+    explosion.updateMatrix();
+    explosion.setCenter(tank.getCenter());
+    this.world.field.add(explosion);
+    tank.beginNetworkDeathGrace();
+    this.pendingNetworkRemovals.push({
+      tank,
+      remaining: NETWORK_DEATH_COLLISION_GRACE,
+    });
     this.aliveTanks = this.aliveTanks.filter((aliveTank) => {
       return aliveTank !== tank;
     });
@@ -91,7 +118,7 @@ export class LevelEnemyScript extends LevelScript {
 
     this.positions = this.mapConfig.getEnemySpawnPositions();
 
-    if (!this.isMagicBlockMatch) {
+    if (!this.isNetworkEnemyMirror) {
       this.spawnTimer.reset(config.ENEMY_FIRST_SPAWN_DELAY);
     }
     this.spawnTimer.done.addListener(this.handleSpawnTimer);
@@ -119,10 +146,23 @@ export class LevelEnemyScript extends LevelScript {
     updateArgs.magicBlockMovement.setPlayerMirrorBulletsSuppressed(
       this.debugPlayerMirrorBulletsHidden,
     );
-    if (!this.isMagicBlockMatch) {
+    if (!this.isNetworkEnemyMirror) {
       this.spawnTimer.update(deltaTime);
     }
     this.freezeTimer.update(deltaTime);
+    this.updatePendingNetworkRemovals(deltaTime);
+  }
+
+  private updatePendingNetworkRemovals(deltaTime: number): void {
+    this.pendingNetworkRemovals.forEach((pending) => {
+      pending.remaining -= deltaTime;
+    });
+    this.pendingNetworkRemovals
+      .filter((pending) => pending.remaining <= 0)
+      .forEach((pending) => pending.tank.finishNetworkRemoval());
+    this.pendingNetworkRemovals = this.pendingNetworkRemovals.filter(
+      (pending) => pending.remaining > 0,
+    );
   }
 
   private handleSpawnTimer = (): void => {
@@ -157,11 +197,11 @@ export class LevelEnemyScript extends LevelScript {
 
     const behavior = this.replayEnemyTraces !== null
       ? new RecordedTankBehavior(this.replayEnemyTraces[event.partyIndex] ?? [])
-      : this.isMagicBlockMatch
+      : this.isNetworkEnemyMirror
         ? new StandStillTankBehavior()
         : new AiTankBehavior();
     const tank = TankFactory.createEnemy(event.partyIndex, type, behavior);
-    tank.setNetworkControlled(this.isMagicBlockMatch);
+    tank.setNetworkControlled(this.isNetworkEnemyMirror);
     if (tank.behavior instanceof AiTankBehavior) {
       tank.behavior.setBasePosition(this.mapConfig.getBasePosition());
     }
@@ -189,6 +229,7 @@ export class LevelEnemyScript extends LevelScript {
       });
 
       tank.removeSelf();
+      this.activeEnemyIds.delete(tank.partyIndex);
 
       // Remove from alive
       this.aliveTanks = this.aliveTanks.filter((aliveTank) => {
@@ -197,7 +238,7 @@ export class LevelEnemyScript extends LevelScript {
 
       // If timer was stopped because max count of alive enemies has been
       // reached, restart it, because one of alive tanks has just been killed
-      if (!this.isMagicBlockMatch && !this.spawnTimer.isActive()) {
+      if (!this.isNetworkEnemyMirror && !this.spawnTimer.isActive()) {
         this.spawnTimer.reset(config.ENEMY_SPAWN_DELAY);
       }
 
@@ -213,12 +254,17 @@ export class LevelEnemyScript extends LevelScript {
   };
 
   private requestSpawn(): void {
-    this.spawningCount += 1;
-
     const type = this.list[this.listIndex];
     const position = this.positions[this.positionIndex];
+    if (type === undefined || position === undefined) {
+      this.spawnTimer.stop();
+      return;
+    }
+
+    this.spawningCount += 1;
 
     const partyIndex = this.listIndex;
+    this.activeEnemyIds.add(partyIndex);
 
     // Go to next tank
     this.listIndex += 1;
