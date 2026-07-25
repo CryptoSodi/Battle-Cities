@@ -3,7 +3,10 @@ const path = require('path');
 const storageConfig = require('./storageConfig');
 
 const TABLE_NAME = 'battlecity_webrtc_signals';
+const OBSERVER_TABLE_NAME = 'battlecity_webrtc_observers';
 const SIGNAL_TTL_MS = 5 * 60 * 1000;
+const OBSERVER_TTL_MS = 20 * 1000;
+const MAX_OBSERVERS_PER_MATCH = 32;
 const SIGNAL_MAX_BYTES = 256 * 1024;
 
 let pgPool = null;
@@ -48,6 +51,16 @@ async function ensureSchema() {
       ON ${TABLE_NAME} (match_id, player_index, kind);
     CREATE INDEX IF NOT EXISTS battlecity_webrtc_signals_created_idx
       ON ${TABLE_NAME} (created_at);
+
+    CREATE TABLE IF NOT EXISTS ${OBSERVER_TABLE_NAME} (
+      match_id TEXT NOT NULL,
+      observer_id TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (match_id, observer_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS battlecity_webrtc_observers_updated_idx
+      ON ${OBSERVER_TABLE_NAME} (updated_at);
   `);
 }
 
@@ -56,6 +69,9 @@ async function cleanupExpired(now = Date.now()) {
     await ensureSchema();
     await getPgPool().query(
       `DELETE FROM ${TABLE_NAME} WHERE created_at < NOW() - INTERVAL '5 minutes'`,
+    );
+    await getPgPool().query(
+      `DELETE FROM ${OBSERVER_TABLE_NAME} WHERE updated_at < NOW() - INTERVAL '20 seconds'`,
     );
     return;
   }
@@ -69,7 +85,12 @@ async function cleanupExpired(now = Date.now()) {
         const filePath = path.join(getDataDir(), file);
         try {
           const signal = JSON.parse(await fs.readFile(filePath, 'utf8'));
-          if (now - Date.parse(signal.createdAt) > SIGNAL_TTL_MS) {
+          const isObserver = file.startsWith('registry-observer-');
+          const timestamp = Date.parse(
+            isObserver ? signal.updatedAt : signal.createdAt,
+          );
+          const ttl = isObserver ? OBSERVER_TTL_MS : SIGNAL_TTL_MS;
+          if (!Number.isFinite(timestamp) || now - timestamp > ttl) {
             await fs.unlink(filePath);
           }
         } catch {
@@ -77,6 +98,87 @@ async function cleanupExpired(now = Date.now()) {
         }
       }),
   );
+}
+
+async function registerObserver(matchId, observerId) {
+  validateObserverRoute(matchId, observerId);
+  await cleanupExpired();
+
+  if (hasPersistentConfig()) {
+    await ensureSchema();
+    const existing = await getPgPool().query(
+      `SELECT 1 FROM ${OBSERVER_TABLE_NAME} WHERE match_id = $1 AND observer_id = $2`,
+      [matchId, observerId],
+    );
+    if (existing.rowCount === 0) {
+      const count = await getPgPool().query(
+        `SELECT COUNT(*) AS count FROM ${OBSERVER_TABLE_NAME} WHERE match_id = $1`,
+        [matchId],
+      );
+      if (Number(count.rows[0].count) >= MAX_OBSERVERS_PER_MATCH) {
+        throw new Error('Observer limit reached');
+      }
+    }
+    await getPgPool().query(
+      `
+        INSERT INTO ${OBSERVER_TABLE_NAME} (match_id, observer_id, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (match_id, observer_id)
+        DO UPDATE SET updated_at = NOW()
+      `,
+      [matchId, observerId],
+    );
+    return;
+  }
+
+  await ensureDataDir();
+  const observers = await listObservers(matchId);
+  if (
+    !observers.includes(observerId) &&
+    observers.length >= MAX_OBSERVERS_PER_MATCH
+  ) {
+    throw new Error('Observer limit reached');
+  }
+  await fs.writeFile(
+    getObserverPath(matchId, observerId),
+    JSON.stringify({ matchId, observerId, updatedAt: new Date().toISOString() }),
+    'utf8',
+  );
+}
+
+async function listObservers(matchId) {
+  if (!isValidMatchId(matchId)) {
+    throw new Error('Invalid observer route');
+  }
+  await cleanupExpired();
+
+  if (hasPersistentConfig()) {
+    await ensureSchema();
+    const result = await getPgPool().query(
+      `SELECT observer_id FROM ${OBSERVER_TABLE_NAME} WHERE match_id = $1 ORDER BY updated_at`,
+      [matchId],
+    );
+    return result.rows.map((row) => row.observer_id);
+  }
+
+  await ensureDataDir();
+  const prefix = `registry-observer-${safePathPart(matchId)}-`;
+  const files = await fs.readdir(getDataDir());
+  const observers = await Promise.all(
+    files
+      .filter((file) => file.startsWith(prefix) && file.endsWith('.json'))
+      .map(async (file) => {
+        try {
+          const entry = JSON.parse(
+            await fs.readFile(path.join(getDataDir(), file), 'utf8'),
+          );
+          return isValidObserverId(entry.observerId) ? entry.observerId : null;
+        } catch {
+          return null;
+        }
+      }),
+  );
+  return observers.filter((observerId) => observerId !== null);
 }
 
 async function publishSignal(matchId, playerIndex, kind, code) {
@@ -196,6 +298,13 @@ function getSignalPath(matchId, playerIndex, kind) {
   return path.join(getDataDir(), `${safePathPart(matchId)}-${playerIndex}-${kind}.json`);
 }
 
+function getObserverPath(matchId, observerId) {
+  return path.join(
+    getDataDir(),
+    `registry-observer-${safePathPart(matchId)}-${safePathPart(observerId)}.json`,
+  );
+}
+
 function safePathPart(value) {
   return String(value).replace(/[^0-9A-Za-z_-]/g, '_');
 }
@@ -210,6 +319,12 @@ function validateSignalRoute(matchId, playerIndex, kind) {
   }
 }
 
+function validateObserverRoute(matchId, observerId) {
+  if (!isValidMatchId(matchId) || !isValidObserverId(observerId)) {
+    throw new Error('Invalid observer route');
+  }
+}
+
 function isValidMatchId(value) {
   return typeof value === 'string' && /^[0-9A-Za-z_-]{1,64}$/.test(value);
 }
@@ -218,15 +333,23 @@ function isValidPlayerIndex(value) {
   return value === '0' || value === '1';
 }
 
+function isValidObserverId(value) {
+  return typeof value === 'string' && /^[0-9a-z]{8}$/.test(value);
+}
+
 function isValidSignalKind(value) {
   return value === 'offer' || value === 'answer';
 }
 
 module.exports = {
   SIGNAL_MAX_BYTES,
+  MAX_OBSERVERS_PER_MATCH,
   isValidMatchId,
   isValidPlayerIndex,
   isValidSignalKind,
+  isValidObserverId,
+  registerObserver,
+  listObservers,
   publishSignal,
   readSignal,
 };

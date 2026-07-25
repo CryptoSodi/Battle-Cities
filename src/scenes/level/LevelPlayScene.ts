@@ -140,6 +140,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private webRtcGhostScript: LevelWebRtcGhostScript;
   private winScript: LevelWinScript;
   private isWebRtcMatch = false;
+  private isWebRtcBroadcaster = false;
+  private isWebRtcObserver = false;
   private localPlayerIndex = 0;
 
   protected setup(updateArgs: GameUpdateArgs): void {
@@ -147,6 +149,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const { collisionSystem, inputManager, gameStorage, rng, session } = updateArgs;
     this.gameStorage = gameStorage;
     this.isWebRtcMatch = updateArgs.webRtcMatch.isEnabled();
+    this.isWebRtcBroadcaster = updateArgs.webRtcMatch.isBroadcaster();
+    this.isWebRtcObserver = updateArgs.webRtcMatch.isObserver();
     this.localPlayerIndex = this.isWebRtcMatch
       ? updateArgs.webRtcMatch.getLocalPlayerIndex()
       : this.params.localPlayerIndex ?? 0;
@@ -736,8 +740,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     const localPlayerIndex = updateArgs.webRtcMatch.isEnabled()
       ? updateArgs.webRtcMatch.getLocalPlayerIndex()
       : this.params.localPlayerIndex ?? 0;
-    const targetTank =
-      this.world.getPlayerTanks()[localPlayerIndex];
+    const isWebRtcSpectator =
+      this.isWebRtcBroadcaster || this.isWebRtcObserver;
+    const targetTank = isWebRtcSpectator
+      ? null
+      : this.world.getPlayerTanks()[localPlayerIndex];
     const fieldWidth = this.world.field.size.width;
     const fieldHeight = this.world.field.size.height;
     const viewportWidth =
@@ -752,8 +759,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // Gameplay zoom is render-only: the field is drawn scaled around the play
     // area's screen center (the pivot), so the camera centers on the same world
     // point regardless of zoom — only the visible world window shrinks.
-    const zoom = this.cameraZoom;
-    const renderZoom = zoom * this.cameraVisualZoom;
+    const zoom = isWebRtcSpectator
+      ? Math.min(viewportWidth / fieldWidth, viewportHeight / fieldHeight)
+      : this.cameraZoom;
+    const renderZoom = isWebRtcSpectator
+      ? zoom
+      : zoom * this.cameraVisualZoom;
     const playLeft = config.BORDER_LEFT_WIDTH;
     const playTop =
       config.LEVEL_PLAY_TOP_OFFSET + config.BORDER_TOP_BOTTOM_HEIGHT;
@@ -779,7 +790,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       targetTank !== null &&
       targetTank !== undefined;
     let targetCenter: Vector;
-    if (this.cameraFocus !== null) {
+    if (isWebRtcSpectator) {
+      targetCenter = new Vector(fieldWidth / 2, fieldHeight / 2);
+    } else if (this.cameraFocus !== null) {
       targetCenter = this.cameraFocus;
     } else if (targetTank !== null && targetTank !== undefined) {
       targetCenter = targetTank.getCenter();
@@ -865,11 +878,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       0,
       this.cameraTrauma - config.CAMERA_TRAUMA_DECAY * deltaTime,
     );
-    const shakeMagnitude =
-      this.cameraTrauma *
-      this.cameraTrauma *
-      config.CAMERA_MAX_SHAKE *
-      config.CAMERA_SHAKE_INTENSITY;
+    const shakeMagnitude = isWebRtcSpectator
+      ? 0
+      : this.cameraTrauma *
+        this.cameraTrauma *
+        config.CAMERA_MAX_SHAKE *
+        config.CAMERA_SHAKE_INTENSITY;
     let shakeX = 0;
     let shakeY = 0;
     if (shakeMagnitude > 0) {
@@ -993,6 +1007,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     }
 
     if (event.type === PowerupType.ZoomOut) {
+      if (this.isWebRtcBroadcaster || this.isWebRtcObserver) {
+        return;
+      }
       if (
         this.isWebRtcMatch &&
         event.partyIndex !== this.localPlayerIndex

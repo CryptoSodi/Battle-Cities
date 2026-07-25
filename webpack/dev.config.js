@@ -384,6 +384,54 @@ function attachReplayApi(app) {
   });
 
   app.post(
+    '/api/webrtc/matches/:matchId/observers',
+    async (request, response) => {
+      const { matchId } = request.params;
+      if (!webrtcSignalStore.isValidMatchId(matchId)) {
+        sendJson(response, 400, { ok: false, error: 'Invalid observer route' });
+        return;
+      }
+
+      let body;
+      try {
+        body = await readJsonBody(request);
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: 'Invalid JSON' });
+        return;
+      }
+
+      if (!webrtcSignalStore.isValidObserverId(body.observerId)) {
+        sendJson(response, 400, { ok: false, error: 'Invalid observer ID' });
+        return;
+      }
+
+      try {
+        await webrtcSignalStore.registerObserver(matchId, body.observerId);
+        sendJson(response, 201, { ok: true });
+      } catch (error) {
+        sendJson(
+          response,
+          error.message === 'Observer limit reached' ? 409 : 400,
+          { ok: false, error: error.message },
+        );
+      }
+    },
+  );
+
+  app.get(
+    '/api/webrtc/matches/:matchId/observers',
+    async (request, response) => {
+      const { matchId } = request.params;
+      if (!webrtcSignalStore.isValidMatchId(matchId)) {
+        sendJson(response, 400, { ok: false, error: 'Invalid observer route' });
+        return;
+      }
+      const observers = await webrtcSignalStore.listObservers(matchId);
+      sendJson(response, 200, { ok: true, observers });
+    },
+  );
+
+  app.post(
     '/api/webrtc/matches/:matchId/players/:playerIndex/signals/:kind',
     async (request, response) => {
       const { matchId, playerIndex, kind } = request.params;

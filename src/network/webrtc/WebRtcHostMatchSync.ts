@@ -13,6 +13,10 @@ const MAX_ENEMY_TICKS_PER_UPDATE = 2;
 const MAX_PLAYER_TICKS_PER_UPDATE = 2;
 const NETWORK_PROBE_INTERVAL_SECONDS = 0.5;
 const JITTER_SMOOTHING = 0.2;
+const OBSERVER_HEARTBEAT_MS = 5000;
+const OBSERVER_DISCOVERY_MS = 2000;
+
+type WebRtcLinkId = 0 | 1 | string;
 
 interface WebRtcInputPacket {
   type: 'webrtc-input';
@@ -27,16 +31,21 @@ interface WebRtcInputPacket {
 
 interface WebRtcEnemyFrame {
   partyIndex: number;
+  x: number;
+  y: number;
   rotation: Rotation;
   moving: boolean;
   deltaX: number;
   deltaY: number;
   alive: boolean;
   fireSeq: number;
+  initialSync?: boolean;
 }
 
 interface WebRtcPlayerFrame {
   partyIndex: 0 | 1;
+  x: number;
+  y: number;
   rotation: Rotation;
   moving: boolean;
   deltaX: number;
@@ -46,6 +55,7 @@ interface WebRtcPlayerFrame {
   fireX: number;
   fireY: number;
   fireRotation: Rotation;
+  initialSync?: boolean;
 }
 
 interface WebRtcPowerupFrame {
@@ -118,13 +128,27 @@ function createRoomId(): string {
     .join('');
 }
 
+function createObserverId(): string {
+  return createRoomId();
+}
+
+function observerLinkId(observerId: string): string {
+  return `observer:${observerId}`;
+}
+
+function isObserverLink(linkId: WebRtcLinkId): linkId is string {
+  return typeof linkId === 'string';
+}
+
 export class WebRtcHostMatchSync {
   private readonly enabled: boolean;
   private readonly broadcaster: boolean;
+  private readonly observer: boolean;
+  private readonly observerId: string;
   private readonly room: string;
   private readonly localPlayerIndex: number;
   private readonly disableEnemyShooting: boolean;
-  private readonly links = new Map<0 | 1, WebRtcGhostSync>();
+  private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private inputSeq = 0;
   private frameSeq = 0;
@@ -182,12 +206,22 @@ export class WebRtcHostMatchSync {
   private playerTwoClockValue: HTMLElement = null;
   private rttValue: HTMLElement = null;
   private jitterValue: HTMLElement = null;
+  private observerHeartbeatTimer: number = null;
+  private observerDiscoveryTimer: number = null;
 
   constructor(location = window.location) {
     const params = new URLSearchParams(location.search);
     this.enabled = params.get('mode') === 'webrtc';
     this.broadcaster =
       this.enabled && params.get('broadcaster') === '1';
+    this.observer =
+      this.enabled && !this.broadcaster && params.get('observer') === '1';
+    const requestedObserverId = normalizeRoom(params.get('observerId') || '');
+    this.observerId = this.observer
+      ? /^[a-z0-9]{8}$/.test(requestedObserverId)
+        ? requestedObserverId
+        : createObserverId()
+      : '';
     this.localPlayerIndex =
       params.get('join') === '1' || params.get('player') === '2' ? 1 : 0;
     this.disableEnemyShooting =
@@ -203,6 +237,16 @@ export class WebRtcHostMatchSync {
       params.delete('host');
       params.delete('join');
       params.delete('player');
+      params.delete('observer');
+      params.delete('observerId');
+      window.history.replaceState(
+        null,
+        '',
+        `${location.pathname}?${params.toString()}${location.hash}`,
+      );
+    }
+    if (this.observer && params.get('observerId') !== this.observerId) {
+      params.set('observerId', this.observerId);
       window.history.replaceState(
         null,
         '',
@@ -230,6 +274,10 @@ export class WebRtcHostMatchSync {
     return this.isEnabled() && this.broadcaster;
   }
 
+  public isObserver(): boolean {
+    return this.isEnabled() && this.observer;
+  }
+
   public isConnected(): boolean {
     return this.isEnabled() && this.connected && this.ready;
   }
@@ -245,7 +293,7 @@ export class WebRtcHostMatchSync {
   public isRemoteTank(partyIndex: number): boolean {
     return (
       this.isEnabled() &&
-      (this.broadcaster || partyIndex !== this.localPlayerIndex)
+      (this.broadcaster || this.observer || partyIndex !== this.localPlayerIndex)
     );
   }
 
@@ -260,6 +308,10 @@ export class WebRtcHostMatchSync {
 
     if (this.broadcaster) {
       this.applyRemoteInput(tank, updateArgs.deltaTime);
+      return true;
+    }
+
+    if (this.observer) {
       return true;
     }
 
@@ -377,6 +429,9 @@ export class WebRtcHostMatchSync {
     if (this.broadcaster) {
       this.configureLink(0);
       this.configureLink(1);
+      this.startObserverDiscovery();
+    } else if (this.observer) {
+      this.startObserverHeartbeat();
     } else {
       this.configureLink(this.localPlayerIndex as 0 | 1);
     }
@@ -388,30 +443,42 @@ export class WebRtcHostMatchSync {
     log('mode enabled', {
       role: this.broadcaster
         ? 'broadcaster'
+        : this.observer
+          ? 'observer'
         : `player-${this.localPlayerIndex + 1}`,
       room: this.room,
       localPlayerIndex: this.localPlayerIndex,
       disableEnemyShooting: this.disableEnemyShooting,
       playerOneUrl: this.createPlayerUrl(0),
       playerTwoUrl: this.createPlayerUrl(1),
+      observerUrl: this.createObserverUrl(),
     });
   }
 
-  private configureLink(playerIndex: 0 | 1): void {
+  private configureLink(linkId: WebRtcLinkId): void {
+    if (this.links.has(linkId)) {
+      return;
+    }
     const sync = new WebRtcGhostSync();
-    const signalingRoom = `${this.room}-p${playerIndex + 1}`;
+    const signalingRoom =
+      isObserverLink(linkId)
+        ? `${this.room}-o-${linkId.slice('observer:'.length)}`
+        : `${this.room}-p${linkId + 1}`;
     const signalingIndex = this.broadcaster ? 0 : 1;
     sync.configureDirect(true, signalingRoom, signalingIndex);
     sync.setSignalTransport(
       new HttpGhostSignalTransport(signalingRoom, signalingIndex),
     );
     sync.subscribePackets((packet) => {
-      this.acceptPacket(packet, playerIndex);
+      this.acceptPacket(packet, linkId);
     });
     sync.subscribeConnection((connected) => {
-      this.handleConnection(playerIndex, connected);
+      this.handleConnection(linkId, connected);
     });
-    this.links.set(playerIndex, sync);
+    this.links.set(linkId, sync);
+    if (this.started) {
+      sync.start();
+    }
   }
 
   private start(): void {
@@ -423,14 +490,16 @@ export class WebRtcHostMatchSync {
   }
 
   private handleConnection(
-    playerIndex: 0 | 1,
+    linkId: WebRtcLinkId,
     isConnected: boolean,
   ): void {
     if (this.broadcaster) {
-      if (isConnected) {
-        this.connectedPlayers.add(playerIndex);
-      } else {
-        this.connectedPlayers.delete(playerIndex);
+      if (!isObserverLink(linkId)) {
+        if (isConnected) {
+          this.connectedPlayers.add(linkId);
+        } else {
+          this.connectedPlayers.delete(linkId);
+        }
       }
       this.connected = this.connectedPlayers.size === 2;
       this.ready = this.connected;
@@ -438,6 +507,12 @@ export class WebRtcHostMatchSync {
         type: 'webrtc-ready',
         ready: this.ready,
       } satisfies WebRtcReadyPacket);
+      if (isObserverLink(linkId) && isConnected) {
+        this.sendToLink(linkId, {
+          type: 'webrtc-ready',
+          ready: this.ready,
+        } satisfies WebRtcReadyPacket);
+      }
       const waitingFor = [0, 1]
         .filter((index) => !this.connectedPlayers.has(index))
         .map((index) => `player ${index + 1}`)
@@ -462,6 +537,16 @@ export class WebRtcHostMatchSync {
   }
 
   private showClientStatus(): void {
+    if (this.observer) {
+      this.showStatus(
+        this.ready
+          ? 'WebRTC observer connected'
+          : this.connected
+            ? 'Observer waiting for match to start'
+            : `Observer connecting to broadcaster\nRoom: ${this.room}`,
+      );
+      return;
+    }
     const playerNumber = this.localPlayerIndex + 1;
     this.showStatus(
       this.ready
@@ -476,16 +561,93 @@ export class WebRtcHostMatchSync {
     playerIndex: 0 | 1,
     packet: WebRtcDataPacket,
   ): void {
-    this.links.get(playerIndex)?.sendWebRtcPacket(packet);
+    this.sendToLink(playerIndex, packet);
+  }
+
+  private sendToLink(linkId: WebRtcLinkId, packet: WebRtcDataPacket): void {
+    this.links.get(linkId)?.sendWebRtcPacket(packet);
   }
 
   private broadcast(packet: WebRtcDataPacket): void {
     this.links.forEach((sync) => sync.sendWebRtcPacket(packet));
   }
 
+  private startObserverHeartbeat(): void {
+    const heartbeat = async (): Promise<void> => {
+      try {
+        const response = await fetch(this.observerRegistryUrl().toString(), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ observerId: this.observerId }),
+        });
+        if (!response.ok) {
+          const body = (await response.json()) as { error?: string };
+          throw new Error(body.error || `Observer registration failed: ${response.status}`);
+        }
+        const linkId = observerLinkId(this.observerId);
+        if (!this.links.has(linkId)) {
+          this.configureLink(linkId);
+          this.start();
+        }
+      } catch (error) {
+        this.showStatus(`Observer admission failed\n${(error as Error).message}`);
+        log('observer heartbeat failed', error);
+      } finally {
+        this.observerHeartbeatTimer = window.setTimeout(
+          heartbeat,
+          OBSERVER_HEARTBEAT_MS,
+        );
+      }
+    };
+
+    void heartbeat();
+  }
+
+  private startObserverDiscovery(): void {
+    const discover = async (): Promise<void> => {
+      try {
+        const response = await fetch(this.observerRegistryUrl().toString(), {
+          headers: { accept: 'application/json' },
+        });
+        if (!response.ok) {
+          throw new Error(`Observer discovery failed: ${response.status}`);
+        }
+        const body = (await response.json()) as {
+          observers?: string[];
+        };
+        const activeLinks = new Set(
+          (body.observers ?? []).map((observerId) => observerLinkId(observerId)),
+        );
+        activeLinks.forEach((linkId) => this.configureLink(linkId));
+        Array.from(this.links.entries()).forEach(([linkId, sync]) => {
+          if (isObserverLink(linkId) && !activeLinks.has(linkId)) {
+            sync.stop();
+            this.links.delete(linkId);
+          }
+        });
+      } catch (error) {
+        log('observer discovery failed', error);
+      } finally {
+        this.observerDiscoveryTimer = window.setTimeout(
+          discover,
+          OBSERVER_DISCOVERY_MS,
+        );
+      }
+    };
+
+    void discover();
+  }
+
+  private observerRegistryUrl(): URL {
+    return new URL(
+      `/api/webrtc/matches/${encodeURIComponent(this.room)}/observers`,
+      window.location.origin,
+    );
+  }
+
   private acceptPacket(
     packet: WebRtcDataPacket,
-    linkPlayerIndex: 0 | 1,
+    linkId: WebRtcLinkId,
   ): void {
     if (!this.isEnabled()) {
       return;
@@ -499,7 +661,7 @@ export class WebRtcHostMatchSync {
       ) {
         return;
       }
-      this.sendToPlayer(linkPlayerIndex, {
+      this.sendToLink(linkId, {
         type: 'webrtc-pong',
         id: ping.id,
         sentAt: ping.sentAt,
@@ -533,17 +695,18 @@ export class WebRtcHostMatchSync {
     if (this.broadcaster && packet.type === 'webrtc-input') {
       const input = packet as WebRtcInputPacket;
       if (
-        input.player !== linkPlayerIndex ||
+        isObserverLink(linkId) ||
+        input.player !== linkId ||
         input.seq <=
-          (this.latestRemoteInputs.get(linkPlayerIndex)?.seq ?? 0)
+          (this.latestRemoteInputs.get(linkId)?.seq ?? 0)
       ) {
         return;
       }
-      this.latestRemoteInputs.set(linkPlayerIndex, input);
-      this.latestRemoteInputReceivedAt.set(linkPlayerIndex, Date.now());
+      this.latestRemoteInputs.set(linkId, input);
+      this.latestRemoteInputReceivedAt.set(linkId, Date.now());
       if (Number.isFinite(input.elapsedSeconds)) {
         this.playerElapsedSeconds.set(
-          linkPlayerIndex,
+          linkId,
           input.elapsedSeconds,
         );
       }
@@ -555,6 +718,8 @@ export class WebRtcHostMatchSync {
       if (frame.seq <= (this.latestHostFrame?.seq ?? 0)) {
         return;
       }
+      const isInitialObserverFrame =
+        this.observer && this.latestHostFrame === null;
       this.latestHostFrame = frame;
       if (Number.isFinite(frame.sharedElapsedSeconds)) {
         this.sharedElapsedSeconds = frame.sharedElapsedSeconds;
@@ -569,7 +734,11 @@ export class WebRtcHostMatchSync {
           ticks = [];
           this.pendingPlayerTicks.set(playerFrame.partyIndex, ticks);
         }
-        ticks.push(playerFrame);
+        ticks.push(
+          isInitialObserverFrame
+            ? { ...playerFrame, initialSync: true }
+            : playerFrame,
+        );
       });
       const activeEnemyIds = new Set(frame.activeEnemyIds);
       Array.from(this.pendingEnemyTicks.keys()).forEach((partyIndex) => {
@@ -583,7 +752,11 @@ export class WebRtcHostMatchSync {
           ticks = [];
           this.pendingEnemyTicks.set(enemyFrame.partyIndex, ticks);
         }
-        ticks.push(enemyFrame);
+        ticks.push(
+          isInitialObserverFrame
+            ? { ...enemyFrame, initialSync: true }
+            : enemyFrame,
+        );
       });
     }
   }
@@ -637,6 +810,11 @@ export class WebRtcHostMatchSync {
     if (input.fire && input.seq > lastFireSeq) {
       this.lastAppliedRemoteFireSeqs.set(tank.partyIndex, input.seq);
       tank.fire();
+    }
+
+    if (tank.isStunned()) {
+      tank.idle(false);
+      return;
     }
 
     if (input.direction !== null) {
@@ -737,6 +915,8 @@ export class WebRtcHostMatchSync {
 
     return {
       partyIndex: tank.partyIndex as 0 | 1,
+      x: tank.position.x,
+      y: tank.position.y,
       rotation: tank.rotation,
       moving: tank.state === TankState.Moving,
       deltaX,
@@ -766,6 +946,8 @@ export class WebRtcHostMatchSync {
 
     return {
       partyIndex: tank.partyIndex,
+      x: tank.position.x,
+      y: tank.position.y,
       rotation: tank.rotation,
       moving: tank.state === TankState.Moving,
       deltaX,
@@ -790,8 +972,16 @@ export class WebRtcHostMatchSync {
           tank.applyNetworkMovement(
             frame.rotation,
             frame.moving,
-            Number.isFinite(frame.deltaX) ? frame.deltaX : 0,
-            Number.isFinite(frame.deltaY) ? frame.deltaY : 0,
+            frame.initialSync && Number.isFinite(frame.x)
+              ? frame.x - tank.position.x
+              : Number.isFinite(frame.deltaX)
+                ? frame.deltaX
+                : 0,
+            frame.initialSync && Number.isFinite(frame.y)
+              ? frame.y - tank.position.y
+              : Number.isFinite(frame.deltaY)
+                ? frame.deltaY
+                : 0,
           );
 
           const lastFireSeq =
@@ -827,8 +1017,16 @@ export class WebRtcHostMatchSync {
         tank.applyNetworkMovement(
           frame.rotation,
           frame.moving,
-          Number.isFinite(frame.deltaX) ? frame.deltaX : 0,
-          Number.isFinite(frame.deltaY) ? frame.deltaY : 0,
+          frame.initialSync && Number.isFinite(frame.x)
+            ? frame.x - tank.position.x
+            : Number.isFinite(frame.deltaX)
+              ? frame.deltaX
+              : 0,
+          frame.initialSync && Number.isFinite(frame.y)
+            ? frame.y - tank.position.y
+            : Number.isFinite(frame.deltaY)
+              ? frame.deltaY
+              : 0,
         );
 
         const lastFireSeq =
@@ -917,11 +1115,14 @@ export class WebRtcHostMatchSync {
     }
     this.probeTimer = 0;
     this.probeSeq += 1;
-    this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
+    const linkId: WebRtcLinkId = this.observer
+      ? observerLinkId(this.observerId)
+      : (this.localPlayerIndex as 0 | 1);
+    this.sendToLink(linkId, {
       type: 'webrtc-ping',
       id: this.probeSeq,
       sentAt: performance.now(),
-      senderPlayerIndex: this.localPlayerIndex,
+      senderPlayerIndex: this.observer ? -1 : this.localPlayerIndex,
     } satisfies WebRtcPingPacket);
   }
 
@@ -1034,6 +1235,21 @@ export class WebRtcHostMatchSync {
     params.delete('broadcaster');
     params.delete('join');
     params.delete('host');
+    params.delete('observer');
+
+    return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+  }
+
+  private createObserverUrl(): string {
+    const params = new URLSearchParams(window.location.search);
+    params.set('mode', 'webrtc');
+    params.set('match', this.room);
+    params.set('observer', '1');
+    params.delete('broadcaster');
+    params.delete('join');
+    params.delete('host');
+    params.delete('player');
+    params.delete('observerId');
 
     return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
   }
@@ -1058,6 +1274,23 @@ export class WebRtcHostMatchSync {
       };
       log(`player-${playerIndex + 1} link: ${url}`);
     });
+    const observerUrl = this.createObserverUrl();
+    const observerButton = this.ensureJoinButton('observer');
+    const observerLabel = 'Copy WebRTC observer link';
+    observerButton.type = 'button';
+    observerButton.textContent = observerLabel;
+    observerButton.onclick = async (): Promise<void> => {
+      try {
+        await navigator.clipboard.writeText(observerUrl);
+        observerButton.textContent = 'WebRTC observer link copied';
+        window.setTimeout(() => {
+          observerButton.textContent = observerLabel;
+        }, 2000);
+      } catch {
+        observerButton.textContent = 'Copy failed - check DevTools';
+      }
+    };
+    log(`observer link: ${observerUrl}`);
   }
 
   private showStatus(message: string): void {
@@ -1075,7 +1308,7 @@ export class WebRtcHostMatchSync {
     Object.assign(element.style, {
       position: 'fixed',
       right: '16px',
-      bottom: this.broadcaster ? '128px' : '16px',
+      bottom: this.broadcaster ? '184px' : '16px',
       zIndex: '1000',
       maxWidth: '320px',
       minHeight: '44px',
@@ -1093,8 +1326,11 @@ export class WebRtcHostMatchSync {
     return element;
   }
 
-  private ensureJoinButton(playerIndex: 0 | 1): HTMLButtonElement {
-    const existing = this.joinButtons.get(playerIndex);
+  private ensureJoinButton(
+    linkId: 0 | 1 | 'observer',
+  ): HTMLButtonElement {
+    const buttonIndex = linkId === 'observer' ? 2 : linkId;
+    const existing = this.joinButtons.get(buttonIndex);
     if (existing !== undefined) {
       return existing;
     }
@@ -1105,7 +1341,7 @@ export class WebRtcHostMatchSync {
     Object.assign(button.style, {
       position: 'fixed',
       right: '16px',
-      bottom: playerIndex === 0 ? '72px' : '16px',
+      bottom: `${16 + (2 - buttonIndex) * 56}px`,
       zIndex: '1000',
       minHeight: '44px',
       padding: '10px 14px',
@@ -1117,7 +1353,7 @@ export class WebRtcHostMatchSync {
       cursor: 'pointer',
     });
     document.body.appendChild(button);
-    this.joinButtons.set(playerIndex, button);
+    this.joinButtons.set(buttonIndex, button);
 
     return button;
   }

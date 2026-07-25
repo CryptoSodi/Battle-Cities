@@ -626,6 +626,16 @@ export class WebRtcGhostSync {
     });
   }
 
+  public stop(): void {
+    this.enabled = false;
+    this.unsubscribeSignalTransport?.();
+    this.unsubscribeSignalTransport = null;
+    this.signalTransport = null;
+    this.resetPeerConnection();
+    this.broadcastChannel?.close();
+    this.broadcastChannel = null;
+  }
+
   private createSignalCode(
     description: RTCSessionDescription | RTCSessionDescriptionInit,
     signalSessionId: string,

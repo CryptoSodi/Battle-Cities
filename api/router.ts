@@ -29,6 +29,7 @@ import * as stakingUnstake from '../routes/staking/unstake';
 import * as tradingTokens from '../routes/trading/tokens';
 import * as tradingVerifySwap from '../routes/trading/verify-swap';
 import * as webrtcSignals from '../routes/webrtcSignals';
+import * as webrtcObservers from '../routes/webrtcObservers';
 import {
   createJsonResponse,
   createOptionsResponse,
@@ -71,6 +72,8 @@ const routes: { [path: string]: { [method: string]: RouteHandler } } = {
 
 const webrtcSignalRoutePattern =
   /^webrtc\/matches\/([^/]+)\/players\/([^/]+)\/signals\/([^/]+)$/;
+const webrtcObserverRoutePattern =
+  /^webrtc\/matches\/([^/]+)\/observers$/;
 
 function resolveRoute(request: Request): string {
   const url = new URL(request.url);
@@ -85,6 +88,27 @@ function resolveRoute(request: Request): string {
 
 async function dispatch(request: Request): Promise<Response> {
   const route = resolveRoute(request);
+  const webrtcObserverMatch = route.match(webrtcObserverRoutePattern);
+  if (webrtcObserverMatch !== null) {
+    const [, matchId] = webrtcObserverMatch;
+    const method = request.method.toUpperCase();
+    if (method === 'GET') {
+      return webrtcObservers.GET(request, matchId);
+    }
+    if (method === 'POST') {
+      return webrtcObservers.POST(request, matchId);
+    }
+    if (method === 'OPTIONS') {
+      return webrtcObservers.OPTIONS(request);
+    }
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: {
+        allow: 'GET, POST, OPTIONS',
+        'content-type': 'application/json',
+      },
+    });
+  }
   const webrtcSignalMatch = route.match(webrtcSignalRoutePattern);
   if (webrtcSignalMatch !== null) {
     const [, matchId, playerIndex, kind] = webrtcSignalMatch;
