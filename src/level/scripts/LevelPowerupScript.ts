@@ -13,12 +13,37 @@ import {
   LevelEnemyHitEvent,
   LevelEnemySpawnCompletedEvent,
   LevelMapTileDestroyedEvent,
+  LevelPowerupPickedEvent,
 } from '../events';
+
+export interface NetworkPowerupSnapshot {
+  id: number;
+  kind: PowerupType;
+  x: number;
+  y: number;
+}
+
+export interface NetworkPowerupPickup {
+  seq: number;
+  type: PowerupType;
+  partyIndex: number;
+  x: number;
+  y: number;
+}
 
 export class LevelPowerupScript extends LevelScript {
   private readonly isLocalServerMatch =
     new URLSearchParams(window.location.search).get('mode') === 'local';
+  private readonly isWebRtcJoin = (() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'webrtc' && params.get('join') === '1';
+  })();
   private networkPowerupId: number = null;
+  private activePowerupId: number = null;
+  private powerupSequence = 0;
+  private pickupSequence = 0;
+  private lastNetworkPickupSequence = 0;
+  private latestPickup: NetworkPowerupPickup = null;
   private timer: Timer;
   private activePowerup: Powerup = null;
   private grid: PowerupGrid;
@@ -47,6 +72,51 @@ export class LevelPowerupScript extends LevelScript {
     if (!this.isLocalServerMatch) {
       return;
     }
+    this.applyNetworkPowerup(snapshot);
+  }
+
+  public syncWebRtcPowerup(snapshot: NetworkPowerupSnapshot | null): void {
+    if (!this.isWebRtcJoin) {
+      return;
+    }
+    this.applyNetworkPowerup(snapshot);
+  }
+
+  public syncWebRtcPickup(snapshot: NetworkPowerupPickup | null): void {
+    if (
+      !this.isWebRtcJoin ||
+      snapshot === null ||
+      snapshot.seq <= this.lastNetworkPickupSequence
+    ) {
+      return;
+    }
+    this.lastNetworkPickupSequence = snapshot.seq;
+    this.eventBus.powerupPicked.notify({
+      type: snapshot.type,
+      partyIndex: snapshot.partyIndex,
+      centerPosition: new Vector(snapshot.x, snapshot.y),
+    });
+  }
+
+  public getWebRtcPowerup(): NetworkPowerupSnapshot | null {
+    if (this.activePowerup === null || this.activePowerupId === null) {
+      return null;
+    }
+    return {
+      id: this.activePowerupId,
+      kind: this.activePowerup.type,
+      x: this.activePowerup.position.x,
+      y: this.activePowerup.position.y,
+    };
+  }
+
+  public getWebRtcPickup(): NetworkPowerupPickup | null {
+    return this.latestPickup;
+  }
+
+  private applyNetworkPowerup(
+    snapshot: LocalPowerupSnapshot | NetworkPowerupSnapshot | null,
+  ): void {
     if (snapshot === null) {
       if (this.networkPowerupId !== null) {
         this.revoke();
@@ -78,6 +148,7 @@ export class LevelPowerupScript extends LevelScript {
       this.handleEnemySpawnCompleted,
     );
     this.eventBus.mapTileDestroyed.addListener(this.handleMapTileDestroyed);
+    this.eventBus.powerupPicked.addListener(this.capturePowerupPickup);
 
     this.timer = new Timer();
     this.timer.done.addListener(this.handleTimer);
@@ -101,11 +172,14 @@ export class LevelPowerupScript extends LevelScript {
   }
 
   protected update({ deltaTime }: GameUpdateArgs): void {
+    if (this.isWebRtcJoin) {
+      return;
+    }
     this.timer.update(deltaTime);
   }
 
   private handleEnemyHit = (event: LevelEnemyHitEvent): void => {
-    if (this.isLocalServerMatch) {
+    if (this.isLocalServerMatch || this.isWebRtcJoin) {
       return;
     }
     const { type: tankType } = event;
@@ -122,7 +196,7 @@ export class LevelPowerupScript extends LevelScript {
   private handleEnemySpawnCompleted = (
     event: LevelEnemySpawnCompletedEvent,
   ): void => {
-    if (this.isLocalServerMatch) {
+    if (this.isLocalServerMatch || this.isWebRtcJoin) {
       return;
     }
     const { type: tankType } = event;
@@ -239,6 +313,9 @@ export class LevelPowerupScript extends LevelScript {
     powerup.position.copyFrom(position);
 
     powerup.picked.addListener(({ partyIndex }) => {
+      this.activePowerup = null;
+      this.activePowerupId = null;
+      this.timer.stop();
       this.eventBus.powerupPicked.notify({
         type: powerup.type,
         centerPosition: powerup.getCenter(),
@@ -253,6 +330,7 @@ export class LevelPowerupScript extends LevelScript {
     this.timer.reset(config.POWERUP_DURATION * (1 + salvage / 100));
 
     this.activePowerup = powerup;
+    this.activePowerupId = ++this.powerupSequence;
 
     this.world.field.add(powerup);
 
@@ -269,9 +347,21 @@ export class LevelPowerupScript extends LevelScript {
 
     this.activePowerup.destroy();
     this.activePowerup = null;
+    this.activePowerupId = null;
 
     this.eventBus.powerupRevoked.notify(null);
   }
+
+  private capturePowerupPickup = (event: LevelPowerupPickedEvent): void => {
+    this.pickupSequence += 1;
+    this.latestPickup = {
+      seq: this.pickupSequence,
+      type: event.type,
+      partyIndex: event.partyIndex,
+      x: event.centerPosition.x,
+      y: event.centerPosition.y,
+    };
+  };
 
   private createBaseRect(): Rect {
     const basePosition = this.mapConfig.getBasePosition();

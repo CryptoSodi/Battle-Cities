@@ -2,6 +2,7 @@ import { Rotation } from '../../game';
 import type { GameUpdateArgs } from '../../game';
 import { EnemyTank, PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
+import { PowerupType } from '../../powerup';
 
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
@@ -47,6 +48,21 @@ interface WebRtcPlayerFrame {
   fireRotation: Rotation;
 }
 
+interface WebRtcPowerupFrame {
+  id: number;
+  kind: PowerupType;
+  x: number;
+  y: number;
+}
+
+interface WebRtcPowerupPickupFrame {
+  seq: number;
+  type: PowerupType;
+  partyIndex: number;
+  x: number;
+  y: number;
+}
+
 interface WebRtcHostFramePacket {
   type: 'webrtc-host-frame';
   seq: number;
@@ -56,6 +72,8 @@ interface WebRtcHostFramePacket {
   playerOneElapsedSeconds: number;
   playerTwoElapsedSeconds: number;
   players: WebRtcPlayerFrame[];
+  powerup: WebRtcPowerupFrame | null;
+  powerupPickup: WebRtcPowerupPickupFrame | null;
   activeEnemyIds: number[];
   enemies: WebRtcEnemyFrame[];
 }
@@ -242,6 +260,8 @@ export class WebRtcHostMatchSync {
     players: PlayerTank[],
     enemies: EnemyTank[],
     activeEnemyIds: number[],
+    powerup: WebRtcPowerupFrame | null,
+    powerupPickup: WebRtcPowerupPickupFrame | null,
     deltaTime: number,
   ): void {
     if (!this.isEnabled()) {
@@ -261,7 +281,14 @@ export class WebRtcHostMatchSync {
       }
       this.observePlayers(players);
       this.observeEnemies(enemies);
-      this.sendHostFrame(players, enemies, activeEnemyIds, deltaTime);
+      this.sendHostFrame(
+        players,
+        enemies,
+        activeEnemyIds,
+        powerup,
+        powerupPickup,
+        deltaTime,
+      );
       this.updateClock();
       return;
     }
@@ -309,6 +336,14 @@ export class WebRtcHostMatchSync {
 
   public getActiveEnemyIds(): number[] {
     return this.latestHostFrame?.activeEnemyIds ?? [];
+  }
+
+  public getPowerup(): WebRtcPowerupFrame | null {
+    return this.latestHostFrame?.powerup ?? null;
+  }
+
+  public getPowerupPickup(): WebRtcPowerupPickupFrame | null {
+    return this.latestHostFrame?.powerupPickup ?? null;
   }
 
   private configure(): void {
@@ -546,6 +581,8 @@ export class WebRtcHostMatchSync {
     players: PlayerTank[],
     enemies: EnemyTank[],
     activeEnemyIds: number[],
+    powerup: WebRtcPowerupFrame | null,
+    powerupPickup: WebRtcPowerupPickupFrame | null,
     deltaTime: number,
   ): void {
     const activeEnemyIdSet = new Set(activeEnemyIds);
@@ -563,6 +600,8 @@ export class WebRtcHostMatchSync {
       playerOneElapsedSeconds: this.localElapsedSeconds,
       playerTwoElapsedSeconds: this.remoteElapsedSeconds,
       players: players.map((tank) => this.createPlayerFrame(tank)),
+      powerup,
+      powerupPickup,
       activeEnemyIds,
       enemies: enemies.map((tank) => this.createEnemyFrame(tank)),
     };

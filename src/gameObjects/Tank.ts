@@ -189,14 +189,7 @@ export class Tank extends GameObject {
       }
     }
 
-    if (this.isStunned()) {
-      if (this.stunBlinkTimer.isDone()) {
-        this.stunBlinkTimer.reset(STUN_BLINK_DELAY);
-        this.setVisible(!this.getVisible());
-      }
-      this.stunBlinkTimer.update(deltaTime);
-      this.stunTimer.update(deltaTime);
-    }
+    this.updateStun(deltaTime);
 
     // Behavior code is responsible for blocking movement for a tank when it
     // is sliding
@@ -376,6 +369,18 @@ export class Tank extends GameObject {
 
     this.translateY(this.attributes.moveSpeed * deltaTime);
     this.updateMatrix(true);
+  }
+
+  protected updateStun(deltaTime: number): void {
+    if (!this.isStunned()) {
+      return;
+    }
+    if (this.stunBlinkTimer.isDone()) {
+      this.stunBlinkTimer.reset(STUN_BLINK_DELAY);
+      this.setVisible(!this.getVisible());
+    }
+    this.stunBlinkTimer.update(deltaTime);
+    this.stunTimer.update(deltaTime);
   }
 
   public applyNetworkMovement(

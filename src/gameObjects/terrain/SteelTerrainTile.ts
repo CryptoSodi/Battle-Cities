@@ -16,8 +16,8 @@ export class SteelTerrainTile extends TerrainTile {
     super(config.STEEL_TILE_SIZE, config.STEEL_TILE_SIZE);
   }
 
-  public destroy(): void {
-    super.destroy();
+  public destroy(notify = true): void {
+    super.destroy(notify);
     this.collider.unregister();
   }
 

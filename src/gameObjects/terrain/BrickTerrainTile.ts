@@ -27,8 +27,8 @@ export class BrickTerrainTile extends TerrainTile {
     super(config.BRICK_TILE_SIZE, config.BRICK_TILE_SIZE);
   }
 
-  public destroy(): void {
-    super.destroy();
+  public destroy(notify = true): void {
+    super.destroy(notify);
     this.collider.unregister();
   }
 

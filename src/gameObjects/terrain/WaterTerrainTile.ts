@@ -17,8 +17,8 @@ export class WaterTerrainTile extends TerrainTile {
     super(config.WATER_TILE_SIZE, config.WATER_TILE_SIZE);
   }
 
-  public destroy(): void {
-    super.destroy();
+  public destroy(notify = true): void {
+    super.destroy(notify);
     this.collider.unregister();
   }
 

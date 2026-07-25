@@ -31,12 +31,12 @@ export class BrickSuperTerrainTile extends TerrainTile {
     this.subTiles = subTiles;
   }
 
-  public destroy(): void {
-    super.destroy();
+  public destroy(notify = true): void {
+    super.destroy(notify);
     this.collider.unregister();
 
     for (const subTile of this.subTiles) {
-      subTile.destroy();
+      subTile.destroy(notify);
     }
   }
 

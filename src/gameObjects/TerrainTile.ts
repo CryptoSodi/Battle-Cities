@@ -5,10 +5,12 @@ export abstract class TerrainTile extends GameObject {
   public abstract type: TerrainType;
   public destroyed = new Subject<{ centerPosition: Vector }>();
 
-  public destroy(): void {
+  public destroy(notify = true): void {
     this.removeSelf();
-    this.destroyed.notify({
-      centerPosition: this.getCenter(),
-    });
+    if (notify) {
+      this.destroyed.notify({
+        centerPosition: this.getCenter(),
+      });
+    }
   }
 }

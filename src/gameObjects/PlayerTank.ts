@@ -63,6 +63,7 @@ export class PlayerTank extends Tank {
     if (this.networkControlled) {
       this.updateCollisionStates();
       this.shieldTimer.update(updateArgs.deltaTime);
+      this.updateStun(updateArgs.deltaTime);
       this.behavior.update(this, updateArgs);
       this.lastFireTimer.update(updateArgs.deltaTime);
       this.updateAnimation(updateArgs.deltaTime);

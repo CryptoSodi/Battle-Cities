@@ -139,11 +139,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private spawnScript: LevelSpawnScript;
   private webRtcGhostScript: LevelWebRtcGhostScript;
   private winScript: LevelWinScript;
+  private isWebRtcMatch = false;
+  private localPlayerIndex = 0;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     document.body.classList.add('level-playing');
     const { collisionSystem, inputManager, gameStorage, rng, session } = updateArgs;
     this.gameStorage = gameStorage;
+    this.isWebRtcMatch = updateArgs.webRtcMatch.isEnabled();
+    this.localPlayerIndex = this.isWebRtcMatch
+      ? updateArgs.webRtcMatch.getLocalPlayerIndex()
+      : this.params.localPlayerIndex ?? 0;
     document.querySelectorAll('.mobile-gamepad-qr').forEach((element) => {
       element.remove();
     });
@@ -527,7 +533,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     });
 
-    this.updateCamera(updateArgs.deltaTime);
+    this.updateCamera(updateArgs);
 
     this.root.updateWorldMatrix(false, true);
 
@@ -549,8 +555,18 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           playerTanks,
           this.enemyScript.getAliveTanks(),
           this.enemyScript.getActiveEnemyIds(),
+          this.powerupScript.getWebRtcPowerup(),
+          this.powerupScript.getWebRtcPickup(),
           updateArgs.deltaTime,
         );
+        if (!updateArgs.webRtcMatch.isHost()) {
+          this.powerupScript.syncWebRtcPowerup(
+            updateArgs.webRtcMatch.getPowerup(),
+          );
+          this.powerupScript.syncWebRtcPickup(
+            updateArgs.webRtcMatch.getPowerupPickup(),
+          );
+        }
       } else if (updateArgs.magicBlockMovement.isOnlineMatch()) {
         this.webRtcGhostScript.prepareRemoteTankForServerPath();
         updateArgs.magicBlockMovement.updateMatch(
@@ -715,9 +731,13 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     return null;
   }
 
-  private updateCamera(deltaTime: number): void {
+  private updateCamera(updateArgs: GameUpdateArgs): void {
+    const { deltaTime } = updateArgs;
+    const localPlayerIndex = updateArgs.webRtcMatch.isEnabled()
+      ? updateArgs.webRtcMatch.getLocalPlayerIndex()
+      : this.params.localPlayerIndex ?? 0;
     const targetTank =
-      this.world.getPlayerTanks()[this.params.localPlayerIndex ?? 0];
+      this.world.getPlayerTanks()[localPlayerIndex];
     const fieldWidth = this.world.field.size.width;
     const fieldHeight = this.world.field.size.height;
     const viewportWidth =
@@ -973,6 +993,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     }
 
     if (event.type === PowerupType.ZoomOut) {
+      if (
+        this.isWebRtcMatch &&
+        event.partyIndex !== this.localPlayerIndex
+      ) {
+        return;
+      }
       this.cameraZoom =
         this.baseCameraZoom * config.ZOOM_OUT_POWERUP_MULTIPLIER;
       this.zoomOutTimer.reset(config.ZOOM_OUT_POWERUP_DURATION);
