@@ -1,4 +1,5 @@
 import { LevelInfo } from '../../gameObjects';
+import { GameUpdateArgs } from '../../game';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
@@ -7,7 +8,7 @@ import { LevelEnemySpawnRequestedEvent, LevelPlayerDiedEvent } from '../events';
 export class LevelInfoScript extends LevelScript {
   private info: LevelInfo;
 
-  protected setup(): void {
+  protected setup(updateArgs: GameUpdateArgs): void {
     this.eventBus.playerDied.addListener(this.handlePlayerDied);
     this.eventBus.enemySpawnRequested.addListener(
       this.handleEnemySpawnRequested,
@@ -16,11 +17,13 @@ export class LevelInfoScript extends LevelScript {
     this.info = new LevelInfo(
       this.world.sceneRoot.size.width,
       this.session.isMultiplayer(),
+      updateArgs.webRtcMatch.isEnabled(),
     );
     this.info.position.set(0, 0);
     this.world.sceneRoot.add(this.info);
 
     this.info.setLevelNumber(this.session.getLevelNumber());
+    this.info.setScore(this.session.getMaxGamePoints());
 
     this.session.players.forEach((playerSession, playerIndex) => {
       playerSession.lifeup.addListener(() => {
@@ -29,6 +32,29 @@ export class LevelInfoScript extends LevelScript {
 
       this.info.setLivesCount(playerIndex, playerSession.getLivesCount());
     });
+  }
+
+  protected update(updateArgs: GameUpdateArgs): void {
+    const webRtcMatch = updateArgs.webRtcMatch;
+    if (
+      webRtcMatch.isEnabled() &&
+      !webRtcMatch.isBroadcaster() &&
+      !webRtcMatch.isObserver()
+    ) {
+      const playerIndex = webRtcMatch.getLocalPlayerIndex() as 0 | 1;
+      this.info.setScore(
+        webRtcMatch.getPlayerScore(playerIndex) ??
+          this.session.getPlayer(playerIndex).getGamePoints(),
+      );
+    } else {
+      this.info.setScore(this.session.getMaxGamePoints());
+    }
+
+    if (webRtcMatch.isEnabled()) {
+      this.info.setBattleTime(
+        webRtcMatch.getSharedElapsedSeconds(),
+      );
+    }
   }
 
   private handlePlayerDied = (event: LevelPlayerDiedEvent): void => {

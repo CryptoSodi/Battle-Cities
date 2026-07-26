@@ -977,6 +977,23 @@ gameLoop.update.addListener((event) => {
     });
   }
   scene.invokeUpdate(updateArgs);
+
+  const replayDeadline = performance.now() + 8;
+  let replaySteps = 0;
+  while (replaySteps < 8 && performance.now() < replayDeadline) {
+    const replayDeltaTime = webRtcMatch.beginCatchUpStep();
+    if (replayDeltaTime === null) {
+      break;
+    }
+    updateArgs.deltaTime = replayDeltaTime;
+    try {
+      scene.invokeUpdate(updateArgs);
+    } finally {
+      webRtcMatch.endCatchUpStep();
+    }
+    replaySteps += 1;
+  }
+  updateArgs.deltaTime = event.deltaTime;
 });
 
 // Presentation: runs exactly once per animation frame.

@@ -494,6 +494,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
+    if (updateArgs.webRtcMatch.shouldHoldClientSimulation()) {
+      return;
+    }
     this.session.recordLevelTick();
     this.applyRemoteBoardMutations(updateArgs);
     const { collisionSystem, gameState } = updateArgs;
@@ -561,6 +564,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           this.enemyScript.getActiveEnemyIds(),
           this.powerupScript.getWebRtcPowerup(),
           this.powerupScript.getWebRtcPickup(),
+          [
+            this.session.getPlayer(0).getGamePoints(),
+            this.session.getPlayer(1).getGamePoints(),
+          ],
           updateArgs.deltaTime,
         );
         if (!updateArgs.webRtcMatch.isHost()) {

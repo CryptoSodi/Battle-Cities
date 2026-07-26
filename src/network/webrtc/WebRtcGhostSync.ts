@@ -263,21 +263,21 @@ export class WebRtcGhostSync {
     this.sendDataChannelPacket(packet);
   }
 
-  public sendWebRtcPacket(packet: WebRtcDataPacket): void {
+  public sendWebRtcPacket(packet: WebRtcDataPacket): boolean {
     if (!this.isEnabled()) {
-      return;
+      return false;
     }
 
     this.start();
-    this.sendDataChannelPacket(packet);
+    return this.sendDataChannelPacket(packet);
   }
 
-  private sendDataChannelPacket(packet: WebRtcDataPacket): void {
+  private sendDataChannelPacket(packet: WebRtcDataPacket): boolean {
     if (
       this.dataChannel === null ||
       this.dataChannel.readyState !== 'open'
     ) {
-      return;
+      return false;
     }
 
     if (this.dataChannel.bufferedAmount > MAX_BUFFERED_AMOUNT_BYTES) {
@@ -288,10 +288,11 @@ export class WebRtcGhostSync {
           bufferedAmount: this.dataChannel.bufferedAmount,
         });
       }
-      return;
+      return false;
     }
 
     this.dataChannel.send(JSON.stringify(packet));
+    return true;
   }
 
   public getLatestSnapshot(): WebRtcGhostTankSnapshot {

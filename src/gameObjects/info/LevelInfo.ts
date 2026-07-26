@@ -8,23 +8,41 @@ const BLOCK_GAP = 16;
 const EDGE_PADDING_LEFT = 56;
 const EDGE_PADDING_RIGHT = 32;
 const CENTER_GAP = 40;
+const SCORE_GAP = 48;
+const BATTLE_TIME_GAP = 48;
 
 export class LevelInfo extends GameObject {
   public zIndex = config.LEVEL_INFO_Z_INDEX;
   private enemyTitle = new SpriteText('ENEMY', { color: config.COLOR_YELLOW });
   private enemyValue = new SpriteText('00', { color: config.COLOR_WHITE });
+  private scoreTitle = new SpriteText('SCORE', { color: config.COLOR_YELLOW });
+  private scoreValue = new SpriteText('000000', { color: '#4dff00' });
   private primaryLivesTitle = new SpriteText('1P', { color: config.COLOR_YELLOW });
   private primaryLivesValue = new SpriteText('00', { color: config.COLOR_WHITE });
   private secondaryLivesTitle = new SpriteText('2P', { color: config.COLOR_YELLOW });
   private secondaryLivesValue = new SpriteText('00', { color: config.COLOR_WHITE });
   private stageTitle = new SpriteText('STAGE', { color: config.COLOR_YELLOW });
   private stageValue = new SpriteText('00', { color: config.COLOR_WHITE });
+  private battleTimeTitle = new SpriteText('BATTLE TIME', {
+    color: config.COLOR_YELLOW,
+  });
+  private battleTimeValue = new SpriteText('00:00', {
+    color: '#4dff00',
+  });
   private readonly isMultiplayer: boolean;
+  private readonly showBattleTime: boolean;
+  private displayedScore = -1;
+  private displayedBattleSecond = -1;
 
-  constructor(width: number, isMultiplayer: boolean) {
+  constructor(
+    width: number,
+    isMultiplayer: boolean,
+    showBattleTime = false,
+  ) {
     super(width, config.LEVEL_INFO_HEIGHT);
 
     this.isMultiplayer = isMultiplayer;
+    this.showBattleTime = showBattleTime;
   }
 
   protected setup(): void {
@@ -32,6 +50,8 @@ export class LevelInfo extends GameObject {
 
     this.add(this.enemyTitle);
     this.add(this.enemyValue);
+    this.add(this.scoreTitle);
+    this.add(this.scoreValue);
 
     this.add(this.primaryLivesTitle);
     this.add(this.primaryLivesValue);
@@ -43,6 +63,10 @@ export class LevelInfo extends GameObject {
 
     this.add(this.stageTitle);
     this.add(this.stageValue);
+    if (this.showBattleTime) {
+      this.add(this.battleTimeTitle);
+      this.add(this.battleTimeValue);
+    }
 
     this.layout();
   }
@@ -73,16 +97,60 @@ export class LevelInfo extends GameObject {
     this.layout();
   }
 
+  public setScore(score: number): void {
+    const displayScore = Math.max(0, Math.floor(score));
+    if (displayScore === this.displayedScore) {
+      return;
+    }
+    this.displayedScore = displayScore;
+    this.scoreValue.setText(displayScore.toString().padStart(6, '0'));
+    this.layout();
+  }
+
+  public setBattleTime(elapsedSeconds: number): void {
+    const totalSeconds = Math.max(0, Math.floor(elapsedSeconds));
+    if (!this.showBattleTime || totalSeconds === this.displayedBattleSecond) {
+      return;
+    }
+    this.displayedBattleSecond = totalSeconds;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    this.battleTimeValue.setText(
+      `${minutes.toString().padStart(2, '0')}:${seconds
+        .toString()
+        .padStart(2, '0')}`,
+    );
+    this.layout();
+  }
+
   private layout(): void {
     const enemyWidth = this.getBlockWidth(this.enemyTitle, this.enemyValue);
     const stageWidth = this.getBlockWidth(this.stageTitle, this.stageValue);
 
     this.positionBlock(this.enemyTitle, this.enemyValue, EDGE_PADDING_LEFT);
     this.positionBlock(
+      this.scoreTitle,
+      this.scoreValue,
+      EDGE_PADDING_LEFT + enemyWidth + SCORE_GAP,
+    );
+    const stageStartX = this.size.width - EDGE_PADDING_RIGHT - stageWidth;
+    this.positionBlock(
       this.stageTitle,
       this.stageValue,
-      this.size.width - EDGE_PADDING_RIGHT - stageWidth,
+      stageStartX,
     );
+    if (this.showBattleTime) {
+      const battleTimeWidth = this.getBlockWidth(
+        this.battleTimeTitle,
+        this.battleTimeValue,
+      );
+      const battleTimeX = stageStartX - BATTLE_TIME_GAP - battleTimeWidth;
+      this.positionBlock(
+        this.battleTimeTitle,
+        this.battleTimeValue,
+        battleTimeX,
+      );
+    }
 
     const centerX = this.size.width / 2;
     const primaryWidth = this.getBlockWidth(

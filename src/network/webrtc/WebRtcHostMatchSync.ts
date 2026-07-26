@@ -15,6 +15,8 @@ const NETWORK_PROBE_INTERVAL_SECONDS = 0.5;
 const JITTER_SMOOTHING = 0.2;
 const OBSERVER_HEARTBEAT_MS = 5000;
 const OBSERVER_DISCOVERY_MS = 2000;
+const REPLAY_FRAMES_PER_HOST_TICK = 8;
+const REPLAY_READY_MAX_LAG = 2;
 
 type WebRtcLinkId = 0 | 1 | string;
 
@@ -78,6 +80,7 @@ interface WebRtcHostFramePacket {
   seq: number;
   tick: number;
   deltaTime: number;
+  playerScores: [number, number];
   sharedElapsedSeconds: number;
   playerOneElapsedSeconds: number;
   playerTwoElapsedSeconds: number;
@@ -105,6 +108,42 @@ interface WebRtcPongPacket {
 interface WebRtcReadyPacket {
   type: 'webrtc-ready';
   ready: boolean;
+  syncPlayer?: 0 | 1 | null;
+  serverFrameSeq?: number;
+}
+
+interface WebRtcResumePacket {
+  type: 'webrtc-resume';
+  player: 0 | 1;
+  lastAppliedFrameSeq: number;
+}
+
+interface WebRtcReplayStartPacket {
+  type: 'webrtc-replay-start';
+  fromSeq: number;
+  targetSeq: number;
+}
+
+interface WebRtcReplayCompletePacket {
+  type: 'webrtc-replay-complete';
+  targetSeq: number;
+}
+
+interface WebRtcReplayReadyPacket {
+  type: 'webrtc-replay-ready';
+  appliedSeq: number;
+}
+
+interface WebRtcReplayUnavailablePacket {
+  type: 'webrtc-replay-unavailable';
+  oldestAvailableSeq: number;
+  serverSeq: number;
+}
+
+interface WebRtcClientReadyPacket {
+  type: 'webrtc-client-ready';
+  player: 0 | 1;
+  appliedSeq: number;
 }
 
 function log(message: string, data?: any): void {
@@ -150,6 +189,15 @@ export class WebRtcHostMatchSync {
   private readonly disableEnemyShooting: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
+  private readonly activePlayers = new Set<number>();
+  private readonly syncingPlayers = new Set<number>();
+  private readonly frameHistory: WebRtcHostFramePacket[] = [];
+  private readonly frameHistoryBySeq = new Map<number, WebRtcHostFramePacket>();
+  private readonly replaySessions = new Map<
+    number,
+    { nextSeq: number; targetSeq: number }
+  >();
+  private readonly pendingActivations = new Map<number, number>();
   private inputSeq = 0;
   private frameSeq = 0;
   private tick = 0;
@@ -160,6 +208,16 @@ export class WebRtcHostMatchSync {
   private readonly latestRemoteInputReceivedAt = new Map<number, number>();
   private readonly lastAppliedRemoteFireSeqs = new Map<number, number>();
   private latestHostFrame: WebRtcHostFramePacket = null;
+  private activeReplayFrame: WebRtcHostFramePacket = null;
+  private readonly recoveryFrames = new Map<number, WebRtcHostFramePacket>();
+  private readonly clientFrameCache = new Map<number, WebRtcHostFramePacket>();
+  private readonly pendingAppliedFrameSeqs: number[] = [];
+  private lastAppliedHostFrameSeq = 0;
+  private replayTargetSeq = 0;
+  private replayDeliveryComplete = false;
+  private lastReadyAckSeq = -1;
+  private clientSyncing = false;
+  private recoveryUnavailable = false;
   private readonly pendingPlayerTicks = new Map<
     number,
     WebRtcPlayerFrame[]
@@ -187,6 +245,7 @@ export class WebRtcHostMatchSync {
     { x: number; y: number }
   >();
   private started = false;
+  private matchStarted = false;
   private connected = false;
   private ready = false;
   private localElapsedSeconds = 0;
@@ -290,6 +349,59 @@ export class WebRtcHostMatchSync {
     return this.localPlayerIndex;
   }
 
+  public getSharedElapsedSeconds(): number {
+    return this.sharedElapsedSeconds;
+  }
+
+  public getPlayerScore(playerIndex: 0 | 1): number | null {
+    const score = (this.activeReplayFrame ?? this.latestHostFrame)
+      ?.playerScores?.[playerIndex];
+    return Number.isFinite(score) ? Math.max(0, Math.floor(score)) : null;
+  }
+
+  public shouldHoldClientSimulation(): boolean {
+    return (
+      this.isEnabled() &&
+      !this.broadcaster &&
+      !this.observer &&
+      this.clientSyncing &&
+      this.activeReplayFrame === null
+    );
+  }
+
+  public beginCatchUpStep(): number | null {
+    if (
+      !this.clientSyncing ||
+      this.recoveryUnavailable ||
+      this.activeReplayFrame !== null
+    ) {
+      return null;
+    }
+    const nextSeq = this.lastAppliedHostFrameSeq + 1;
+    const frame = this.recoveryFrames.get(nextSeq);
+    if (frame === undefined) {
+      this.maybeAcknowledgeReplay();
+      return null;
+    }
+    this.activeReplayFrame = frame;
+    return frame.deltaTime;
+  }
+
+  public endCatchUpStep(): void {
+    if (this.activeReplayFrame === null) {
+      return;
+    }
+    const appliedSeq = this.activeReplayFrame.seq;
+    this.recoveryFrames.delete(appliedSeq);
+    this.clientFrameCache.delete(appliedSeq);
+    this.lastAppliedHostFrameSeq = appliedSeq;
+    this.activeReplayFrame = null;
+    if (appliedSeq % 30 === 0 || appliedSeq >= this.replayTargetSeq) {
+      this.showClientStatus();
+    }
+    this.maybeAcknowledgeReplay();
+  }
+
   public isRemoteTank(partyIndex: number): boolean {
     return (
       this.isEnabled() &&
@@ -315,6 +427,10 @@ export class WebRtcHostMatchSync {
       return true;
     }
 
+    if (this.clientSyncing) {
+      return true;
+    }
+
     if (tank.partyIndex === this.localPlayerIndex) {
       this.sendLocalInput(
         updateArgs,
@@ -331,6 +447,7 @@ export class WebRtcHostMatchSync {
     activeEnemyIds: number[],
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
+    playerScores: [number, number],
     deltaTime: number,
   ): void {
     if (!this.isEnabled()) {
@@ -339,18 +456,17 @@ export class WebRtcHostMatchSync {
 
     this.start();
     this.tick += 1;
-    if (this.ready) {
+    if (this.ready && !this.clientSyncing) {
       this.localElapsedSeconds += deltaTime;
       this.updateNetworkProbe(deltaTime);
     }
 
     if (this.broadcaster) {
-      if (this.ready) {
-        this.sharedElapsedSeconds += deltaTime;
-      } else {
+      if (!this.matchStarted) {
         this.updateClock();
         return;
       }
+      this.sharedElapsedSeconds += deltaTime;
       this.observePlayers(players);
       this.observeEnemies(enemies);
       this.sendHostFrame(
@@ -359,10 +475,22 @@ export class WebRtcHostMatchSync {
         activeEnemyIds,
         powerup,
         powerupPickup,
+        playerScores,
         deltaTime,
       );
       this.updateClock();
       return;
+    }
+
+    if (this.activeReplayFrame !== null) {
+      this.updateClock();
+      return;
+    }
+
+    const appliedSeq = this.pendingAppliedFrameSeqs.shift();
+    if (appliedSeq !== undefined) {
+      this.lastAppliedHostFrameSeq = appliedSeq;
+      this.clientFrameCache.delete(appliedSeq);
     }
 
     this.updateClock();
@@ -401,7 +529,8 @@ export class WebRtcHostMatchSync {
       });
       return;
     }
-    if (this.latestHostFrame === null) {
+    const frame = this.activeReplayFrame ?? this.latestHostFrame;
+    if (frame === null) {
       return;
     }
     players.forEach((tank) => {
@@ -409,20 +538,33 @@ export class WebRtcHostMatchSync {
         tank.setNetworkControlled(true);
       }
     });
+    if (this.activeReplayFrame !== null) {
+      this.applyReplayPlayerFrames(players, frame.players ?? []);
+      this.applyReplayEnemyFrames(enemies, frame.enemies ?? []);
+      return;
+    }
     this.applyPlayerFrames(players);
     this.applyEnemyFrames(enemies);
   }
 
   public getActiveEnemyIds(): number[] {
-    return this.latestHostFrame?.activeEnemyIds ?? [];
+    return (
+      this.activeReplayFrame?.activeEnemyIds ??
+      this.latestHostFrame?.activeEnemyIds ??
+      []
+    );
   }
 
   public getPowerup(): WebRtcPowerupFrame | null {
-    return this.latestHostFrame?.powerup ?? null;
+    return this.activeReplayFrame?.powerup ?? this.latestHostFrame?.powerup ?? null;
   }
 
   public getPowerupPickup(): WebRtcPowerupPickupFrame | null {
-    return this.latestHostFrame?.powerupPickup ?? null;
+    return (
+      this.activeReplayFrame?.powerupPickup ??
+      this.latestHostFrame?.powerupPickup ??
+      null
+    );
   }
 
   private configure(): void {
@@ -494,32 +636,61 @@ export class WebRtcHostMatchSync {
     isConnected: boolean,
   ): void {
     if (this.broadcaster) {
-      if (!isObserverLink(linkId)) {
-        if (isConnected) {
-          this.connectedPlayers.add(linkId);
-        } else {
-          this.connectedPlayers.delete(linkId);
-        }
-      }
-      this.connected = this.connectedPlayers.size === 2;
-      this.ready = this.connected;
-      this.broadcast({
-        type: 'webrtc-ready',
-        ready: this.ready,
-      } satisfies WebRtcReadyPacket);
       if (isObserverLink(linkId) && isConnected) {
         this.sendToLink(linkId, {
           type: 'webrtc-ready',
-          ready: this.ready,
+          ready: this.matchStarted,
+          syncPlayer: null,
+          serverFrameSeq: this.frameSeq,
         } satisfies WebRtcReadyPacket);
+        return;
       }
+      if (isObserverLink(linkId)) {
+        return;
+      }
+
+      const reconnectingPlayer = this.matchStarted && isConnected;
+      if (isConnected) {
+        this.connectedPlayers.add(linkId);
+        if (!this.matchStarted) {
+          this.activePlayers.add(linkId);
+        } else {
+          this.syncingPlayers.add(linkId);
+          this.activePlayers.delete(linkId);
+        }
+      } else {
+        this.connectedPlayers.delete(linkId);
+        this.activePlayers.delete(linkId);
+        this.replaySessions.delete(linkId);
+        this.pendingActivations.delete(linkId);
+        if (this.matchStarted) {
+          this.syncingPlayers.add(linkId);
+        }
+      }
+
+      if (!this.matchStarted && this.connectedPlayers.size === 2) {
+        this.matchStarted = true;
+        this.activePlayers.add(0);
+        this.activePlayers.add(1);
+        this.syncingPlayers.clear();
+      }
+      this.connected = this.connectedPlayers.size === 2;
+      this.ready = this.matchStarted;
+      this.broadcast({
+        type: 'webrtc-ready',
+        ready: this.matchStarted,
+        syncPlayer: reconnectingPlayer ? linkId : null,
+        serverFrameSeq: this.frameSeq,
+      } satisfies WebRtcReadyPacket);
       const waitingFor = [0, 1]
         .filter((index) => !this.connectedPlayers.has(index))
         .map((index) => `player ${index + 1}`)
         .join(' and ');
       this.showStatus(
-        this.ready
-          ? `Broadcaster connected\nPlayers 1 and 2 ready`
+        this.matchStarted
+          ? waitingFor === ''
+            ? `Broadcaster connected\nPlayers 1 and 2 active`
+            : `Match running\nWaiting for ${waitingFor} to reconnect`
           : `Broadcaster waiting for ${waitingFor}\nRoom: ${this.room}`,
       );
       return;
@@ -527,13 +698,159 @@ export class WebRtcHostMatchSync {
 
     this.connected = isConnected;
     if (!isConnected) {
-      this.ready = false;
       this.probeTimer = 0;
       this.lastRttMs = null;
       this.rttMs = null;
       this.jitterMs = null;
+      if (!this.observer && this.ready && this.lastAppliedHostFrameSeq > 0) {
+        this.beginClientSync();
+      } else if (!this.ready) {
+        this.ready = false;
+      }
+    } else if (!this.observer && this.clientSyncing) {
+      this.sendResumeRequest();
     }
     this.showClientStatus();
+  }
+
+  private beginClientSync(): void {
+    this.clientSyncing = true;
+    this.recoveryUnavailable = false;
+    this.replayDeliveryComplete = false;
+    this.lastReadyAckSeq = -1;
+    this.replayTargetSeq = this.lastAppliedHostFrameSeq;
+    this.pendingPlayerTicks.clear();
+    this.pendingEnemyTicks.clear();
+    this.pendingAppliedFrameSeqs.length = 0;
+    this.clientFrameCache.forEach((frame, seq) => {
+      if (seq > this.lastAppliedHostFrameSeq) {
+        this.recoveryFrames.set(seq, frame);
+      }
+    });
+  }
+
+  private sendResumeRequest(): void {
+    this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
+      type: 'webrtc-resume',
+      player: this.localPlayerIndex as 0 | 1,
+      lastAppliedFrameSeq: this.lastAppliedHostFrameSeq,
+    } satisfies WebRtcResumePacket);
+  }
+
+  private handleResumeRequest(
+    playerIndex: 0 | 1,
+    packet: WebRtcResumePacket,
+  ): void {
+    if (
+      packet.player !== playerIndex ||
+      !this.connectedPlayers.has(playerIndex) ||
+      !Number.isInteger(packet.lastAppliedFrameSeq) ||
+      packet.lastAppliedFrameSeq < 0 ||
+      packet.lastAppliedFrameSeq > this.frameSeq
+    ) {
+      return;
+    }
+
+    if (this.activePlayers.has(playerIndex)) {
+      this.sendToPlayer(playerIndex, {
+        type: 'webrtc-replay-ready',
+        appliedSeq: packet.lastAppliedFrameSeq,
+      } satisfies WebRtcReplayReadyPacket);
+      return;
+    }
+
+    const oldestAvailableSeq = this.frameHistory[0]?.seq ?? this.frameSeq + 1;
+    if (packet.lastAppliedFrameSeq < oldestAvailableSeq - 1) {
+      this.sendToPlayer(playerIndex, {
+        type: 'webrtc-replay-unavailable',
+        oldestAvailableSeq,
+        serverSeq: this.frameSeq,
+      } satisfies WebRtcReplayUnavailablePacket);
+      return;
+    }
+
+    if (packet.lastAppliedFrameSeq === this.frameSeq) {
+      this.activatePlayer(playerIndex, packet.lastAppliedFrameSeq);
+      return;
+    }
+
+    this.syncingPlayers.add(playerIndex);
+    this.activePlayers.delete(playerIndex);
+    this.replaySessions.set(playerIndex, {
+      nextSeq: packet.lastAppliedFrameSeq + 1,
+      targetSeq: this.frameSeq,
+    });
+    this.sendToPlayer(playerIndex, {
+      type: 'webrtc-replay-start',
+      fromSeq: packet.lastAppliedFrameSeq + 1,
+      targetSeq: this.frameSeq,
+    } satisfies WebRtcReplayStartPacket);
+  }
+
+  private handleClientReady(
+    playerIndex: 0 | 1,
+    packet: WebRtcClientReadyPacket,
+  ): void {
+    if (
+      packet.player !== playerIndex ||
+      !this.syncingPlayers.has(playerIndex) ||
+      !Number.isInteger(packet.appliedSeq) ||
+      packet.appliedSeq < 0 ||
+      packet.appliedSeq > this.frameSeq
+    ) {
+      return;
+    }
+    if (this.frameSeq - packet.appliedSeq <= REPLAY_READY_MAX_LAG) {
+      this.activatePlayer(playerIndex, packet.appliedSeq);
+      return;
+    }
+
+    this.replaySessions.set(playerIndex, {
+      nextSeq: packet.appliedSeq + 1,
+      targetSeq: this.frameSeq,
+    });
+    this.sendToPlayer(playerIndex, {
+      type: 'webrtc-replay-start',
+      fromSeq: packet.appliedSeq + 1,
+      targetSeq: this.frameSeq,
+    } satisfies WebRtcReplayStartPacket);
+  }
+
+  private activatePlayer(playerIndex: 0 | 1, appliedSeq: number): void {
+    const confirmationSent = this.sendToPlayer(playerIndex, {
+      type: 'webrtc-replay-ready',
+      appliedSeq,
+    } satisfies WebRtcReplayReadyPacket);
+    if (!confirmationSent) {
+      this.pendingActivations.set(playerIndex, appliedSeq);
+      return;
+    }
+    this.syncingPlayers.delete(playerIndex);
+    this.replaySessions.delete(playerIndex);
+    this.pendingActivations.delete(playerIndex);
+    this.activePlayers.add(playerIndex);
+    this.latestRemoteInputs.delete(playerIndex);
+    this.latestRemoteInputReceivedAt.delete(playerIndex);
+    this.lastAppliedRemoteFireSeqs.delete(playerIndex);
+  }
+
+  private maybeAcknowledgeReplay(): void {
+    if (
+      !this.clientSyncing ||
+      !this.replayDeliveryComplete ||
+      this.activeReplayFrame !== null ||
+      this.lastAppliedHostFrameSeq < this.replayTargetSeq ||
+      this.recoveryFrames.has(this.lastAppliedHostFrameSeq + 1) ||
+      this.lastReadyAckSeq === this.lastAppliedHostFrameSeq
+    ) {
+      return;
+    }
+    this.lastReadyAckSeq = this.lastAppliedHostFrameSeq;
+    this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
+      type: 'webrtc-client-ready',
+      player: this.localPlayerIndex as 0 | 1,
+      appliedSeq: this.lastAppliedHostFrameSeq,
+    } satisfies WebRtcClientReadyPacket);
   }
 
   private showClientStatus(): void {
@@ -549,7 +866,11 @@ export class WebRtcHostMatchSync {
     }
     const playerNumber = this.localPlayerIndex + 1;
     this.showStatus(
-      this.ready
+      this.recoveryUnavailable
+        ? `Player ${playerNumber} recovery unavailable\nAuthoritative replay history is incomplete`
+        : this.clientSyncing
+          ? `Player ${playerNumber} synchronizing\nFrame ${this.lastAppliedHostFrameSeq} / ${this.replayTargetSeq}`
+      : this.ready
         ? `WebRTC match ready - player ${playerNumber}`
         : this.connected
           ? `Player ${playerNumber} waiting for other player`
@@ -560,12 +881,15 @@ export class WebRtcHostMatchSync {
   private sendToPlayer(
     playerIndex: 0 | 1,
     packet: WebRtcDataPacket,
-  ): void {
-    this.sendToLink(playerIndex, packet);
+  ): boolean {
+    return this.sendToLink(playerIndex, packet);
   }
 
-  private sendToLink(linkId: WebRtcLinkId, packet: WebRtcDataPacket): void {
-    this.links.get(linkId)?.sendWebRtcPacket(packet);
+  private sendToLink(
+    linkId: WebRtcLinkId,
+    packet: WebRtcDataPacket,
+  ): boolean {
+    return this.links.get(linkId)?.sendWebRtcPacket(packet) ?? false;
   }
 
   private broadcast(packet: WebRtcDataPacket): void {
@@ -688,6 +1012,79 @@ export class WebRtcHostMatchSync {
     if (!this.broadcaster && packet.type === 'webrtc-ready') {
       const ready = packet as WebRtcReadyPacket;
       this.ready = ready.ready === true;
+      if (
+        !this.observer &&
+        ready.syncPlayer === this.localPlayerIndex &&
+        !this.clientSyncing
+      ) {
+        this.beginClientSync();
+      }
+      if (this.ready && !this.observer && this.connected) {
+        this.sendResumeRequest();
+      }
+      this.showClientStatus();
+      return;
+    }
+
+    if (this.broadcaster && packet.type === 'webrtc-resume') {
+      if (isObserverLink(linkId)) {
+        return;
+      }
+      this.handleResumeRequest(linkId, packet as WebRtcResumePacket);
+      return;
+    }
+
+    if (this.broadcaster && packet.type === 'webrtc-client-ready') {
+      if (isObserverLink(linkId)) {
+        return;
+      }
+      this.handleClientReady(linkId, packet as WebRtcClientReadyPacket);
+      return;
+    }
+
+    if (!this.broadcaster && packet.type === 'webrtc-replay-start') {
+      const replay = packet as WebRtcReplayStartPacket;
+      if (!this.clientSyncing) {
+        this.beginClientSync();
+      }
+      this.replayTargetSeq = Math.max(this.replayTargetSeq, replay.targetSeq);
+      this.replayDeliveryComplete = false;
+      this.lastReadyAckSeq = -1;
+      this.showClientStatus();
+      return;
+    }
+
+    if (!this.broadcaster && packet.type === 'webrtc-replay-complete') {
+      const replay = packet as WebRtcReplayCompletePacket;
+      this.replayTargetSeq = Math.max(this.replayTargetSeq, replay.targetSeq);
+      this.replayDeliveryComplete = true;
+      this.maybeAcknowledgeReplay();
+      return;
+    }
+
+    if (!this.broadcaster && packet.type === 'webrtc-replay-ready') {
+      const replay = packet as WebRtcReplayReadyPacket;
+      if (replay.appliedSeq > this.lastAppliedHostFrameSeq) {
+        return;
+      }
+      this.clientSyncing = false;
+      this.recoveryUnavailable = false;
+      this.replayDeliveryComplete = false;
+      this.replayTargetSeq = replay.appliedSeq;
+      Array.from(this.recoveryFrames.values())
+        .filter((frame) => frame.seq > this.lastAppliedHostFrameSeq)
+        .sort((a, b) => a.seq - b.seq)
+        .forEach((frame) => this.queueLiveFrame(frame, false));
+      this.recoveryFrames.clear();
+      this.showClientStatus();
+      return;
+    }
+
+    if (!this.broadcaster && packet.type === 'webrtc-replay-unavailable') {
+      const unavailable = packet as WebRtcReplayUnavailablePacket;
+      this.beginClientSync();
+      this.recoveryUnavailable = true;
+      this.replayTargetSeq = unavailable.serverSeq;
       this.showClientStatus();
       return;
     }
@@ -696,6 +1093,7 @@ export class WebRtcHostMatchSync {
       const input = packet as WebRtcInputPacket;
       if (
         isObserverLink(linkId) ||
+        !this.activePlayers.has(linkId) ||
         input.player !== linkId ||
         input.seq <=
           (this.latestRemoteInputs.get(linkId)?.seq ?? 0)
@@ -715,12 +1113,27 @@ export class WebRtcHostMatchSync {
 
     if (!this.broadcaster && packet.type === 'webrtc-host-frame') {
       const frame = packet as WebRtcHostFramePacket;
+      if (!Number.isInteger(frame.seq) || frame.seq <= 0) {
+        return;
+      }
+      this.clientFrameCache.set(frame.seq, frame);
+      if (this.clientSyncing) {
+        if (frame.seq > this.lastAppliedHostFrameSeq) {
+          this.recoveryFrames.set(frame.seq, frame);
+        }
+        if (frame.seq > (this.latestHostFrame?.seq ?? 0)) {
+          this.latestHostFrame = frame;
+          this.sharedElapsedSeconds = frame.sharedElapsedSeconds;
+        }
+        return;
+      }
       if (frame.seq <= (this.latestHostFrame?.seq ?? 0)) {
         return;
       }
       const isInitialObserverFrame =
         this.observer && this.latestHostFrame === null;
       this.latestHostFrame = frame;
+      this.queueLiveFrame(frame, isInitialObserverFrame);
       if (Number.isFinite(frame.sharedElapsedSeconds)) {
         this.sharedElapsedSeconds = frame.sharedElapsedSeconds;
         if (!this.hasSynchronizedClock) {
@@ -728,37 +1141,36 @@ export class WebRtcHostMatchSync {
           this.hasSynchronizedClock = true;
         }
       }
-      (frame.players ?? []).forEach((playerFrame) => {
-        let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
-        if (ticks === undefined) {
-          ticks = [];
-          this.pendingPlayerTicks.set(playerFrame.partyIndex, ticks);
-        }
-        ticks.push(
-          isInitialObserverFrame
-            ? { ...playerFrame, initialSync: true }
-            : playerFrame,
-        );
-      });
-      const activeEnemyIds = new Set(frame.activeEnemyIds);
-      Array.from(this.pendingEnemyTicks.keys()).forEach((partyIndex) => {
-        if (!activeEnemyIds.has(partyIndex)) {
-          this.pendingEnemyTicks.delete(partyIndex);
-        }
-      });
-      frame.enemies.forEach((enemyFrame) => {
-        let ticks = this.pendingEnemyTicks.get(enemyFrame.partyIndex);
-        if (ticks === undefined) {
-          ticks = [];
-          this.pendingEnemyTicks.set(enemyFrame.partyIndex, ticks);
-        }
-        ticks.push(
-          isInitialObserverFrame
-            ? { ...enemyFrame, initialSync: true }
-            : enemyFrame,
-        );
-      });
     }
+  }
+
+  private queueLiveFrame(
+    frame: WebRtcHostFramePacket,
+    initialSync: boolean,
+  ): void {
+    this.pendingAppliedFrameSeqs.push(frame.seq);
+    (frame.players ?? []).forEach((playerFrame) => {
+      let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
+      if (ticks === undefined) {
+        ticks = [];
+        this.pendingPlayerTicks.set(playerFrame.partyIndex, ticks);
+      }
+      ticks.push(initialSync ? { ...playerFrame, initialSync: true } : playerFrame);
+    });
+    const activeEnemyIds = new Set(frame.activeEnemyIds);
+    Array.from(this.pendingEnemyTicks.keys()).forEach((partyIndex) => {
+      if (!activeEnemyIds.has(partyIndex)) {
+        this.pendingEnemyTicks.delete(partyIndex);
+      }
+    });
+    frame.enemies.forEach((enemyFrame) => {
+      let ticks = this.pendingEnemyTicks.get(enemyFrame.partyIndex);
+      if (ticks === undefined) {
+        ticks = [];
+        this.pendingEnemyTicks.set(enemyFrame.partyIndex, ticks);
+      }
+      ticks.push(initialSync ? { ...enemyFrame, initialSync: true } : enemyFrame);
+    });
   }
 
   private sendLocalInput(
@@ -873,6 +1285,7 @@ export class WebRtcHostMatchSync {
     activeEnemyIds: number[],
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
+    playerScores: [number, number],
     deltaTime: number,
   ): void {
     const activeEnemyIdSet = new Set(activeEnemyIds);
@@ -886,6 +1299,9 @@ export class WebRtcHostMatchSync {
       seq: ++this.frameSeq,
       tick: this.tick,
       deltaTime: Math.min(Math.max(deltaTime, 0), 0.1),
+      playerScores: playerScores.map((score) => {
+        return Math.max(0, Math.floor(score));
+      }) as [number, number],
       sharedElapsedSeconds: this.sharedElapsedSeconds,
       playerOneElapsedSeconds: this.playerElapsedSeconds.get(0) ?? 0,
       playerTwoElapsedSeconds: this.playerElapsedSeconds.get(1) ?? 0,
@@ -898,7 +1314,52 @@ export class WebRtcHostMatchSync {
       enemies: enemies.map((tank) => this.createEnemyFrame(tank)),
     };
 
+    this.frameHistory.push(frame);
+    this.frameHistoryBySeq.set(frame.seq, frame);
     this.broadcast(frame);
+    this.pumpReplaySessions();
+    this.pumpPendingActivations();
+  }
+
+  private pumpPendingActivations(): void {
+    this.pendingActivations.forEach((appliedSeq, playerIndex) => {
+      this.activatePlayer(playerIndex as 0 | 1, appliedSeq);
+    });
+  }
+
+  private pumpReplaySessions(): void {
+    this.replaySessions.forEach((session, playerIndex) => {
+      let sent = 0;
+      while (
+        session.nextSeq <= session.targetSeq &&
+        sent < REPLAY_FRAMES_PER_HOST_TICK
+      ) {
+        const frame = this.frameHistoryBySeq.get(session.nextSeq);
+        if (frame === undefined) {
+          this.sendToPlayer(playerIndex as 0 | 1, {
+            type: 'webrtc-replay-unavailable',
+            oldestAvailableSeq: this.frameHistory[0]?.seq ?? this.frameSeq + 1,
+            serverSeq: this.frameSeq,
+          } satisfies WebRtcReplayUnavailablePacket);
+          this.replaySessions.delete(playerIndex);
+          return;
+        }
+        if (!this.sendToPlayer(playerIndex as 0 | 1, frame)) {
+          break;
+        }
+        session.nextSeq += 1;
+        sent += 1;
+      }
+      if (session.nextSeq > session.targetSeq) {
+        const completionSent = this.sendToPlayer(playerIndex as 0 | 1, {
+          type: 'webrtc-replay-complete',
+          targetSeq: session.targetSeq,
+        } satisfies WebRtcReplayCompletePacket);
+        if (completionSent) {
+          this.replaySessions.delete(playerIndex);
+        }
+      }
+    });
   }
 
   private createPlayerFrame(tank: PlayerTank): WebRtcPlayerFrame {
@@ -1000,6 +1461,32 @@ export class WebRtcHostMatchSync {
     });
   }
 
+  private applyReplayEnemyFrames(
+    enemies: EnemyTank[],
+    frames: WebRtcEnemyFrame[],
+  ): void {
+    frames.forEach((frame) => {
+      const tank = enemies.find(
+        (candidate) => candidate.partyIndex === frame.partyIndex,
+      );
+      if (tank === undefined) {
+        return;
+      }
+      tank.setNetworkControlled(true);
+      tank.applyNetworkMovement(
+        frame.rotation,
+        frame.moving,
+        Number.isFinite(frame.deltaX) ? frame.deltaX : 0,
+        Number.isFinite(frame.deltaY) ? frame.deltaY : 0,
+      );
+      const lastFireSeq = this.lastEnemyFireSeqs.get(frame.partyIndex) ?? 0;
+      if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
+        this.lastEnemyFireSeqs.set(frame.partyIndex, frame.fireSeq);
+        tank.fire(true);
+      }
+    });
+  }
+
   private applyPlayerFrames(players: PlayerTank[]): void {
     this.pendingPlayerTicks.forEach((ticks, partyIndex) => {
       const tank = players.find((candidate) => {
@@ -1045,6 +1532,36 @@ export class WebRtcHostMatchSync {
       });
       if (ticks.length === 0) {
         this.pendingPlayerTicks.delete(partyIndex);
+      }
+    });
+  }
+
+  private applyReplayPlayerFrames(
+    players: PlayerTank[],
+    frames: WebRtcPlayerFrame[],
+  ): void {
+    frames.forEach((frame) => {
+      const tank = players.find((candidate) => {
+        return (
+          candidate !== null &&
+          candidate !== undefined &&
+          candidate.partyIndex === frame.partyIndex
+        );
+      });
+      if (tank === undefined) {
+        return;
+      }
+      tank.setNetworkControlled(true);
+      tank.applyNetworkMovement(
+        frame.rotation,
+        frame.moving,
+        Number.isFinite(frame.deltaX) ? frame.deltaX : 0,
+        Number.isFinite(frame.deltaY) ? frame.deltaY : 0,
+      );
+      const lastFireSeq = this.lastPlayerFireSeqs.get(frame.partyIndex) ?? 0;
+      if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
+        this.lastPlayerFireSeqs.set(frame.partyIndex, frame.fireSeq);
+        tank.fireFromNetwork(frame.fireX, frame.fireY, frame.fireRotation);
       }
     });
   }
@@ -1179,13 +1696,13 @@ export class WebRtcHostMatchSync {
     Object.assign(element.style, {
       position: 'fixed',
       left: '12px',
-      top: '12px',
+      top: '104px',
       zIndex: '1000',
       width: '176px',
       padding: '10px 12px',
       border: '1px solid var(--mb-accent, #55e6c1)',
       borderRadius: '6px',
-      background: 'var(--mb-panel, #09131f)',
+      background: 'rgba(9, 19, 31, 0.78)',
       color: 'var(--mb-text, #ffffff)',
       font: '600 13px system-ui, sans-serif',
       fontVariantNumeric: 'tabular-nums',
