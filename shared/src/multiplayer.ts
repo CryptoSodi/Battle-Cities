@@ -37,10 +37,31 @@ export interface MultiplayerAssignment {
   reconnected: boolean;
 }
 
+export interface MultiplayerRuntimeConfig {
+  protocolVersion: 1;
+  mode: 'webrtc';
+  matchId: string;
+  role: 'player';
+  playerSlot: PlayerSlot;
+  level: number;
+  signalingBaseUrl: string;
+  joinToken: string;
+}
+
 export interface MultiplayerStartResponse {
   ok: boolean;
   assignment?: MultiplayerAssignment;
+  runtime?: MultiplayerRuntimeConfig;
   error?: string;
+}
+
+export interface MultiplayerAuthoritativeScore {
+  playerSlot: PlayerSlot;
+  score: number;
+}
+
+export interface MultiplayerAuthoritativeResultRequest {
+  scores: MultiplayerAuthoritativeScore[];
 }
 
 export interface MultiplayerObserverResponse {

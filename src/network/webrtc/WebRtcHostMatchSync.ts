@@ -7,6 +7,8 @@ import { PowerupType } from '../../powerup';
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
 import { getApiUrl } from '../api';
+import { getApiBaseUrl } from '../api';
+import type { MultiplayerRuntimeConfig } from '@battlecities/shared';
 
 const INPUT_HEARTBEAT_MS = 150;
 const REMOTE_INPUT_TIMEOUT_MS = 500;
@@ -183,10 +185,13 @@ function isObserverLink(linkId: WebRtcLinkId): linkId is string {
 export class WebRtcHostMatchSync {
   private readonly enabled: boolean;
   private readonly broadcaster: boolean;
+  private readonly headlessBroadcaster: boolean;
   private readonly observer: boolean;
   private readonly observerId: string;
   private readonly room: string;
   private readonly localPlayerIndex: number;
+  private readonly signalingBaseUrl: string;
+  private readonly authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
@@ -269,12 +274,17 @@ export class WebRtcHostMatchSync {
   private observerHeartbeatTimer: number = null;
   private observerDiscoveryTimer: number = null;
 
-  constructor(location = window.location) {
+  constructor(
+    runtime: MultiplayerRuntimeConfig | null = null,
+    location = window.location,
+  ) {
     const params = new URLSearchParams(location.search);
-    this.enabled = params.get('mode') === 'webrtc';
+    this.enabled = runtime !== null || params.get('mode') === 'webrtc';
     this.broadcaster =
-      this.enabled && params.get('broadcaster') === '1';
-    this.observer =
+      runtime === null && this.enabled && params.get('broadcaster') === '1';
+    this.headlessBroadcaster =
+      this.broadcaster && params.get('headless') === '1';
+    this.observer = runtime === null &&
       this.enabled && !this.broadcaster && params.get('observer') === '1';
     const requestedObserverId = normalizeRoom(params.get('observerId') || '');
     this.observerId = this.observer
@@ -282,13 +292,16 @@ export class WebRtcHostMatchSync {
         ? requestedObserverId
         : createObserverId()
       : '';
-    this.localPlayerIndex =
-      params.get('join') === '1' || params.get('player') === '2' ? 1 : 0;
+    this.localPlayerIndex = runtime?.playerSlot ??
+      (params.get('join') === '1' || params.get('player') === '2' ? 1 : 0);
+    this.signalingBaseUrl = runtime?.signalingBaseUrl || getApiBaseUrl();
+    this.authorizationToken = runtime?.joinToken ||
+      (this.broadcaster ? params.get('serviceToken') || '' : '');
     this.disableEnemyShooting =
       params.get('debugNoEnemyShooting') === '1' ||
       params.get('webrtcNoEnemyShooting') === '1';
 
-    let room = normalizeRoom(params.get('match') || '');
+    let room = runtime?.matchId || normalizeRoom(params.get('match') || '');
     if (this.enabled && this.broadcaster && room === '') {
       room = createRoomId();
       params.set('mode', 'webrtc');
@@ -332,6 +345,10 @@ export class WebRtcHostMatchSync {
 
   public isBroadcaster(): boolean {
     return this.isEnabled() && this.broadcaster;
+  }
+
+  public isHeadlessBroadcaster(): boolean {
+    return this.isEnabled() && this.headlessBroadcaster;
   }
 
   public isObserver(): boolean {
@@ -580,9 +597,13 @@ export class WebRtcHostMatchSync {
     }
     this.start();
     if (this.broadcaster) {
-      this.showPlayerControls();
+      if (!this.headlessBroadcaster) {
+        this.showPlayerControls();
+      }
     }
-    this.ensureClockElement();
+    if (!this.headlessBroadcaster) {
+      this.ensureClockElement();
+    }
     log('mode enabled', {
       role: this.broadcaster
         ? 'broadcaster'
@@ -592,9 +613,14 @@ export class WebRtcHostMatchSync {
       room: this.room,
       localPlayerIndex: this.localPlayerIndex,
       disableEnemyShooting: this.disableEnemyShooting,
-      playerOneUrl: this.createPlayerUrl(0),
-      playerTwoUrl: this.createPlayerUrl(1),
-      observerUrl: this.createObserverUrl(),
+      headless: this.headlessBroadcaster,
+      ...(this.broadcaster
+        ? {
+            playerOneUrl: this.createPlayerUrl(0),
+            playerTwoUrl: this.createPlayerUrl(1),
+            observerUrl: this.createObserverUrl(),
+          }
+        : {}),
     });
   }
 
@@ -610,7 +636,12 @@ export class WebRtcHostMatchSync {
     const signalingIndex = this.broadcaster ? 0 : 1;
     sync.configureDirect(true, signalingRoom, signalingIndex);
     sync.setSignalTransport(
-      new HttpGhostSignalTransport(signalingRoom, signalingIndex),
+      new HttpGhostSignalTransport(
+        signalingRoom,
+        signalingIndex,
+        this.signalingBaseUrl,
+        this.authorizationToken,
+      ),
     );
     sync.subscribePackets((packet) => {
       this.acceptPacket(packet, linkId);
@@ -1607,6 +1638,9 @@ export class WebRtcHostMatchSync {
   }
 
   private updateClock(): void {
+    if (this.headlessBroadcaster) {
+      return;
+    }
     this.ensureClockElement();
     const playerOneElapsed = this.broadcaster
       ? this.playerElapsedSeconds.get(0) ?? 0
@@ -1755,6 +1789,7 @@ export class WebRtcHostMatchSync {
     params.delete('join');
     params.delete('host');
     params.delete('observer');
+    params.delete('headless');
 
     return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
   }
@@ -1769,6 +1804,7 @@ export class WebRtcHostMatchSync {
     params.delete('host');
     params.delete('player');
     params.delete('observerId');
+    params.delete('headless');
 
     return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
   }
@@ -1813,6 +1849,10 @@ export class WebRtcHostMatchSync {
   }
 
   private showStatus(message: string): void {
+    if (this.headlessBroadcaster) {
+      log(message.replace(/\n/g, ' '));
+      return;
+    }
     this.ensureStatusElement().textContent = message;
   }
 

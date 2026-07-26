@@ -15,6 +15,9 @@ export interface GameLoopOptions {
   // Maximum number of fixed sim steps allowed per animation frame. Caps
   // catch-up work after a long stall so the loop can't spiral.
   maxSubSteps?: number;
+  // Use a wall-clock timer instead of requestAnimationFrame. Headless browser
+  // workers do not have a visible presentation surface to drive the loop.
+  timerDriven?: boolean;
 }
 
 export interface GameLoopUpdateEvent {
@@ -34,6 +37,7 @@ const DEFAULT_OPTIONS = {
   // requestAnimationFrame is usually 60 fps; in seconds
   fps: 60,
   maxSubSteps: 5,
+  timerDriven: false,
 };
 
 enum State {
@@ -169,7 +173,14 @@ export class GameLoop {
     const alpha = this.accumulator / fixedDeltaTime;
     this.render.notify({ alpha });
 
-    window.requestAnimationFrame(this.loop);
+    if (this.options.timerDriven) {
+      window.setTimeout(
+        () => this.loop(performance.now()),
+        1000 / this.options.fps,
+      );
+    } else {
+      window.requestAnimationFrame(this.loop);
+    }
   };
 
   private getFixedDeltaTime(): number {

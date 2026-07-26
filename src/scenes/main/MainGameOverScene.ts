@@ -2,6 +2,7 @@ import { Timer } from '../../core';
 import { AudioManager, GameUpdateArgs } from '../../game';
 import { GameOverHeading } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
+import { clearMultiplayerRuntime } from '../../network/multiplayerRuntime';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
@@ -47,6 +48,7 @@ export class MainGameOverScene extends GameScene {
 
   private finish(): void {
     this.audioManager.stopAll();
+    clearMultiplayerRuntime();
     this.navigator.clearAndPush(GameSceneType.MainHighscore);
   }
 }

@@ -3,7 +3,7 @@ import {
   WebRtcGhostSignalTransport,
 } from './WebRtcGhostSync';
 import { WebRtcSignalReadResponse } from '@battlecities/shared';
-import { getApiUrl } from '../api';
+import { getApiBaseUrl } from '../api';
 
 const POLL_INTERVAL_MS = 750;
 
@@ -11,12 +11,21 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
   private readonly room: string;
   private readonly localPlayerIndex: number;
   private readonly remotePlayerIndex: number;
+  private readonly signalingBaseUrl: string;
+  private readonly authorizationToken: string;
   private readonly lastSeenSignalIds = new Map<WebRtcGhostSignalKind, number>();
 
-  constructor(room: string, localPlayerIndex: number) {
+  constructor(
+    room: string,
+    localPlayerIndex: number,
+    signalingBaseUrl = getApiBaseUrl(),
+    authorizationToken = '',
+  ) {
     this.room = room;
     this.localPlayerIndex = localPlayerIndex;
     this.remotePlayerIndex = 1 - localPlayerIndex;
+    this.signalingBaseUrl = signalingBaseUrl;
+    this.authorizationToken = authorizationToken;
   }
 
   public async publishSignal(
@@ -28,8 +37,10 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
       {
         method: 'POST',
         headers: {
+          ...this.authorizationHeaders(),
           'content-type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ code }),
       },
     );
@@ -80,8 +91,10 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
 
     const response = await fetch(url.toString(), {
       headers: {
+        ...this.authorizationHeaders(),
         accept: 'application/json',
       },
+      credentials: 'include',
     });
     if (!response.ok) {
       throw new Error(`HTTP WebRTC signal poll failed: ${response.status}`);
@@ -98,11 +111,16 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
 
   private signalUrl(playerIndex: number, kind: WebRtcGhostSignalKind): URL {
     return new URL(
-      getApiUrl(
-        `/api/webrtc/matches/${encodeURIComponent(
-          this.room,
-        )}/players/${playerIndex}/signals/${kind}`,
-      ),
+      `/api/webrtc/matches/${encodeURIComponent(
+        this.room,
+      )}/players/${playerIndex}/signals/${kind}`,
+      this.signalingBaseUrl,
     );
+  }
+
+  private authorizationHeaders(): Record<string, string> {
+    return this.authorizationToken === ''
+      ? {}
+      : { authorization: `Bearer ${this.authorizationToken}` };
   }
 }

@@ -2,6 +2,7 @@ import { Sound } from '../../core';
 import { AudioManager, GameUpdateArgs } from '../../game';
 import { PlayerTank, VictoryHeading, VictoryMap } from '../../gameObjects';
 import { MenuInputContext } from '../../input';
+import { clearMultiplayerRuntime } from '../../network/multiplayerRuntime';
 import { TankFactory, TankType, VictoryTankBehavior } from '../../tank';
 
 import { GameScene } from '../GameScene';
@@ -101,6 +102,7 @@ export class MainVictoryScene extends GameScene {
 
   private finish(): void {
     this.audioManager.stopAll();
+    clearMultiplayerRuntime();
     this.navigator.clearAndPush(GameSceneType.MainHighscore);
   }
 }

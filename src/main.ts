@@ -38,6 +38,7 @@ import { getPhantomProvider } from './wallet';
 import { apiFetch, getApiUrl } from './network/api';
 import { MagicBlockMovementSync } from './network/magicblock';
 import { WebRtcHostMatchSync } from './network/webrtc';
+import { readMultiplayerRuntime } from './network/multiplayerRuntime';
 
 import * as config from './config';
 
@@ -66,15 +67,20 @@ const authStatusElement = document.querySelector(
 
 const log = new Logger('main', Logger.Level.Debug);
 
-const rendererOverride = new URLSearchParams(window.location.search).get(
-  'renderer',
-);
+const runtimeParams = new URLSearchParams(window.location.search);
+const isHeadlessBroadcaster =
+  runtimeParams.get('mode') === 'webrtc' &&
+  runtimeParams.get('broadcaster') === '1' &&
+  runtimeParams.get('headless') === '1';
+const rendererOverride = runtimeParams.get('renderer');
 const gameRenderer = new GameRenderer({
   // debug: true,
   height: config.CANVAS_HEIGHT,
   width: config.CANVAS_WIDTH,
   renderer:
-    rendererOverride === 'canvas' || rendererOverride === 'webgl'
+    isHeadlessBroadcaster
+      ? 'canvas'
+      : rendererOverride === 'canvas' || rendererOverride === 'webgl'
       ? rendererOverride
       : 'auto',
   renderScale: config.RENDER_SCALE,
@@ -193,7 +199,9 @@ const showScanlines = gameStorage.getBoolean(
 document.body.classList.toggle('scanlines-disabled', !showScanlines);
 
 const inputManager = new InputManager(gameStorage);
-inputManager.listen();
+if (!isHeadlessBroadcaster) {
+  inputManager.listen();
+}
 
 const POINTER_TAP_SLOP = 24;
 const POINTER_SWIPE_THRESHOLD = 48;
@@ -572,12 +580,16 @@ const mapLoader = new MapLoader(manifestMapListReader);
 
 const audioManager = new AudioManager(audioLoader, gameStorage);
 audioManager.loadSettings();
+if (isHeadlessBroadcaster) {
+  audioManager.setGlobalMuted(true);
+}
 
 const session = new Session();
 const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
 const magicBlockMovement = new MagicBlockMovementSync(playerIdentity);
-const webRtcMatch = new WebRtcHostMatchSync();
+const multiplayerRuntime = readMultiplayerRuntime();
+const webRtcMatch = new WebRtcHostMatchSync(multiplayerRuntime);
 
 const inputHintSettings = new InputHintSettings(gameStorage);
 
@@ -591,7 +603,7 @@ if (
   magicBlockMovement.isOnlineMatch() ||
   webRtcMatch.isEnabled()
 ) {
-  const requestedLevel = Number(
+  const requestedLevel = multiplayerRuntime?.level ?? Number(
     new URLSearchParams(window.location.search).get('level'),
   );
   const levelNumber = Number.isInteger(requestedLevel)
@@ -611,7 +623,9 @@ sceneRouter.transitionStarted.addListener(() => {
 });
 
 const debugInspector = new DebugInspector(gameRenderer.getDomElement());
-debugInspector.listen();
+if (!isHeadlessBroadcaster) {
+  debugInspector.listen();
+}
 debugInspector.click.addListener((position: Vector) => {
   const intersections: GameObject[] = [];
 
@@ -634,7 +648,7 @@ const rng = new Prng(Date.now() >>> 0 || 1);
 // canvas; matches the game's logical resolution so world coords line up.
 const particles = new ParticleSystem(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
 
-const gameLoop = new GameLoop();
+const gameLoop = new GameLoop({ timerDriven: isHeadlessBroadcaster });
 
 const updateArgs: GameUpdateArgs = {
   audioManager,
@@ -666,11 +680,15 @@ const updateArgs: GameUpdateArgs = {
 const stats = new Stats();
 const debugGameLoopMenu = new DebugGameLoopMenu(gameLoop);
 
-if (config.IS_DEV) {
+if (config.IS_DEV && !isHeadlessBroadcaster) {
   debugGameLoopMenu.attach();
 }
 
 function waitForLogin(): Promise<void> {
+  if (isHeadlessBroadcaster) {
+    return Promise.resolve();
+  }
+
   return new Promise((resolve) => {
     let loginStarted = false;
 
@@ -998,6 +1016,11 @@ gameLoop.update.addListener((event) => {
 
 // Presentation: runs exactly once per animation frame.
 gameLoop.render.addListener((event) => {
+  if (isHeadlessBroadcaster) {
+    gameState.update();
+    return;
+  }
+
   stats.begin();
   const currentSceneType = sceneRouter.getCurrentType();
   document.body.classList.toggle(
@@ -1138,9 +1161,13 @@ function startBackgroundSpritePreload(): void {
 
 async function main(): Promise<void> {
   loadingElement.textContent = 'Loading interface...';
-  await preloadUiFont();
+  if (!isHeadlessBroadcaster) {
+    await preloadUiFont();
+  }
   await waitForLogin();
-  await hydrateShopCacheFromServer();
+  if (!isHeadlessBroadcaster) {
+    await hydrateShopCacheFromServer();
+  }
   enterGameView();
 
   log.time('Audio preload');
@@ -1188,20 +1215,27 @@ async function main(): Promise<void> {
   inputManager.loadAllBindings();
   log.timeEnd('Input bindings load');
 
-  document.body.removeChild(loadingElement);
-  const gameCanvas = gameRenderer.getDomElement();
-  const gameStage = document.createElement('div');
-  gameStage.className = 'game-stage';
-  document.body.appendChild(gameStage);
-  gameStage.appendChild(gameCanvas);
-  logCanvasSize('Game', gameCanvas);
-  // Particle overlay sits directly above the game canvas.
-  const particleCanvas = particles.getDomElement();
-  gameStage.appendChild(particleCanvas);
-  logCanvasSize('Particle', particleCanvas);
+  loadingElement.remove();
+  if (!isHeadlessBroadcaster) {
+    const gameCanvas = gameRenderer.getDomElement();
+    const gameStage = document.createElement('div');
+    gameStage.className = 'game-stage';
+    document.body.appendChild(gameStage);
+    gameStage.appendChild(gameCanvas);
+    logCanvasSize('Game', gameCanvas);
+    // Particle overlay sits directly above the game canvas.
+    const particleCanvas = particles.getDomElement();
+    gameStage.appendChild(particleCanvas);
+    logCanvasSize('Particle', particleCanvas);
+  } else {
+    document.body.classList.add('headless-broadcaster');
+    log.info('Headless WebRTC broadcaster simulation started');
+  }
 
   gameLoop.start();
-  startBackgroundSpritePreload();
+  if (!isHeadlessBroadcaster) {
+    startBackgroundSpritePreload();
+  }
   // gameLoop.next();
 }
 

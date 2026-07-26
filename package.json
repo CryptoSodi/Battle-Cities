@@ -11,6 +11,8 @@
     "start": "webpack-dev-server --open --config webpack/dev.config.js",
     "start:prod": "webpack-dev-server --open --config webpack/local-prod.config.js",
     "start:prod2": "webpack-dev-server --open --config webpack/prod2.config.js",
+    "broadcaster:headless": "node scripts/headless-broadcaster-service.js",
+    "broadcaster:headless": "node scripts/headless-broadcaster-service.js",
     "server:local": "cargo run --manifest-path LocalServer/Cargo.toml",
     "test": "ava --verbose",
     "test:watch": "ava --verbose --watch"
