@@ -1,6 +1,8 @@
 import { Rotation } from '../../game';
 import { TankState } from '../../gameObjects';
 import { TankTier } from '../../tank';
+import { isMatchId } from '@battlecities/shared';
+import { WebRtcSignalKind, WebRtcSignalTransport } from '@battlecities/shared';
 
 export interface WebRtcGhostTankSnapshot {
   partyIndex: number;
@@ -33,14 +35,9 @@ interface SignalCode {
   description: RTCSessionDescriptionInit;
 }
 
-export type WebRtcGhostSignalKind = 'offer' | 'answer';
+export type WebRtcGhostSignalKind = WebRtcSignalKind;
 
-export interface WebRtcGhostSignalTransport {
-  publishSignal(code: string, kind: WebRtcGhostSignalKind): Promise<void>;
-  subscribe(
-    callback: (code: string, kind: WebRtcGhostSignalKind) => void,
-  ): () => void;
-}
+export type WebRtcGhostSignalTransport = WebRtcSignalTransport;
 
 interface GhostMirrorConsoleApi {
   createOfferCode(): Promise<string>;
@@ -191,7 +188,7 @@ export class WebRtcGhostSync {
     this.enabled =
       flagValue !== null &&
       isEnabledValue(normalizeRoom(flagValue)) &&
-      matchRoom !== '';
+      isMatchId(matchRoom);
     this.room = this.enabled ? matchRoom : '';
     this.localPlayerIndex = localPlayerIndex;
     this.configureBroadcastChannel();
@@ -203,8 +200,9 @@ export class WebRtcGhostSync {
     room: string,
     localPlayerIndex: number,
   ): void {
-    this.enabled = enabled && room !== '';
-    this.room = this.enabled ? normalizeRoom(room) : '';
+    const normalizedRoom = normalizeRoom(room);
+    this.enabled = enabled && isMatchId(normalizedRoom);
+    this.room = this.enabled ? normalizedRoom : '';
     this.localPlayerIndex = localPlayerIndex;
     this.configureBroadcastChannel();
     this.configureConsoleApi();

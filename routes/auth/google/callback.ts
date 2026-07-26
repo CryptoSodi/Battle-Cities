@@ -10,7 +10,9 @@ export async function GET(request: Request): Promise<Response> {
   const state = url.searchParams.get('state');
 
   if (code === null || state === null) {
-    return googleAuth.redirectResponse('/?authError=google');
+    return googleAuth.redirectResponse(
+      googleAuth.createFrontendRedirect('/?authError=google'),
+    );
   }
 
   try {
@@ -19,11 +21,13 @@ export async function GET(request: Request): Promise<Response> {
     return new Response(null, {
       status: 302,
       headers: {
-        location: '/',
+        location: googleAuth.createFrontendRedirect('/'),
         'set-cookie': sessionIdentity.createSessionCookie(session.id),
       },
     });
   } catch {
-    return googleAuth.redirectResponse('/?authError=google');
+    return googleAuth.redirectResponse(
+      googleAuth.createFrontendRedirect('/?authError=google'),
+    );
   }
 }

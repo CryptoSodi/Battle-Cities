@@ -7,6 +7,8 @@ export async function GET(request: Request): Promise<Response> {
     const origin = googleAuth.getOriginFromRequestUrl(request.url);
     return googleAuth.redirectResponse(googleAuth.createAuthorizationUrl(origin));
   } catch {
-    return googleAuth.redirectResponse('/?authError=google_config');
+    return googleAuth.redirectResponse(
+      googleAuth.createFrontendRedirect('/?authError=google_config'),
+    );
   }
 }

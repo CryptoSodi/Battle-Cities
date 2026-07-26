@@ -4,6 +4,12 @@ const { merge } = require('webpack-merge');
 require('../server/loadLocalEnv').loadLocalEnv();
 process.env.BATTLECITY_STORAGE_MODE = 'local';
 
+const useStandaloneApi =
+  String(process.env.BATTLECITY_USE_STANDALONE_API || '').toLowerCase() ===
+  'true' || process.env.BATTLECITY_USE_STANDALONE_API === '1';
+const standaloneApiTarget =
+  process.env.BATTLECITY_API_PROXY_TARGET || 'http://127.0.0.1:3001';
+
 const baseConfig = require('./base.config');
 const replayIdentity = require('../server/replayIdentity');
 const replayStore = require('../server/replayStore');
@@ -78,7 +84,9 @@ function attachReplayApi(app) {
       const origin = googleAuth.getOriginFromExpressRequest(request);
       response.redirect(googleAuth.createAuthorizationUrl(origin));
     } catch (error) {
-      response.redirect('/?authError=google_config');
+      response.redirect(
+        googleAuth.createFrontendRedirect('/?authError=google_config'),
+      );
     }
   });
 
@@ -97,9 +105,11 @@ function attachReplayApi(app) {
         'set-cookie',
         sessionIdentity.createSessionCookie(session.id),
       );
-      response.redirect('/');
+      response.redirect(googleAuth.createFrontendRedirect('/'));
     } catch (error) {
-      response.redirect('/?authError=google');
+      response.redirect(
+        googleAuth.createFrontendRedirect('/?authError=google'),
+      );
     }
   });
 
@@ -679,6 +689,15 @@ module.exports = merge(baseConfig, {
     server: 'https',
     allowedHosts: 'all',
     proxy: [
+      ...(useStandaloneApi
+        ? [
+            {
+              context: ['/api'],
+              target: standaloneApiTarget,
+              secure: false,
+            },
+          ]
+        : []),
       {
         context: ['/local-game'],
         target: 'ws://127.0.0.1:8787',
@@ -687,7 +706,9 @@ module.exports = merge(baseConfig, {
       },
     ],
     setupMiddlewares: (middlewares, devServer) => {
-      attachReplayApi(devServer.app);
+      if (!useStandaloneApi) {
+        attachReplayApi(devServer.app);
+      }
       return middlewares;
     },
   },

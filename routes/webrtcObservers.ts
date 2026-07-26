@@ -1,6 +1,11 @@
 declare const require: any;
 
 import { createJsonResponse, createOptionsResponse } from './_helpers';
+import {
+  WebRtcObserverListResponse,
+  WebRtcObserverRegistrationRequest,
+} from '@battlecities/shared';
+import { isMatchId } from '../shared/src';
 
 const signalStore = require('../server/webrtcSignalStore');
 
@@ -12,7 +17,7 @@ export async function GET(
   request: Request,
   matchId: string,
 ): Promise<Response> {
-  if (!signalStore.isValidMatchId(matchId)) {
+  if (!isMatchId(matchId)) {
     return createJsonResponse(
       request,
       { ok: false, error: 'Invalid observer route' },
@@ -21,14 +26,15 @@ export async function GET(
   }
 
   const observers = await signalStore.listObservers(matchId);
-  return createJsonResponse(request, { ok: true, observers });
+  const response: WebRtcObserverListResponse = { ok: true, observers };
+  return createJsonResponse(request, response);
 }
 
 export async function POST(
   request: Request,
   matchId: string,
 ): Promise<Response> {
-  if (!signalStore.isValidMatchId(matchId)) {
+  if (!isMatchId(matchId)) {
     return createJsonResponse(
       request,
       { ok: false, error: 'Invalid observer route' },
@@ -36,9 +42,9 @@ export async function POST(
     );
   }
 
-  let body: any;
+  let body: WebRtcObserverRegistrationRequest;
   try {
-    body = await request.json();
+    body = (await request.json()) as WebRtcObserverRegistrationRequest;
   } catch {
     return createJsonResponse(
       request,

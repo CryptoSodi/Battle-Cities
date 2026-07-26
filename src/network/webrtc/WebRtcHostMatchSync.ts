@@ -6,6 +6,7 @@ import { PowerupType } from '../../powerup';
 
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
+import { getApiUrl } from '../api';
 
 const INPUT_HEARTBEAT_MS = 150;
 const REMOTE_INPUT_TIMEOUT_MS = 500;
@@ -964,8 +965,9 @@ export class WebRtcHostMatchSync {
 
   private observerRegistryUrl(): URL {
     return new URL(
-      `/api/webrtc/matches/${encodeURIComponent(this.room)}/observers`,
-      window.location.origin,
+      getApiUrl(
+        `/api/webrtc/matches/${encodeURIComponent(this.room)}/observers`,
+      ),
     );
   }
 

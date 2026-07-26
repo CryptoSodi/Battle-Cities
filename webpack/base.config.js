@@ -11,6 +11,12 @@ module.exports = {
   },
 
   resolve: {
+    alias: {
+      '@battlecities/shared': require('path').resolve(
+        __dirname,
+        '../shared/src/index.ts',
+      ),
+    },
     extensions: ['.js', '.ts'],
     fallback: {
       buffer: require.resolve('buffer/'),
@@ -30,6 +36,11 @@ module.exports = {
   },
 
   plugins: [
+    new webpack.DefinePlugin({
+      'process.env.BATTLECITY_API_BASE_URL': JSON.stringify(
+        process.env.BATTLECITY_API_BASE_URL || '',
+      ),
+    }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser',

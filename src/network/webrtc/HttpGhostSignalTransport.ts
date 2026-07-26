@@ -2,15 +2,8 @@ import {
   WebRtcGhostSignalKind,
   WebRtcGhostSignalTransport,
 } from './WebRtcGhostSync';
-
-interface HttpSignalResponse {
-  ok: boolean;
-  signal: {
-    id: number;
-    code: string;
-    kind: WebRtcGhostSignalKind;
-  } | null;
-}
+import { WebRtcSignalReadResponse } from '@battlecities/shared';
+import { getApiUrl } from '../api';
 
 const POLL_INTERVAL_MS = 750;
 
@@ -94,7 +87,7 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
       throw new Error(`HTTP WebRTC signal poll failed: ${response.status}`);
     }
 
-    const body = (await response.json()) as HttpSignalResponse;
+    const body = (await response.json()) as WebRtcSignalReadResponse;
     if (body.signal === null || body.signal.id <= lastSeenId) {
       return;
     }
@@ -103,15 +96,13 @@ export class HttpGhostSignalTransport implements WebRtcGhostSignalTransport {
     callback(body.signal.code, body.signal.kind);
   }
 
-  private signalUrl(
-    playerIndex: number,
-    kind: WebRtcGhostSignalKind,
-  ): URL {
+  private signalUrl(playerIndex: number, kind: WebRtcGhostSignalKind): URL {
     return new URL(
-      `/api/webrtc/matches/${encodeURIComponent(
-        this.room,
-      )}/players/${playerIndex}/signals/${kind}`,
-      window.location.origin,
+      getApiUrl(
+        `/api/webrtc/matches/${encodeURIComponent(
+          this.room,
+        )}/players/${playerIndex}/signals/${kind}`,
+      ),
     );
   }
 }

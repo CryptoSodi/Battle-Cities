@@ -1,6 +1,12 @@
 declare const require: any;
 
 import { createJsonResponse, createOptionsResponse } from './_helpers';
+import {
+  WebRtcSignalPublishRequest,
+  WebRtcSignalPublishResponse,
+  WebRtcSignalReadResponse,
+} from '@battlecities/shared';
+import { isMatchId } from '../shared/src';
 
 const signalStore = require('../server/webrtcSignalStore');
 
@@ -18,9 +24,9 @@ export async function POST(
     return createJsonResponse(request, { ok: false, error: 'Invalid signal route' }, 400);
   }
 
-  let body: any;
+  let body: WebRtcSignalPublishRequest;
   try {
-    body = await request.json();
+    body = (await request.json()) as WebRtcSignalPublishRequest;
   } catch {
     return createJsonResponse(request, { ok: false, error: 'Invalid JSON' }, 400);
   }
@@ -32,9 +38,14 @@ export async function POST(
       kind,
       body?.code,
     );
+    const response: WebRtcSignalPublishResponse = {
+      ok: true,
+      id: result.id,
+      createdAt: result.createdAt,
+    };
     return createJsonResponse(
       request,
-      { ok: true, id: result.id, createdAt: result.createdAt },
+      response,
       201,
     );
   } catch (error) {
@@ -64,12 +75,13 @@ export async function GET(
     Number(url.searchParams.get('after') || '0'),
   );
 
-  return createJsonResponse(request, { ok: true, signal });
+  const response: WebRtcSignalReadResponse = { ok: true, signal };
+  return createJsonResponse(request, response);
 }
 
 function isValidRoute(matchId: string, playerIndex: string, kind: string): boolean {
   return (
-    signalStore.isValidMatchId(matchId) &&
+    isMatchId(matchId) &&
     signalStore.isValidPlayerIndex(playerIndex) &&
     signalStore.isValidSignalKind(kind)
   );
