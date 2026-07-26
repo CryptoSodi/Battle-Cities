@@ -7,6 +7,7 @@ import { LevelEnemySpawnRequestedEvent, LevelPlayerDiedEvent } from '../events';
 
 export class LevelInfoScript extends LevelScript {
   private info: LevelInfo;
+  private localElapsedSeconds = 0;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.eventBus.playerDied.addListener(this.handlePlayerDied);
@@ -17,7 +18,7 @@ export class LevelInfoScript extends LevelScript {
     this.info = new LevelInfo(
       this.world.sceneRoot.size.width,
       this.session.isMultiplayer(),
-      updateArgs.webRtcMatch.isEnabled(),
+      true,
     );
     this.info.position.set(0, 0);
     this.world.sceneRoot.add(this.info);
@@ -54,6 +55,9 @@ export class LevelInfoScript extends LevelScript {
       this.info.setBattleTime(
         webRtcMatch.getSharedElapsedSeconds(),
       );
+    } else {
+      this.localElapsedSeconds += updateArgs.deltaTime;
+      this.info.setBattleTime(this.localElapsedSeconds);
     }
   }
 
