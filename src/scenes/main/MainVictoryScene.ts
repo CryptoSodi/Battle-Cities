@@ -19,7 +19,7 @@ export class MainVictoryScene extends GameScene {
   private victorySound: Sound;
   private victoryPlays = 0;
 
-  protected setup({ audioManager, audioLoader }: GameUpdateArgs): void {
+  protected setup({ audioManager, audioLoader, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
 
     this.victorySound = audioLoader.load('victory');
@@ -48,6 +48,9 @@ export class MainVictoryScene extends GameScene {
     this.root.add(this.tank);
 
     this.audioManager.playLoop('tank.move');
+    void webRtcMatch.completeAuthoritativeMatch().catch((error) => {
+      console.error('[multiplayer] result submission failed', error);
+    });
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

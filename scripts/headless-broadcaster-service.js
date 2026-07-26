@@ -118,6 +118,7 @@ function launchMatch(matchId, level) {
   runtimeUrl.searchParams.set('headless', '1');
   runtimeUrl.searchParams.set('match', matchId);
   runtimeUrl.searchParams.set('level', level.toString());
+  runtimeUrl.searchParams.set('serviceToken', serviceToken);
 
   const profileDirectory = mkdtempSync(
     join(tmpdir(), `battlecity-${matchId}-`),
@@ -356,9 +357,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   process.exit(1);
 }
 if (serviceToken === '') {
-  console.warn(
-    'BROADCASTER_SERVICE_TOKEN is unset; match lifecycle endpoints are unprotected.',
-  );
+  console.error('BROADCASTER_SERVICE_TOKEN is required.');
+  process.exit(1);
 }
 
 server.listen(port, host, () => {

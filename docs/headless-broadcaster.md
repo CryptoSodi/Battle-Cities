@@ -59,8 +59,9 @@ curl -X POST http://127.0.0.1:7777/matches \
   -d '{"matchId":"test-1","level":1}'
 ```
 
-The response includes the Player 1, Player 2, observer, and public status URLs.
-Omit `matchId` to generate one.
+The response is an operator-only lifecycle record. Player runtime configuration
+is created by the Vercel API and never uses these internal URLs. Omit `matchId`
+to generate one.
 
 List and inspect matches:
 
@@ -80,9 +81,11 @@ curl -X DELETE \
   http://127.0.0.1:7777/matches/test-1
 ```
 
-Each match runs in a separate Chrome process and profile. Stopping the service
-stops every match. Match completion callbacks, persisted results, automatic
-worker assignment, and abandoned-match cleanup remain follow-up work.
+Each match runs in a separate Chrome process and profile. The service injects
+its token only into the loopback headless URL so Chrome can authenticate
+signaling and submit authoritative final scores. The Vercel API persists that
+result and calls `DELETE /matches/:matchId` to stop the worker. Stopping the
+service stops every match.
 
 ## Reverse Proxy
 

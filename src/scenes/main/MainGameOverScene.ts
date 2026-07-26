@@ -14,7 +14,7 @@ export class MainGameOverScene extends GameScene {
   private timer = new Timer(SCENE_DURATION);
   private audioManager: AudioManager;
 
-  protected setup({ audioManager }: GameUpdateArgs): void {
+  protected setup({ audioManager, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
 
     this.timer.done.addListener(this.handleDone);
@@ -25,6 +25,9 @@ export class MainGameOverScene extends GameScene {
     this.root.add(this.heading);
 
     this.audioManager.play('game-over');
+    void webRtcMatch.completeAuthoritativeMatch().catch((error) => {
+      console.error('[multiplayer] result submission failed', error);
+    });
   }
 
   protected update(updateArgs: GameUpdateArgs): void {

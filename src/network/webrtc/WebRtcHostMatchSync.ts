@@ -273,6 +273,8 @@ export class WebRtcHostMatchSync {
   private jitterValue: HTMLElement = null;
   private observerHeartbeatTimer: number = null;
   private observerDiscoveryTimer: number = null;
+  private authoritativeScores: [number, number] = [0, 0];
+  private resultSubmissionStarted = false;
 
   constructor(
     runtime: MultiplayerRuntimeConfig | null = null,
@@ -377,6 +379,39 @@ export class WebRtcHostMatchSync {
     return Number.isFinite(score) ? Math.max(0, Math.floor(score)) : null;
   }
 
+  public async completeAuthoritativeMatch(): Promise<void> {
+    if (
+      !this.isHeadlessBroadcaster() ||
+      this.authorizationToken === '' ||
+      this.resultSubmissionStarted
+    ) {
+      return;
+    }
+    this.resultSubmissionStarted = true;
+    const response = await fetch(
+      getApiUrl(
+        `/api/multiplayer/matches/${encodeURIComponent(this.room)}/result`,
+      ),
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.authorizationToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          scores: this.authoritativeScores.map((score, playerSlot) => ({
+            playerSlot,
+            score,
+          })),
+        }),
+      },
+    );
+    if (!response.ok) {
+      this.resultSubmissionStarted = false;
+      throw new Error(`Authoritative result submission failed: ${response.status}`);
+    }
+  }
+
   public shouldHoldClientSimulation(): boolean {
     return (
       this.isEnabled() &&
@@ -470,6 +505,13 @@ export class WebRtcHostMatchSync {
   ): void {
     if (!this.isEnabled()) {
       return;
+    }
+
+    if (this.broadcaster) {
+      this.authoritativeScores = [
+        Math.max(0, Math.floor(playerScores[0] || 0)),
+        Math.max(0, Math.floor(playerScores[1] || 0)),
+      ];
     }
 
     this.start();
