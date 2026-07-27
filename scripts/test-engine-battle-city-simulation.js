@@ -170,6 +170,11 @@ function overlaps(left, right) {
     if (respawnedTank !== null && respawnedTank !== firstTank) break;
   }
   assert.ok(respawnedTank, 'player one must respawn for fire replication test');
+  assert.strictEqual(
+    frame.players.find((player) => player.partyIndex === 0).initialSync,
+    true,
+    'a respawn must emit a new player-generation sync frame',
+  );
   simulation.acceptInput(input(0, 2, null, false, true));
   frame = simulation.step();
   assert.strictEqual(

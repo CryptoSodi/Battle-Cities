@@ -717,6 +717,7 @@ export class EngineBattleCitySimulation {
       fireY: fire?.y ?? tank.position.y,
       fireRotation:
         fire?.rotation ?? (tank.rotation as SimulationRotation),
+      initialSync: !sameTank,
     };
   }
 

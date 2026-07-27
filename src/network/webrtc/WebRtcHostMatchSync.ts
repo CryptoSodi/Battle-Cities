@@ -16,6 +16,7 @@ const INPUT_HEARTBEAT_MS = 150;
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
 const MAX_PLAYER_TICKS_PER_UPDATE = 2;
+const PLAYER_TICK_CATCH_UP_BACKLOG = 6;
 const NETWORK_PROBE_INTERVAL_SECONDS = 0.5;
 const JITTER_SMOOTHING = 0.2;
 const OBSERVER_HEARTBEAT_MS = 5000;
@@ -1327,6 +1328,9 @@ export class WebRtcHostMatchSync {
         ticks = [];
         this.pendingPlayerTicks.set(playerFrame.partyIndex, ticks);
       }
+      if (playerFrame.initialSync === true) {
+        ticks.length = 0;
+      }
       ticks.push(initialSync ? { ...playerFrame, initialSync: true } : playerFrame);
     });
     const activeEnemyIds = new Set(frame.activeEnemyIds);
@@ -1567,6 +1571,7 @@ export class WebRtcHostMatchSync {
       fireX: fire?.x ?? tank.position.x,
       fireY: fire?.y ?? tank.position.y,
       fireRotation: fire?.rotation ?? tank.rotation,
+      initialSync: !sameTank,
     };
   }
 
@@ -1706,7 +1711,11 @@ export class WebRtcHostMatchSync {
         return;
       }
       tank.setNetworkControlled(true);
-      ticks.splice(0, MAX_PLAYER_TICKS_PER_UPDATE).forEach((frame) => {
+      const ticksToApply =
+        ticks.length > PLAYER_TICK_CATCH_UP_BACKLOG
+          ? MAX_PLAYER_TICKS_PER_UPDATE
+          : 1;
+      ticks.splice(0, ticksToApply).forEach((frame) => {
         tank.setNetworkTier(frame.tier ?? TankTier.A);
         tank.applyNetworkMovement(
           frame.rotation,
