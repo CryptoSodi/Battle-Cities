@@ -163,6 +163,7 @@ function overlaps(left, right) {
 
   const firstTank = simulation.world.getPlayerTanks()[0];
   firstTank.die();
+  simulation.acceptInput(input(0, 2, 0, true));
   let respawnedTank = null;
   for (let tick = 0; tick < 360; tick += 1) {
     frame = simulation.step();
@@ -175,7 +176,17 @@ function overlaps(left, right) {
     true,
     'a respawn must emit a new player-generation sync frame',
   );
-  simulation.acceptInput(input(0, 2, null, false, true));
+  assert.strictEqual(
+    frame.players.find((player) => player.partyIndex === 0).deltaY,
+    0,
+    'movement received before respawn must not move the new tank',
+  );
+  assert.strictEqual(
+    frame.players.find((player) => player.partyIndex === 0).y,
+    704,
+    'a respawned tank must remain at the authoritative spawn point',
+  );
+  simulation.acceptInput(input(0, 3, null, false, true));
   frame = simulation.step();
   assert.strictEqual(
     frame.players.find((player) => player.partyIndex === 0).fireSeq,

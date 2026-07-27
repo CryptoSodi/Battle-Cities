@@ -1330,6 +1330,11 @@ export class WebRtcHostMatchSync {
       }
       if (playerFrame.initialSync === true) {
         ticks.length = 0;
+        if (playerFrame.partyIndex === this.localPlayerIndex) {
+          this.lastInputAt = 0;
+          this.lastDirection = null;
+          this.lastMoving = false;
+        }
       }
       ticks.push(initialSync ? { ...playerFrame, initialSync: true } : playerFrame);
     });
@@ -1792,6 +1797,8 @@ export class WebRtcHostMatchSync {
         return;
       }
       this.observedPlayers.add(tank);
+      this.latestRemoteInputs.delete(tank.partyIndex);
+      this.latestRemoteInputReceivedAt.delete(tank.partyIndex);
       tank.fired.addListener(() => {
         this.playerFireSeqs.set(
           tank.partyIndex,

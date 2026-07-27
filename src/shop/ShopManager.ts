@@ -123,6 +123,12 @@ const ACTIVE_ITEMS = [
 const PASSIVE_ITEMS = [ShopInventoryItemId.ExtraLife];
 
 const MAX_POWERUP_STACK = 2;
+const ACTIVE_LOADOUT_SLOTS = [
+  ShopLoadoutSlot.ActiveOne,
+  ShopLoadoutSlot.ActiveTwo,
+  ShopLoadoutSlot.ActiveThree,
+  ShopLoadoutSlot.ActiveFour,
+];
 
 export class ShopManager {
   private storage: GameStorage;
@@ -335,8 +341,7 @@ export class ShopManager {
       extraLives: 0,
     };
 
-    Object.keys(loadout).forEach((slotKey) => {
-      const slot = slotKey as ShopLoadoutSlot;
+    ACTIVE_LOADOUT_SLOTS.forEach((slot) => {
       const itemId = loadout[slot];
       if (itemId === undefined || (inventory[itemId] || 0) <= 0) {
         return;

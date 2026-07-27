@@ -94,6 +94,7 @@ interface PreviousEnemyPosition {
 
 class HeadlessWebRtcMatch {
   private readonly lastFireSeqs = new Map<number, number>();
+  private readonly controlledTanks = new Map<number, PlayerTank>();
 
   public constructor(
     private readonly inputs: Map<SimulationPlayerIndex, LatestInput>,
@@ -105,7 +106,14 @@ class HeadlessWebRtcMatch {
     tank: PlayerTank,
     updateArgs: GameUpdateArgs,
   ): boolean {
-    const latest = this.inputs.get(tank.partyIndex as SimulationPlayerIndex);
+    const playerIndex = tank.partyIndex as SimulationPlayerIndex;
+    if (this.controlledTanks.get(playerIndex) !== tank) {
+      this.observeAuthoritativePlayerTank(tank);
+      tank.idle(false);
+      return true;
+    }
+
+    const latest = this.inputs.get(playerIndex);
     if (
       latest === undefined ||
       Date.now() - latest.receivedAt > REMOTE_INPUT_TIMEOUT_MS
@@ -125,6 +133,12 @@ class HeadlessWebRtcMatch {
       ),
     );
     return true;
+  }
+
+  public observeAuthoritativePlayerTank(tank: PlayerTank): void {
+    const playerIndex = tank.partyIndex as SimulationPlayerIndex;
+    this.controlledTanks.set(playerIndex, tank);
+    this.inputs.delete(playerIndex);
   }
 
   public isEnabled(): boolean {
@@ -348,6 +362,7 @@ export class EngineBattleCitySimulation {
     });
 
     this.playerScript.tankCreated.addListener((tank) => {
+      webRtcMatch.observeAuthoritativePlayerTank(tank);
       this.observeTankFire(tank, this.playerFire);
     });
     this.enemyScript.tankCreated.addListener((tank) => {
