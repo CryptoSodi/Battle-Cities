@@ -232,7 +232,7 @@ export class WebRtcHostMatchSync {
   private readonly frameHistory: WebRtcHostFramePacket[] = [];
   private readonly frameHistoryBySeq = new Map<number, WebRtcHostFramePacket>();
   private readonly replaySessions = new Map<
-    number,
+    WebRtcLinkId,
     { nextSeq: number; targetSeq: number }
   >();
   private readonly pendingActivations = new Map<number, number>();
@@ -836,9 +836,21 @@ export class WebRtcHostMatchSync {
           syncPlayer: null,
           serverFrameSeq: this.frameSeq,
         } satisfies WebRtcReadyPacket);
+        if (this.frameSeq > 0) {
+          this.replaySessions.set(linkId, {
+            nextSeq: 1,
+            targetSeq: this.frameSeq,
+          });
+          this.sendToLink(linkId, {
+            type: 'webrtc-replay-start',
+            fromSeq: 1,
+            targetSeq: this.frameSeq,
+          } satisfies WebRtcReplayStartPacket);
+        }
         return;
       }
       if (isObserverLink(linkId)) {
+        this.replaySessions.delete(linkId);
         return;
       }
 
@@ -1042,12 +1054,29 @@ export class WebRtcHostMatchSync {
     ) {
       return;
     }
+    if (this.observer) {
+      this.finishClientSync(this.lastAppliedHostFrameSeq);
+      return;
+    }
     this.lastReadyAckSeq = this.lastAppliedHostFrameSeq;
     this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
       type: 'webrtc-client-ready',
       player: this.localPlayerIndex as 0 | 1,
       appliedSeq: this.lastAppliedHostFrameSeq,
     } satisfies WebRtcClientReadyPacket);
+  }
+
+  private finishClientSync(appliedSeq: number): void {
+    this.clientSyncing = false;
+    this.recoveryUnavailable = false;
+    this.replayDeliveryComplete = false;
+    this.replayTargetSeq = appliedSeq;
+    Array.from(this.recoveryFrames.values())
+      .filter((frame) => frame.seq > this.lastAppliedHostFrameSeq)
+      .sort((a, b) => a.seq - b.seq)
+      .forEach((frame) => this.queueLiveFrame(frame, false));
+    this.recoveryFrames.clear();
+    this.showClientStatus();
   }
 
   private showClientStatus(): void {
@@ -1265,16 +1294,7 @@ export class WebRtcHostMatchSync {
       if (replay.appliedSeq > this.lastAppliedHostFrameSeq) {
         return;
       }
-      this.clientSyncing = false;
-      this.recoveryUnavailable = false;
-      this.replayDeliveryComplete = false;
-      this.replayTargetSeq = replay.appliedSeq;
-      Array.from(this.recoveryFrames.values())
-        .filter((frame) => frame.seq > this.lastAppliedHostFrameSeq)
-        .sort((a, b) => a.seq - b.seq)
-        .forEach((frame) => this.queueLiveFrame(frame, false));
-      this.recoveryFrames.clear();
-      this.showClientStatus();
+      this.finishClientSync(replay.appliedSeq);
       return;
     }
 
@@ -1560,7 +1580,7 @@ export class WebRtcHostMatchSync {
   }
 
   private pumpReplaySessions(): void {
-    this.replaySessions.forEach((session, playerIndex) => {
+    this.replaySessions.forEach((session, linkId) => {
       let sent = 0;
       while (
         session.nextSeq <= session.targetSeq &&
@@ -1568,27 +1588,27 @@ export class WebRtcHostMatchSync {
       ) {
         const frame = this.frameHistoryBySeq.get(session.nextSeq);
         if (frame === undefined) {
-          this.sendToPlayer(playerIndex as 0 | 1, {
+          this.sendToLink(linkId, {
             type: 'webrtc-replay-unavailable',
             oldestAvailableSeq: this.frameHistory[0]?.seq ?? this.frameSeq + 1,
             serverSeq: this.frameSeq,
           } satisfies WebRtcReplayUnavailablePacket);
-          this.replaySessions.delete(playerIndex);
+          this.replaySessions.delete(linkId);
           return;
         }
-        if (!this.sendToPlayer(playerIndex as 0 | 1, frame)) {
+        if (!this.sendToLink(linkId, frame)) {
           break;
         }
         session.nextSeq += 1;
         sent += 1;
       }
       if (session.nextSeq > session.targetSeq) {
-        const completionSent = this.sendToPlayer(playerIndex as 0 | 1, {
+        const completionSent = this.sendToLink(linkId, {
           type: 'webrtc-replay-complete',
           targetSeq: session.targetSeq,
         } satisfies WebRtcReplayCompletePacket);
         if (completionSent) {
-          this.replaySessions.delete(playerIndex);
+          this.replaySessions.delete(linkId);
         }
       }
     });

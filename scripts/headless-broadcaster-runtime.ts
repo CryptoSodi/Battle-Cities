@@ -229,7 +229,7 @@ class MatchRuntime {
   private readonly syncingPlayers = new Set<SimulationPlayerIndex>();
   private readonly frameHistory: SimulationHostFramePacket[] = [];
   private readonly frameBySeq = new Map<number, SimulationHostFramePacket>();
-  private readonly replaySessions = new Map<SimulationPlayerIndex, ReplaySession>();
+  private readonly replaySessions = new Map<LinkId, ReplaySession>();
   private readonly startedAt = new Date();
   private readonly tickIntervalMs: number;
   private tickTimer: NodeJS.Timeout;
@@ -341,10 +341,20 @@ class MatchRuntime {
       if (connected) {
         this.connectedObservers.add(linkId);
         this.send(linkId, this.readyPacket(null));
-        const latest = this.frameHistory[this.frameHistory.length - 1];
-        if (latest !== undefined) this.send(linkId, latest);
+        if (this.simulation.seq > 0) {
+          this.replaySessions.set(linkId, {
+            nextSeq: 1,
+            targetSeq: this.simulation.seq,
+          });
+          this.send(linkId, {
+            type: 'webrtc-replay-start',
+            fromSeq: 1,
+            targetSeq: this.simulation.seq,
+          });
+        }
       } else {
         this.connectedObservers.delete(linkId);
+        this.replaySessions.delete(linkId);
       }
       return;
     }
@@ -463,18 +473,18 @@ class MatchRuntime {
   }
 
   private pumpReplays(): void {
-    this.replaySessions.forEach((session, player) => {
+    this.replaySessions.forEach((session, linkId) => {
       let sent = 0;
       while (session.nextSeq <= session.targetSeq && sent < FRAME_REPLAY_PER_TICK) {
         const frame = this.frameBySeq.get(session.nextSeq);
-        if (frame === undefined || !this.send(player, frame)) break;
+        if (frame === undefined || !this.send(linkId, frame)) break;
         session.nextSeq += 1;
         sent += 1;
       }
-      if (session.nextSeq > session.targetSeq && this.send(player, {
+      if (session.nextSeq > session.targetSeq && this.send(linkId, {
         type: 'webrtc-replay-complete',
         targetSeq: session.targetSeq,
-      })) this.replaySessions.delete(player);
+      })) this.replaySessions.delete(linkId);
     });
   }
 
@@ -514,6 +524,7 @@ class MatchRuntime {
           this.links.get(linkId)?.close();
           this.links.delete(linkId);
           this.connectedObservers.delete(linkId);
+          this.replaySessions.delete(linkId);
         }
       });
     } catch (error) {
