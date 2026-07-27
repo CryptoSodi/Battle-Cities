@@ -222,6 +222,7 @@ export class EngineBattleCitySimulation {
   private enemyDeathSeq = 0;
   private currentTick = 0;
   private frameSeq = 0;
+  private pendingHitStopSeconds = 0;
 
   public constructor(map: SimulationMapDto, options: SimulationOptions) {
     this.tickRate = Math.max(10, Math.floor(options.tickRate ?? 60));
@@ -384,6 +385,19 @@ export class EngineBattleCitySimulation {
     });
     this.eventBus.enemyExploded.addListener(() => {
       this.enemyExplosionCount += 1;
+      this.requestHitStop(
+        config.HIT_STOP_KILL * config.CAMERA_SHAKE_INTENSITY,
+      );
+    });
+    this.eventBus.playerDied.addListener(() => {
+      this.requestHitStop(
+        config.HIT_STOP_DEATH * config.CAMERA_SHAKE_INTENSITY,
+      );
+    });
+    this.eventBus.baseDied.addListener(() => {
+      this.requestHitStop(
+        config.HIT_STOP_DEATH * config.CAMERA_SHAKE_INTENSITY,
+      );
     });
 
     this.root.updateMatrix(true);
@@ -396,6 +410,12 @@ export class EngineBattleCitySimulation {
 
   public get seq(): number {
     return this.frameSeq;
+  }
+
+  public consumeHitStopSeconds(): number {
+    const seconds = this.pendingHitStopSeconds;
+    this.pendingHitStopSeconds = 0;
+    return seconds;
   }
 
   public acceptInput(packet: SimulationInputPacket): boolean {
@@ -539,7 +559,7 @@ export class EngineBattleCitySimulation {
       deltaTime: this.deltaTime,
       gameState: this.gameState,
       gameStorage: null,
-      hitStop: (): void => undefined,
+      hitStop: this.requestHitStop,
       inputManager,
       magicBlockMovement,
       particles: {
@@ -592,6 +612,12 @@ export class EngineBattleCitySimulation {
     });
     this.world.field.add(...tiles);
   }
+
+  private requestHitStop = (seconds: number): void => {
+    if (Number.isFinite(seconds) && seconds > this.pendingHitStopSeconds) {
+      this.pendingHitStopSeconds = seconds;
+    }
+  };
 
   private prepareNetworkTick(): void {
     this.world.getPlayerTanks().forEach((tank) => {

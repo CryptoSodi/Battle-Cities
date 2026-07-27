@@ -520,7 +520,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
-    if (updateArgs.webRtcMatch.shouldHoldClientSimulation()) {
+    if (
+      updateArgs.webRtcMatch.isWaitingForPeer() ||
+      updateArgs.webRtcMatch.shouldHoldClientSimulation()
+    ) {
       return;
     }
     this.session.recordLevelTick();

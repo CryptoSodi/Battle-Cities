@@ -278,6 +278,12 @@ class MatchRuntime {
     this.frameBySeq.set(frame.seq, frame);
     this.broadcast(frame);
     this.pumpReplays();
+    const hitStopSeconds = this.simulation.consumeHitStopSeconds();
+    if (hitStopSeconds > 0) {
+      this.nextTickAt =
+        Math.max(this.nextTickAt, performance.now()) +
+        hitStopSeconds * 1000;
+    }
     if (this.simulation.isComplete() && !this.resultSubmissionStarted) {
       this.resultSubmissionStarted = true;
       void this.submitResult();

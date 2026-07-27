@@ -163,6 +163,11 @@ function overlaps(left, right) {
 
   const firstTank = simulation.world.getPlayerTanks()[0];
   firstTank.die();
+  assert.strictEqual(
+    simulation.consumeHitStopSeconds(),
+    0.11,
+    'a player death must request the browser-equivalent authoritative hit-stop',
+  );
   simulation.acceptInput(input(0, 2, 0, true));
   let respawnedTank = null;
   for (let tick = 0; tick < 360; tick += 1) {
