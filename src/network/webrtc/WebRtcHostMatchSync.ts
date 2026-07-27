@@ -103,6 +103,10 @@ interface WebRtcHostFramePacket {
   deltaTime: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
+  playerKillCounts?: [
+    [number, number, number, number],
+    [number, number, number, number],
+  ];
   sharedElapsedSeconds: number;
   playerOneElapsedSeconds: number;
   playerTwoElapsedSeconds: number;
@@ -421,6 +425,10 @@ export class WebRtcHostMatchSync {
   public consumeMatchResult(): {
     result: 'win' | 'loss';
     playerScores: [number, number];
+    playerKillCounts?: [
+      [number, number, number, number],
+      [number, number, number, number],
+    ];
   } | null {
     const frame = this.activeReplayFrame ?? this.latestHostFrame;
     if (
@@ -434,6 +442,7 @@ export class WebRtcHostMatchSync {
     return {
       result: frame.matchResult,
       playerScores: frame.playerScores,
+      playerKillCounts: frame.playerKillCounts,
     };
   }
 
@@ -559,6 +568,10 @@ export class WebRtcHostMatchSync {
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
     playerScores: [number, number],
+    playerKillCounts: [
+      [number, number, number, number],
+      [number, number, number, number],
+    ],
     matchResult: 'win' | 'loss' | null,
     deltaTime: number,
   ): void {
@@ -595,6 +608,7 @@ export class WebRtcHostMatchSync {
         powerup,
         powerupPickup,
         playerScores,
+        playerKillCounts,
         matchResult,
         deltaTime,
       );
@@ -1493,6 +1507,10 @@ export class WebRtcHostMatchSync {
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
     playerScores: [number, number],
+    playerKillCounts: [
+      [number, number, number, number],
+      [number, number, number, number],
+    ],
     matchResult: 'win' | 'loss' | null,
     deltaTime: number,
   ): void {
@@ -1511,6 +1529,7 @@ export class WebRtcHostMatchSync {
       playerScores: playerScores.map((score) => {
         return Math.max(0, Math.floor(score));
       }) as [number, number],
+      playerKillCounts,
       sharedElapsedSeconds: this.sharedElapsedSeconds,
       playerOneElapsedSeconds: this.playerElapsedSeconds.get(0) ?? 0,
       playerTwoElapsedSeconds: this.playerElapsedSeconds.get(1) ?? 0,

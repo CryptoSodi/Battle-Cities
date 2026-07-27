@@ -718,6 +718,18 @@ export class EngineBattleCitySimulation {
       deltaTime: this.deltaTime,
       matchResult: this.matchLifecycle.getResult(),
       playerScores: this.getScores(),
+      playerKillCounts: this.session.getPlayers().map((player) => {
+        const record = player.getLevelPointsRecord();
+        return [
+          record.getTierKillCount(TankTier.A),
+          record.getTierKillCount(TankTier.B),
+          record.getTierKillCount(TankTier.C),
+          record.getTierKillCount(TankTier.D),
+        ];
+      }) as [
+        [number, number, number, number],
+        [number, number, number, number],
+      ],
       sharedElapsedSeconds: this.currentTick * this.deltaTime,
       playerOneElapsedSeconds: this.playerElapsed[0],
       playerTwoElapsedSeconds: this.playerElapsed[1],

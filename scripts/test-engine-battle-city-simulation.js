@@ -134,6 +134,11 @@ function overlaps(left, right) {
     'win',
     'the terminal host frame must carry the authoritative match result',
   );
+  assert.deepStrictEqual(
+    terminalFrame.playerKillCounts,
+    [[1, 0, 0, 0], [0, 0, 0, 0]],
+    'the terminal host frame must carry each player tier kill breakdown',
+  );
 }
 
 {

@@ -600,6 +600,18 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
             this.session.getPlayer(0).getGamePoints(),
             this.session.getPlayer(1).getGamePoints(),
           ],
+          this.session.getPlayers().map((player) => {
+            const record = player.getLevelPointsRecord();
+            return [
+              record.getTierKillCount(TankTier.A),
+              record.getTierKillCount(TankTier.B),
+              record.getTierKillCount(TankTier.C),
+              record.getTierKillCount(TankTier.D),
+            ];
+          }) as [
+            [number, number, number, number],
+            [number, number, number, number],
+          ],
           this.matchLifecycle.getResult(),
           updateArgs.deltaTime,
         );
@@ -1060,7 +1072,12 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       return;
     }
     matchResult.playerScores.forEach((score, playerIndex) => {
-      this.session.getPlayer(playerIndex).setAuthoritativeGamePoints(score);
+      const player = this.session.getPlayer(playerIndex);
+      const killCounts = matchResult.playerKillCounts?.[playerIndex];
+      if (killCounts !== undefined) {
+        player.getLevelPointsRecord().setTierKillCounts(killCounts);
+      }
+      player.setAuthoritativeGamePoints(score);
     });
     if (matchResult.result === 'loss') {
       this.session.setGameOver();

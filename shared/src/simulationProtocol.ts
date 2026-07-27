@@ -89,6 +89,10 @@ export interface SimulationHostFramePacket {
   deltaTime: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
+  playerKillCounts?: [
+    [number, number, number, number],
+    [number, number, number, number],
+  ];
   sharedElapsedSeconds: number;
   playerOneElapsedSeconds: number;
   playerTwoElapsedSeconds: number;

@@ -57,6 +57,23 @@ export class PointsRecord {
     return count;
   }
 
+  public setTierKillCounts(
+    counts: [number, number, number, number],
+  ): void {
+    this.kills = [];
+    [TankTier.A, TankTier.B, TankTier.C, TankTier.D].forEach(
+      (tier, index) => {
+        const count = Math.min(
+          1000,
+          Math.max(0, Math.floor(Number(counts[index]) || 0)),
+        );
+        for (let kill = 0; kill < count; kill += 1) {
+          this.kills.push(tier);
+        }
+      },
+    );
+  }
+
   public getTierPoints(tierToFind: TankTier): number {
     let total = 0;
 
