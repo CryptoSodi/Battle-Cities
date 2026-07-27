@@ -3,6 +3,7 @@ import test from 'ava';
 
 import { GameObject, Vector } from '../../core';
 import { Session } from '../../game';
+import { PlayerTank } from '../../gameObjects';
 import { MapConfig } from '../../map';
 import { TankDeathReason } from '../../tank/TankDeathReason';
 import { TankParty } from '../../tank/TankParty';
@@ -107,4 +108,59 @@ test('network enemy removal emits the normal death effect event once', (t) => {
   t.is(deaths[0].hitterPartyIndex, 1);
   t.deepEqual(deaths[0].centerPosition, new Vector(110, 120));
   t.is(enemyScript.getAliveTanks().length, 0);
+});
+
+test('authoritative enemy spawn waits while a player occupies its spawn point', (t) => {
+  const world = new LevelWorld(new GameObject(), 400, 400);
+  const eventBus = new LevelEventBus();
+  const enemyScript = new LevelEnemyScript(false);
+  enemyScript.invokeInit(world, eventBus, new Session(), new MapConfig());
+
+  const spawnPosition = new Vector(32, 32);
+  const player = new GameObject(64, 64) as PlayerTank;
+  player.position.copyFrom(spawnPosition);
+  player.updateMatrix();
+  world.addPlayerTank(0, player);
+
+  const script = enemyScript as any;
+  script.list = [new TankType(TankParty.Enemy, TankTier.A, false)];
+  script.positions = [spawnPosition];
+
+  let spawnRequests = 0;
+  eventBus.enemySpawnRequested.addListener(() => {
+    spawnRequests += 1;
+  });
+
+  t.false(script.requestSpawn());
+  t.is(spawnRequests, 0);
+  t.is(script.listIndex, 0);
+  t.is(script.positionIndex, 0);
+
+  player.position.set(128, 128);
+  player.updateMatrix();
+
+  t.true(script.requestSpawn());
+  t.is(spawnRequests, 1);
+  t.is(script.listIndex, 1);
+});
+
+test('authoritative enemy spawn waits while another enemy occupies its spawn point', (t) => {
+  const world = new LevelWorld(new GameObject(), 400, 400);
+  const eventBus = new LevelEventBus();
+  const enemyScript = new LevelEnemyScript(false);
+  enemyScript.invokeInit(world, eventBus, new Session(), new MapConfig());
+
+  const spawnPosition = new Vector(32, 32);
+  const occupyingEnemy = new GameObject(64, 64);
+  occupyingEnemy.position.copyFrom(spawnPosition);
+  occupyingEnemy.updateMatrix();
+
+  const script = enemyScript as any;
+  script.aliveTanks = [occupyingEnemy];
+  script.list = [new TankType(TankParty.Enemy, TankTier.A, false)];
+  script.positions = [spawnPosition];
+
+  t.false(script.requestSpawn());
+  t.is(script.listIndex, 0);
+  t.is(script.positionIndex, 0);
 });

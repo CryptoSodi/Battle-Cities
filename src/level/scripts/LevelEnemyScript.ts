@@ -1,4 +1,4 @@
-import { Subject, Timer, Vector } from '../../core';
+import { BoundingBox, Subject, Timer, Vector } from '../../core';
 import { DebugLevelEnemyMenu } from '../../debug';
 import { GameUpdateArgs, Rotation } from '../../game';
 import { EnemyTank } from '../../gameObjects';
@@ -19,6 +19,7 @@ import {
 } from '../events';
 
 const NETWORK_DEATH_COLLISION_GRACE = 0.2;
+const TANK_SPAWN_SIZE = 64;
 
 export interface NetworkEnemyDeath {
   partyIndex: number;
@@ -212,7 +213,12 @@ export class LevelEnemyScript extends LevelScript {
       return;
     }
 
-    this.requestSpawn();
+    if (!this.requestSpawn()) {
+      // Retry on the next simulation tick without consuming this enemy or
+      // advancing to another spawn point.
+      this.spawnTimer.reset(0);
+      return;
+    }
 
     // Start timer to spawn next enemy
     this.spawnTimer.reset(config.ENEMY_SPAWN_DELAY);
@@ -287,12 +293,16 @@ export class LevelEnemyScript extends LevelScript {
     this.world.field.add(tank);
   };
 
-  private requestSpawn(): void {
+  private requestSpawn(): boolean {
     const type = this.list[this.listIndex];
     const position = this.positions[this.positionIndex];
     if (type === undefined || position === undefined) {
       this.spawnTimer.stop();
-      return;
+      return false;
+    }
+
+    if (!this.isNetworkEnemyMirror && this.isSpawnPositionOccupied(position)) {
+      return false;
     }
 
     this.spawningCount += 1;
@@ -316,6 +326,23 @@ export class LevelEnemyScript extends LevelScript {
       position,
       partyIndex,
       unspawnedCount,
+    });
+
+    return true;
+  }
+
+  private isSpawnPositionOccupied(position: Vector): boolean {
+    const spawnBox = new BoundingBox(
+      position.clone(),
+      new Vector(position.x + TANK_SPAWN_SIZE, position.y + TANK_SPAWN_SIZE),
+    );
+    const tanks = [...this.aliveTanks, ...this.world.getPlayerTanks()].filter(
+      (tank) => tank !== null && tank !== undefined,
+    );
+
+    return tanks.some((tank) => {
+      tank.updateMatrix();
+      return spawnBox.intersectsBox(tank.getBoundingBox());
     });
   }
 
