@@ -86,6 +86,9 @@ export class LevelMatchLifecycle {
   };
 
   private handleEnemyDied = (event: LevelEnemyDiedEvent): void => {
+    if (event.networkMirror === true) {
+      return;
+    }
     this.session.recordEnemyDefeated();
     if (
       event.reason === TankDeathReason.WipeoutPowerup ||

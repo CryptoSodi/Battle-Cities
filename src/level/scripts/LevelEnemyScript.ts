@@ -1,7 +1,7 @@
 import { Subject, Timer, Vector } from '../../core';
 import { DebugLevelEnemyMenu } from '../../debug';
 import { GameUpdateArgs, Rotation } from '../../game';
-import { EnemyTank, Explosion } from '../../gameObjects';
+import { EnemyTank } from '../../gameObjects';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame } from '../../replay';
 import { TankDeathReason, TankFactory, TankParty, TankType } from '../../tank';
@@ -25,6 +25,7 @@ export interface NetworkEnemyDeath {
   x: number;
   y: number;
   reason: TankDeathReason;
+  hitterPartyIndex?: number | null;
 }
 
 export class LevelEnemyScript extends LevelScript {
@@ -122,21 +123,17 @@ export class LevelEnemyScript extends LevelScript {
     death: NetworkEnemyDeath = null,
   ): void {
     this.activeEnemyIds.delete(tank.partyIndex);
-    const explosion = new Explosion();
-    explosion.updateMatrix();
     const centerPosition =
       death !== null && Number.isFinite(death.x) && Number.isFinite(death.y)
         ? new Vector(death.x, death.y)
         : tank.getCenter();
-    explosion.setCenter(centerPosition);
-    explosion.completed.addListener(() => {
-      this.eventBus.enemyExploded.notify({
-        type: tank.type,
-        centerPosition,
-        reason: death?.reason ?? TankDeathReason.Bullet,
-      });
+    this.eventBus.enemyDied.notify({
+      type: tank.type,
+      centerPosition,
+      reason: death?.reason ?? TankDeathReason.Bullet,
+      hitterPartyIndex: death?.hitterPartyIndex ?? null,
+      networkMirror: true,
     });
-    this.world.field.add(explosion);
     tank.beginNetworkDeathGrace();
     this.pendingNetworkRemovals.push({
       tank,

@@ -5,5 +5,6 @@ export interface LevelEnemyDiedEvent {
   type: TankType;
   centerPosition: Vector;
   reason: TankDeathReason;
-  hitterPartyIndex: number;
+  hitterPartyIndex: number | null;
+  networkMirror?: boolean;
 }

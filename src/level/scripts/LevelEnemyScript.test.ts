@@ -4,6 +4,7 @@ import test from 'ava';
 import { GameObject, Vector } from '../../core';
 import { Session } from '../../game';
 import { MapConfig } from '../../map';
+import { TankDeathReason } from '../../tank/TankDeathReason';
 import { TankParty } from '../../tank/TankParty';
 import { TankTier } from '../../tank/TankTier';
 import { TankType } from '../../tank/TankType';
@@ -62,4 +63,48 @@ test('tankCreated fires with the constructed tank even if subscribed before this
   });
 
   t.is(receivedPartyIndex, 3, 'tankCreated should have fired with the newly constructed tank');
+});
+
+test('network enemy removal emits the normal death effect event once', (t) => {
+  const world = new LevelWorld(new GameObject(), 400, 400);
+  const eventBus = new LevelEventBus();
+  const session = new Session();
+  const mapConfig = new MapConfig();
+  const enemyScript = new LevelEnemyScript(true);
+  enemyScript.invokeInit(world, eventBus, session, mapConfig);
+
+  const stubUpdateArgs = {
+    deltaTime: 1 / 60,
+    audioLoader: { load: () => ({ play: () => undefined, stop: () => undefined }) },
+    spriteLoader: { load: () => null, loadList: () => [] },
+    collisionSystem: { register: () => undefined },
+    magicBlockMovement: {
+      setPlayerMirrorBulletsSuppressed: () => undefined,
+    },
+  } as any;
+  enemyScript.invokeUpdate(stubUpdateArgs);
+
+  eventBus.enemySpawnCompleted.notify({
+    type: new TankType(TankParty.Enemy, TankTier.A, false),
+    centerPosition: new Vector(100, 100),
+    partyIndex: 3,
+  });
+
+  const deaths = [];
+  eventBus.enemyDied.addListener((event) => deaths.push(event));
+  enemyScript.syncNetworkEnemyDeaths([
+    {
+      partyIndex: 3,
+      x: 110,
+      y: 120,
+      reason: TankDeathReason.Bullet,
+      hitterPartyIndex: 1,
+    },
+  ]);
+
+  t.is(deaths.length, 1);
+  t.true(deaths[0].networkMirror);
+  t.is(deaths[0].hitterPartyIndex, 1);
+  t.deepEqual(deaths[0].centerPosition, new Vector(110, 120));
+  t.is(enemyScript.getAliveTanks().length, 0);
 });
