@@ -1,4 +1,5 @@
 dist/
+dist-broadcaster/
 api-server/dist/
 node_modules/
 server-data/

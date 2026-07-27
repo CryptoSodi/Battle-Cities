@@ -27,6 +27,21 @@ Project is not commercial and was created for learning purposes only.
   - Customize keybindings
   - Mute audio
 
+## Deployment Environments
+
+Online matches use three independently configured projects:
+
+| Project | Required multiplayer environment |
+| --- | --- |
+| Vercel game client | `BATTLECITY_API_BASE_URL=https://api.battlecities.com` |
+| Vercel API | `BROADCASTER_BASE_URL` and private `BROADCASTER_SERVICE_TOKEN` |
+| Headless broadcaster | API/public URLs and the same private service token |
+
+See [Deployment Environment Setup](docs/environment-setup.md) for the complete
+Vercel and Windows instructions. See
+[Headless WebRTC Broadcaster](docs/headless-broadcaster.md) for broadcaster
+runtime and service API details.
+
 ## License
 
 **MIT**

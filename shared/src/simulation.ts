@@ -117,6 +117,8 @@ export class BattleCitySimulation {
   private pickupSeq = 0;
   private frameSeq = 0;
   private currentTick = 0;
+  private baseAlive = true;
+  private enemiesFrozenUntilTick = 0;
   private powerup: SimulationPowerupFrame | null = null;
   private powerupPickup: SimulationPowerupPickupFrame | null = null;
 
@@ -131,9 +133,7 @@ export class BattleCitySimulation {
     const heightTiles = map.field?.heightTiles ?? (legacy ? LEGACY_FIELD_TILES : DEFAULT_FIELD_TILES);
     this.fieldWidth = widthTiles * LARGE_TILE;
     this.fieldHeight = heightTiles * LARGE_TILE;
-    this.contentOffsetY = legacy
-      ? Math.max(0, DEFAULT_FIELD_TILES * LARGE_TILE - this.fieldHeight)
-      : 0;
+    this.contentOffsetY = 0;
     this.playerSpawns = this.createPlayerSpawns();
     this.enemySpawns = this.createEnemySpawns();
     this.enemyList = (map.spawn?.enemy?.list ?? []).map((item) => ({
@@ -183,6 +183,12 @@ export class BattleCitySimulation {
 
   public getScores(): [number, number] {
     return [this.scores[0], this.scores[1]];
+  }
+
+  public isComplete(): boolean {
+    const allPlayersDefeated = this.players.every((player) => !player.alive && player.lives <= 0);
+    return !this.baseAlive || allPlayersDefeated ||
+      (this.nextEnemyIndex >= this.enemyList.length && this.enemies.size === 0);
   }
 
   private createPlayer(index: SimulationPlayerIndex): TankState {
@@ -283,6 +289,10 @@ export class BattleCitySimulation {
     this.enemies.forEach((enemy) => {
       enemy.previousX = enemy.x;
       enemy.previousY = enemy.y;
+      if (this.currentTick < this.enemiesFrozenUntilTick) {
+        enemy.moving = false;
+        return;
+      }
       if (this.currentTick >= enemy.aiTurnAtTick) {
         enemy.rotation = this.chooseEnemyRotation(enemy);
         enemy.aiTurnAtTick = this.currentTick + Math.ceil((0.35 + this.random.next() * 0.9) * this.tickRate);
@@ -339,14 +349,19 @@ export class BattleCitySimulation {
       const vector = directionVector(bullet.rotation);
       bullet.x += vector.x * bullet.speed * this.deltaTime;
       bullet.y += vector.y * bullet.speed * this.deltaTime;
-      if (!this.insideField(bullet) || this.hitTerrain(bullet) || this.hitTank(bullet)) {
+      if (
+        !this.insideField(bullet) ||
+        this.hitTerrain(bullet) ||
+        this.hitBase(bullet) ||
+        this.hitTank(bullet)
+      ) {
         this.bullets.splice(index, 1);
       }
     }
   }
 
   private hitTerrain(bullet: BulletState): boolean {
-    for (const cell of this.terrain.values()) {
+    for (const cell of Array.from(this.terrain.values())) {
       if (!overlaps(bullet, cell)) continue;
       if (cell.destructible) this.terrain.delete(cell.key);
       return true;
@@ -356,7 +371,7 @@ export class BattleCitySimulation {
 
   private hitTank(bullet: BulletState): boolean {
     if (bullet.ownerParty === 'player') {
-      for (const enemy of this.enemies.values()) {
+      for (const enemy of Array.from(this.enemies.values())) {
         if (!overlaps(bullet, enemy)) continue;
         enemy.health -= 1;
         if (enemy.health <= 0) {
@@ -380,6 +395,14 @@ export class BattleCitySimulation {
     const player = this.players.find((candidate) => candidate.alive && overlaps(bullet, candidate));
     if (player === undefined) return false;
     if (this.currentTick >= player.shieldUntilTick) this.killPlayer(player);
+    return true;
+  }
+
+  private hitBase(bullet: BulletState): boolean {
+    if (!this.baseAlive) return false;
+    const base = this.getBasePosition();
+    if (!overlaps(bullet, { ...base, width: LARGE_TILE, height: LARGE_TILE })) return false;
+    this.baseAlive = false;
     return true;
   }
 
@@ -441,11 +464,8 @@ export class BattleCitySimulation {
     else if (type === 'shield') player.shieldUntilTick = this.currentTick + 10 * this.tickRate;
     else if (type === 'speed') player.speed = 240;
     else if (type === 'upgrade') player.tier = nextTier(player.tier);
-    else if (type === 'freeze') {
-      this.enemies.forEach((enemy) => {
-        enemy.aiTurnAtTick = Math.max(enemy.aiTurnAtTick, this.currentTick + 10 * this.tickRate);
-      });
-    } else if (type === 'wipeout') this.enemies.clear();
+    else if (type === 'freeze') this.enemiesFrozenUntilTick = this.currentTick + 10 * this.tickRate;
+    else if (type === 'wipeout') this.enemies.clear();
   }
 
   private tryMove(tank: TankState, rotation: SimulationRotation, distance: number): boolean {
@@ -456,10 +476,10 @@ export class BattleCitySimulation {
       y: clamp(tank.y + vector.y * distance, 0, this.fieldHeight - tank.height),
     };
     if (candidate.x === tank.x && candidate.y === tank.y) return false;
-    for (const cell of this.terrain.values()) {
+    for (const cell of Array.from(this.terrain.values())) {
       if (overlaps(candidate, cell)) return false;
     }
-    const tanks = [...this.players, ...this.enemies.values()];
+    const tanks = [...this.players, ...Array.from(this.enemies.values())];
     if (tanks.some((other) => other !== tank && other.alive && overlaps(candidate, other))) return false;
     tank.x = candidate.x;
     tank.y = candidate.y;

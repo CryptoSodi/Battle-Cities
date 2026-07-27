@@ -1,32 +1,34 @@
 # Headless WebRTC Broadcaster
 
-The broadcaster service runs the existing authoritative game simulation in
-headless Chrome. It does not create the canvas presentation, HUD, audio output,
-local input listeners, or broadcaster controls. WebRTC packets, simulation,
-scores, replay history, observers, and reconnection use the existing code paths.
+The broadcaster is a pure Node.js service. It runs one independent
+`BattleCitySimulation` and WebRTC peer pipeline per active match. It does not
+launch Chrome, create a canvas, render a HUD, initialize audio, or accept local
+game input.
+
+The simulation and packet types live in `shared/src`, so Node and browser code
+compile against the same authoritative contract.
 
 ## Network Contract
 
 - Public hostname: `https://broadcaster.battlecities.com`
 - Local service: `http://127.0.0.1:7777`
-- Default player frontend: `https://battlecities.com`
-- Default API: `https://api.battlecities.com`
+- Signaling API: `https://api.battlecities.com`
 
-The public hostname should reverse-proxy to `127.0.0.1:7777`. The service binds
-to loopback by default and proxies its local headless browser's `/api/*` calls
-to the Vercel API.
+The public hostname should reverse-proxy to `127.0.0.1:7777`. The broadcaster
+uses the existing HTTP WebRTC signaling endpoints directly.
 
 ## Start
 
-```sh
-npm run build
-BROADCASTER_SERVICE_TOKEN=replace-me npm run broadcaster:headless
-```
-
-PowerShell:
+For the complete frontend Vercel, API Vercel, and Windows environment setup,
+see [Deployment Environment Setup](environment-setup.md).
 
 ```powershell
-$env:BROADCASTER_SERVICE_TOKEN = 'replace-me'
+$env:BROADCASTER_SERVICE_TOKEN = 'same-secret-used-by-the-vercel-api'
+$env:BROADCASTER_API_URL = 'https://api.battlecities.com'
+$env:BROADCASTER_PUBLIC_URL = 'https://broadcaster.battlecities.com'
+$env:BROADCASTER_CLIENT_URL = 'https://battlecities.com'
+$env:BROADCASTER_HOST = '127.0.0.1'
+$env:BROADCASTER_PORT = '7777'
 npm run broadcaster:headless
 ```
 
@@ -34,15 +36,20 @@ Optional environment variables:
 
 - `BROADCASTER_HOST` defaults to `127.0.0.1`.
 - `BROADCASTER_PORT` defaults to `7777`.
-- `BROADCASTER_PUBLIC_URL` defaults to
-  `https://broadcaster.battlecities.com`.
-- `BATTLECITY_CLIENT_URL` defaults to `https://battlecities.com`.
-- `BATTLECITY_API_URL` defaults to `https://api.battlecities.com`.
-- `CHROME_PATH` overrides Chrome or Chromium discovery.
-- `CHROME_NO_SANDBOX=1` disables Chrome's sandbox. Use this only inside an
-  already isolated container that must run as root, not on a normal EC2 host.
+- `BROADCASTER_API_URL` defaults to `http://127.0.0.1:3000`.
+- `BROADCASTER_PUBLIC_URL` defaults to the local service URL.
+- `BROADCASTER_CLIENT_URL` defaults to `https://battlecities.com` and controls
+  the observer frontend opened by the monitor.
+- `BROADCASTER_DISABLE_ENEMY_SHOOTING=1` disables authoritative enemy firing.
+
+`BROADCASTER_SERVICE_TOKEN` is required in production and must match the API's
+token. It authenticates lifecycle and signaling requests.
 
 ## Service API
+
+Open the operator monitor at `http://127.0.0.1:7777/monitor`. Enter the
+`BROADCASTER_SERVICE_TOKEN` to list all active matches. The View action opens
+the selected match through the configured client frontend in observer mode.
 
 Health does not require authentication:
 
@@ -59,37 +66,21 @@ curl -X POST http://127.0.0.1:7777/matches \
   -d '{"matchId":"test-1","level":1}'
 ```
 
-The response is an operator-only lifecycle record. Player runtime configuration
-is created by the Vercel API and never uses these internal URLs. Omit `matchId`
-to generate one.
-
-List and inspect matches:
+List, inspect, and stop matches:
 
 ```sh
-curl -H "Authorization: Bearer replace-me" \
-  http://127.0.0.1:7777/matches
-
-curl -H "Authorization: Bearer replace-me" \
-  http://127.0.0.1:7777/matches/test-1
+curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches
+curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
+curl -X DELETE -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
 ```
 
-Stop a match:
-
-```sh
-curl -X DELETE \
-  -H "Authorization: Bearer replace-me" \
-  http://127.0.0.1:7777/matches/test-1
-```
-
-Each match runs in a separate Chrome process and profile. The service injects
-its token only into the loopback headless URL so Chrome can authenticate
-signaling and submit authoritative final scores. The Vercel API persists that
-result and calls `DELETE /matches/:matchId` to stop the worker. Stopping the
-service stops every match.
+The API creates player runtime configuration separately. Creating a match here
+starts signaling peers immediately, but the simulation clock does not advance
+until both player data channels are connected. A player disconnect does not
+stop simulation or observer frames. Reconnection uses the complete in-memory
+frame history and the existing replay-ready handshake.
 
 ## Reverse Proxy
-
-An Nginx server block can proxy the hostname without exposing port `7777`:
 
 ```nginx
 server {
@@ -104,6 +95,3 @@ server {
     }
 }
 ```
-
-TLS certificate configuration is intentionally omitted because it depends on
-the EC2 certificate and deployment setup.
