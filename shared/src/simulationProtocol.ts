@@ -48,6 +48,9 @@ export interface SimulationEnemyFrame {
   deltaY: number;
   alive: boolean;
   fireSeq: number;
+  fireX: number;
+  fireY: number;
+  fireRotation: SimulationRotation;
   initialSync?: boolean;
 }
 

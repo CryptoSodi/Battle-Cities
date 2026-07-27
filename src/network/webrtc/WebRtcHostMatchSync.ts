@@ -44,6 +44,9 @@ interface WebRtcEnemyFrame {
   deltaY: number;
   alive: boolean;
   fireSeq: number;
+  fireX: number;
+  fireY: number;
+  fireRotation: Rotation;
   initialSync?: boolean;
 }
 
@@ -246,6 +249,10 @@ export class WebRtcHostMatchSync {
   >();
   private readonly enemyFireSeqs = new Map<number, number>();
   private readonly lastEnemyFireSeqs = new Map<number, number>();
+  private readonly latestEnemyFire = new Map<
+    number,
+    { x: number; y: number; rotation: Rotation }
+  >();
   private readonly lastEnemyPositions = new Map<
     number,
     { x: number; y: number }
@@ -1480,6 +1487,7 @@ export class WebRtcHostMatchSync {
       y: tank.position.y,
     });
 
+    const fire = this.latestEnemyFire.get(tank.partyIndex);
     return {
       partyIndex: tank.partyIndex,
       x: tank.position.x,
@@ -1490,6 +1498,9 @@ export class WebRtcHostMatchSync {
       deltaY,
       alive: tank.isAlive(),
       fireSeq: this.enemyFireSeqs.get(tank.partyIndex) ?? 0,
+      fireX: fire?.x ?? tank.position.x,
+      fireY: fire?.y ?? tank.position.y,
+      fireRotation: fire?.rotation ?? tank.rotation,
     };
   }
 
@@ -1527,7 +1538,11 @@ export class WebRtcHostMatchSync {
             frame.fireSeq > lastFireSeq
           ) {
             this.lastEnemyFireSeqs.set(frame.partyIndex, frame.fireSeq);
-            tank.fire(true);
+            tank.fireFromNetwork(
+              Number.isFinite(frame.fireX) ? frame.fireX : tank.position.x,
+              Number.isFinite(frame.fireY) ? frame.fireY : tank.position.y,
+              frame.fireRotation ?? frame.rotation,
+            );
           }
         });
       if (ticks.length === 0) {
@@ -1557,7 +1572,11 @@ export class WebRtcHostMatchSync {
       const lastFireSeq = this.lastEnemyFireSeqs.get(frame.partyIndex) ?? 0;
       if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
         this.lastEnemyFireSeqs.set(frame.partyIndex, frame.fireSeq);
-        tank.fire(true);
+        tank.fireFromNetwork(
+          Number.isFinite(frame.fireX) ? frame.fireX : tank.position.x,
+          Number.isFinite(frame.fireY) ? frame.fireY : tank.position.y,
+          frame.fireRotation ?? frame.rotation,
+        );
       }
     });
   }
@@ -1671,6 +1690,11 @@ export class WebRtcHostMatchSync {
       }
       this.observedEnemies.add(tank);
       tank.fired.addListener(() => {
+        this.latestEnemyFire.set(tank.partyIndex, {
+          x: tank.position.x,
+          y: tank.position.y,
+          rotation: tank.rotation,
+        });
         this.enemyFireSeqs.set(
           tank.partyIndex,
           (this.enemyFireSeqs.get(tank.partyIndex) ?? 0) + 1,

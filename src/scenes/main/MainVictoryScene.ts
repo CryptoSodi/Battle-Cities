@@ -21,6 +21,7 @@ export class MainVictoryScene extends GameScene {
 
   protected setup({ audioManager, audioLoader, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
+    clearMultiplayerRuntime();
 
     this.victorySound = audioLoader.load('victory');
     this.victorySound.ended.addListener(this.handleVictorySoundEnded);
@@ -105,7 +106,6 @@ export class MainVictoryScene extends GameScene {
 
   private finish(): void {
     this.audioManager.stopAll();
-    clearMultiplayerRuntime();
     this.navigator.clearAndPush(GameSceneType.MainHighscore);
   }
 }

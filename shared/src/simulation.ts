@@ -13,14 +13,19 @@ import {
 } from './simulationProtocol';
 
 const TILE = 16;
+const MEDIUM_TILE = 32;
 const LARGE_TILE = 64;
 const LEGACY_FIELD_TILES = 13;
 const DEFAULT_FIELD_TILES = 20;
 const TANK_SIZE = 64;
-const BULLET_SIZE = 12;
+const BULLET_WIDTH = 12;
+const BULLET_HEIGHT = 16;
 const PLAYER_SPEED = 180;
 const BULLET_SPEED = 600;
 const ENEMY_LIMIT = 6;
+const BASE_WIDTH = 128;
+const BASE_HEIGHT = 96;
+const BASE_HEART_OFFSET = 32;
 
 interface RectState {
   x: number;
@@ -38,6 +43,10 @@ interface TankState extends RectState {
   health: number;
   speed: number;
   fireSeq: number;
+  fireX: number;
+  fireY: number;
+  fireRotation: SimulationRotation;
+  nextFireTick: number;
   lastInputFireSeq: number;
   shieldUntilTick: number;
   stunnedUntilTick: number;
@@ -45,8 +54,11 @@ interface TankState extends RectState {
   lives: number;
   previousX: number;
   previousY: number;
-  aiTurnAtTick: number;
+  aiState: 'moving' | 'thinking' | 'unstuck-thinking' | 'firing';
+  aiThinkUntilTick: number;
   aiFireAtTick: number;
+  aiLastRoundedX: number;
+  aiLastRoundedY: number;
   hasDrop: boolean;
 }
 
@@ -56,17 +68,31 @@ interface BulletState extends RectState {
   ownerIndex: number;
   rotation: SimulationRotation;
   speed: number;
+  wallDamage: 1 | 2;
 }
 
 interface TerrainCell extends RectState {
   key: string;
+  type: 'brick' | 'steel';
   destructible: boolean;
+  movementKey: string;
+}
+
+interface MovementCell extends RectState {
+  key: string;
+  type: 'brick' | 'steel' | 'water' | 'base';
 }
 
 interface LatestInput {
   packet: SimulationInputPacket;
   receivedTick: number;
 }
+
+type BulletImpact =
+  | { time: number; kind: 'terrain'; cell: TerrainCell }
+  | { time: number; kind: 'base' }
+  | { time: number; kind: 'tank'; tank: TankState }
+  | { time: number; kind: 'border' };
 
 class DeterministicRandom {
   private state: number;
@@ -76,16 +102,23 @@ class DeterministicRandom {
   }
 
   public next(): number {
+    this.state = (this.state + 0x6d2b79f5) >>> 0;
     let value = this.state;
-    value ^= value << 13;
-    value ^= value >>> 17;
-    value ^= value << 5;
-    this.state = value >>> 0;
-    return this.state / 0x100000000;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 0x100000000;
   }
 
   public integer(maxExclusive: number): number {
     return Math.floor(this.next() * maxExclusive);
+  }
+
+  public number(min: number, max: number): number {
+    return min + Math.floor(this.next() * (max - min));
+  }
+
+  public probability(chancePercent: number): boolean {
+    return this.number(1, 100) <= chancePercent;
   }
 }
 
@@ -104,6 +137,7 @@ export class BattleCitySimulation {
   private readonly enemySpawns: Array<{ x: number; y: number }>;
   private readonly enemyList: Array<{ tier: string; drop: boolean }>;
   private readonly terrain = new Map<string, TerrainCell>();
+  private readonly movementTerrain = new Map<string, MovementCell>();
   private readonly players: [TankState, TankState];
   private readonly enemies = new Map<number, TankState>();
   private readonly bullets: BulletState[] = [];
@@ -133,7 +167,10 @@ export class BattleCitySimulation {
     const heightTiles = map.field?.heightTiles ?? (legacy ? LEGACY_FIELD_TILES : DEFAULT_FIELD_TILES);
     this.fieldWidth = widthTiles * LARGE_TILE;
     this.fieldHeight = heightTiles * LARGE_TILE;
-    this.contentOffsetY = 0;
+    this.contentOffsetY =
+      (map.version ?? 0) < 2 && heightTiles > LEGACY_FIELD_TILES
+        ? this.fieldHeight - LEGACY_FIELD_TILES * LARGE_TILE
+        : 0;
     this.playerSpawns = this.createPlayerSpawns();
     this.enemySpawns = this.createEnemySpawns();
     this.enemyList = (map.spawn?.enemy?.list ?? []).map((item) => ({
@@ -206,6 +243,10 @@ export class BattleCitySimulation {
       health: 1,
       speed: PLAYER_SPEED,
       fireSeq: 0,
+      fireX: spawn.x,
+      fireY: spawn.y,
+      fireRotation: 0,
+      nextFireTick: 0,
       lastInputFireSeq: 0,
       shieldUntilTick: Math.ceil(3.5 * this.tickRate),
       stunnedUntilTick: 0,
@@ -213,8 +254,11 @@ export class BattleCitySimulation {
       lives: 3,
       previousX: spawn.x,
       previousY: spawn.y,
-      aiTurnAtTick: 0,
+      aiState: 'moving',
+      aiThinkUntilTick: 0,
       aiFireAtTick: 0,
+      aiLastRoundedX: -1,
+      aiLastRoundedY: -1,
       hasDrop: false,
     };
   }
@@ -232,15 +276,15 @@ export class BattleCitySimulation {
         return;
       }
       const packet = input.packet;
-      if (packet.direction !== null) {
-        player.rotation = packet.direction;
-      }
-      if (packet.moving && packet.direction !== null) {
-        player.moving = this.tryMove(player, packet.direction, player.speed * this.deltaTime);
-      }
       if (packet.fire && packet.seq > player.lastInputFireSeq) {
         player.lastInputFireSeq = packet.seq;
         this.fire(player, 'player');
+      }
+      if (packet.direction !== null) {
+        this.rotateTank(player, packet.direction);
+      }
+      if (packet.moving && packet.direction !== null) {
+        player.moving = this.tryMove(player, packet.direction, player.speed * this.deltaTime);
       }
     });
   }
@@ -269,6 +313,10 @@ export class BattleCitySimulation {
       health: tier === 'd' ? 4 : 1,
       speed: tier === 'b' ? 240 : 120,
       fireSeq: 0,
+      fireX: spawn.x,
+      fireY: spawn.y,
+      fireRotation: 180,
+      nextFireTick: 0,
       lastInputFireSeq: 0,
       shieldUntilTick: 0,
       stunnedUntilTick: 0,
@@ -276,8 +324,11 @@ export class BattleCitySimulation {
       lives: 0,
       previousX: spawn.x,
       previousY: spawn.y,
-      aiTurnAtTick: this.currentTick + this.random.integer(this.tickRate),
-      aiFireAtTick: this.currentTick + Math.ceil((0.4 + this.random.next()) * this.tickRate),
+      aiState: 'moving',
+      aiThinkUntilTick: 0,
+      aiFireAtTick: this.currentTick,
+      aiLastRoundedX: -1,
+      aiLastRoundedY: -1,
       hasDrop: definition.drop,
     };
     this.enemies.set(enemy.partyIndex, enemy);
@@ -291,119 +342,362 @@ export class BattleCitySimulation {
       enemy.previousY = enemy.y;
       if (this.currentTick < this.enemiesFrozenUntilTick) {
         enemy.moving = false;
+        enemy.aiFireAtTick += 1;
+        if (enemy.aiThinkUntilTick > 0) enemy.aiThinkUntilTick += 1;
         return;
       }
-      if (this.currentTick >= enemy.aiTurnAtTick) {
-        enemy.rotation = this.chooseEnemyRotation(enemy);
-        enemy.aiTurnAtTick = this.currentTick + Math.ceil((0.35 + this.random.next() * 0.9) * this.tickRate);
+      if (this.disableEnemyShooting && enemy.aiState === 'firing') {
+        enemy.aiState = 'moving';
       }
-      enemy.moving = this.tryMove(enemy, enemy.rotation, enemy.speed * this.deltaTime);
-      if (!enemy.moving) {
-        enemy.rotation = this.chooseEnemyRotation(enemy, true);
-        enemy.aiTurnAtTick = this.currentTick + Math.ceil(0.2 * this.tickRate);
+      if (this.currentTick >= enemy.aiFireAtTick) {
+        if (!this.disableEnemyShooting) {
+          const hasFired = this.fire(enemy, 'enemy');
+          if (hasFired && enemy.aiState === 'firing') {
+            enemy.aiState = 'moving';
+          }
+        }
+        this.scheduleEnemyFire(enemy);
       }
-      if (!this.disableEnemyShooting && this.currentTick >= enemy.aiFireAtTick) {
-        this.fire(enemy, 'enemy');
-        enemy.aiFireAtTick = this.currentTick + Math.ceil((0.65 + this.random.next() * 1.5) * this.tickRate);
+      if (enemy.aiState === 'firing') {
+        enemy.moving = false;
+        return;
       }
+      if (
+        enemy.aiState === 'thinking' ||
+        enemy.aiState === 'unstuck-thinking'
+      ) {
+        enemy.moving = false;
+        if (this.currentTick < enemy.aiThinkUntilTick) return;
+        if (
+          !this.disableEnemyShooting &&
+          enemy.aiState === 'thinking' &&
+          this.random.probability(30)
+        ) {
+          enemy.aiState = 'firing';
+          return;
+        }
+        enemy.aiState = 'moving';
+        this.rotateTank(enemy, this.getNextEnemyRotation(enemy));
+        return;
+      }
+
+      enemy.moving = this.tryMove(
+        enemy,
+        enemy.rotation,
+        enemy.speed * this.deltaTime,
+      );
+      const roundedX = Math.round(enemy.x);
+      const roundedY = Math.round(enemy.y);
+      const isStuck =
+        enemy.aiLastRoundedX === roundedX &&
+        enemy.aiLastRoundedY === roundedY;
+      if (isStuck) {
+        enemy.aiState = 'thinking';
+        enemy.aiThinkUntilTick = this.createTimerReadyTick(0.3);
+        enemy.moving = false;
+        return;
+      }
+      const vertical = enemy.rotation === 0 || enemy.rotation === 180;
+      const horizontal = enemy.rotation === 90 || enemy.rotation === 270;
+      const canThink =
+        this.random.number(1, 100) <= 5 &&
+        ((horizontal && enemy.x % MEDIUM_TILE === 0) ||
+          (vertical && enemy.y % MEDIUM_TILE === 0));
+      if (canThink) {
+        enemy.aiState = 'unstuck-thinking';
+        enemy.aiThinkUntilTick = this.createTimerReadyTick(0.3);
+        enemy.moving = false;
+        return;
+      }
+      enemy.aiLastRoundedX = roundedX;
+      enemy.aiLastRoundedY = roundedY;
     });
   }
 
-  private chooseEnemyRotation(enemy: TankState, blocked = false): SimulationRotation {
-    const base = this.getBasePosition();
-    const towardBase: SimulationRotation =
-      Math.abs(base.x - enemy.x) > Math.abs(base.y - enemy.y)
-        ? base.x < enemy.x ? 270 : 90
-        : 180;
-    if (!blocked && this.random.next() < 0.55) {
-      return towardBase;
+  private scheduleEnemyFire(enemy: TankState): void {
+    const milliseconds = this.random.number(0, 1500);
+    enemy.aiFireAtTick =
+      this.currentTick +
+      Math.floor(milliseconds / 1000 * this.tickRate) +
+      2;
+  }
+
+  private createTimerReadyTick(durationSeconds: number): number {
+    return (
+      this.currentTick +
+      Math.floor(durationSeconds * this.tickRate) +
+      2
+    );
+  }
+
+  private getNextEnemyRotation(enemy: TankState): SimulationRotation {
+    if (this.random.probability(30)) {
+      return this.getRotationTowardsBase(enemy);
     }
-    const rotations: SimulationRotation[] = [0, 90, 180, 270];
+    if (this.random.probability(10)) return 0;
+    const rotations: SimulationRotation[] = [180, 270, 90];
     return rotations[this.random.integer(rotations.length)];
   }
 
-  private fire(tank: TankState, ownerParty: 'player' | 'enemy'): void {
-    if (this.bullets.some((bullet) =>
-      bullet.ownerParty === ownerParty && bullet.ownerIndex === tank.partyIndex,
-    )) {
-      return;
+  private getRotationTowardsBase(enemy: TankState): SimulationRotation {
+    const base = this.getBasePosition();
+    const deltaX = base.x - enemy.x;
+    const deltaY = base.y - enemy.y;
+    const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (magnitude === 0) return 180;
+    const x = deltaX / magnitude;
+    const y = deltaY / magnitude;
+    const maxValue = Math.max(x, y);
+    if (Math.abs(x) === Math.abs(maxValue)) {
+      if (x > 0) return 90;
+      if (x < 0) return 270;
     }
-    const vector = directionVector(tank.rotation);
+    return 180;
+  }
+
+  private fire(
+    tank: TankState,
+    ownerParty: 'player' | 'enemy',
+  ): boolean {
+    const attributes = getTankFireAttributes(ownerParty, tank.tier);
+    const activeBulletCount = this.bullets.filter((bullet) =>
+      bullet.ownerParty === ownerParty && bullet.ownerIndex === tank.partyIndex,
+    ).length;
+    if (
+      activeBulletCount >= attributes.maxCount ||
+      this.currentTick < tank.nextFireTick
+    ) {
+      return false;
+    }
+    const rect = createBulletRect(tank);
     this.bullets.push({
       id: this.nextBulletId++,
       ownerParty,
       ownerIndex: tank.partyIndex,
       rotation: tank.rotation,
-      speed: tank.tier === 'b' || tank.tier === 'c' ? 900 : BULLET_SPEED,
-      x: tank.x + tank.width / 2 - BULLET_SIZE / 2 + vector.x * tank.width / 2,
-      y: tank.y + tank.height / 2 - BULLET_SIZE / 2 + vector.y * tank.height / 2,
-      width: BULLET_SIZE,
-      height: BULLET_SIZE,
+      speed: attributes.speed,
+      wallDamage: attributes.wallDamage,
+      ...rect,
     });
     tank.fireSeq += 1;
+    tank.fireX = tank.x;
+    tank.fireY = tank.y;
+    tank.fireRotation = tank.rotation;
+    tank.nextFireTick =
+      this.currentTick + Math.max(1, Math.ceil(attributes.rapidDelay * this.tickRate));
+    return true;
   }
 
   private updateBullets(): void {
+    const previousById = new Map<number, BulletState>();
     for (let index = this.bullets.length - 1; index >= 0; index -= 1) {
       const bullet = this.bullets[index];
+      const previous = { ...bullet };
+      previousById.set(bullet.id, previous);
       const vector = directionVector(bullet.rotation);
       bullet.x += vector.x * bullet.speed * this.deltaTime;
       bullet.y += vector.y * bullet.speed * this.deltaTime;
-      if (
-        !this.insideField(bullet) ||
-        this.hitTerrain(bullet) ||
-        this.hitBase(bullet) ||
-        this.hitTank(bullet)
-      ) {
+      const impact = this.findBulletImpact(previous, bullet);
+      if (impact !== null) {
+        bullet.x = previous.x + (bullet.x - previous.x) * impact.time;
+        bullet.y = previous.y + (bullet.y - previous.y) * impact.time;
+        this.applyBulletImpact(bullet, impact);
         this.bullets.splice(index, 1);
       }
     }
+    this.resolveBulletCollisions(previousById);
   }
 
-  private hitTerrain(bullet: BulletState): boolean {
+  private findBulletImpact(
+    previous: BulletState,
+    current: BulletState,
+  ): BulletImpact | null {
+    let closest: BulletImpact | null = this.getBorderImpact(previous, current);
+    const consider = (impact: BulletImpact): void => {
+      if (closest === null || impact.time < closest.time) {
+        closest = impact;
+      }
+    };
+
     for (const cell of Array.from(this.terrain.values())) {
-      if (!overlaps(bullet, cell)) continue;
-      if (cell.destructible) this.terrain.delete(cell.key);
-      return true;
+      const time = sweptCollisionTime(previous, current, cell);
+      if (time !== null) consider({ time, kind: 'terrain', cell });
     }
-    return false;
+
+    if (this.baseAlive) {
+      const time = sweptCollisionTime(previous, current, this.getBaseHeartRect());
+      if (time !== null) consider({ time, kind: 'base' });
+    }
+
+    const targets =
+      previous.ownerParty === 'player'
+        ? [
+          ...Array.from(this.enemies.values()),
+          ...this.players.filter((player) =>
+            player.partyIndex !== previous.ownerIndex,
+          ),
+        ]
+        : this.players;
+    for (const tank of targets) {
+      if (!tank.alive) continue;
+      const time = sweptCollisionTime(previous, current, tank);
+      if (time !== null) consider({ time, kind: 'tank', tank });
+    }
+
+    return closest;
   }
 
-  private hitTank(bullet: BulletState): boolean {
+  private applyBulletImpact(bullet: BulletState, impact: BulletImpact): void {
+    if (impact.kind === 'terrain') {
+      this.destroyTerrainAtImpact(bullet, impact.cell);
+      return;
+    }
+    if (impact.kind === 'base') {
+      this.baseAlive = false;
+      return;
+    }
+    if (impact.kind !== 'tank') {
+      return;
+    }
+
+    const tank = impact.tank;
+    if (bullet.ownerParty === 'player' && tank.partyIndex === bullet.ownerIndex) {
+      return;
+    }
+    if (
+      bullet.ownerParty === 'player' &&
+      this.enemies.get(tank.partyIndex) === tank
+    ) {
+      tank.health -= 1;
+      if (tank.health <= 0) {
+        this.enemies.delete(tank.partyIndex);
+        const player = bullet.ownerIndex as SimulationPlayerIndex;
+        this.scores[player] += scoreForTier(tank.tier);
+        if (tank.hasDrop) this.spawnPowerup();
+        this.nextEnemySpawnTick = Math.min(
+          this.nextEnemySpawnTick,
+          this.currentTick + 3 * this.tickRate,
+        );
+      }
+      return;
+    }
     if (bullet.ownerParty === 'player') {
-      for (const enemy of Array.from(this.enemies.values())) {
-        if (!overlaps(bullet, enemy)) continue;
-        enemy.health -= 1;
-        if (enemy.health <= 0) {
-          this.enemies.delete(enemy.partyIndex);
-          const player = bullet.ownerIndex as SimulationPlayerIndex;
-          this.scores[player] += scoreForTier(enemy.tier);
-          if (enemy.hasDrop) this.spawnPowerup();
-          this.nextEnemySpawnTick = Math.min(this.nextEnemySpawnTick, this.currentTick + 3 * this.tickRate);
-        }
-        return true;
+      if (this.currentTick >= tank.stunnedUntilTick) {
+        tank.stunnedUntilTick =
+          this.currentTick + Math.ceil(5 * this.tickRate);
       }
-      const friend = this.players.find((player) =>
-        player.partyIndex !== bullet.ownerIndex && player.alive && overlaps(bullet, player),
-      );
-      if (friend !== undefined) {
-        friend.stunnedUntilTick = this.currentTick + Math.ceil(1.5 * this.tickRate);
-        return true;
-      }
-      return false;
+      return;
     }
-    const player = this.players.find((candidate) => candidate.alive && overlaps(bullet, candidate));
-    if (player === undefined) return false;
-    if (this.currentTick >= player.shieldUntilTick) this.killPlayer(player);
-    return true;
+    if (this.currentTick >= tank.shieldUntilTick) this.killPlayer(tank);
   }
 
-  private hitBase(bullet: BulletState): boolean {
-    if (!this.baseAlive) return false;
-    const base = this.getBasePosition();
-    if (!overlaps(bullet, { ...base, width: LARGE_TILE, height: LARGE_TILE })) return false;
-    this.baseAlive = false;
-    return true;
+  private destroyTerrainAtImpact(
+    bullet: BulletState,
+    struck: TerrainCell,
+  ): void {
+    if (!struck.destructible && bullet.wallDamage < 2) {
+      return;
+    }
+    const vertical =
+      bullet.rotation === 0 || bullet.rotation === 180;
+    const struckAxis = vertical ? struck.y : struck.x;
+    const bulletCenter = vertical
+      ? bullet.x + bullet.width / 2
+      : bullet.y + bullet.height / 2;
+    const maxCells = struck.type === 'brick' ? bullet.wallDamage * 4 : 2;
+    const candidates = Array.from(this.terrain.values())
+      .filter((cell) =>
+        cell.type === struck.type &&
+        (vertical ? cell.y : cell.x) === struckAxis &&
+        Math.abs(
+          (vertical ? cell.x + cell.width / 2 : cell.y + cell.height / 2) -
+          bulletCenter,
+        ) < LARGE_TILE / 2,
+      )
+      .sort((left, right) =>
+        Math.abs(
+          (vertical ? left.x + left.width / 2 : left.y + left.height / 2) -
+          bulletCenter,
+        ) -
+        Math.abs(
+          (vertical ? right.x + right.width / 2 : right.y + right.height / 2) -
+          bulletCenter,
+        ),
+      );
+
+    const selected: TerrainCell[] = [struck];
+    for (const candidate of candidates) {
+      if (selected.includes(candidate) || selected.length >= maxCells) continue;
+      const touchesSelected = selected.some((cell) =>
+        vertical
+          ? Math.abs(cell.x - candidate.x) === cell.width
+          : Math.abs(cell.y - candidate.y) === cell.height,
+      );
+      if (touchesSelected) selected.push(candidate);
+    }
+    selected.slice(0, maxCells).forEach((cell) => this.destroyTerrainCell(cell));
+  }
+
+  private destroyTerrainCell(cell: TerrainCell): void {
+    this.terrain.delete(cell.key);
+    if (
+      cell.type !== 'brick' ||
+      !Array.from(this.terrain.values()).some((candidate) =>
+        candidate.type === 'brick' && candidate.movementKey === cell.movementKey,
+      )
+    ) {
+      this.movementTerrain.delete(cell.movementKey);
+    }
+  }
+
+  private resolveBulletCollisions(
+    previousById: Map<number, BulletState>,
+  ): void {
+    const removed = new Set<number>();
+    for (let leftIndex = 0; leftIndex < this.bullets.length; leftIndex += 1) {
+      const left = this.bullets[leftIndex];
+      if (removed.has(left.id)) continue;
+      for (let rightIndex = leftIndex + 1; rightIndex < this.bullets.length; rightIndex += 1) {
+        const right = this.bullets[rightIndex];
+        if (
+          removed.has(right.id) ||
+          left.ownerParty === right.ownerParty
+        ) {
+          continue;
+        }
+        const leftPrevious = previousById.get(left.id) ?? left;
+        const rightPrevious = previousById.get(right.id) ?? right;
+        const relativeCurrent = {
+          ...left,
+          x:
+            leftPrevious.x +
+            (left.x - leftPrevious.x) -
+            (right.x - rightPrevious.x),
+          y:
+            leftPrevious.y +
+            (left.y - leftPrevious.y) -
+            (right.y - rightPrevious.y),
+        };
+        if (
+          !overlaps(left, right) &&
+          sweptCollisionTime(
+            leftPrevious,
+            relativeCurrent,
+            rightPrevious,
+          ) === null
+        ) {
+          continue;
+        }
+        removed.add(left.id);
+        removed.add(right.id);
+        break;
+      }
+    }
+    if (removed.size > 0) {
+      for (let index = this.bullets.length - 1; index >= 0; index -= 1) {
+        if (removed.has(this.bullets[index].id)) this.bullets.splice(index, 1);
+      }
+    }
   }
 
   private killPlayer(player: TankState): void {
@@ -470,20 +764,82 @@ export class BattleCitySimulation {
 
   private tryMove(tank: TankState, rotation: SimulationRotation, distance: number): boolean {
     const vector = directionVector(rotation);
-    const candidate = {
-      ...tank,
-      x: clamp(tank.x + vector.x * distance, 0, this.fieldWidth - tank.width),
-      y: clamp(tank.y + vector.y * distance, 0, this.fieldHeight - tank.height),
-    };
-    if (candidate.x === tank.x && candidate.y === tank.y) return false;
-    for (const cell of Array.from(this.terrain.values())) {
-      if (overlaps(candidate, cell)) return false;
+    let allowedDistance = distance;
+    let collidedWithWall = false;
+    const walls: RectState[] = [
+      ...Array.from(this.movementTerrain.values()),
+      this.getBaseHeartRect(),
+    ];
+    for (const wall of walls) {
+      const collisionDistance = getForwardCollisionDistance(
+        tank,
+        wall,
+        rotation,
+        allowedDistance,
+      );
+      if (collisionDistance !== null) {
+        allowedDistance = collisionDistance;
+        collidedWithWall = true;
+      }
     }
     const tanks = [...this.players, ...Array.from(this.enemies.values())];
-    if (tanks.some((other) => other !== tank && other.alive && overlaps(candidate, other))) return false;
-    tank.x = candidate.x;
-    tank.y = candidate.y;
-    return true;
+    for (const other of tanks) {
+      if (other === tank || !other.alive) continue;
+      const collisionDistance = getForwardCollisionDistance(
+        tank,
+        other,
+        rotation,
+        allowedDistance,
+      );
+      if (collisionDistance !== null) {
+        allowedDistance = collisionDistance;
+        collidedWithWall = false;
+      }
+    }
+    const nextX = clamp(
+      tank.x + vector.x * allowedDistance,
+      0,
+      this.fieldWidth - tank.width,
+    );
+    const nextY = clamp(
+      tank.y + vector.y * allowedDistance,
+      0,
+      this.fieldHeight - tank.height,
+    );
+    const moved = nextX !== tank.x || nextY !== tank.y;
+    tank.x = nextX;
+    tank.y = nextY;
+    if (collidedWithWall) {
+      if (vector.x !== 0) tank.x = snapToGrid(tank.x, MEDIUM_TILE);
+      else tank.y = snapToGrid(tank.y, MEDIUM_TILE);
+    }
+    return moved;
+  }
+
+  private rotateTank(tank: TankState, rotation: SimulationRotation): void {
+    if (tank.rotation === rotation) return;
+    if (rotation === 0 || rotation === 180) {
+      const targetX = snapToGrid(tank.x, MEDIUM_TILE);
+      if (targetX !== tank.x) {
+        this.tryMove(
+          tank,
+          targetX > tank.x ? 90 : 270,
+          Math.abs(targetX - tank.x),
+        );
+      }
+    } else {
+      const targetY = snapToGrid(tank.y, MEDIUM_TILE);
+      if (targetY !== tank.y) {
+        this.tryMove(
+          tank,
+          targetY > tank.y ? 180 : 0,
+          Math.abs(targetY - tank.y),
+        );
+      }
+    }
+    tank.x = clamp(tank.x, 0, this.fieldWidth - tank.width);
+    tank.y = clamp(tank.y, 0, this.fieldHeight - tank.height);
+    tank.rotation = rotation;
   }
 
   private createFrame(): SimulationHostFramePacket {
@@ -497,9 +853,9 @@ export class BattleCitySimulation {
       deltaY: tank.y - tank.previousY,
       alive: tank.alive,
       fireSeq: tank.fireSeq,
-      fireX: tank.x,
-      fireY: tank.y,
-      fireRotation: tank.rotation,
+      fireX: tank.fireX,
+      fireY: tank.fireY,
+      fireRotation: tank.fireRotation,
     }));
     const enemies: SimulationEnemyFrame[] = Array.from(this.enemies.values()).map((tank) => ({
       partyIndex: tank.partyIndex,
@@ -511,6 +867,9 @@ export class BattleCitySimulation {
       deltaY: tank.y - tank.previousY,
       alive: tank.alive,
       fireSeq: tank.fireSeq,
+      fireX: tank.fireX,
+      fireY: tank.fireY,
+      fireRotation: tank.fireRotation,
     }));
     return {
       type: 'webrtc-host-frame',
@@ -531,19 +890,43 @@ export class BattleCitySimulation {
 
   private createTerrain(): void {
     for (const region of this.map.terrain?.regions ?? []) {
-      if (region.type === 'grass' || region.type === 'ice') continue;
-      for (let y = 0; y < region.height; y += TILE) {
-        for (let x = 0; x < region.width; x += TILE) {
+      const type = region.type.toLowerCase();
+      const isBrick = [
+        'brick',
+        'menu-brick',
+        'inverse-brick',
+        'blue-brick',
+      ].includes(type);
+      if (!isBrick && type !== 'steel' && type !== 'water') continue;
+      const collisionSize = isBrick ? TILE : MEDIUM_TILE;
+      for (let y = 0; y < region.height; y += collisionSize) {
+        for (let x = 0; x < region.width; x += collisionSize) {
           const cellX = region.x + x;
           const cellY = region.y + this.contentOffsetY + y;
+          const movementX = Math.floor(cellX / MEDIUM_TILE) * MEDIUM_TILE;
+          const movementY = Math.floor(cellY / MEDIUM_TILE) * MEDIUM_TILE;
+          const movementKey = `${movementX}:${movementY}`;
+          if (!this.movementTerrain.has(movementKey)) {
+            this.movementTerrain.set(movementKey, {
+              key: movementKey,
+              type: isBrick ? 'brick' : type as 'steel' | 'water',
+              x: movementX,
+              y: movementY,
+              width: MEDIUM_TILE,
+              height: MEDIUM_TILE,
+            });
+          }
+          if (type === 'water') continue;
           const key = `${cellX}:${cellY}`;
           this.terrain.set(key, {
             key,
-            destructible: region.type === 'brick',
+            type: isBrick ? 'brick' : 'steel',
+            destructible: isBrick,
+            movementKey,
             x: cellX,
             y: cellY,
-            width: Math.min(TILE, region.width - x),
-            height: Math.min(TILE, region.height - y),
+            width: Math.min(collisionSize, region.width - x),
+            height: Math.min(collisionSize, region.height - y),
           });
         }
       }
@@ -554,7 +937,7 @@ export class BattleCitySimulation {
     const base = this.getBasePosition();
     const defaults = [
       { x: Math.max(0, base.x - 96), y: this.fieldHeight - LARGE_TILE },
-      { x: Math.min(this.fieldWidth - LARGE_TILE, base.x + 96), y: this.fieldHeight - LARGE_TILE },
+      { x: Math.min(this.fieldWidth - LARGE_TILE, base.x + 160), y: this.fieldHeight - LARGE_TILE },
     ];
     return defaults.map((fallback, index) => {
       const location = this.map.spawn?.player?.locations?.[index];
@@ -579,12 +962,49 @@ export class BattleCitySimulation {
     if (this.map.base !== undefined) {
       return { x: this.map.base.x, y: this.map.base.y + this.contentOffsetY };
     }
-    return { x: Math.floor((this.fieldWidth - LARGE_TILE) / 2), y: this.fieldHeight - LARGE_TILE };
+    return {
+      x: Math.floor((this.fieldWidth - BASE_WIDTH) / 2),
+      y: this.fieldHeight - BASE_HEIGHT,
+    };
   }
 
-  private insideField(rect: RectState): boolean {
-    return rect.x + rect.width >= 0 && rect.y + rect.height >= 0 &&
-      rect.x <= this.fieldWidth && rect.y <= this.fieldHeight;
+  private getBaseHeartRect(): RectState {
+    const base = this.getBasePosition();
+    return {
+      x: base.x + BASE_HEART_OFFSET,
+      y: base.y + BASE_HEART_OFFSET,
+      width: LARGE_TILE,
+      height: LARGE_TILE,
+    };
+  }
+
+  private getBorderImpact(
+    previous: BulletState,
+    current: BulletState,
+  ): BulletImpact | null {
+    const deltaX = current.x - previous.x;
+    const deltaY = current.y - previous.y;
+    let time: number | null = null;
+    if (deltaX < 0 && current.x < 0) {
+      time = (0 - previous.x) / deltaX;
+    } else if (
+      deltaX > 0 &&
+      current.x + current.width > this.fieldWidth
+    ) {
+      time =
+        (this.fieldWidth - previous.x - previous.width) / deltaX;
+    } else if (deltaY < 0 && current.y < 0) {
+      time = (0 - previous.y) / deltaY;
+    } else if (
+      deltaY > 0 &&
+      current.y + current.height > this.fieldHeight
+    ) {
+      time =
+        (this.fieldHeight - previous.y - previous.height) / deltaY;
+    }
+    return time === null
+      ? null
+      : { time: clamp(time, 0, 1), kind: 'border' };
   }
 }
 
@@ -606,6 +1026,152 @@ function isRotation(value: SimulationRotation | null): boolean {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function snapToGrid(value: number, size: number): number {
+  return Math.round(value / size) * size;
+}
+
+function getForwardCollisionDistance(
+  mover: RectState,
+  obstacle: RectState,
+  rotation: SimulationRotation,
+  maxDistance: number,
+): number | null {
+  if (overlaps(mover, obstacle)) return null;
+  const horizontalOverlap =
+    mover.x < obstacle.x + obstacle.width &&
+    mover.x + mover.width > obstacle.x;
+  const verticalOverlap =
+    mover.y < obstacle.y + obstacle.height &&
+    mover.y + mover.height > obstacle.y;
+  let distance: number | null = null;
+  if (rotation === 0 && horizontalOverlap && obstacle.y + obstacle.height <= mover.y) {
+    distance = mover.y - obstacle.y - obstacle.height;
+  } else if (
+    rotation === 90 &&
+    verticalOverlap &&
+    obstacle.x >= mover.x + mover.width
+  ) {
+    distance = obstacle.x - mover.x - mover.width;
+  } else if (
+    rotation === 180 &&
+    horizontalOverlap &&
+    obstacle.y >= mover.y + mover.height
+  ) {
+    distance = obstacle.y - mover.y - mover.height;
+  } else if (
+    rotation === 270 &&
+    verticalOverlap &&
+    obstacle.x + obstacle.width <= mover.x
+  ) {
+    distance = mover.x - obstacle.x - obstacle.width;
+  }
+  return distance !== null && distance <= maxDistance ? distance : null;
+}
+
+function getTankFireAttributes(
+  ownerParty: 'player' | 'enemy',
+  tier: string,
+): {
+  speed: number;
+  maxCount: number;
+  rapidDelay: number;
+  wallDamage: 1 | 2;
+} {
+  if (ownerParty === 'enemy') {
+    return {
+      speed: tier === 'c' ? 900 : BULLET_SPEED,
+      maxCount: 1,
+      rapidDelay: 0.16,
+      wallDamage: 1,
+    };
+  }
+  return {
+    speed: tier === 'a' ? BULLET_SPEED : 900,
+    maxCount: tier === 'c' || tier === 'd' ? 2 : 1,
+    rapidDelay: tier === 'c' || tier === 'd' ? 0.04 : 0.16,
+    wallDamage: tier === 'd' ? 2 : 1,
+  };
+}
+
+function createBulletRect(tank: TankState): RectState {
+  if (tank.rotation === 0) {
+    return {
+      x: tank.x + (tank.width - BULLET_WIDTH) / 2,
+      y: tank.y,
+      width: BULLET_WIDTH,
+      height: BULLET_HEIGHT,
+    };
+  }
+  if (tank.rotation === 90) {
+    return {
+      x: tank.x + tank.width - BULLET_HEIGHT,
+      y: tank.y + (tank.height - BULLET_WIDTH) / 2,
+      width: BULLET_HEIGHT,
+      height: BULLET_WIDTH,
+    };
+  }
+  if (tank.rotation === 180) {
+    return {
+      x: tank.x + (tank.width - BULLET_WIDTH) / 2,
+      y: tank.y + tank.height - BULLET_HEIGHT,
+      width: BULLET_WIDTH,
+      height: BULLET_HEIGHT,
+    };
+  }
+  return {
+    x: tank.x,
+    y: tank.y + (tank.height - BULLET_WIDTH) / 2,
+    width: BULLET_HEIGHT,
+    height: BULLET_WIDTH,
+  };
+}
+
+function sweptCollisionTime(
+  previous: RectState,
+  current: RectState,
+  target: RectState,
+): number | null {
+  if (overlaps(previous, target)) return 0;
+  const deltaX = current.x - previous.x;
+  const deltaY = current.y - previous.y;
+  if (deltaX > 0) {
+    if (
+      previous.y < target.y + target.height &&
+      previous.y + previous.height > target.y
+    ) {
+      const time =
+        (target.x - previous.x - previous.width) / deltaX;
+      return time >= 0 && time <= 1 ? time : null;
+    }
+  } else if (deltaX < 0) {
+    if (
+      previous.y < target.y + target.height &&
+      previous.y + previous.height > target.y
+    ) {
+      const time = (target.x + target.width - previous.x) / deltaX;
+      return time >= 0 && time <= 1 ? time : null;
+    }
+  } else if (deltaY > 0) {
+    if (
+      previous.x < target.x + target.width &&
+      previous.x + previous.width > target.x
+    ) {
+      const time =
+        (target.y - previous.y - previous.height) / deltaY;
+      return time >= 0 && time <= 1 ? time : null;
+    }
+  } else if (deltaY < 0) {
+    if (
+      previous.x < target.x + target.width &&
+      previous.x + previous.width > target.x
+    ) {
+      const time = (target.y + target.height - previous.y) / deltaY;
+      return time >= 0 && time <= 1 ? time : null;
+    }
+  }
+  return null;
 }
 
 function normalizeTier(value: string): string {

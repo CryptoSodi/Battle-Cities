@@ -16,6 +16,7 @@ export class MainGameOverScene extends GameScene {
 
   protected setup({ audioManager, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
+    clearMultiplayerRuntime();
 
     this.timer.done.addListener(this.handleDone);
 
@@ -51,7 +52,6 @@ export class MainGameOverScene extends GameScene {
 
   private finish(): void {
     this.audioManager.stopAll();
-    clearMultiplayerRuntime();
     this.navigator.clearAndPush(GameSceneType.MainHighscore);
   }
 }

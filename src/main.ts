@@ -38,7 +38,10 @@ import { getPhantomProvider } from './wallet';
 import { apiFetch, getApiUrl } from './network/api';
 import { MagicBlockMovementSync } from './network/magicblock';
 import { WebRtcHostMatchSync } from './network/webrtc';
-import { readMultiplayerRuntime } from './network/multiplayerRuntime';
+import {
+  clearPlayerRuntimeOnReload,
+  readMultiplayerRuntime,
+} from './network/multiplayerRuntime';
 
 import * as config from './config';
 
@@ -588,6 +591,7 @@ const session = new Session();
 const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
 const magicBlockMovement = new MagicBlockMovementSync(playerIdentity);
+clearPlayerRuntimeOnReload();
 const multiplayerRuntime = readMultiplayerRuntime();
 const webRtcMatch = new WebRtcHostMatchSync(multiplayerRuntime);
 

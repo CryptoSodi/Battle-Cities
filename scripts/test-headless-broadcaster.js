@@ -10,6 +10,188 @@ const map = JSON.parse(
   readFileSync(resolve(__dirname, '..', 'data', 'maps', 'original', '01.json'), 'utf8'),
 );
 
+function createTestMap(overrides = {}) {
+  return {
+    version: 2,
+    field: { widthTiles: 20, heightTiles: 13 },
+    spawn: {
+      player: {
+        locations: [
+          { x: 64, y: 704 },
+          { x: 960, y: 704 },
+        ],
+      },
+      enemy: { locations: [], list: [] },
+    },
+    terrain: { regions: [] },
+    ...overrides,
+  };
+}
+
+function input(seq, direction, moving, fire) {
+  return {
+    type: 'webrtc-input',
+    player: 0,
+    seq,
+    tick: seq,
+    direction,
+    moving,
+    fire,
+    elapsedSeconds: seq / 60,
+  };
+}
+
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({ spawn: { enemy: { locations: [], list: [] } } }),
+    { seed: 1 },
+  );
+  const frame = simulation.step();
+  assert.deepStrictEqual(
+    frame.players.map(({ x, y }) => ({ x, y })),
+    [
+      { x: 480, y: 768 },
+      { x: 736, y: 768 },
+    ],
+    'default player spawns must match the engine base-container offsets',
+  );
+}
+
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({
+      spawn: {
+        player: {
+          locations: [
+            { x: 10, y: 100 },
+            { x: 960, y: 704 },
+          ],
+        },
+        enemy: { locations: [], list: [] },
+      },
+    }),
+    { seed: 2 },
+  );
+  simulation.acceptInput(input(1, 90, true, true));
+  const frame = simulation.step();
+  const player = frame.players[0];
+  const bullet = simulation.bullets[0];
+  assert.deepStrictEqual(
+    {
+      x: player.x,
+      y: player.y,
+      rotation: player.rotation,
+      fireX: player.fireX,
+      fireY: player.fireY,
+      fireRotation: player.fireRotation,
+    },
+    {
+      x: 13,
+      y: 96,
+      rotation: 90,
+      fireX: 10,
+      fireY: 100,
+      fireRotation: 0,
+    },
+    'players must fire before turning/moving and snap to the 32px movement grid',
+  );
+  assert.deepStrictEqual(
+    {
+      x: bullet.x,
+      y: bullet.y,
+      width: bullet.width,
+      height: bullet.height,
+      rotation: bullet.rotation,
+    },
+    { x: 36, y: 90, width: 12, height: 16, rotation: 0 },
+    'bullet geometry and muzzle placement must match Tank.fire',
+  );
+}
+
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({
+      spawn: {
+        player: {
+          locations: [
+            { x: 32, y: 96 },
+            { x: 960, y: 704 },
+          ],
+        },
+        enemy: { locations: [], list: [] },
+      },
+      terrain: {
+        regions: [
+          { type: 'brick', x: 160, y: 96, width: 32, height: 32 },
+        ],
+      },
+    }),
+    { seed: 3 },
+  );
+  simulation.acceptInput(input(1, 90, true, false));
+  let frame;
+  for (let tick = 0; tick < 24; tick += 1) frame = simulation.step();
+  assert.strictEqual(
+    frame.players[0].x,
+    96,
+    'movement must resolve to the wall contact edge instead of rejecting the whole tick',
+  );
+}
+
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({
+      spawn: {
+        player: {
+          locations: [
+            { x: 64, y: 192 },
+            { x: 960, y: 704 },
+          ],
+        },
+        enemy: { locations: [], list: [] },
+      },
+      terrain: {
+        regions: [
+          { type: 'water', x: 64, y: 96, width: 64, height: 32 },
+        ],
+      },
+    }),
+    { seed: 4 },
+  );
+  simulation.acceptInput(input(1, null, false, true));
+  for (let tick = 0; tick < 8; tick += 1) simulation.step();
+  assert.strictEqual(simulation.bullets.length, 1, 'water must not stop bullets');
+  assert.ok(simulation.bullets[0].y < 128, 'bullet must travel through water');
+}
+
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({
+      terrain: {
+        regions: [
+          { type: 'brick', x: 160, y: 96, width: 32, height: 32 },
+        ],
+      },
+    }),
+    { seed: 5 },
+  );
+  const cells = Array.from(simulation.terrain.values());
+  assert.strictEqual(cells.length, 4);
+  assert.strictEqual(simulation.movementTerrain.size, 1);
+  cells.slice(0, 3).forEach((cell) => simulation.destroyTerrainCell(cell));
+  assert.strictEqual(
+    simulation.movementTerrain.size,
+    1,
+    'a partially destroyed brick supertile must keep its movement collider',
+  );
+  simulation.destroyTerrainCell(cells[3]);
+  assert.strictEqual(
+    simulation.movementTerrain.size,
+    0,
+    'the movement collider must disappear after all four brick pieces are destroyed',
+  );
+}
+
 const left = new BattleCitySimulation(map, { seed: 12345 });
 const right = new BattleCitySimulation(map, { seed: 12345 });
 
@@ -32,4 +214,4 @@ for (let tick = 0; tick < 900; tick += 1) {
 
 assert.deepStrictEqual(left.getScores(), right.getScores());
 assert.strictEqual(left.tick, 900);
-console.log('headless broadcaster simulation determinism: ok');
+console.log('headless broadcaster simulation parity and determinism: ok');
