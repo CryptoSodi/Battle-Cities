@@ -13,7 +13,7 @@
     "start:prod2": "webpack-dev-server --open --config webpack/prod2.config.js",
     "broadcaster:build": "tsc -p tsconfig.broadcaster.json",
     "broadcaster:headless": "node scripts/headless-broadcaster-service.js",
-    "broadcaster:test": "npm run broadcaster:build && node scripts/test-headless-broadcaster.js",
+    "broadcaster:test": "npm run broadcaster:build && node scripts/test-engine-battle-city-simulation.js && node scripts/test-headless-broadcaster.js",
     "server:local": "cargo run --manifest-path LocalServer/Cargo.toml",
     "test": "ava --verbose",
     "test:watch": "ava --verbose --watch"

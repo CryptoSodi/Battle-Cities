@@ -1,5 +1,6 @@
 export type SimulationRotation = 0 | 90 | 180 | 270;
 export type SimulationPlayerIndex = 0 | 1;
+export type SimulationTankTier = 'a' | 'b' | 'c' | 'd';
 
 export type SimulationPowerupType =
   | 'defence'
@@ -24,6 +25,7 @@ export interface SimulationInputPacket {
 
 export interface SimulationPlayerFrame {
   partyIndex: SimulationPlayerIndex;
+  tier?: SimulationTankTier;
   x: number;
   y: number;
   rotation: SimulationRotation;
@@ -150,5 +152,14 @@ export interface SimulationMapDto {
 export interface SimulationOptions {
   seed: number;
   tickRate?: number;
+  level?: number;
   disableEnemyShooting?: boolean;
+  initialPlayerTiers?: [SimulationTankTier, SimulationTankTier];
+  runBoosts?: {
+    hull?: number;
+    armor?: number;
+    engine?: number;
+    salvage?: number;
+  };
+  extraLives?: number;
 }

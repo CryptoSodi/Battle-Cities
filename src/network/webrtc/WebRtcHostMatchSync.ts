@@ -3,12 +3,14 @@ import type { GameUpdateArgs } from '../../game';
 import { EnemyTank, PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
 import { PowerupType } from '../../powerup';
+import { TankTier } from '../../tank';
 
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
 import { getApiUrl } from '../api';
 import { getApiBaseUrl } from '../api';
 import type { MultiplayerRuntimeConfig } from '@battlecities/shared';
+import { applyRemotePlayerInput } from './applyRemotePlayerInput';
 
 const INPUT_HEARTBEAT_MS = 150;
 const REMOTE_INPUT_TIMEOUT_MS = 500;
@@ -52,6 +54,7 @@ interface WebRtcEnemyFrame {
 
 interface WebRtcPlayerFrame {
   partyIndex: 0 | 1;
+  tier: TankTier;
   x: number;
   y: number;
   rotation: Rotation;
@@ -1301,25 +1304,10 @@ export class WebRtcHostMatchSync {
 
     const lastFireSeq =
       this.lastAppliedRemoteFireSeqs.get(tank.partyIndex) ?? 0;
-    if (input.fire && input.seq > lastFireSeq) {
-      this.lastAppliedRemoteFireSeqs.set(tank.partyIndex, input.seq);
-      tank.fire();
-    }
-
-    if (tank.isStunned()) {
-      tank.idle(false);
-      return;
-    }
-
-    if (input.direction !== null) {
-      tank.rotate(input.direction);
-    }
-    if (input.moving && input.direction !== null) {
-      tank.move(deltaTime);
-      return;
-    }
-
-    tank.idle();
+    this.lastAppliedRemoteFireSeqs.set(
+      tank.partyIndex,
+      applyRemotePlayerInput(tank, input, deltaTime, lastFireSeq),
+    );
   }
 
   private readInput(updateArgs: GameUpdateArgs): {
@@ -1458,6 +1446,7 @@ export class WebRtcHostMatchSync {
 
     return {
       partyIndex: tank.partyIndex as 0 | 1,
+      tier: tank.type.tier,
       x: tank.position.x,
       y: tank.position.y,
       rotation: tank.rotation,
@@ -1595,6 +1584,7 @@ export class WebRtcHostMatchSync {
       }
       tank.setNetworkControlled(true);
       ticks.splice(0, MAX_PLAYER_TICKS_PER_UPDATE).forEach((frame) => {
+        tank.setNetworkTier(frame.tier ?? TankTier.A);
         tank.applyNetworkMovement(
           frame.rotation,
           frame.moving,
@@ -1646,6 +1636,7 @@ export class WebRtcHostMatchSync {
         return;
       }
       tank.setNetworkControlled(true);
+      tank.setNetworkTier(frame.tier ?? TankTier.A);
       tank.applyNetworkMovement(
         frame.rotation,
         frame.moving,

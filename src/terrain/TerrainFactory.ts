@@ -1,16 +1,14 @@
 import { Rect, Size, Vector } from '../core';
-import {
-  TerrainTile,
-  BlueBrickTerrainTile,
-  BrickSuperTerrainTile,
-  BrickTerrainTile,
-  IceTerrainTile,
-  InverseBrickTerrainTile,
-  JungleTerrainTile,
-  MenuBrickTerrainTile,
-  SteelTerrainTile,
-  WaterTerrainTile,
-} from '../gameObjects';
+import { TerrainTile } from '../gameObjects/TerrainTile';
+import { BlueBrickTerrainTile } from '../gameObjects/terrain/BlueBrickTerrainTile';
+import { BrickSuperTerrainTile } from '../gameObjects/terrain/BrickSuperTerrainTile';
+import { BrickTerrainTile } from '../gameObjects/terrain/BrickTerrainTile';
+import { IceTerrainTile } from '../gameObjects/terrain/IceTerrainTile';
+import { InverseBrickTerrainTile } from '../gameObjects/terrain/InverseBrickTerrainTile';
+import { JungleTerrainTile } from '../gameObjects/terrain/JungleTerrainTile';
+import { MenuBrickTerrainTile } from '../gameObjects/terrain/MenuBrickTerrainTile';
+import { SteelTerrainTile } from '../gameObjects/terrain/SteelTerrainTile';
+import { WaterTerrainTile } from '../gameObjects/terrain/WaterTerrainTile';
 import * as config from '../config';
 
 import { TerrainRegionConfig } from './TerrainRegionConfig';

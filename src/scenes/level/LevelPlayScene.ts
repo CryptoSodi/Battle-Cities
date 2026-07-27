@@ -21,14 +21,19 @@ import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
 import { EnemyMovementFrame, saveReplay } from '../../replay';
 import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
-import { TankDeathReason, TankTier } from '../../tank';
+import { TankTier } from '../../tank';
 import { TerrainFactory, TerrainRegionConfig, TerrainType } from '../../terrain';
 import { GameObject, ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
-import { LevelEventBus, LevelScript, LevelWorld } from '../../level';
 import {
-  LevelEnemyDiedEvent,
+  LevelEventBus,
+  LevelMatchLifecycle,
+  LevelScript,
+  LevelWorld,
+  prepareLevelSession,
+} from '../../level';
+import {
   LevelPlayerDiedEvent,
   LevelPowerupPickedEvent,
 } from '../../level/events';
@@ -66,6 +71,7 @@ const BASE_WALL_TERRAIN_REGIONS = [
 export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private world: LevelWorld;
   private eventBus: LevelEventBus;
+  private matchLifecycle: LevelMatchLifecycle;
   private session: Session;
   private inputManager: InputManager;
   private gameStorage: GameStorage;
@@ -270,10 +276,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.inputManager = inputManager;
     this.session = session;
-    this.session.startLevelStats(
+    prepareLevelSession(
+      this.session,
       this.params.mapConfig.getEnemySpawnList().length,
     );
-    this.applyRunExtraLives();
 
     const playerSpawnPositions = mapConfig.getPlayerSpawnPositions();
     this.initialCameraTarget =
@@ -339,8 +345,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.audioScript = new LevelAudioScript();
     this.minimapScript = new LevelMinimapScript();
-    this.baseScript = new LevelBaseScript();
-    this.enemyScript = new LevelEnemyScript();
+    const isWebRtcClient =
+      this.isWebRtcMatch && !this.isWebRtcBroadcaster;
+    this.baseScript = new LevelBaseScript(this.isWebRtcMatch);
+    this.enemyScript = new LevelEnemyScript(isWebRtcClient);
     this.enemyScript.setReplayEnemyTraces(replay?.enemyTraces ?? null);
     this.explosionScript = new LevelExplosionScript();
     this.gameOverScript = new LevelGameOverScript();
@@ -351,7 +359,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.playerOverScript = new LevelPlayerOverScript();
     this.playerScript = new LevelPlayerScript();
     this.pointsScript = new LevelPointsScript();
-    this.powerupScript = new LevelPowerupScript();
+    this.powerupScript = new LevelPowerupScript({
+      isWebRtcClient,
+    });
     if (replay !== undefined) {
       this.powerupScript.setReplayPowerupSpawns(replay.powerupSpawns);
     } else if (this.isRecordingReplay) {
@@ -384,6 +394,17 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.allScripts.forEach((script) => {
       script.invokeInit(this.world, this.eventBus, session, mapConfig);
     });
+    this.matchLifecycle = new LevelMatchLifecycle(
+      this.eventBus,
+      this.session,
+      {
+        gameOver: this.gameOverScript,
+        pause: this.pauseScript,
+        playerOver: this.playerOverScript,
+        player: this.playerScript,
+        win: this.winScript,
+      },
+    );
 
     // When intro starts, enable only it and audio
     this.alwaysUpdateScripts = [this.audioScript, this.introScript];
@@ -413,8 +434,6 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     });
 
     this.eventBus.baseDied.addListener(this.handleBaseDied);
-    this.eventBus.enemyAllDied.addListener(this.handleEnemyAllDied);
-    this.eventBus.enemyDied.addListener(this.handleEnemyDied);
     this.eventBus.playerDied.addListener(this.handlePlayerDied);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
     this.eventBus.levelGameOverCompleted.addListener(
@@ -684,19 +703,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private applyLocalMatchEvents(updateArgs: GameUpdateArgs): void {
     updateArgs.magicBlockMovement.drainLocalMatchEvents().forEach((event) => {
       if (event.kind === 'base_died' && !this.session.isGameOver()) {
-        this.handleBaseDied();
+        this.eventBus.baseDied.notify(null);
         return;
       }
       if (event.kind === 'match_won') {
-        this.handleEnemyAllDied();
+        this.eventBus.enemyAllDied.notify(null);
         return;
       }
       if (event.kind === 'match_lost' && !this.session.isGameOver()) {
-        this.session.setGameOver();
-        this.pauseScript.disable();
-        this.playerScript.disable();
-        this.gameOverScript.enable();
-        this.winScript.disable();
+        this.matchLifecycle.loseMatch();
         return;
       }
       if (event.kind === 'powerup_picked') {
@@ -957,62 +972,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // then plays out).
     this.cameraFocus = event.centerPosition.clone();
     this.cameraFocusTimer.reset(config.CAMERA_DEATH_HOLD);
-    const playerSession = this.session.getPlayer(event.partyIndex);
-    playerSession.removeLife();
-
-    if (this.session.isAnyPlayerAlive()) {
-      // If other player is alive, but current player is dead - show
-      // notification for dead player that his game is over. Only the first
-      // player who dies gets this notification.
-      if (!playerSession.isAlive()) {
-        this.playerOverScript.setPlayerIndex(event.partyIndex);
-        this.playerOverScript.enable();
-      }
-      return;
-    }
-
-    // If both players die - game is lost
-
-    this.session.setGameOver();
-
-    this.pauseScript.disable();
-    this.playerScript.disable();
-    this.gameOverScript.enable();
-
-    // Game can be lost even after level is won if the base is killed
-    this.winScript.disable();
-  };
-
-  private handleEnemyAllDied = (): void => {
-    this.pauseScript.disable();
-    this.winScript.enable();
-  };
-
-  private handleEnemyDied = (event: LevelEnemyDiedEvent): void => {
-    this.session.recordEnemyDefeated();
-
-    // Only kills are awarded
-    if (event.reason === TankDeathReason.WipeoutPowerup) {
-      return;
-    }
-    if (event.hitterPartyIndex === null || event.hitterPartyIndex === undefined) {
-      return;
-    }
-
-    const playerSession = this.session.getPlayer(event.hitterPartyIndex);
-
-    playerSession.addKillPoints(event.type.tier);
   };
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
-    const playerSession = this.session.getPlayer(event.partyIndex);
-
-    playerSession.addPowerupPoints(event.type);
-
-    if (event.type === PowerupType.Life) {
-      playerSession.addLife();
-    }
-
     if (event.type === PowerupType.ZoomOut) {
       if (this.isWebRtcBroadcaster || this.isWebRtcObserver) {
         return;
@@ -1033,17 +995,6 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.cameraZoom = this.baseCameraZoom;
   };
 
-  private applyRunExtraLives(): void {
-    const extraLives = this.session.getRunConsumables().extraLives;
-
-    for (let index = 0; index < extraLives; index += 1) {
-      this.session.primaryPlayer.addLife();
-      if (this.session.isMultiplayer()) {
-        this.session.secondaryPlayer.addLife();
-      }
-    }
-  }
-
   private handleBaseDied = (): void => {
     this.addCameraTrauma(config.CAMERA_TRAUMA_BASE_DIED);
     this.requestHitStop(config.HIT_STOP_DEATH * config.CAMERA_SHAKE_INTENSITY);
@@ -1056,14 +1007,6 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       basePosition.y + config.BASE_DEFAULT_SIZE.height / 2,
     );
     this.cameraFocusTimer.stop();
-    this.session.setGameOver();
-
-    this.pauseScript.disable();
-    this.playerScript.disable();
-    this.gameOverScript.enable();
-
-    // Player can lose even after level is won
-    this.winScript.disable();
   };
 
   // Block user input after some delay when game is over

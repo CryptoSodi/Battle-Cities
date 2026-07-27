@@ -1,6 +1,7 @@
 import { Logger, Prng, Timer, Vector } from '../../core';
-import { GameUpdateArgs, Rotation } from '../../game';
-import { Tank } from '../../gameObjects';
+import { GameUpdateArgs } from '../../game/GameUpdateArgs';
+import { Rotation } from '../../game/Rotation';
+import { Tank } from '../../gameObjects/Tank';
 import * as config from '../../config';
 
 import { TankBehavior } from '../TankBehavior';

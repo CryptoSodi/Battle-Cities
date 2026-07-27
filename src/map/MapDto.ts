@@ -1,5 +1,5 @@
-import { TerrainType } from '../terrain';
-import { TankTier } from '../tank';
+import { TerrainType } from '../terrain/TerrainType';
+import { TankTier } from '../tank/TankTier';
 
 export interface MapDtoSpawnEnemyListItem {
   tier: TankTier;

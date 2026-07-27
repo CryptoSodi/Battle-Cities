@@ -3,6 +3,7 @@ import {
   RectPainter,
   SpriteAlignment,
   SpritePainter,
+  Subject,
   Timer,
   Vector,
 } from '../../core';
@@ -97,18 +98,28 @@ class PowerHotbarSlot extends GameObject {
 }
 
 export class LevelPlayerScript extends LevelScript {
+  public tankCreated = new Subject<PlayerTank>();
   private positions: Vector[] = [];
   private timers: Timer[] = [];
   private tanks: PlayerTank[] = [];
   private hotbar = new GameObject();
   private shopManager: ShopManager = null;
   private isReplaying = false;
+  private readonly headless: boolean;
+
+  public constructor(options: { headless?: boolean } = {}) {
+    super();
+    this.headless = options.headless === true;
+  }
 
   protected setup({ gameStorage, inputManager, session }: GameUpdateArgs): void {
-    this.shopManager = new ShopManager(gameStorage);
-    this.isReplaying = inputManager.isReplaying();
+    if (!this.headless) {
+      this.shopManager = new ShopManager(gameStorage);
+      this.isReplaying = inputManager.isReplaying();
+    }
     const runConsumables = session.getRunConsumables();
     if (
+      !this.headless &&
       !this.isReplaying &&
       session.getLevelNumber() === 1 &&
       runConsumables.powerupItems.length === 0 &&
@@ -143,7 +154,7 @@ export class LevelPlayerScript extends LevelScript {
       this.tanks.push(null);
     });
 
-    if (config.IS_DEV) {
+    if (config.IS_DEV && !this.headless) {
       const debugMenu = new DebugLevelPlayerMenu({
         top: 365,
       });
@@ -183,7 +194,7 @@ export class LevelPlayerScript extends LevelScript {
         14,
     );
     this.hotbar.setZIndex(500);
-    if (!isMobileTouchLayout()) {
+    if (!this.headless && !isMobileTouchLayout()) {
       this.world.sceneRoot.add(this.hotbar);
       this.renderHotbar();
     }
@@ -193,6 +204,10 @@ export class LevelPlayerScript extends LevelScript {
     this.timers.forEach((timer) => {
       timer.update(deltaTime);
     });
+
+    if (this.headless) {
+      return;
+    }
 
     const inputMethod = inputManager.getActiveMethod();
     if (inputMethod.isDownAny(LevelPlayInputContext.PowerOne)) {
@@ -284,6 +299,7 @@ export class LevelPlayerScript extends LevelScript {
     playerSession.setLevelSpawned();
 
     this.tanks[partyIndex] = tank;
+    this.tankCreated.notify(tank);
 
     this.world.addPlayerTank(partyIndex, tank);
   };

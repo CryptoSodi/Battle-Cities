@@ -21,15 +21,7 @@ import {
 const NETWORK_DEATH_COLLISION_GRACE = 0.2;
 
 export class LevelEnemyScript extends LevelScript {
-  private readonly isNetworkEnemyMirror = (() => {
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    return (
-      mode === 'match' ||
-      mode === 'local' ||
-      (mode === 'webrtc' && params.get('broadcaster') !== '1')
-    );
-  })();
+  private readonly isNetworkEnemyMirror: boolean;
   private list: TankType[] = [];
   private listIndex = 0;
   private aliveTanks: EnemyTank[] = [];
@@ -57,6 +49,16 @@ export class LevelEnemyScript extends LevelScript {
   // be before a listener registered eagerly elsewhere (see LevelPlayScene's
   // enemy-fire recording, which needs the tank to already exist).
   public tankCreated = new Subject<EnemyTank>();
+  private readonly headless: boolean;
+
+  public constructor(
+    isNetworkEnemyMirror = detectNetworkEnemyMirror(),
+    headless = false,
+  ) {
+    super();
+    this.isNetworkEnemyMirror = isNetworkEnemyMirror;
+    this.headless = headless;
+  }
 
   public setReplayEnemyTraces(
     traces: Record<number, EnemyMovementFrame[]> | null,
@@ -133,7 +135,7 @@ export class LevelEnemyScript extends LevelScript {
 
     this.freezeTimer.done.addListener(this.handleFreezeTimer);
 
-    if (config.IS_DEV) {
+    if (config.IS_DEV && !this.headless) {
       const debugMenu = new DebugLevelEnemyMenu({
         top: 365,
         left: 0,
@@ -354,4 +356,17 @@ export class LevelEnemyScript extends LevelScript {
     }
     return config.ENEMY_MAX_ALIVE_COUNT;
   }
+}
+
+function detectNetworkEnemyMirror(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  return (
+    mode === 'match' ||
+    mode === 'local' ||
+    (mode === 'webrtc' && params.get('broadcaster') !== '1')
+  );
 }

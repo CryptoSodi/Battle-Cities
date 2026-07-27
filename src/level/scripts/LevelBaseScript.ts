@@ -16,8 +16,12 @@ const WALL_REGIONS = [
 export class LevelBaseScript extends LevelScript {
   private base: Base;
   private defenceTimer = new Timer();
-  private readonly isWebRtcMatch =
-    new URLSearchParams(window.location.search).get('mode') === 'webrtc';
+  private readonly isWebRtcMatch: boolean;
+
+  public constructor(isWebRtcMatch = detectWebRtcMatch()) {
+    super();
+    this.isWebRtcMatch = isWebRtcMatch;
+  }
 
   protected setup(): void {
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
@@ -112,4 +116,11 @@ export class LevelBaseScript extends LevelScript {
     this.world.field.add(...tiles);
     this.world.field.setNeedsPaint();
   }
+}
+
+function detectWebRtcMatch(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'webrtc'
+  );
 }

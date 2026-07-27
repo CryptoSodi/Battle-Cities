@@ -1,5 +1,5 @@
 import { Sprite, SpritePainter } from '../../core';
-import { GameUpdateArgs } from '../../game';
+import { GameUpdateArgs } from '../../game/GameUpdateArgs';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
 

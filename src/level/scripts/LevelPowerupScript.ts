@@ -32,15 +32,8 @@ export interface NetworkPowerupPickup {
 }
 
 export class LevelPowerupScript extends LevelScript {
-  private readonly isLocalServerMatch =
-    new URLSearchParams(window.location.search).get('mode') === 'local';
-  private readonly isWebRtcClient = (() => {
-    const params = new URLSearchParams(window.location.search);
-    return (
-      params.get('mode') === 'webrtc' &&
-      params.get('broadcaster') !== '1'
-    );
-  })();
+  private readonly isLocalServerMatch: boolean;
+  private readonly isWebRtcClient: boolean;
   private networkPowerupId: number = null;
   private activePowerupId: number = null;
   private powerupSequence = 0;
@@ -58,6 +51,22 @@ export class LevelPowerupScript extends LevelScript {
   private replaySpawnIndex = 0;
   private isRecordingPowerups = false;
   private recordedPowerupSpawns: PowerupSpawnFrame[] = [];
+  private readonly headless: boolean;
+
+  public constructor(
+    options: {
+      isLocalServerMatch?: boolean;
+      isWebRtcClient?: boolean;
+      headless?: boolean;
+    } = {},
+  ) {
+    super();
+    const detected = detectNetworkMode();
+    this.isLocalServerMatch =
+      options.isLocalServerMatch ?? detected.isLocalServerMatch;
+    this.isWebRtcClient = options.isWebRtcClient ?? detected.isWebRtcClient;
+    this.headless = options.headless === true;
+  }
 
   public setReplayPowerupSpawns(frames: PowerupSpawnFrame[] | null): void {
     this.replayPowerupSpawns = frames;
@@ -163,7 +172,7 @@ export class LevelPowerupScript extends LevelScript {
     this.blockGridDefaults();
     this.blockGridInitialMap();
 
-    if (config.IS_DEV) {
+    if (config.IS_DEV && !this.headless) {
       const debugMenu = new DebugLevelPowerupMenu(this.world, this.grid, {
         top: 125,
       });
@@ -432,4 +441,20 @@ export class LevelPowerupScript extends LevelScript {
       );
     });
   }
+}
+
+function detectNetworkMode(): {
+  isLocalServerMatch: boolean;
+  isWebRtcClient: boolean;
+} {
+  if (typeof window === 'undefined') {
+    return { isLocalServerMatch: false, isWebRtcClient: false };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    isLocalServerMatch: params.get('mode') === 'local',
+    isWebRtcClient:
+      params.get('mode') === 'webrtc' &&
+      params.get('broadcaster') !== '1',
+  };
 }

@@ -6,8 +6,10 @@ import {
   SpritePainter,
   Subject,
 } from '../core';
-import { GameUpdateArgs, Tag } from '../game';
-import { Bullet, Explosion } from '../gameObjects';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { Tag } from '../game/Tag';
+import { Bullet } from './Bullet';
+import { Explosion } from './Explosion';
 import * as config from '../config';
 
 export class BaseHeart extends GameObject {

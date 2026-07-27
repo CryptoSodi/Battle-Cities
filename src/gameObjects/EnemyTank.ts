@@ -1,7 +1,11 @@
 import { Collision, Sound } from '../core';
 import { SpritePainter } from '../core';
-import { GameUpdateArgs, GameState, Tag } from '../game';
-import { TankColor, TankSkinAnimation, TankTier } from '../tank';
+import { GameState } from '../game/GameState';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { Tag } from '../game/Tag';
+import { TankColor } from '../tank/TankColor';
+import { TankSkinAnimation } from '../tank/TankSkinAnimation';
+import { TankTier } from '../tank/TankTier';
 import * as config from '../config';
 
 import { Tank, TankCollisionResolution } from './Tank';

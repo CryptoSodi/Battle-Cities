@@ -41,6 +41,32 @@ function input(seq, direction, moving, fire) {
   };
 }
 
+function rectsOverlap(left, right) {
+  return left.x < right.x + right.width &&
+    left.x + left.width > right.x &&
+    left.y < right.y + right.height &&
+    left.y + left.height > right.y;
+}
+
+function assertNoTankWallOverlap(simulation) {
+  const tanks = [
+    ...simulation.players,
+    ...Array.from(simulation.enemies.values()),
+  ].filter((tank) => tank.alive);
+  const walls = [
+    ...Array.from(simulation.movementTerrain.values()),
+    simulation.getBaseHeartRect(),
+  ];
+  tanks.forEach((tank) => {
+    walls.forEach((wall) => {
+      assert.ok(
+        !rectsOverlap(tank, wall),
+        `tank ${tank.partyIndex} overlaps wall ${wall.key ?? 'base-heart'}`,
+      );
+    });
+  });
+}
+
 {
   const simulation = new BattleCitySimulation(
     createTestMap({ spawn: { enemy: { locations: [], list: [] } } }),
@@ -192,6 +218,58 @@ function input(seq, direction, moving, fire) {
   );
 }
 
+{
+  const simulation = new BattleCitySimulation(
+    createTestMap({
+      spawn: {
+        player: {
+          locations: [
+            { x: 608, y: 672 },
+            { x: 960, y: 704 },
+          ],
+        },
+        enemy: { locations: [], list: [] },
+      },
+    }),
+    { seed: 6 },
+  );
+  const player = simulation.players[0];
+  simulation.applyPowerup(player, 'defence');
+  simulation.acceptInput(input(1, 180, true, false));
+  const frame = simulation.step();
+  assert.strictEqual(
+    frame.players[0].y,
+    672,
+    'base-defence walls must block authoritative tank movement',
+  );
+  assert.ok(
+    Array.from(simulation.movementTerrain.values()).every(
+      (wall) => !rectsOverlap(player, wall),
+    ),
+    'a tank must never remain inside a newly created base wall',
+  );
+
+  player.x = 608;
+  player.y = 740;
+  simulation.resolveTankWallOverlaps(player);
+  assert.deepStrictEqual(
+    { x: player.x, y: player.y },
+    { x: 608, y: 672 },
+    'fortification appearing around a tank must resolve it outside',
+  );
+
+  simulation.baseDefenceUntilTick = simulation.tick + 1;
+  simulation.step();
+  const baseWallCells = Array.from(simulation.terrain.values()).filter(
+    (cell) => cell.y >= 736 && cell.x >= 576 && cell.x < 704,
+  );
+  assert.ok(baseWallCells.length > 0);
+  assert.ok(
+    baseWallCells.every((cell) => cell.type === 'brick'),
+    'expired base defence must retain brick walls and their colliders',
+  );
+}
+
 const left = new BattleCitySimulation(map, { seed: 12345 });
 const right = new BattleCitySimulation(map, { seed: 12345 });
 
@@ -210,6 +288,8 @@ for (let tick = 0; tick < 900; tick += 1) {
   left.acceptInput(packet);
   right.acceptInput(packet);
   assert.deepStrictEqual(left.step(), right.step());
+  assertNoTankWallOverlap(left);
+  assertNoTankWallOverlap(right);
 }
 
 assert.deepStrictEqual(left.getScores(), right.getScores());

@@ -26,6 +26,12 @@ const ENEMY_LIMIT = 6;
 const BASE_WIDTH = 128;
 const BASE_HEIGHT = 96;
 const BASE_HEART_OFFSET = 32;
+const BASE_DEFENCE_DURATION = 17;
+const BASE_WALL_REGIONS = [
+  { x: 0, y: 0, width: 128, height: 32 },
+  { x: 0, y: 32, width: 32, height: 64 },
+  { x: 96, y: 32, width: 32, height: 64 },
+] as const;
 
 interface RectState {
   x: number;
@@ -152,6 +158,7 @@ export class BattleCitySimulation {
   private frameSeq = 0;
   private currentTick = 0;
   private baseAlive = true;
+  private baseDefenceUntilTick = 0;
   private enemiesFrozenUntilTick = 0;
   private powerup: SimulationPowerupFrame | null = null;
   private powerupPickup: SimulationPowerupPickupFrame | null = null;
@@ -724,6 +731,13 @@ export class BattleCitySimulation {
   }
 
   private updatePowerup(): void {
+    if (
+      this.baseDefenceUntilTick > 0 &&
+      this.currentTick >= this.baseDefenceUntilTick
+    ) {
+      this.replaceBaseWalls('brick');
+      this.baseDefenceUntilTick = 0;
+    }
     if (this.powerup === null) return;
     const rect = { x: this.powerup.x, y: this.powerup.y, width: TANK_SIZE, height: TANK_SIZE };
     const pickedBy = this.players.find((player) => player.alive && overlaps(player, rect));
@@ -754,7 +768,11 @@ export class BattleCitySimulation {
   }
 
   private applyPowerup(player: TankState, type: SimulationPowerupType): void {
-    if (type === 'life') player.lives += 1;
+    if (type === 'defence') {
+      this.replaceBaseWalls('steel');
+      this.baseDefenceUntilTick =
+        this.currentTick + BASE_DEFENCE_DURATION * this.tickRate;
+    } else if (type === 'life') player.lives += 1;
     else if (type === 'shield') player.shieldUntilTick = this.currentTick + 10 * this.tickRate;
     else if (type === 'speed') player.speed = 240;
     else if (type === 'upgrade') player.tier = nextTier(player.tier);
@@ -763,13 +781,11 @@ export class BattleCitySimulation {
   }
 
   private tryMove(tank: TankState, rotation: SimulationRotation, distance: number): boolean {
+    this.resolveTankWallOverlaps(tank);
     const vector = directionVector(rotation);
     let allowedDistance = distance;
     let collidedWithWall = false;
-    const walls: RectState[] = [
-      ...Array.from(this.movementTerrain.values()),
-      this.getBaseHeartRect(),
-    ];
+    const walls = this.getMovementWalls();
     for (const wall of walls) {
       const collisionDistance = getForwardCollisionDistance(
         tank,
@@ -814,6 +830,42 @@ export class BattleCitySimulation {
       else tank.y = snapToGrid(tank.y, MEDIUM_TILE);
     }
     return moved;
+  }
+
+  private getMovementWalls(): RectState[] {
+    return [
+      ...Array.from(this.movementTerrain.values()),
+      this.getBaseHeartRect(),
+    ];
+  }
+
+  private resolveTankWallOverlaps(tank: TankState): void {
+    const walls = this.getMovementWalls();
+    for (let pass = 0; pass < walls.length; pass += 1) {
+      const wall = walls.find((candidate) => overlaps(tank, candidate));
+      if (wall === undefined) return;
+      const candidates = [
+        { x: wall.x - tank.width, y: tank.y },
+        { x: wall.x + wall.width, y: tank.y },
+        { x: tank.x, y: wall.y - tank.height },
+        { x: tank.x, y: wall.y + wall.height },
+      ]
+        .map((candidate) => ({
+          x: clamp(candidate.x, 0, this.fieldWidth - tank.width),
+          y: clamp(candidate.y, 0, this.fieldHeight - tank.height),
+        }))
+        .sort((left, right) =>
+          Math.abs(left.x - tank.x) + Math.abs(left.y - tank.y) -
+          (Math.abs(right.x - tank.x) + Math.abs(right.y - tank.y)),
+        );
+      const resolved = candidates.find((candidate) => {
+        const rect = { ...tank, ...candidate };
+        return !walls.some((candidateWall) => overlaps(rect, candidateWall));
+      });
+      if (resolved === undefined) return;
+      tank.x = resolved.x;
+      tank.y = resolved.y;
+    }
   }
 
   private rotateTank(tank: TankState, rotation: SimulationRotation): void {
@@ -898,37 +950,90 @@ export class BattleCitySimulation {
         'blue-brick',
       ].includes(type);
       if (!isBrick && type !== 'steel' && type !== 'water') continue;
-      const collisionSize = isBrick ? TILE : MEDIUM_TILE;
-      for (let y = 0; y < region.height; y += collisionSize) {
-        for (let x = 0; x < region.width; x += collisionSize) {
-          const cellX = region.x + x;
-          const cellY = region.y + this.contentOffsetY + y;
-          const movementX = Math.floor(cellX / MEDIUM_TILE) * MEDIUM_TILE;
-          const movementY = Math.floor(cellY / MEDIUM_TILE) * MEDIUM_TILE;
-          const movementKey = `${movementX}:${movementY}`;
-          if (!this.movementTerrain.has(movementKey)) {
-            this.movementTerrain.set(movementKey, {
-              key: movementKey,
-              type: isBrick ? 'brick' : type as 'steel' | 'water',
-              x: movementX,
-              y: movementY,
-              width: MEDIUM_TILE,
-              height: MEDIUM_TILE,
-            });
-          }
-          if (type === 'water') continue;
-          const key = `${cellX}:${cellY}`;
-          this.terrain.set(key, {
-            key,
-            type: isBrick ? 'brick' : 'steel',
-            destructible: isBrick,
-            movementKey,
-            x: cellX,
-            y: cellY,
-            width: Math.min(collisionSize, region.width - x),
-            height: Math.min(collisionSize, region.height - y),
+      this.addTerrainRegion(
+        isBrick ? 'brick' : type as 'steel' | 'water',
+        region.x,
+        region.y + this.contentOffsetY,
+        region.width,
+        region.height,
+      );
+    }
+  }
+
+  private replaceBaseWalls(type: 'brick' | 'steel'): void {
+    const base = this.getBasePosition();
+    const regions = BASE_WALL_REGIONS.map((region) => ({
+      x: base.x + region.x,
+      y: base.y + region.y,
+      width: region.width,
+      height: region.height,
+    }));
+    for (const region of regions) {
+      this.clearTerrainRegion(region);
+      this.addTerrainRegion(
+        type,
+        region.x,
+        region.y,
+        region.width,
+        region.height,
+      );
+    }
+    [...this.players, ...Array.from(this.enemies.values())]
+      .filter((tank) => tank.alive)
+      .forEach((tank) => this.resolveTankWallOverlaps(tank));
+  }
+
+  private clearTerrainRegion(region: RectState): void {
+    for (const cell of Array.from(this.terrain.values())) {
+      if (containsTopLeft(region, cell)) this.terrain.delete(cell.key);
+    }
+    for (const cell of Array.from(this.movementTerrain.values())) {
+      if (containsTopLeft(region, cell)) {
+        this.movementTerrain.delete(cell.key);
+      }
+    }
+  }
+
+  private addTerrainRegion(
+    type: 'brick' | 'steel' | 'water',
+    regionX: number,
+    regionY: number,
+    regionWidth: number,
+    regionHeight: number,
+  ): void {
+    const isBrick = type === 'brick';
+    const collisionSize = isBrick ? TILE : MEDIUM_TILE;
+    for (let y = 0; y < regionHeight; y += collisionSize) {
+      for (let x = 0; x < regionWidth; x += collisionSize) {
+        const cellX = regionX + x;
+        const cellY = regionY + y;
+        const movementX =
+          Math.floor(cellX / MEDIUM_TILE) * MEDIUM_TILE;
+        const movementY =
+          Math.floor(cellY / MEDIUM_TILE) * MEDIUM_TILE;
+        const movementKey = `${movementX}:${movementY}`;
+        if (!this.movementTerrain.has(movementKey)) {
+          this.movementTerrain.set(movementKey, {
+            key: movementKey,
+            type,
+            x: movementX,
+            y: movementY,
+            width: MEDIUM_TILE,
+            height: MEDIUM_TILE,
           });
         }
+        if (type === 'water') continue;
+        const key = `${cellX}:${cellY}`;
+        this.terrain.set(key, {
+          key,
+          type,
+          destructible: isBrick,
+          movementKey,
+          x: cellX,
+          y: cellY,
+          width: Math.min(collisionSize, regionWidth - x),
+          height: Math.min(collisionSize, regionHeight - y),
+        });
       }
     }
   }
@@ -1011,6 +1116,13 @@ export class BattleCitySimulation {
 function overlaps(left: RectState, right: RectState): boolean {
   return left.x < right.x + right.width && left.x + left.width > right.x &&
     left.y < right.y + right.height && left.y + left.height > right.y;
+}
+
+function containsTopLeft(container: RectState, rect: RectState): boolean {
+  return rect.x >= container.x &&
+    rect.x < container.x + container.width &&
+    rect.y >= container.y &&
+    rect.y < container.y + container.height;
 }
 
 function directionVector(rotation: SimulationRotation): { x: number; y: number } {

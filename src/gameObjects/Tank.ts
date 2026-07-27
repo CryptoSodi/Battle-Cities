@@ -13,16 +13,19 @@ import {
   Timer,
   Vector,
 } from '../core';
-import { GameState, GameUpdateArgs, Rotation, Tag } from '../game';
+import { GameState } from '../game/GameState';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { Rotation } from '../game/Rotation';
+import { Tag } from '../game/Tag';
+import { TankAnimationFrame } from '../tank/TankAnimationFrame';
 import {
-  TankAnimationFrame,
   TankAttributes,
   TankAttributesFactory,
-  TankBehavior,
-  TankDeathReason,
-  TankSkinAnimation,
-  TankType,
-} from '../tank';
+} from '../tank/TankAttributesFactory';
+import { TankBehavior } from '../tank/TankBehavior';
+import { TankDeathReason } from '../tank/TankDeathReason';
+import { TankSkinAnimation } from '../tank/TankSkinAnimation';
+import { TankType } from '../tank/TankType';
 import * as config from '../config';
 
 import { Bullet } from './Bullet';

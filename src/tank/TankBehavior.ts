@@ -1,5 +1,5 @@
-import { GameUpdateArgs } from '../game';
-import { Tank } from '../gameObjects';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { Tank } from '../gameObjects/Tank';
 
 export abstract class TankBehavior {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

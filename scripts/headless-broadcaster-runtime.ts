@@ -5,7 +5,6 @@ import { resolve } from 'path';
 import { RTCDataChannel, RTCPeerConnection } from 'werift';
 
 import {
-  BattleCitySimulation,
   SimulationClientPacket,
   SimulationClientReadyPacket,
   SimulationHostFramePacket,
@@ -14,7 +13,10 @@ import {
   SimulationPlayerIndex,
   SimulationReadyPacket,
   SimulationResumePacket,
+  SimulationOptions,
+  SimulationTankTier,
 } from '../shared/src';
+import { EngineBattleCitySimulation } from './engine-battle-city-simulation';
 
 const HOST = process.env.BROADCASTER_HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.BROADCASTER_PORT || '7777', 10);
@@ -24,6 +26,7 @@ const CLIENT_URL = String(process.env.BROADCASTER_CLIENT_URL || 'https://battlec
 const SERVICE_TOKEN = String(process.env.BROADCASTER_SERVICE_TOKEN || '');
 const FRAME_REPLAY_PER_TICK = 8;
 const OBSERVER_DISCOVERY_MS = 2000;
+const MAX_CATCH_UP_TICKS = 4;
 
 type LinkId = SimulationPlayerIndex | `observer:${string}`;
 
@@ -196,7 +199,7 @@ class WebRtcPeerLink {
 }
 
 class MatchRuntime {
-  private readonly simulation: BattleCitySimulation;
+  private readonly simulation: EngineBattleCitySimulation;
   private readonly links = new Map<LinkId, WebRtcPeerLink>();
   private readonly connectedPlayers = new Set<SimulationPlayerIndex>();
   private readonly connectedObservers = new Set<`observer:${string}`>();
@@ -206,20 +209,33 @@ class MatchRuntime {
   private readonly frameBySeq = new Map<number, SimulationHostFramePacket>();
   private readonly replaySessions = new Map<SimulationPlayerIndex, ReplaySession>();
   private readonly startedAt = new Date();
+  private readonly tickIntervalMs: number;
   private tickTimer: NodeJS.Timeout;
   private observerTimer: NodeJS.Timeout;
+  private nextTickAt: number;
   private matchStarted = false;
   private stopped = false;
   private resultSubmissionStarted = false;
 
-  public constructor(public readonly id: string, public readonly level: number) {
-    this.simulation = new BattleCitySimulation(loadMap(level), {
+  public constructor(
+    public readonly id: string,
+    public readonly level: number,
+    simulationOptions: Pick<
+      SimulationOptions,
+      'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+    > = {},
+  ) {
+    this.simulation = new EngineBattleCitySimulation(loadMap(level), {
+      ...simulationOptions,
       seed: seedFromMatchId(id),
+      level,
       disableEnemyShooting: process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1',
     });
     this.configureLink(0, `${id}-p1`);
     this.configureLink(1, `${id}-p2`);
-    this.tickTimer = setInterval(() => this.tick(), 1000 / this.simulation.tickRate);
+    this.tickIntervalMs = 1000 / this.simulation.tickRate;
+    this.nextTickAt = performance.now() + this.tickIntervalMs;
+    this.tickTimer = setTimeout(() => this.runTickLoop(), this.tickIntervalMs);
     this.observerTimer = setInterval(() => void this.discoverObservers(), OBSERVER_DISCOVERY_MS);
     void this.discoverObservers();
   }
@@ -227,7 +243,7 @@ class MatchRuntime {
   public stop(): void {
     if (this.stopped) return;
     this.stopped = true;
-    clearInterval(this.tickTimer);
+    clearTimeout(this.tickTimer);
     clearInterval(this.observerTimer);
     this.links.forEach((link) => link.close());
     this.links.clear();
@@ -263,6 +279,19 @@ class MatchRuntime {
     }
   }
 
+  private runTickLoop(): void {
+    if (this.stopped) return;
+    const now = performance.now();
+    let ticks = 0;
+    while (now >= this.nextTickAt && ticks < MAX_CATCH_UP_TICKS) {
+      this.tick();
+      this.nextTickAt += this.tickIntervalMs;
+      ticks += 1;
+    }
+    const delay = Math.max(0, this.nextTickAt - performance.now());
+    this.tickTimer = setTimeout(() => this.runTickLoop(), delay);
+  }
+
   private configureLink(linkId: LinkId, room: string): void {
     if (this.links.has(linkId)) return;
     const link = new WebRtcPeerLink(
@@ -286,6 +315,7 @@ class MatchRuntime {
       }
       return;
     }
+    const wasConnected = this.connectedPlayers.has(linkId);
     const reconnecting = this.matchStarted && connected;
     if (connected) {
       this.connectedPlayers.add(linkId);
@@ -300,11 +330,27 @@ class MatchRuntime {
       this.replaySessions.delete(linkId);
       if (this.matchStarted) this.syncingPlayers.add(linkId);
     }
+    if (connected && !wasConnected) {
+      console.log(
+        `[broadcaster] player connected match=${this.id} slot=${linkId + 1}` +
+        ` connection=${reconnecting ? 'reconnect' : 'initial'}` +
+        ` players=${this.connectedPlayers.size}/2 tick=${this.simulation.tick}`,
+      );
+    } else if (!connected && wasConnected) {
+      console.log(
+        `[broadcaster] player disconnected match=${this.id} slot=${linkId + 1}` +
+        ` players=${this.connectedPlayers.size}/2 tick=${this.simulation.tick}`,
+      );
+    }
     if (!this.matchStarted && this.connectedPlayers.size === 2) {
       this.matchStarted = true;
       this.activePlayers.add(0);
       this.activePlayers.add(1);
       this.syncingPlayers.clear();
+      console.log(
+        `[broadcaster] match started match=${this.id}` +
+        ` players=2/2 tick=${this.simulation.tick}`,
+      );
     }
     this.broadcast(this.readyPacket(reconnecting ? linkId : null));
   }
@@ -377,6 +423,10 @@ class MatchRuntime {
     this.syncingPlayers.delete(player);
     this.replaySessions.delete(player);
     this.activePlayers.add(player);
+    console.log(
+      `[broadcaster] player active match=${this.id} slot=${player + 1}` +
+      ` appliedSeq=${appliedSeq} serverSeq=${this.simulation.seq}`,
+    );
   }
 
   private pumpReplays(): void {
@@ -494,7 +544,11 @@ const server = createServer(async (request, response) => {
         json(response, 409, { error: 'Match is already running.', ...matches.get(matchId)!.status() });
         return;
       }
-      const match = new MatchRuntime(matchId, level);
+      const match = new MatchRuntime(
+        matchId,
+        level,
+        parseSimulationOptions(body),
+      );
       matches.set(matchId, match);
       json(response, 201, match.status());
       return;
@@ -588,6 +642,57 @@ function seedFromMatchId(matchId: string): number {
 
 function normalizeMatchId(value: unknown): string {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 64);
+}
+
+function parseSimulationOptions(
+  body: Record<string, unknown>,
+): Pick<
+  SimulationOptions,
+  'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+> {
+  const options: Pick<
+    SimulationOptions,
+    'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+  > = {};
+  const extraLives = Number(body.extraLives);
+  if (Number.isFinite(extraLives)) {
+    options.extraLives = Math.max(0, Math.min(20, Math.floor(extraLives)));
+  }
+
+  if (
+    Array.isArray(body.initialPlayerTiers) &&
+    body.initialPlayerTiers.length === 2 &&
+    body.initialPlayerTiers.every(isTankTier)
+  ) {
+    options.initialPlayerTiers = body.initialPlayerTiers as [
+      SimulationTankTier,
+      SimulationTankTier,
+    ];
+  }
+
+  if (
+    body.runBoosts !== null &&
+    typeof body.runBoosts === 'object' &&
+    !Array.isArray(body.runBoosts)
+  ) {
+    const boosts = body.runBoosts as Record<string, unknown>;
+    options.runBoosts = {
+      hull: finiteNumber(boosts.hull),
+      armor: finiteNumber(boosts.armor),
+      engine: finiteNumber(boosts.engine),
+      salvage: finiteNumber(boosts.salvage),
+    };
+  }
+  return options;
+}
+
+function isTankTier(value: unknown): value is SimulationTankTier {
+  return value === 'a' || value === 'b' || value === 'c' || value === 'd';
+}
+
+function finiteNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function isObserver(linkId: LinkId): linkId is `observer:${string}` {

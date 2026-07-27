@@ -1,5 +1,6 @@
 import { BoxCollider, SpritePainter } from '../../core';
-import { GameUpdateArgs, Tag } from '../../game';
+import { GameUpdateArgs } from '../../game/GameUpdateArgs';
+import { Tag } from '../../game/Tag';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
 

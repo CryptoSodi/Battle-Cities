@@ -6,7 +6,7 @@ import {
   SpritePainter,
   Subject,
 } from '../core';
-import { GameUpdateArgs } from '../game';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
 import * as config from '../config';
 
 import { emitExplosion } from './explosionEffect';

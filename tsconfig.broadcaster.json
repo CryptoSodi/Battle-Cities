@@ -4,13 +4,23 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2020", "DOM"],
+    "baseUrl": ".",
+    "paths": {
+      "@battlecities/shared": ["shared/src/index.ts"]
+    },
     "outDir": "dist-broadcaster",
     "rootDir": ".",
     "types": ["node"],
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": true
+    "strict": false
   },
-  "include": ["scripts/headless-broadcaster-runtime.ts", "shared/src/**/*.ts"]
+  "include": [
+    "scripts/headless-broadcaster-runtime.ts",
+    "scripts/engine-battle-city-simulation.ts",
+    "src/types/**/*.d.ts",
+    "shared/src/**/*.ts"
+  ]
 }

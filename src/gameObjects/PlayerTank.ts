@@ -1,14 +1,14 @@
 import { Collision, Subject, Timer } from '../core';
-import { GameUpdateArgs, SessionRunBoosts, Tag } from '../game';
-import {
-  TankAttributesFactory,
-  TankColor,
-  TankColorFactory,
-  TankDeathReason,
-  TankSkinAnimation,
-  TankTier,
-  TankType,
-} from '../tank';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { SessionRunBoosts } from '../game/Session';
+import { Tag } from '../game/Tag';
+import { TankAttributesFactory } from '../tank/TankAttributesFactory';
+import { TankColor } from '../tank/TankColor';
+import { TankColorFactory } from '../tank/TankColorFactory';
+import { TankDeathReason } from '../tank/TankDeathReason';
+import { TankSkinAnimation } from '../tank/TankSkinAnimation';
+import { TankTier } from '../tank/TankTier';
+import { TankType } from '../tank/TankType';
 import * as config from '../config';
 
 import { Tank } from './Tank';
@@ -81,6 +81,14 @@ export class PlayerTank extends Tank {
   public setNetworkControlled(controlled: boolean): this {
     this.networkControlled = controlled;
     return this;
+  }
+
+  public setNetworkTier(tier: TankTier): void {
+    if (this.type.tier === tier) {
+      return;
+    }
+    this.type.increaseTier(tier);
+    this.applyTier(false);
   }
 
   // If tier is provided - it means that specific tier needs to be activated

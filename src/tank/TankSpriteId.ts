@@ -1,4 +1,4 @@
-import { Rotation } from '../game';
+import { Rotation } from '../game/Rotation';
 
 import { TankColor } from './TankColor';
 import { TankType } from './TankType';

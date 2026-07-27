@@ -1,5 +1,6 @@
 import { Animation, GameObject, Sprite, SpritePainter } from '../core';
-import { GameUpdateArgs, GameState } from '../game';
+import { GameState } from '../game/GameState';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
 import * as config from '../config';
 
 export class Shield extends GameObject {

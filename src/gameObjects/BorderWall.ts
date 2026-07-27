@@ -1,5 +1,6 @@
 import { BoxCollider, GameObject, SpritePainter } from '../core';
-import { GameUpdateArgs, Tag } from '../game';
+import { GameUpdateArgs } from '../game/GameUpdateArgs';
+import { Tag } from '../game/Tag';
 import * as config from '../config';
 
 export class BorderWall extends GameObject {
