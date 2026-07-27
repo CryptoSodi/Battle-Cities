@@ -476,7 +476,6 @@ export class WebRtcHostMatchSync {
     return (
       this.isEnabled() &&
       !this.broadcaster &&
-      !this.observer &&
       this.clientSyncing &&
       this.activeReplayFrame === null
     );
