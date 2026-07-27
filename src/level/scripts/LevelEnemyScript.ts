@@ -93,10 +93,7 @@ export class LevelEnemyScript extends LevelScript {
     return Array.from(this.activeEnemyIds);
   }
 
-  public syncNetworkEnemyCount(
-    activeIds: number[],
-    spawnMissing = true,
-  ): void {
+  public syncNetworkEnemyCount(activeIds: number[]): void {
     if (!this.isNetworkEnemyMirror) {
       return;
     }
@@ -107,7 +104,7 @@ export class LevelEnemyScript extends LevelScript {
       .filter((tank) => !activeIdSet.has(tank.partyIndex))
       .forEach((tank) => this.removeNetworkEnemy(tank));
 
-    if (!spawnMissing || activeIdSet.size === 0) {
+    if (activeIdSet.size === 0) {
       return;
     }
     const desiredCount = Math.max(...Array.from(activeIdSet)) + 1;

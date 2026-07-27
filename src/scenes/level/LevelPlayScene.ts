@@ -552,18 +552,19 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.params.replay === undefined &&
       updateArgs.webRtcMatch.isEnabled()
     ) {
-      this.enemyScript.syncNetworkEnemyDeaths(
-        updateArgs.webRtcMatch.drainEnemyDeaths(),
-      );
       const replayEnemySpawns =
         updateArgs.webRtcMatch.getReplayEnemySpawns();
       if (replayEnemySpawns !== null) {
         this.enemyScript.syncNetworkReplayEnemies(replayEnemySpawns);
       }
-      this.enemyScript.syncNetworkEnemyCount(
-        updateArgs.webRtcMatch.getActiveEnemyIds(),
-        replayEnemySpawns === null,
+      this.enemyScript.syncNetworkEnemyDeaths(
+        updateArgs.webRtcMatch.drainEnemyDeaths(),
       );
+      if (replayEnemySpawns === null) {
+        this.enemyScript.syncNetworkEnemyCount(
+          updateArgs.webRtcMatch.getActiveEnemyIds(),
+        );
+      }
       updateArgs.webRtcMatch.prepareNetworkTicks(
         this.world.getPlayerTanks(),
         this.enemyScript.getAliveTanks(),
