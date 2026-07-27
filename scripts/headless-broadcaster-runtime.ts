@@ -31,6 +31,7 @@ const OBSERVER_DISCOVERY_MS = 2000;
 const MAX_CATCH_UP_TICKS = 4;
 
 type LinkId = SimulationPlayerIndex | `observer:${string}`;
+type MatchCategory = 'guest' | 'live' | 'event';
 
 interface SignalCode {
   type: 'battlecity-ghost-signal';
@@ -50,6 +51,7 @@ interface ReplaySession {
 interface MatchStatus {
   id: string;
   level: number;
+  category: MatchCategory;
   status: 'running' | 'stopped';
   tick: number;
   frameSeq: number;
@@ -240,6 +242,7 @@ class MatchRuntime {
   public constructor(
     public readonly id: string,
     public readonly level: number,
+    public readonly category: MatchCategory,
     simulationOptions: Pick<
       SimulationOptions,
       | 'extraLives'
@@ -277,6 +280,7 @@ class MatchRuntime {
     return {
       id: this.id,
       level: this.level,
+      category: this.category,
       status: this.stopped ? 'stopped' : 'running',
       tick: this.simulation.tick,
       frameSeq: this.simulation.seq,
@@ -549,8 +553,34 @@ const server = createServer(async (request, response) => {
       html(response, monitorHtml());
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/live') {
+      html(response, monitorHtml(true));
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/monitor/config') {
       json(response, 200, { clientUrl: CLIENT_URL, refreshMs: 2000 });
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/live/config') {
+      json(response, 200, { clientUrl: CLIENT_URL, refreshMs: 2000 });
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/live/matches') {
+      json(response, 200, {
+        matches: Array.from(matches.values()).map((match) => {
+          const status = match.status();
+          return {
+            id: status.id,
+            level: status.level,
+            category: status.category,
+            tick: status.tick,
+            connectedPlayers: status.connectedPlayers,
+            observerCount: status.observerCount,
+            matchStarted: status.matchStarted,
+            startedAt: status.startedAt,
+          };
+        }),
+      });
       return;
     }
     if (request.method === 'GET' && url.pathname === '/health') {
@@ -569,6 +599,7 @@ const server = createServer(async (request, response) => {
       const body = await readJson(request);
       const matchId = normalizeMatchId(body.matchId) || randomBytes(4).toString('hex');
       const level = Math.max(1, Math.min(35, Number.parseInt(String(body.level), 10) || 1));
+      const category = normalizeMatchCategory(body.category);
       if (matches.has(matchId)) {
         json(response, 409, { error: 'Match is already running.', ...matches.get(matchId)!.status() });
         return;
@@ -576,6 +607,7 @@ const server = createServer(async (request, response) => {
       const match = new MatchRuntime(
         matchId,
         level,
+        category,
         parseSimulationOptions(body),
       );
       matches.set(matchId, match);
@@ -671,6 +703,10 @@ function seedFromMatchId(matchId: string): number {
 
 function normalizeMatchId(value: unknown): string {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 64);
+}
+
+function normalizeMatchCategory(value: unknown): MatchCategory {
+  return value === 'guest' || value === 'event' ? value : 'live';
 }
 
 function parseSimulationOptions(
@@ -830,13 +866,13 @@ function html(response: ServerResponse, body: string): void {
   response.end(data);
 }
 
-function monitorHtml(): string {
+function monitorHtml(publicLive = false): string {
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Battle Cities Broadcaster Monitor</title>
+  <title>Battle Cities ${publicLive ? 'Live Games' : 'Broadcaster Monitor'}</title>
   <style>
     :root {
       color-scheme: dark;
@@ -905,6 +941,20 @@ function monitorHtml(): string {
       gap: 16px;
       margin-bottom: 16px;
     }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .tab {
+      min-height: 44px;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: 0;
+      padding: 0 18px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 720;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { border-bottom-color: var(--accent); color: var(--accent); }
     .summary { display: flex; align-items: baseline; gap: 10px; }
     .summary strong { font-size: 24px; font-variant-numeric: tabular-nums; }
     .summary span { color: var(--muted); font-size: 13px; }
@@ -1002,7 +1052,7 @@ function monitorHtml(): string {
   </style>
 </head>
 <body>
-  <section id="auth" class="auth" aria-labelledby="auth-title">
+  <section id="auth" class="auth" aria-labelledby="auth-title"${publicLive ? ' hidden' : ''}>
     <h2 id="auth-title">Broadcaster access</h2>
     <form id="auth-form">
       <div class="field">
@@ -1014,10 +1064,10 @@ function monitorHtml(): string {
     </form>
   </section>
 
-  <div id="monitor" hidden>
+  <div id="monitor"${publicLive ? '' : ' hidden'}>
     <header class="topbar">
       <div class="topbar-inner">
-        <div class="brand"><h1>Battle Cities</h1><span class="brand-label">Broadcaster Monitor</span></div>
+        <div class="brand"><h1>Battle Cities</h1><span class="brand-label">${publicLive ? 'Live Games' : 'Broadcaster Monitor'}</span></div>
         <div class="service-state"><span id="service-dot" class="state-dot"></span><span id="service-label">Connecting</span></div>
       </div>
     </header>
@@ -1025,6 +1075,11 @@ function monitorHtml(): string {
       <div class="toolbar">
         <div class="summary"><strong id="match-count">0</strong><span>active matches</span></div>
         <button id="refresh" class="button" type="button">Refresh</button>
+      </div>
+      <div id="category-tabs" class="tabs"${publicLive ? '' : ' hidden'}>
+        <button class="tab active" type="button" data-category="guest">Guest Games</button>
+        <button class="tab" type="button" data-category="live">Live Games</button>
+        <button class="tab" type="button" data-category="event">Event Games</button>
       </div>
       <div id="loading" class="state-panel" aria-live="polite">
         <div><div class="skeleton"></div><div class="skeleton"></div></div>
@@ -1054,8 +1109,11 @@ function monitorHtml(): string {
 
   <script>
     (function () {
+      var publicLive = ${publicLive ? 'true' : 'false'};
       var token = sessionStorage.getItem('battlecities-broadcaster-token') || '';
       var config = { clientUrl: 'https://battlecities.com', refreshMs: 2000 };
+      var activeCategory = 'guest';
+      var currentMatches = [];
       var refreshTimer = null;
       var loadingRequest = false;
       var auth = document.getElementById('auth');
@@ -1072,7 +1130,7 @@ function monitorHtml(): string {
       var viewer = document.getElementById('viewer');
       var observerFrame = document.getElementById('observer-frame');
 
-      fetch('/monitor/config').then(function (response) { return response.json(); }).then(function (value) { config = value; });
+      fetch(publicLive ? '/live/config' : '/monitor/config').then(function (response) { return response.json(); }).then(function (value) { config = value; });
 
       form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -1083,30 +1141,42 @@ function monitorHtml(): string {
       refresh.addEventListener('click', function () { loadMatches(false); });
       document.getElementById('retry').addEventListener('click', function () { loadMatches(false); });
       document.getElementById('close-viewer').addEventListener('click', closeViewer);
+      document.querySelectorAll('[data-category]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          activeCategory = tab.getAttribute('data-category');
+          document.querySelectorAll('[data-category]').forEach(function (item) {
+            item.classList.toggle('active', item === tab);
+          });
+          renderMatches(currentMatches);
+        });
+      });
 
       function loadMatches(authenticating) {
-        if (!token || loadingRequest) return;
+        if ((!publicLive && !token) || loadingRequest) return;
         loadingRequest = true;
         refresh.disabled = true;
         if (!matches.hidden || !empty.hidden || !error.hidden) loading.hidden = true;
         else loading.hidden = false;
-        fetch('/matches', { headers: { authorization: 'Bearer ' + token, accept: 'application/json' } })
+        var headers = { accept: 'application/json' };
+        if (!publicLive) headers.authorization = 'Bearer ' + token;
+        fetch(publicLive ? '/live/matches' : '/matches', { headers: headers })
           .then(function (response) {
             if (response.status === 401) throw new Error('AUTH');
             if (!response.ok) throw new Error('HTTP ' + response.status);
             return response.json();
           })
           .then(function (body) {
-            sessionStorage.setItem('battlecities-broadcaster-token', token);
+            if (!publicLive) sessionStorage.setItem('battlecities-broadcaster-token', token);
             auth.hidden = true;
             monitor.hidden = false;
             setServiceState(true);
-            renderMatches(body.matches || []);
+            currentMatches = body.matches || [];
+            renderMatches(currentMatches);
             scheduleRefresh();
           })
           .catch(function (failure) {
             setServiceState(false);
-            if (failure.message === 'AUTH') {
+            if (!publicLive && failure.message === 'AUTH') {
               sessionStorage.removeItem('battlecities-broadcaster-token');
               auth.hidden = false;
               monitor.hidden = true;
@@ -1127,6 +1197,9 @@ function monitorHtml(): string {
       }
 
       function renderMatches(list) {
+        if (publicLive) {
+          list = list.filter(function (match) { return match.category === activeCategory; });
+        }
         document.getElementById('match-count').textContent = String(list.length);
         rows.replaceChildren();
         if (list.length === 0) {
@@ -1152,7 +1225,13 @@ function monitorHtml(): string {
           button.className = 'button primary view-button';
           button.type = 'button';
           button.textContent = 'View';
-          button.addEventListener('click', function () { viewMatch(match); });
+          button.addEventListener('click', function () {
+            if (publicLive) {
+              window.open(createObserverUrl(match), '_blank', 'noopener,noreferrer');
+            } else {
+              viewMatch(match);
+            }
+          });
           actionCell.appendChild(button);
           row.appendChild(actionCell);
           rows.appendChild(row);
@@ -1168,16 +1247,21 @@ function monitorHtml(): string {
       }
 
       function viewMatch(match) {
+        var observerUrl = createObserverUrl(match);
+        document.getElementById('viewer-match').textContent = match.id;
+        document.getElementById('open-observer').href = observerUrl;
+        observerFrame.src = observerUrl;
+        viewer.hidden = false;
+        viewer.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      }
+
+      function createObserverUrl(match) {
         var observerUrl = new URL(config.clientUrl);
         observerUrl.searchParams.set('mode', 'webrtc');
         observerUrl.searchParams.set('observer', '1');
         observerUrl.searchParams.set('match', match.id);
         observerUrl.searchParams.set('level', String(match.level));
-        document.getElementById('viewer-match').textContent = match.id;
-        document.getElementById('open-observer').href = observerUrl.toString();
-        observerFrame.src = observerUrl.toString();
-        viewer.hidden = false;
-        viewer.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+        return observerUrl.toString();
       }
 
       function closeViewer() {
@@ -1207,7 +1291,9 @@ function monitorHtml(): string {
         refreshTimer = setTimeout(function () { loadMatches(false); }, Math.max(1000, Number(config.refreshMs) || 2000));
       }
 
-      if (token) {
+      if (publicLive) {
+        loadMatches(false);
+      } else if (token) {
         tokenInput.value = token;
         loadMatches(true);
       } else {
