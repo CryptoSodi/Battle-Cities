@@ -33,8 +33,6 @@ export interface NetworkReplayEnemy {
   partyIndex: number;
   x: number;
   y: number;
-  deltaX: number;
-  deltaY: number;
 }
 
 export class LevelEnemyScript extends LevelScript {
@@ -126,23 +124,24 @@ export class LevelEnemyScript extends LevelScript {
       ) {
         return;
       }
-      const x = frame.x - (Number.isFinite(frame.deltaX) ? frame.deltaX : 0);
-      const y = frame.y - (Number.isFinite(frame.deltaY) ? frame.deltaY : 0);
       this.activeEnemyIds.add(frame.partyIndex);
       this.listIndex = Math.max(this.listIndex, frame.partyIndex + 1);
       this.spawningCount += 1;
       this.handleSpawnCompleted({
         type: this.list[frame.partyIndex],
         centerPosition: new Vector(
-          x + TANK_SPAWN_SIZE / 2,
-          y + TANK_SPAWN_SIZE / 2,
+          frame.x + TANK_SPAWN_SIZE / 2,
+          frame.y + TANK_SPAWN_SIZE / 2,
         ),
         partyIndex: frame.partyIndex,
       });
     });
   }
 
-  public syncNetworkEnemyDeaths(deaths: NetworkEnemyDeath[]): void {
+  public syncNetworkEnemyDeaths(
+    deaths: NetworkEnemyDeath[],
+    showEffects = true,
+  ): void {
     if (!this.isNetworkEnemyMirror) {
       return;
     }
@@ -151,7 +150,7 @@ export class LevelEnemyScript extends LevelScript {
         return candidate.partyIndex === death.partyIndex;
       });
       if (tank !== undefined) {
-        this.removeNetworkEnemy(tank, death);
+        this.removeNetworkEnemy(tank, death, showEffects);
       }
     });
   }
@@ -159,24 +158,31 @@ export class LevelEnemyScript extends LevelScript {
   private removeNetworkEnemy(
     tank: EnemyTank,
     death: NetworkEnemyDeath = null,
+    showEffects = true,
   ): void {
     this.activeEnemyIds.delete(tank.partyIndex);
     const centerPosition =
       death !== null && Number.isFinite(death.x) && Number.isFinite(death.y)
         ? new Vector(death.x, death.y)
         : tank.getCenter();
-    this.eventBus.enemyDied.notify({
-      type: tank.type,
-      centerPosition,
-      reason: death?.reason ?? TankDeathReason.Bullet,
-      hitterPartyIndex: death?.hitterPartyIndex ?? null,
-      networkMirror: true,
-    });
-    tank.beginNetworkDeathGrace();
-    this.pendingNetworkRemovals.push({
-      tank,
-      remaining: NETWORK_DEATH_COLLISION_GRACE,
-    });
+    if (showEffects) {
+      this.eventBus.enemyDied.notify({
+        type: tank.type,
+        centerPosition,
+        reason: death?.reason ?? TankDeathReason.Bullet,
+        hitterPartyIndex: death?.hitterPartyIndex ?? null,
+        networkMirror: true,
+      });
+    }
+    if (showEffects) {
+      tank.beginNetworkDeathGrace();
+      this.pendingNetworkRemovals.push({
+        tank,
+        remaining: NETWORK_DEATH_COLLISION_GRACE,
+      });
+    } else {
+      tank.finishNetworkRemoval();
+    }
     this.aliveTanks = this.aliveTanks.filter((aliveTank) => {
       return aliveTank !== tank;
     });

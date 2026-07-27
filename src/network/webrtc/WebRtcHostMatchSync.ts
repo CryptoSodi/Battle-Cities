@@ -1746,8 +1746,8 @@ export class WebRtcHostMatchSync {
       tank.applyNetworkMovement(
         frame.rotation,
         frame.moving,
-        Number.isFinite(frame.deltaX) ? frame.deltaX : 0,
-        Number.isFinite(frame.deltaY) ? frame.deltaY : 0,
+        Number.isFinite(frame.x) ? frame.x - tank.position.x : 0,
+        Number.isFinite(frame.y) ? frame.y - tank.position.y : 0,
       );
       const lastFireSeq = this.lastEnemyFireSeqs.get(frame.partyIndex) ?? 0;
       if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {

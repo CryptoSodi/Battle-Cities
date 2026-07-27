@@ -98,14 +98,12 @@ test('network replay creates an enemy without waiting for a spawn animation', (t
       partyIndex: 0,
       x: 96,
       y: 64,
-      deltaX: 2,
-      deltaY: 0,
     },
   ]);
 
   const tank = enemyScript.getAliveTanks()[0];
   t.is(tank.partyIndex, 0);
-  t.is(tank.position.x, 94);
+  t.is(tank.position.x, 96);
   t.is(tank.position.y, 64);
 });
 
