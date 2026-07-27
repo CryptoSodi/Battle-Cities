@@ -56,9 +56,10 @@ function networkFirst(request) {
   return fetch(request)
     .then(function (response) {
       if (isCacheableResponse(response)) {
+        var cacheResponse = response.clone();
         caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(request, response.clone()).catch(function () {});
-        });
+          cache.put(request, cacheResponse).catch(function () {});
+        }).catch(function () {});
       }
       return response;
     })

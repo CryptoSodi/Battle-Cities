@@ -93,12 +93,13 @@ class WebRtcPeerLink {
   public close(): void {
     this.closed = true;
     if (this.pollTimer !== null) clearTimeout(this.pollTimer);
-    if (this.reconnectTimer !== null) clearTimeout(this.reconnectTimer);
+    this.clearReconnectTimer();
     this.resetPeer();
   }
 
   private async startOfferCycle(): Promise<void> {
     if (this.closed) return;
+    this.clearReconnectTimer();
     this.resetPeer();
     this.signalSessionId = `${this.room}-0-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
     const peer = new RTCPeerConnection({
@@ -106,6 +107,7 @@ class WebRtcPeerLink {
     });
     this.peer = peer;
     peer.connectionStateChange.subscribe((state) => {
+      if (this.peer !== peer) return;
       if (state === 'failed' || state === 'disconnected' || state === 'closed') {
         this.onConnection(false);
         this.scheduleReconnect();
@@ -138,12 +140,18 @@ class WebRtcPeerLink {
 
   private attachChannel(channel: RTCDataChannel): void {
     this.channel = channel;
-    channel.onopen = () => this.onConnection(true);
+    channel.onopen = () => {
+      if (this.channel !== channel) return;
+      this.clearReconnectTimer();
+      this.onConnection(true);
+    };
     channel.onclose = () => {
+      if (this.channel !== channel) return;
       this.onConnection(false);
       this.scheduleReconnect();
     };
     channel.onMessage.subscribe((message) => {
+      if (this.channel !== channel) return;
       try {
         const text = Buffer.isBuffer(message) ? message.toString('utf8') : message;
         const packet = JSON.parse(text) as SimulationClientPacket;
@@ -183,20 +191,30 @@ class WebRtcPeerLink {
   }
 
   private scheduleReconnect(): void {
-    if (this.closed || this.reconnectTimer !== null) return;
+    if (this.closed || this.isConnected() || this.reconnectTimer !== null) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      void this.startOfferCycle();
+      if (!this.closed && !this.isConnected()) {
+        void this.startOfferCycle();
+      }
     }, 1200);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer === null) return;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
   }
 
   private resetPeer(): void {
     if (this.pollTimer !== null) clearTimeout(this.pollTimer);
     this.pollTimer = null;
-    this.channel?.close();
-    this.peer?.close();
+    const channel = this.channel;
+    const peer = this.peer;
     this.channel = null;
     this.peer = null;
+    channel?.close();
+    peer?.close();
   }
 }
 
