@@ -682,6 +682,10 @@ export class WebRtcHostMatchSync {
     return this.activeReplayFrame?.enemies ?? null;
   }
 
+  public isApplyingCatchUpFrame(): boolean {
+    return this.activeReplayFrame !== null;
+  }
+
   public observeAuthoritativePlayerTank(tank: PlayerTank): void {
     if (this.broadcaster) {
       this.observePlayers([tank]);

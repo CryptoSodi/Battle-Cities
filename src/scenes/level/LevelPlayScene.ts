@@ -573,7 +573,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     // Update all objects on the scene
     this.root.traverseDescedants((node) => {
-      const shouldUpdate = gameState.is(GameState.Playing) || node.ignorePause;
+      const shouldUpdate =
+        gameState.is(GameState.Playing) ||
+        node.ignorePause ||
+        updateArgs.webRtcMatch.isApplyingCatchUpFrame();
       if (shouldUpdate) {
         node.invokeUpdate(updateArgs);
       }
