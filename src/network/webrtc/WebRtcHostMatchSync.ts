@@ -3,7 +3,7 @@ import type { GameUpdateArgs } from '../../game';
 import { EnemyTank, PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
 import { PowerupType } from '../../powerup';
-import { TankTier } from '../../tank';
+import { TankDeathReason, TankTier } from '../../tank';
 
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
@@ -33,6 +33,7 @@ interface WebRtcInputPacket {
   direction: Rotation | null;
   moving: boolean;
   fire: boolean;
+  powerSlot?: number | null;
   elapsedSeconds: number;
 }
 
@@ -82,6 +83,16 @@ interface WebRtcPowerupPickupFrame {
   partyIndex: number;
   x: number;
   y: number;
+  hotbarSlot?: number;
+}
+
+interface WebRtcEnemyDeathFrame {
+  seq: number;
+  partyIndex: number;
+  x: number;
+  y: number;
+  reason: TankDeathReason;
+  hitterPartyIndex: 0 | 1 | null;
 }
 
 interface WebRtcHostFramePacket {
@@ -97,6 +108,7 @@ interface WebRtcHostFramePacket {
   powerup: WebRtcPowerupFrame | null;
   powerupPickup: WebRtcPowerupPickupFrame | null;
   activeEnemyIds: number[];
+  enemyDeaths?: WebRtcEnemyDeathFrame[];
   enemies: WebRtcEnemyFrame[];
 }
 
@@ -188,6 +200,14 @@ function isObserverLink(linkId: WebRtcLinkId): linkId is string {
   return typeof linkId === 'string';
 }
 
+function isPowerSlot(value: number | null | undefined): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (Number.isInteger(value) && value >= 0 && value < 4)
+  );
+}
+
 export class WebRtcHostMatchSync {
   private readonly enabled: boolean;
   private readonly broadcaster: boolean;
@@ -219,6 +239,7 @@ export class WebRtcHostMatchSync {
   private readonly latestRemoteInputs = new Map<number, WebRtcInputPacket>();
   private readonly latestRemoteInputReceivedAt = new Map<number, number>();
   private readonly lastAppliedRemoteFireSeqs = new Map<number, number>();
+  private readonly pendingRemotePowerSlots = new Map<number, number[]>();
   private latestHostFrame: WebRtcHostFramePacket = null;
   private activeReplayFrame: WebRtcHostFramePacket = null;
   private readonly recoveryFrames = new Map<number, WebRtcHostFramePacket>();
@@ -238,6 +259,9 @@ export class WebRtcHostMatchSync {
     number,
     WebRtcEnemyFrame[]
   >();
+  private readonly pendingEnemyDeaths: WebRtcEnemyDeathFrame[] = [];
+  private readonly pendingEnemyDeathSeqs = new Set<number>();
+  private lastAppliedEnemyDeathSeq = 0;
   private readonly observedEnemies = new WeakSet<EnemyTank>();
   private readonly observedPlayers = new WeakSet<PlayerTank>();
   private readonly playerFireSeqs = new Map<number, number>();
@@ -256,6 +280,8 @@ export class WebRtcHostMatchSync {
     number,
     { x: number; y: number; rotation: Rotation }
   >();
+  private readonly queuedEnemyDeaths: WebRtcEnemyDeathFrame[] = [];
+  private enemyDeathSeq = 0;
   private readonly lastEnemyPositions = new Map<
     number,
     { x: number; y: number }
@@ -625,6 +651,51 @@ export class WebRtcHostMatchSync {
     );
   }
 
+  public observeAuthoritativePlayerTank(tank: PlayerTank): void {
+    if (this.broadcaster) {
+      this.observePlayers([tank]);
+    }
+  }
+
+  public observeAuthoritativeEnemyTank(tank: EnemyTank): void {
+    if (this.broadcaster) {
+      this.observeEnemies([tank]);
+    }
+  }
+
+  public drainEnemyDeaths(): WebRtcEnemyDeathFrame[] {
+    if (this.activeReplayFrame !== null) {
+      this.queueEnemyDeaths(this.activeReplayFrame.enemyDeaths ?? []);
+    }
+    const deaths = this.pendingEnemyDeaths.splice(
+      0,
+      this.pendingEnemyDeaths.length,
+    );
+    deaths.forEach((death) => {
+      this.pendingEnemyDeathSeqs.delete(death.seq);
+      this.lastAppliedEnemyDeathSeq = Math.max(
+        this.lastAppliedEnemyDeathSeq,
+        death.seq,
+      );
+    });
+    return deaths;
+  }
+
+  public consumeRemotePowerSlot(playerIndex: number): number | null {
+    if (!this.broadcaster) {
+      return null;
+    }
+    const slots = this.pendingRemotePowerSlots.get(playerIndex);
+    if (slots === undefined || slots.length === 0) {
+      return null;
+    }
+    const slot = slots.shift();
+    if (slots.length === 0) {
+      this.pendingRemotePowerSlots.delete(playerIndex);
+    }
+    return slot ?? null;
+  }
+
   public getPowerup(): WebRtcPowerupFrame | null {
     return this.activeReplayFrame?.powerup ?? this.latestHostFrame?.powerup ?? null;
   }
@@ -747,6 +818,7 @@ export class WebRtcHostMatchSync {
         this.activePlayers.delete(linkId);
         this.replaySessions.delete(linkId);
         this.pendingActivations.delete(linkId);
+        this.pendingRemotePowerSlots.delete(linkId);
         if (this.matchStarted) {
           this.syncingPlayers.add(linkId);
         }
@@ -805,6 +877,8 @@ export class WebRtcHostMatchSync {
     this.replayTargetSeq = this.lastAppliedHostFrameSeq;
     this.pendingPlayerTicks.clear();
     this.pendingEnemyTicks.clear();
+    this.pendingEnemyDeaths.length = 0;
+    this.pendingEnemyDeathSeqs.clear();
     this.pendingAppliedFrameSeqs.length = 0;
     this.clientFrameCache.forEach((frame, seq) => {
       if (seq > this.lastAppliedHostFrameSeq) {
@@ -916,6 +990,7 @@ export class WebRtcHostMatchSync {
     this.latestRemoteInputs.delete(playerIndex);
     this.latestRemoteInputReceivedAt.delete(playerIndex);
     this.lastAppliedRemoteFireSeqs.delete(playerIndex);
+    this.pendingRemotePowerSlots.delete(playerIndex);
   }
 
   private maybeAcknowledgeReplay(): void {
@@ -1180,6 +1255,7 @@ export class WebRtcHostMatchSync {
         isObserverLink(linkId) ||
         !this.activePlayers.has(linkId) ||
         input.player !== linkId ||
+        !isPowerSlot(input.powerSlot) ||
         input.seq <=
           (this.latestRemoteInputs.get(linkId)?.seq ?? 0)
       ) {
@@ -1187,6 +1263,16 @@ export class WebRtcHostMatchSync {
       }
       this.latestRemoteInputs.set(linkId, input);
       this.latestRemoteInputReceivedAt.set(linkId, Date.now());
+      if (input.powerSlot !== null && input.powerSlot !== undefined) {
+        let slots = this.pendingRemotePowerSlots.get(linkId);
+        if (slots === undefined) {
+          slots = [];
+          this.pendingRemotePowerSlots.set(linkId, slots);
+        }
+        if (slots.length < 16) {
+          slots.push(input.powerSlot);
+        }
+      }
       if (Number.isFinite(input.elapsedSeconds)) {
         this.playerElapsedSeconds.set(
           linkId,
@@ -1234,6 +1320,7 @@ export class WebRtcHostMatchSync {
     initialSync: boolean,
   ): void {
     this.pendingAppliedFrameSeqs.push(frame.seq);
+    this.queueEnemyDeaths(frame.enemyDeaths ?? []);
     (frame.players ?? []).forEach((playerFrame) => {
       let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
       if (ticks === undefined) {
@@ -1266,6 +1353,7 @@ export class WebRtcHostMatchSync {
     const now = Date.now();
     if (
       !input.fire &&
+      input.powerSlot === null &&
       input.direction === this.lastDirection &&
       input.moving === this.lastMoving &&
       now - this.lastInputAt < INPUT_HEARTBEAT_MS
@@ -1286,6 +1374,7 @@ export class WebRtcHostMatchSync {
       direction: input.direction,
       moving: input.moving,
       fire: input.fire,
+      powerSlot: input.powerSlot,
       elapsedSeconds: this.localElapsedSeconds,
     } satisfies WebRtcInputPacket);
   }
@@ -1314,6 +1403,7 @@ export class WebRtcHostMatchSync {
     direction: Rotation | null;
     moving: boolean;
     fire: boolean;
+    powerSlot: number | null;
   } {
     const inputMethod = updateArgs.inputManager.getActiveMethod();
     const direction = this.readDirection(updateArgs);
@@ -1324,7 +1414,22 @@ export class WebRtcHostMatchSync {
       fire:
         inputMethod.isDownAny(LevelPlayInputContext.Fire) ||
         inputMethod.isHoldAny(LevelPlayInputContext.RapidFire),
+      powerSlot: this.readPowerSlot(updateArgs),
     };
+  }
+
+  private readPowerSlot(updateArgs: GameUpdateArgs): number | null {
+    const inputMethod = updateArgs.inputManager.getActiveMethod();
+    const controls = [
+      LevelPlayInputContext.PowerOne,
+      LevelPlayInputContext.PowerTwo,
+      LevelPlayInputContext.PowerThree,
+      LevelPlayInputContext.PowerFour,
+    ];
+    const slot = controls.findIndex((control) => {
+      return inputMethod.isDownAny(control);
+    });
+    return slot >= 0 ? slot : null;
   }
 
   private readDirection(updateArgs: GameUpdateArgs): Rotation | null {
@@ -1381,6 +1486,10 @@ export class WebRtcHostMatchSync {
       powerup,
       powerupPickup,
       activeEnemyIds,
+      enemyDeaths: this.queuedEnemyDeaths.splice(
+        0,
+        this.queuedEnemyDeaths.length,
+      ),
       enemies: enemies.map((tank) => this.createEnemyFrame(tank)),
     };
 
@@ -1540,6 +1649,20 @@ export class WebRtcHostMatchSync {
     });
   }
 
+  private queueEnemyDeaths(deaths: WebRtcEnemyDeathFrame[]): void {
+    deaths.forEach((death) => {
+      if (
+        !Number.isInteger(death.seq) ||
+        death.seq <= this.lastAppliedEnemyDeathSeq ||
+        this.pendingEnemyDeathSeqs.has(death.seq)
+      ) {
+        return;
+      }
+      this.pendingEnemyDeathSeqs.add(death.seq);
+      this.pendingEnemyDeaths.push(death);
+    });
+  }
+
   private applyReplayEnemyFrames(
     enemies: EnemyTank[],
     frames: WebRtcEnemyFrame[],
@@ -1690,6 +1813,20 @@ export class WebRtcHostMatchSync {
           tank.partyIndex,
           (this.enemyFireSeqs.get(tank.partyIndex) ?? 0) + 1,
         );
+      });
+      tank.died.addListener((event) => {
+        const center = tank.getCenter();
+        this.queuedEnemyDeaths.push({
+          seq: ++this.enemyDeathSeq,
+          partyIndex: tank.partyIndex,
+          x: center.x,
+          y: center.y,
+          reason: event.reason,
+          hitterPartyIndex:
+            event.hitterPartyIndex === 0 || event.hitterPartyIndex === 1
+              ? event.hitterPartyIndex
+              : null,
+        });
       });
     });
   }

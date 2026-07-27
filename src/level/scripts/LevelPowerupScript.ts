@@ -29,6 +29,7 @@ export interface NetworkPowerupPickup {
   partyIndex: number;
   x: number;
   y: number;
+  hotbarSlot?: number;
 }
 
 export class LevelPowerupScript extends LevelScript {
@@ -107,6 +108,7 @@ export class LevelPowerupScript extends LevelScript {
       type: snapshot.type,
       partyIndex: snapshot.partyIndex,
       centerPosition: new Vector(snapshot.x, snapshot.y),
+      hotbarSlot: snapshot.hotbarSlot,
     });
   }
 
@@ -372,6 +374,7 @@ export class LevelPowerupScript extends LevelScript {
       partyIndex: event.partyIndex,
       x: event.centerPosition.x,
       y: event.centerPosition.y,
+      hotbarSlot: event.hotbarSlot,
     };
   };
 

@@ -39,6 +39,8 @@ import { LevelWinScript } from '../src/level/scripts/LevelWinScript';
 import { MapConfig } from '../src/map/MapConfig';
 import { MapDto } from '../src/map/MapDto';
 import { applyRemotePlayerInput } from '../src/network/webrtc/applyRemotePlayerInput';
+import { PowerupType } from '../src/powerup';
+import { TankDeathReason } from '../src/tank/TankDeathReason';
 import { TankTier } from '../src/tank/TankTier';
 import { TerrainFactory } from '../src/terrain/TerrainFactory';
 import { TerrainRegionConfig } from '../src/terrain/TerrainRegionConfig';
@@ -46,6 +48,7 @@ import { TerrainType } from '../src/terrain/TerrainType';
 import * as config from '../src/config';
 import {
   SimulationEnemyFrame,
+  SimulationEnemyDeathFrame,
   SimulationHostFramePacket,
   SimulationInputPacket,
   SimulationMapDto,
@@ -71,6 +74,7 @@ interface LatestInput {
 }
 
 interface FireState {
+  tank: Tank;
   seq: number;
   x: number;
   y: number;
@@ -93,6 +97,7 @@ class HeadlessWebRtcMatch {
 
   public constructor(
     private readonly inputs: Map<SimulationPlayerIndex, LatestInput>,
+    private readonly pendingPowerSlots: Map<SimulationPlayerIndex, number[]>,
     private readonly disableEnemyShooting: boolean,
   ) {}
 
@@ -126,6 +131,24 @@ class HeadlessWebRtcMatch {
     return true;
   }
 
+  public isBroadcaster(): boolean {
+    return true;
+  }
+
+  public consumeRemotePowerSlot(playerIndex: number): number | null {
+    const slots = this.pendingPowerSlots.get(
+      playerIndex as SimulationPlayerIndex,
+    );
+    if (slots === undefined || slots.length === 0) {
+      return null;
+    }
+    const slot = slots.shift() ?? null;
+    if (slots.length === 0) {
+      this.pendingPowerSlots.delete(playerIndex as SimulationPlayerIndex);
+    }
+    return slot;
+  }
+
   public isWaitingForPeer(): boolean {
     return false;
   }
@@ -156,11 +179,16 @@ export class EngineBattleCitySimulation {
   private readonly world: LevelWorld;
   private readonly updateArgs: GameUpdateArgs;
   private readonly inputs = new Map<SimulationPlayerIndex, LatestInput>();
+  private readonly pendingPowerSlots = new Map<
+    SimulationPlayerIndex,
+    number[]
+  >();
   private readonly playerElapsed: [number, number] = [0, 0];
   private readonly playerFire = new Map<number, FireState>();
   private readonly enemyFire = new Map<number, FireState>();
   private readonly previousPlayers = new Map<number, PreviousPlayerPosition>();
   private readonly previousEnemies = new Map<number, PreviousEnemyPosition>();
+  private readonly pendingEnemyDeaths: SimulationEnemyDeathFrame[] = [];
   private readonly allScripts: LevelScript[];
   private readonly alwaysUpdateScripts: LevelScript[] = [];
   private readonly playingUpdateScripts: LevelScript[] = [];
@@ -177,6 +205,7 @@ export class EngineBattleCitySimulation {
   private readonly winScript: LevelWinScript;
   private readonly matchLifecycle: LevelMatchLifecycle;
   private enemyExplosionCount = 0;
+  private enemyDeathSeq = 0;
   private currentTick = 0;
   private frameSeq = 0;
 
@@ -233,6 +262,7 @@ export class EngineBattleCitySimulation {
 
     const webRtcMatch = new HeadlessWebRtcMatch(
       this.inputs,
+      this.pendingPowerSlots,
       options.disableEnemyShooting === true,
     );
     this.updateArgs = this.createUpdateArgs(webRtcMatch);
@@ -243,7 +273,23 @@ export class EngineBattleCitySimulation {
     this.gameOverScript = new LevelGameOverScript();
     this.introScript = new LevelIntroScript();
     this.playerOverScript = new LevelPlayerOverScript();
-    this.playerScript = new LevelPlayerScript({ headless: true });
+    this.playerScript = new LevelPlayerScript({
+      headless: true,
+      playerRunConsumables: options.playerRunConsumables?.map(
+        (consumables) => ({
+          powerups: consumables.powerups as PowerupType[],
+          powerupCounts: consumables.powerups.map((_, index) => {
+            return Math.max(
+              0,
+              Math.floor(consumables.powerupCounts?.[index] ?? 1),
+            );
+          }),
+        }),
+      ) as [
+        { powerups: PowerupType[]; powerupCounts: number[] },
+        { powerups: PowerupType[]; powerupCounts: number[] },
+      ],
+    });
     this.pointsScript = new LevelPointsScript();
     this.powerupScript = new LevelPowerupScript({
       isLocalServerMatch: false,
@@ -306,6 +352,20 @@ export class EngineBattleCitySimulation {
     });
     this.enemyScript.tankCreated.addListener((tank) => {
       this.observeTankFire(tank, this.enemyFire);
+      tank.died.addListener((event) => {
+        const center = tank.getCenter();
+        this.pendingEnemyDeaths.push({
+          seq: ++this.enemyDeathSeq,
+          partyIndex: tank.partyIndex,
+          x: center.x,
+          y: center.y,
+          reason: event.reason as TankDeathReason,
+          hitterPartyIndex:
+            event.hitterPartyIndex === 0 || event.hitterPartyIndex === 1
+              ? event.hitterPartyIndex
+              : null,
+        });
+      });
     });
     this.eventBus.enemyExploded.addListener(() => {
       this.enemyExplosionCount += 1;
@@ -328,7 +388,8 @@ export class EngineBattleCitySimulation {
       (packet.player !== 0 && packet.player !== 1) ||
       !Number.isInteger(packet.seq) ||
       packet.seq <= (this.inputs.get(packet.player)?.packet.seq ?? 0) ||
-      !isRotation(packet.direction)
+      !isRotation(packet.direction) ||
+      !isPowerSlot(packet.powerSlot)
     ) {
       return false;
     }
@@ -337,6 +398,16 @@ export class EngineBattleCitySimulation {
       packet,
       receivedAt: Date.now(),
     });
+    if (packet.powerSlot !== null && packet.powerSlot !== undefined) {
+      let slots = this.pendingPowerSlots.get(packet.player);
+      if (slots === undefined) {
+        slots = [];
+        this.pendingPowerSlots.set(packet.player, slots);
+      }
+      if (slots.length < 16) {
+        slots.push(packet.powerSlot);
+      }
+    }
     if (Number.isFinite(packet.elapsedSeconds)) {
       this.playerElapsed[packet.player] = Math.max(0, packet.elapsedSeconds);
     }
@@ -537,15 +608,21 @@ export class EngineBattleCitySimulation {
     tank: Tank,
     states: Map<number, FireState>,
   ): void {
-    if (states.has(tank.partyIndex)) {
+    const existing = states.get(tank.partyIndex);
+    if (existing?.tank === tank) {
       return;
     }
-    const state: FireState = {
+    const state: FireState = existing ?? {
+      tank,
       seq: 0,
-      x: tank.position.x,
-      y: tank.position.y,
+      x: 0,
+      y: 0,
       rotation: tank.rotation as SimulationRotation,
     };
+    state.tank = tank;
+    state.x = tank.position.x;
+    state.y = tank.position.y;
+    state.rotation = tank.rotation as SimulationRotation;
     states.set(tank.partyIndex, state);
     tank.fired.addListener(() => {
       state.seq += 1;
@@ -606,6 +683,10 @@ export class EngineBattleCitySimulation {
       powerup: powerup as SimulationPowerupFrame | null,
       powerupPickup: pickup as SimulationPowerupPickupFrame | null,
       activeEnemyIds,
+      enemyDeaths: this.pendingEnemyDeaths.splice(
+        0,
+        this.pendingEnemyDeaths.length,
+      ),
       enemies,
     };
   }
@@ -675,5 +756,13 @@ function isRotation(value: SimulationRotation | null): boolean {
     value === Rotation.Right ||
     value === Rotation.Down ||
     value === Rotation.Left
+  );
+}
+
+function isPowerSlot(value: number | null | undefined): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (Number.isInteger(value) && value >= 0 && value < 4)
   );
 }

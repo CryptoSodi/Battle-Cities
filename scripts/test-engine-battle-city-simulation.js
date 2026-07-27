@@ -31,7 +31,14 @@ function createMap(overrides = {}) {
   };
 }
 
-function input(player, seq, direction, moving, fire = false) {
+function input(
+  player,
+  seq,
+  direction,
+  moving,
+  fire = false,
+  powerSlot = null,
+) {
   return {
     type: 'webrtc-input',
     player,
@@ -40,6 +47,7 @@ function input(player, seq, direction, moving, fire = false) {
     direction,
     moving,
     fire,
+    powerSlot,
     elapsedSeconds: seq / 60,
   };
 }
@@ -75,6 +83,21 @@ function overlaps(left, right) {
     'a player bullet must naturally destroy and remove an enemy',
   );
   assert.strictEqual(
+    frame.enemyDeaths.length,
+    1,
+    'an enemy kill must emit an explicit client removal event',
+  );
+  assert.strictEqual(
+    frame.enemyDeaths[0].partyIndex,
+    0,
+    'the removal event must identify the killed enemy',
+  );
+  assert.strictEqual(
+    simulation.step().enemyDeaths.length,
+    0,
+    'an enemy removal event must only be emitted once',
+  );
+  assert.strictEqual(
     frame.playerScores[0],
     100,
     'the authoritative runtime must award the firing player',
@@ -104,6 +127,93 @@ function overlaps(left, right) {
     simulation.isComplete(),
     true,
     'victory must complete after the shared browser win timer',
+  );
+}
+
+{
+  const simulation = new EngineBattleCitySimulation(
+    createMap({
+      spawn: {
+        player: {
+          locations: [
+            { x: 64, y: 704 },
+            { x: 704, y: 704 },
+          ],
+        },
+        enemy: {
+          locations: [{ x: 704, y: 0 }],
+          list: [{ tier: 'a' }],
+        },
+      },
+    }),
+    { seed: 20, disableEnemyShooting: true },
+  );
+  let frame;
+  for (let tick = 0; tick < 300; tick += 1) {
+    frame = simulation.step();
+    if (frame.players.length === 2) break;
+  }
+  simulation.acceptInput(input(0, 1, null, false, true));
+  frame = simulation.step();
+  assert.strictEqual(
+    frame.players.find((player) => player.partyIndex === 0).fireSeq,
+    1,
+    'the first player tank must replicate fire',
+  );
+
+  const firstTank = simulation.world.getPlayerTanks()[0];
+  firstTank.die();
+  let respawnedTank = null;
+  for (let tick = 0; tick < 360; tick += 1) {
+    frame = simulation.step();
+    respawnedTank = simulation.world.getPlayerTanks()[0];
+    if (respawnedTank !== null && respawnedTank !== firstTank) break;
+  }
+  assert.ok(respawnedTank, 'player one must respawn for fire replication test');
+  simulation.acceptInput(input(0, 2, null, false, true));
+  frame = simulation.step();
+  assert.strictEqual(
+    frame.players.find((player) => player.partyIndex === 0).fireSeq,
+    2,
+    'a respawned player tank must attach a fresh fire listener',
+  );
+}
+
+{
+  const simulation = new EngineBattleCitySimulation(createMap(), {
+    seed: 21,
+    disableEnemyShooting: true,
+    playerRunConsumables: [
+      { powerups: ['shield'], powerupCounts: [1] },
+      { powerups: [], powerupCounts: [] },
+    ],
+  });
+  let frame;
+  for (let tick = 0; tick < 300; tick += 1) {
+    frame = simulation.step();
+    if (frame.players.length === 2) break;
+  }
+  assert.strictEqual(
+    simulation.acceptInput(input(0, 1, null, false, false, 0)),
+    true,
+    'a valid hotbar command must be accepted',
+  );
+  frame = simulation.step();
+  assert.strictEqual(frame.powerupPickup.partyIndex, 0);
+  assert.strictEqual(frame.powerupPickup.type, 'shield');
+  assert.strictEqual(frame.powerupPickup.hotbarSlot, 0);
+  const pickupSeq = frame.powerupPickup.seq;
+  simulation.acceptInput(input(0, 2, null, false, false, 0));
+  frame = simulation.step();
+  assert.strictEqual(
+    frame.powerupPickup.seq,
+    pickupSeq,
+    'a consumed hotbar slot must not activate twice',
+  );
+  assert.strictEqual(
+    simulation.acceptInput(input(0, 3, null, false, false, 4)),
+    false,
+    'an invalid hotbar slot must be rejected by the server',
   );
 }
 

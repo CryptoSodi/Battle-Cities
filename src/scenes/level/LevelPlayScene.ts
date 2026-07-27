@@ -464,6 +464,13 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       }
     });
 
+    this.playerScript.tankCreated.addListener((tank) => {
+      updateArgs.webRtcMatch.observeAuthoritativePlayerTank(tank);
+    });
+    this.enemyScript.tankCreated.addListener((tank) => {
+      updateArgs.webRtcMatch.observeAuthoritativeEnemyTank(tank);
+    });
+
     // Recording side of enemy replay (see the note above the reseed/replay
     // branch in setup()): as each enemy is constructed, start its trace and
     // hook its `fired` Subject so the per-tick recording loop in update()
@@ -542,6 +549,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.params.replay === undefined &&
       updateArgs.webRtcMatch.isEnabled()
     ) {
+      this.enemyScript.syncNetworkEnemyDeaths(
+        updateArgs.webRtcMatch.drainEnemyDeaths(),
+      );
       this.enemyScript.syncNetworkEnemyCount(
         updateArgs.webRtcMatch.getActiveEnemyIds(),
       );

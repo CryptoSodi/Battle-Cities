@@ -20,6 +20,7 @@ export interface SimulationInputPacket {
   direction: SimulationRotation | null;
   moving: boolean;
   fire: boolean;
+  powerSlot?: number | null;
   elapsedSeconds: number;
 }
 
@@ -69,6 +70,16 @@ export interface SimulationPowerupPickupFrame {
   partyIndex: SimulationPlayerIndex;
   x: number;
   y: number;
+  hotbarSlot?: number;
+}
+
+export interface SimulationEnemyDeathFrame {
+  seq: number;
+  partyIndex: number;
+  x: number;
+  y: number;
+  reason: 'bullet' | 'wipeout';
+  hitterPartyIndex: SimulationPlayerIndex | null;
 }
 
 export interface SimulationHostFramePacket {
@@ -84,6 +95,7 @@ export interface SimulationHostFramePacket {
   powerup: SimulationPowerupFrame | null;
   powerupPickup: SimulationPowerupPickupFrame | null;
   activeEnemyIds: number[];
+  enemyDeaths?: SimulationEnemyDeathFrame[];
   enemies: SimulationEnemyFrame[];
 }
 
@@ -161,5 +173,14 @@ export interface SimulationOptions {
     engine?: number;
     salvage?: number;
   };
+  playerRunConsumables?: [
+    SimulationRunConsumables,
+    SimulationRunConsumables,
+  ];
   extraLives?: number;
+}
+
+export interface SimulationRunConsumables {
+  powerups: SimulationPowerupType[];
+  powerupCounts?: number[];
 }

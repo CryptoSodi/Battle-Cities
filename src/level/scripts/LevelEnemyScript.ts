@@ -20,6 +20,13 @@ import {
 
 const NETWORK_DEATH_COLLISION_GRACE = 0.2;
 
+export interface NetworkEnemyDeath {
+  partyIndex: number;
+  x: number;
+  y: number;
+  reason: TankDeathReason;
+}
+
 export class LevelEnemyScript extends LevelScript {
   private readonly isNetworkEnemyMirror: boolean;
   private list: TankType[] = [];
@@ -96,17 +103,37 @@ export class LevelEnemyScript extends LevelScript {
     }
   }
 
-  private removeNetworkEnemy(tank: EnemyTank): void {
+  public syncNetworkEnemyDeaths(deaths: NetworkEnemyDeath[]): void {
+    if (!this.isNetworkEnemyMirror) {
+      return;
+    }
+    deaths.forEach((death) => {
+      const tank = this.aliveTanks.find((candidate) => {
+        return candidate.partyIndex === death.partyIndex;
+      });
+      if (tank !== undefined) {
+        this.removeNetworkEnemy(tank, death);
+      }
+    });
+  }
+
+  private removeNetworkEnemy(
+    tank: EnemyTank,
+    death: NetworkEnemyDeath = null,
+  ): void {
     this.activeEnemyIds.delete(tank.partyIndex);
     const explosion = new Explosion();
     explosion.updateMatrix();
-    const centerPosition = tank.getCenter();
+    const centerPosition =
+      death !== null && Number.isFinite(death.x) && Number.isFinite(death.y)
+        ? new Vector(death.x, death.y)
+        : tank.getCenter();
     explosion.setCenter(centerPosition);
     explosion.completed.addListener(() => {
       this.eventBus.enemyExploded.notify({
         type: tank.type,
         centerPosition,
-        reason: TankDeathReason.Bullet,
+        reason: death?.reason ?? TankDeathReason.Bullet,
       });
     });
     this.world.field.add(explosion);

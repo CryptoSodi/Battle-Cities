@@ -14,6 +14,8 @@ import {
   SimulationReadyPacket,
   SimulationResumePacket,
   SimulationOptions,
+  SimulationPowerupType,
+  SimulationRunConsumables,
   SimulationTankTier,
 } from '../shared/src';
 import { EngineBattleCitySimulation } from './engine-battle-city-simulation';
@@ -222,7 +224,10 @@ class MatchRuntime {
     public readonly level: number,
     simulationOptions: Pick<
       SimulationOptions,
-      'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+      | 'extraLives'
+      | 'initialPlayerTiers'
+      | 'playerRunConsumables'
+      | 'runBoosts'
     > = {},
   ) {
     this.simulation = new EngineBattleCitySimulation(loadMap(level), {
@@ -648,11 +653,17 @@ function parseSimulationOptions(
   body: Record<string, unknown>,
 ): Pick<
   SimulationOptions,
-  'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+  | 'extraLives'
+  | 'initialPlayerTiers'
+  | 'playerRunConsumables'
+  | 'runBoosts'
 > {
   const options: Pick<
     SimulationOptions,
-    'extraLives' | 'initialPlayerTiers' | 'runBoosts'
+    | 'extraLives'
+    | 'initialPlayerTiers'
+    | 'playerRunConsumables'
+    | 'runBoosts'
   > = {};
   const extraLives = Number(body.extraLives);
   if (Number.isFinite(extraLives)) {
@@ -683,7 +694,61 @@ function parseSimulationOptions(
       salvage: finiteNumber(boosts.salvage),
     };
   }
+
+  if (
+    Array.isArray(body.playerRunConsumables) &&
+    body.playerRunConsumables.length === 2
+  ) {
+    const consumables = body.playerRunConsumables.map(
+      parseRunConsumables,
+    );
+    if (consumables.every((value) => value !== null)) {
+      options.playerRunConsumables = consumables as [
+        SimulationRunConsumables,
+        SimulationRunConsumables,
+      ];
+    }
+  }
   return options;
+}
+
+function parseRunConsumables(value: unknown): SimulationRunConsumables | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const source = value as Record<string, unknown>;
+  if (
+    !Array.isArray(source.powerups) ||
+    source.powerups.length > 4 ||
+    !source.powerups.every(isPowerupType)
+  ) {
+    return null;
+  }
+  const rawCounts = Array.isArray(source.powerupCounts)
+    ? source.powerupCounts
+    : [];
+  return {
+    powerups: source.powerups as SimulationPowerupType[],
+    powerupCounts: source.powerups.map((_, index) => {
+      const count = Number(rawCounts[index] ?? 1);
+      return Number.isFinite(count)
+        ? Math.max(0, Math.min(99, Math.floor(count)))
+        : 1;
+    }),
+  };
+}
+
+function isPowerupType(value: unknown): value is SimulationPowerupType {
+  return (
+    value === 'defence' ||
+    value === 'freeze' ||
+    value === 'life' ||
+    value === 'shield' ||
+    value === 'speed' ||
+    value === 'upgrade' ||
+    value === 'zoomout' ||
+    value === 'wipeout'
+  );
 }
 
 function isTankTier(value: unknown): value is SimulationTankTier {

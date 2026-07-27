@@ -27,6 +27,11 @@ const HOTBAR_SLOT_SIZE = 70;
 const HOTBAR_SLOT_GAP = 12;
 const HOTBAR_SLOT_COUNT = 4;
 
+interface AuthoritativeRunConsumables {
+  powerups: PowerupType[];
+  powerupCounts: number[];
+}
+
 class PowerHotbarSlot extends GameObject {
   private readonly keyText: SpriteText;
   private readonly countText: SpriteText;
@@ -105,14 +110,44 @@ export class LevelPlayerScript extends LevelScript {
   private hotbar = new GameObject();
   private shopManager: ShopManager = null;
   private isReplaying = false;
+  private isWebRtcClient = false;
+  private localPlayerIndex = 0;
   private readonly headless: boolean;
+  private readonly playerRunConsumables:
+    | [AuthoritativeRunConsumables, AuthoritativeRunConsumables]
+    | null;
 
-  public constructor(options: { headless?: boolean } = {}) {
+  public constructor(
+    options: {
+      headless?: boolean;
+      playerRunConsumables?: [
+        AuthoritativeRunConsumables,
+        AuthoritativeRunConsumables,
+      ];
+    } = {},
+  ) {
     super();
     this.headless = options.headless === true;
+    this.playerRunConsumables = options.playerRunConsumables === undefined
+      ? null
+      : options.playerRunConsumables.map((consumables) => ({
+          powerups: [...consumables.powerups],
+          powerupCounts: [...consumables.powerupCounts],
+        })) as [AuthoritativeRunConsumables, AuthoritativeRunConsumables];
   }
 
-  protected setup({ gameStorage, inputManager, session }: GameUpdateArgs): void {
+  protected setup(updateArgs: GameUpdateArgs): void {
+    const {
+      gameStorage,
+      inputManager,
+      session,
+      webRtcMatch,
+    } = updateArgs;
+    this.isWebRtcClient =
+      webRtcMatch.isEnabled() && !webRtcMatch.isBroadcaster();
+    if (this.isWebRtcClient) {
+      this.localPlayerIndex = webRtcMatch.getLocalPlayerIndex();
+    }
     if (!this.headless) {
       this.shopManager = new ShopManager(gameStorage);
       this.isReplaying = inputManager.isReplaying();
@@ -200,10 +235,26 @@ export class LevelPlayerScript extends LevelScript {
     }
   }
 
-  protected update({ deltaTime, inputManager }: GameUpdateArgs): void {
+  protected update(updateArgs: GameUpdateArgs): void {
+    const { deltaTime, inputManager, webRtcMatch } = updateArgs;
     this.timers.forEach((timer) => {
       timer.update(deltaTime);
     });
+
+    if (webRtcMatch.isEnabled()) {
+      if (webRtcMatch.isBroadcaster()) {
+        this.tanks.forEach((_tank, partyIndex) => {
+          for (let action = 0; action < HOTBAR_SLOT_COUNT; action += 1) {
+            const slot = webRtcMatch.consumeRemotePowerSlot(partyIndex);
+            if (slot === null) {
+              break;
+            }
+            this.useHotbarPower(slot, partyIndex, false);
+          }
+        });
+      }
+      return;
+    }
 
     if (this.headless) {
       return;
@@ -304,23 +355,39 @@ export class LevelPlayerScript extends LevelScript {
     this.world.addPlayerTank(partyIndex, tank);
   };
 
-  private useHotbarPower(index: number): void {
-    const tank = this.tanks[0];
+  private useHotbarPower(
+    index: number,
+    partyIndex = 0,
+    consumeStoredInventory = true,
+  ): void {
+    const tank = this.tanks[partyIndex];
     if (tank === null || tank === undefined) {
       return;
     }
 
-    const runConsumables = this.session.getRunConsumables();
+    const authoritativeConsumables =
+      this.playerRunConsumables?.[partyIndex] ?? null;
+    const runConsumables =
+      authoritativeConsumables ?? this.session.getRunConsumables();
     const powerupCounts = runConsumables.powerupCounts || [];
     runConsumables.powerupCounts = powerupCounts;
-    const itemId = runConsumables.powerupItems[index];
+    const itemId = authoritativeConsumables === null
+      ? this.session.getRunConsumables().powerupItems[index]
+      : null;
     const type = runConsumables.powerups[index];
-    if (itemId === undefined || type === undefined) {
+    if (
+      type === undefined ||
+      (consumeStoredInventory && itemId === undefined)
+    ) {
       return;
     }
 
-    if (!this.isReplaying && !this.shopManager.consumeInventoryItem(itemId)) {
-      runConsumables.powerupItems.splice(index, 1);
+    if (
+      consumeStoredInventory &&
+      !this.isReplaying &&
+      !this.shopManager.consumeInventoryItem(itemId)
+    ) {
+      this.session.getRunConsumables().powerupItems.splice(index, 1);
       runConsumables.powerups.splice(index, 1);
       powerupCounts.splice(index, 1);
       this.renderHotbar();
@@ -331,7 +398,9 @@ export class LevelPlayerScript extends LevelScript {
     if (stackCount > 1) {
       powerupCounts[index] = stackCount - 1;
     } else {
-      runConsumables.powerupItems.splice(index, 1);
+      if (authoritativeConsumables === null) {
+        this.session.getRunConsumables().powerupItems.splice(index, 1);
+      }
       runConsumables.powerups.splice(index, 1);
       powerupCounts.splice(index, 1);
     }
@@ -339,9 +408,12 @@ export class LevelPlayerScript extends LevelScript {
     this.eventBus.powerupPicked.notify({
       type,
       centerPosition: tank.getCenter(),
-      partyIndex: 0,
+      partyIndex,
+      hotbarSlot: index,
     });
-    this.renderHotbar();
+    if (!this.headless) {
+      this.renderHotbar();
+    }
   }
 
   private renderHotbar(): void {
@@ -362,7 +434,15 @@ export class LevelPlayerScript extends LevelScript {
   }
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
-    const { type: powerupType, partyIndex } = event;
+    const { type: powerupType, partyIndex, hotbarSlot } = event;
+
+    if (
+      this.isWebRtcClient &&
+      partyIndex === this.localPlayerIndex &&
+      Number.isInteger(hotbarSlot)
+    ) {
+      this.consumeClientHotbarSlot(hotbarSlot);
+    }
 
     const tank = this.tanks[partyIndex];
 
@@ -381,6 +461,21 @@ export class LevelPlayerScript extends LevelScript {
       tank.upgrade();
     }
   };
+
+  private consumeClientHotbarSlot(index: number): void {
+    const runConsumables = this.session.getRunConsumables();
+    const powerupCounts = runConsumables.powerupCounts || [];
+    const stackCount = powerupCounts[index] || 1;
+    if (stackCount > 1) {
+      powerupCounts[index] = stackCount - 1;
+    } else {
+      runConsumables.powerupItems.splice(index, 1);
+      runConsumables.powerups.splice(index, 1);
+      powerupCounts.splice(index, 1);
+    }
+    runConsumables.powerupCounts = powerupCounts;
+    this.renderHotbar();
+  }
 
   private handleLevelGameOverMoveBlocked = (): void => {
     this.tanks.forEach((tank) => {

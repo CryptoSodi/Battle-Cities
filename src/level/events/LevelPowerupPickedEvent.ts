@@ -5,4 +5,5 @@ export interface LevelPowerupPickedEvent {
   type: PowerupType;
   centerPosition: Vector;
   partyIndex: number;
+  hotbarSlot?: number;
 }
