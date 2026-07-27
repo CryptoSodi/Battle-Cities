@@ -29,6 +29,14 @@ export interface NetworkEnemyDeath {
   hitterPartyIndex?: number | null;
 }
 
+export interface NetworkReplayEnemy {
+  partyIndex: number;
+  x: number;
+  y: number;
+  deltaX: number;
+  deltaY: number;
+}
+
 export class LevelEnemyScript extends LevelScript {
   private readonly isNetworkEnemyMirror: boolean;
   private list: TankType[] = [];
@@ -85,7 +93,10 @@ export class LevelEnemyScript extends LevelScript {
     return Array.from(this.activeEnemyIds);
   }
 
-  public syncNetworkEnemyCount(activeIds: number[]): void {
+  public syncNetworkEnemyCount(
+    activeIds: number[],
+    spawnMissing = true,
+  ): void {
     if (!this.isNetworkEnemyMirror) {
       return;
     }
@@ -96,13 +107,42 @@ export class LevelEnemyScript extends LevelScript {
       .filter((tank) => !activeIdSet.has(tank.partyIndex))
       .forEach((tank) => this.removeNetworkEnemy(tank));
 
-    if (activeIdSet.size === 0) {
+    if (!spawnMissing || activeIdSet.size === 0) {
       return;
     }
     const desiredCount = Math.max(...Array.from(activeIdSet)) + 1;
     while (this.listIndex < desiredCount && this.listIndex < this.list.length) {
       this.requestSpawn();
     }
+  }
+
+  public syncNetworkReplayEnemies(frames: NetworkReplayEnemy[]): void {
+    if (!this.isNetworkEnemyMirror) {
+      return;
+    }
+    frames.forEach((frame) => {
+      if (
+        this.aliveTanks.some((tank) => tank.partyIndex === frame.partyIndex) ||
+        !Number.isInteger(frame.partyIndex) ||
+        frame.partyIndex < 0 ||
+        frame.partyIndex >= this.list.length
+      ) {
+        return;
+      }
+      const x = frame.x - (Number.isFinite(frame.deltaX) ? frame.deltaX : 0);
+      const y = frame.y - (Number.isFinite(frame.deltaY) ? frame.deltaY : 0);
+      this.activeEnemyIds.add(frame.partyIndex);
+      this.listIndex = Math.max(this.listIndex, frame.partyIndex + 1);
+      this.spawningCount += 1;
+      this.handleSpawnCompleted({
+        type: this.list[frame.partyIndex],
+        centerPosition: new Vector(
+          x + TANK_SPAWN_SIZE / 2,
+          y + TANK_SPAWN_SIZE / 2,
+        ),
+        partyIndex: frame.partyIndex,
+      });
+    });
   }
 
   public syncNetworkEnemyDeaths(deaths: NetworkEnemyDeath[]): void {

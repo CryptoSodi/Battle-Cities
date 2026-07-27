@@ -555,8 +555,14 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.enemyScript.syncNetworkEnemyDeaths(
         updateArgs.webRtcMatch.drainEnemyDeaths(),
       );
+      const replayEnemySpawns =
+        updateArgs.webRtcMatch.getReplayEnemySpawns();
+      if (replayEnemySpawns !== null) {
+        this.enemyScript.syncNetworkReplayEnemies(replayEnemySpawns);
+      }
       this.enemyScript.syncNetworkEnemyCount(
         updateArgs.webRtcMatch.getActiveEnemyIds(),
+        replayEnemySpawns === null,
       );
       updateArgs.webRtcMatch.prepareNetworkTicks(
         this.world.getPlayerTanks(),

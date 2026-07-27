@@ -678,6 +678,10 @@ export class WebRtcHostMatchSync {
     );
   }
 
+  public getReplayEnemySpawns(): WebRtcEnemyFrame[] | null {
+    return this.activeReplayFrame?.enemies ?? null;
+  }
+
   public observeAuthoritativePlayerTank(tank: PlayerTank): void {
     if (this.broadcaster) {
       this.observePlayers([tank]);

@@ -84,6 +84,31 @@ test('network enemy removal emits the normal death effect event once', (t) => {
   t.is(enemyScript.getAliveTanks().length, 0);
 });
 
+test('network replay creates an enemy without waiting for a spawn animation', (t) => {
+  const world = new LevelWorld(new GameObject(), 400, 400);
+  const eventBus = new LevelEventBus();
+  const enemyScript = new LevelEnemyScript(true);
+  enemyScript.invokeInit(world, eventBus, new Session(), new MapConfig());
+  (enemyScript as any).list = [
+    new TankType(TankParty.Enemy, TankTier.A, false),
+  ];
+
+  enemyScript.syncNetworkReplayEnemies([
+    {
+      partyIndex: 0,
+      x: 96,
+      y: 64,
+      deltaX: 2,
+      deltaY: 0,
+    },
+  ]);
+
+  const tank = enemyScript.getAliveTanks()[0];
+  t.is(tank.partyIndex, 0);
+  t.is(tank.position.x, 94);
+  t.is(tank.position.y, 64);
+});
+
 test('authoritative enemy spawn waits while a player occupies its spawn point', (t) => {
   const world = new LevelWorld(new GameObject(), 400, 400);
   const eventBus = new LevelEventBus();
