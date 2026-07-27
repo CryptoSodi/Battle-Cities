@@ -145,14 +145,15 @@ export class LevelEnemyScript extends LevelScript {
     });
   }
 
-  protected setup(): void {
+  protected init(): void {
     this.eventBus.enemySpawnCompleted.addListener(this.handleSpawnCompleted);
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
 
     this.list = this.mapConfig.getEnemySpawnList();
-
     this.positions = this.mapConfig.getEnemySpawnPositions();
+  }
 
+  protected setup(): void {
     if (!this.isNetworkEnemyMirror) {
       this.spawnTimer.reset(config.ENEMY_FIRST_SPAWN_DELAY);
     }

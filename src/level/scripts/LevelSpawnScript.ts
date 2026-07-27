@@ -7,7 +7,7 @@ import {
 } from '../events';
 
 export class LevelSpawnScript extends LevelScript {
-  protected setup(): void {
+  protected init(): void {
     this.eventBus.enemySpawnRequested.addListener(
       this.handleEnemySpawnRequested,
     );

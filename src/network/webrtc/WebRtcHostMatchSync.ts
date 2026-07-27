@@ -306,14 +306,7 @@ export class WebRtcHostMatchSync {
   private lastRttMs: number = null;
   private rttMs: number = null;
   private jitterMs: number = null;
-  private statusElement: HTMLElement = null;
   private readonly joinButtons = new Map<number, HTMLButtonElement>();
-  private clockElement: HTMLElement = null;
-  private sharedClockValue: HTMLElement = null;
-  private playerOneClockValue: HTMLElement = null;
-  private playerTwoClockValue: HTMLElement = null;
-  private rttValue: HTMLElement = null;
-  private jitterValue: HTMLElement = null;
   private observerHeartbeatTimer: number = null;
   private observerDiscoveryTimer: number = null;
   private authoritativeScores: [number, number] = [0, 0];
@@ -595,7 +588,6 @@ export class WebRtcHostMatchSync {
 
     if (this.broadcaster) {
       if (!this.matchStarted) {
-        this.updateClock();
         return;
       }
       this.sharedElapsedSeconds += deltaTime;
@@ -612,12 +604,10 @@ export class WebRtcHostMatchSync {
         matchResult,
         deltaTime,
       );
-      this.updateClock();
       return;
     }
 
     if (this.activeReplayFrame !== null) {
-      this.updateClock();
       return;
     }
 
@@ -627,7 +617,6 @@ export class WebRtcHostMatchSync {
       this.clientFrameCache.delete(appliedSeq);
     }
 
-    this.updateClock();
   }
 
   public prepareNetworkTicks(
@@ -761,9 +750,6 @@ export class WebRtcHostMatchSync {
       if (!this.headlessBroadcaster) {
         this.showPlayerControls();
       }
-    }
-    if (!this.headlessBroadcaster) {
-      this.ensureClockElement();
     }
     log('mode enabled', {
       role: this.broadcaster
@@ -1911,27 +1897,6 @@ export class WebRtcHostMatchSync {
     });
   }
 
-  private updateClock(): void {
-    if (this.headlessBroadcaster) {
-      return;
-    }
-    this.ensureClockElement();
-    const playerOneElapsed = this.broadcaster
-      ? this.playerElapsedSeconds.get(0) ?? 0
-      : this.latestHostFrame?.playerOneElapsedSeconds ?? 0;
-    const playerTwoElapsed = this.broadcaster
-      ? this.playerElapsedSeconds.get(1) ?? 0
-      : this.latestHostFrame?.playerTwoElapsedSeconds ?? 0;
-
-    this.sharedClockValue.textContent = this.formatClock(
-      this.sharedElapsedSeconds,
-    );
-    this.playerOneClockValue.textContent = this.formatClock(playerOneElapsed);
-    this.playerTwoClockValue.textContent = this.formatClock(playerTwoElapsed);
-    this.rttValue.textContent = this.formatMilliseconds(this.rttMs);
-    this.jitterValue.textContent = this.formatMilliseconds(this.jitterMs);
-  }
-
   private updateNetworkProbe(deltaTime: number): void {
     if (this.broadcaster) {
       return;
@@ -1970,88 +1935,6 @@ export class WebRtcHostMatchSync {
       this.rttMs === null
         ? sampleRttMs
         : this.rttMs + (sampleRttMs - this.rttMs) * JITTER_SMOOTHING;
-  }
-
-  private formatMilliseconds(value: number): string {
-    return value === null || !Number.isFinite(value)
-      ? '-- ms'
-      : `${value.toFixed(1)} ms`;
-  }
-
-  private formatClock(elapsedSeconds: number): string {
-    if (!Number.isFinite(elapsedSeconds)) {
-      elapsedSeconds = 0;
-    }
-    const totalMilliseconds = Math.max(
-      0,
-      Math.floor(elapsedSeconds * 1000),
-    );
-    const minutes = Math.floor(totalMilliseconds / 60000);
-    const seconds = Math.floor((totalMilliseconds % 60000) / 1000);
-    const milliseconds = totalMilliseconds % 1000;
-
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-  }
-
-  private ensureClockElement(): HTMLElement {
-    if (this.clockElement !== null) {
-      return this.clockElement;
-    }
-
-    const element = document.createElement('aside');
-    element.className = 'webrtc-match-clock';
-    element.setAttribute('aria-label', 'WebRTC match clocks');
-    Object.assign(element.style, {
-      position: 'fixed',
-      left: '12px',
-      top: '104px',
-      zIndex: '1000',
-      width: '176px',
-      padding: '10px 12px',
-      border: '1px solid var(--mb-accent, #55e6c1)',
-      borderRadius: '6px',
-      background: 'rgba(9, 19, 31, 0.78)',
-      color: 'var(--mb-text, #ffffff)',
-      font: '600 13px system-ui, sans-serif',
-      fontVariantNumeric: 'tabular-nums',
-      pointerEvents: 'none',
-    });
-
-    const addClockRow = (label: string): HTMLElement => {
-      const row = document.createElement('div');
-      Object.assign(row.style, {
-        display: 'grid',
-        gridTemplateColumns: '1fr auto',
-        alignItems: 'baseline',
-        gap: '12px',
-        minHeight: '22px',
-      });
-
-      const labelElement = document.createElement('span');
-      labelElement.textContent = label;
-      labelElement.style.fontWeight = '500';
-
-      const valueElement = document.createElement('time');
-      valueElement.textContent = '00:00.000';
-      valueElement.style.fontFamily =
-        'ui-monospace, SFMono-Regular, Consolas, monospace';
-
-      row.append(labelElement, valueElement);
-      element.appendChild(row);
-      return valueElement;
-    };
-
-    this.sharedClockValue = addClockRow('Shared');
-    this.playerOneClockValue = addClockRow('Player 1');
-    this.playerTwoClockValue = addClockRow('Player 2');
-    this.rttValue = addClockRow('RTT');
-    this.jitterValue = addClockRow('Jitter');
-
-    document.body.appendChild(element);
-    this.clockElement = element;
-    return element;
   }
 
   private createPlayerUrl(playerIndex: 0 | 1): string {
@@ -2123,40 +2006,7 @@ export class WebRtcHostMatchSync {
   }
 
   private showStatus(message: string): void {
-    if (this.headlessBroadcaster) {
-      log(message.replace(/\n/g, ' '));
-      return;
-    }
-    this.ensureStatusElement().textContent = message;
-  }
-
-  private ensureStatusElement(): HTMLElement {
-    if (this.statusElement !== null) {
-      return this.statusElement;
-    }
-
-    const element = document.createElement('div');
-    element.className = 'webrtc-match-status';
-    element.setAttribute('aria-live', 'polite');
-    Object.assign(element.style, {
-      position: 'fixed',
-      right: '16px',
-      bottom: this.broadcaster ? '184px' : '16px',
-      zIndex: '1000',
-      maxWidth: '320px',
-      minHeight: '44px',
-      whiteSpace: 'pre-line',
-      padding: '10px 14px',
-      border: '2px solid #55e6c1',
-      borderRadius: '6px',
-      background: '#09131f',
-      color: '#fff',
-      font: '600 14px system-ui, sans-serif',
-    });
-    document.body.appendChild(element);
-    this.statusElement = element;
-
-    return element;
+    log(message.replace(/\n/g, ' '));
   }
 
   private ensureJoinButton(
