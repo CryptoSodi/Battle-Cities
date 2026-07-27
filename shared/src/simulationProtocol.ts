@@ -87,6 +87,7 @@ export interface SimulationHostFramePacket {
   seq: number;
   tick: number;
   deltaTime: number;
+  matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
   sharedElapsedSeconds: number;
   playerOneElapsedSeconds: number;

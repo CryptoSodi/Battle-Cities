@@ -62,6 +62,11 @@ export class SessionPlayer {
     return this.gamePoints + this.getLevelPoints();
   }
 
+  public setAuthoritativeGamePoints(points: number): void {
+    const total = Math.max(0, Math.floor(points));
+    this.gamePoints = total - this.getLevelPoints();
+  }
+
   public getLevelPoints(): number {
     return this.levelPointsRecord.getTotalPoints();
   }

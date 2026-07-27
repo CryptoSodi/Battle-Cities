@@ -600,6 +600,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
             this.session.getPlayer(0).getGamePoints(),
             this.session.getPlayer(1).getGamePoints(),
           ],
+          this.matchLifecycle.getResult(),
           updateArgs.deltaTime,
         );
         if (!updateArgs.webRtcMatch.isHost()) {
@@ -609,6 +610,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           this.powerupScript.syncWebRtcPickup(
             updateArgs.webRtcMatch.getPowerupPickup(),
           );
+          this.applyAuthoritativeMatchResult(updateArgs);
         }
       } else if (updateArgs.magicBlockMovement.isOnlineMatch()) {
         this.webRtcGhostScript.prepareRemoteTankForServerPath();
@@ -1051,6 +1053,22 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.navigator.replace(GameSceneType.LevelScore);
   };
+
+  private applyAuthoritativeMatchResult(updateArgs: GameUpdateArgs): void {
+    const matchResult = updateArgs.webRtcMatch.consumeMatchResult();
+    if (matchResult === null) {
+      return;
+    }
+    matchResult.playerScores.forEach((score, playerIndex) => {
+      this.session.getPlayer(playerIndex).setAuthoritativeGamePoints(score);
+    });
+    if (matchResult.result === 'loss') {
+      this.session.setGameOver();
+      this.eventBus.levelGameOverCompleted.notify(null);
+      return;
+    }
+    this.eventBus.levelWinCompleted.notify(null);
+  }
 
   // Wraps up whichever input capture mode this level started in: saves a
   // completed recording as the next "last replay" (dev-only REPLAY menu

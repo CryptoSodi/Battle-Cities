@@ -716,6 +716,7 @@ export class EngineBattleCitySimulation {
       seq: ++this.frameSeq,
       tick: this.currentTick,
       deltaTime: this.deltaTime,
+      matchResult: this.matchLifecycle.getResult(),
       playerScores: this.getScores(),
       sharedElapsedSeconds: this.currentTick * this.deltaTime,
       playerOneElapsedSeconds: this.playerElapsed[0],

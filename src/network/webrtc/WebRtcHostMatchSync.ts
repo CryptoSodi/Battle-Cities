@@ -101,6 +101,7 @@ interface WebRtcHostFramePacket {
   seq: number;
   tick: number;
   deltaTime: number;
+  matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
   sharedElapsedSeconds: number;
   playerOneElapsedSeconds: number;
@@ -243,6 +244,7 @@ export class WebRtcHostMatchSync {
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
   private latestHostFrame: WebRtcHostFramePacket = null;
   private activeReplayFrame: WebRtcHostFramePacket = null;
+  private consumedMatchResultSeq = 0;
   private readonly recoveryFrames = new Map<number, WebRtcHostFramePacket>();
   private readonly clientFrameCache = new Map<number, WebRtcHostFramePacket>();
   private readonly pendingAppliedFrameSeqs: number[] = [];
@@ -416,6 +418,25 @@ export class WebRtcHostMatchSync {
     return Number.isFinite(score) ? Math.max(0, Math.floor(score)) : null;
   }
 
+  public consumeMatchResult(): {
+    result: 'win' | 'loss';
+    playerScores: [number, number];
+  } | null {
+    const frame = this.activeReplayFrame ?? this.latestHostFrame;
+    if (
+      frame === null ||
+      frame.seq <= this.consumedMatchResultSeq ||
+      (frame.matchResult !== 'win' && frame.matchResult !== 'loss')
+    ) {
+      return null;
+    }
+    this.consumedMatchResultSeq = frame.seq;
+    return {
+      result: frame.matchResult,
+      playerScores: frame.playerScores,
+    };
+  }
+
   public async completeAuthoritativeMatch(): Promise<void> {
     if (
       !this.isHeadlessBroadcaster() ||
@@ -538,6 +559,7 @@ export class WebRtcHostMatchSync {
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
     playerScores: [number, number],
+    matchResult: 'win' | 'loss' | null,
     deltaTime: number,
   ): void {
     if (!this.isEnabled()) {
@@ -573,6 +595,7 @@ export class WebRtcHostMatchSync {
         powerup,
         powerupPickup,
         playerScores,
+        matchResult,
         deltaTime,
       );
       this.updateClock();
@@ -1470,6 +1493,7 @@ export class WebRtcHostMatchSync {
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
     playerScores: [number, number],
+    matchResult: 'win' | 'loss' | null,
     deltaTime: number,
   ): void {
     const activeEnemyIdSet = new Set(activeEnemyIds);
@@ -1483,6 +1507,7 @@ export class WebRtcHostMatchSync {
       seq: ++this.frameSeq,
       tick: this.tick,
       deltaTime: Math.min(Math.max(deltaTime, 0), 0.1),
+      matchResult,
       playerScores: playerScores.map((score) => {
         return Math.max(0, Math.floor(score));
       }) as [number, number],

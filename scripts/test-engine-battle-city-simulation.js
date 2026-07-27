@@ -120,13 +120,19 @@ function overlaps(left, right) {
     1,
     'enemy death must complete the shared kill-explosion animation',
   );
+  let terminalFrame = frame;
   for (let tick = 0; tick < 40 && !simulation.isComplete(); tick += 1) {
-    simulation.step();
+    terminalFrame = simulation.step();
   }
   assert.strictEqual(
     simulation.isComplete(),
     true,
     'victory must complete after the shared browser win timer',
+  );
+  assert.strictEqual(
+    terminalFrame.matchResult,
+    'win',
+    'the terminal host frame must carry the authoritative match result',
   );
 }
 
