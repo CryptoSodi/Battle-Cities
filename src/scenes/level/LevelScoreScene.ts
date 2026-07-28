@@ -807,6 +807,21 @@ export class LevelScoreScene extends PanelScene {
   }
 
   private finish(): void {
+    if (this.isObserver) {
+      const returnUrl = this.getObserverReturnUrl();
+      if (returnUrl !== null) {
+        try {
+          if (window.top !== null) {
+            window.top.location.href = returnUrl;
+            return;
+          }
+        } catch {
+          // Cross-origin frames may reject top-level navigation.
+        }
+        window.location.assign(returnUrl);
+        return;
+      }
+    }
     if (this.session.isGameOver()) {
       this.navigator.replace(GameSceneType.MainGameOver);
       return;
@@ -817,5 +832,27 @@ export class LevelScoreScene extends PanelScene {
     }
     this.session.activateNextLevel();
     this.navigator.replace(GameSceneType.LevelLoad);
+  }
+
+  private getObserverReturnUrl(): string | null {
+    const value = new URLSearchParams(window.location.search).get('returnTo');
+    if (value === null) return null;
+    try {
+      const url = new URL(value);
+      const isLocal =
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        /^192\.168\./.test(url.hostname) ||
+        /^10\./.test(url.hostname);
+      if (
+        (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+        (url.hostname !== 'broadcaster.battlecities.com' && !isLocal)
+      ) {
+        return null;
+      }
+      return url.toString();
+    } catch {
+      return null;
+    }
   }
 }

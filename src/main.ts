@@ -699,6 +699,10 @@ function waitForLogin(): Promise<void> {
   return new Promise((resolve) => {
     let loginStarted = false;
 
+    const showLogin = (): void => {
+      document.documentElement.classList.remove('auth-bootstrap');
+    };
+
     const setStatus = (message: string): void => {
       if (authStatusElement !== null) {
         authStatusElement.textContent = message;
@@ -888,6 +892,8 @@ function waitForLogin(): Promise<void> {
           return;
         }
 
+        showLogin();
+
         apiFetch('/api/session')
           .then((response) => (response.ok ? response.json() : null))
           .then((session) => {
@@ -901,7 +907,7 @@ function waitForLogin(): Promise<void> {
           })
           .catch(() => undefined);
       })
-      .catch(() => undefined);
+      .catch(() => showLogin());
 
     guestLoginButton?.addEventListener('click', () => {
       startGuestSession();
@@ -927,6 +933,7 @@ function enterGameView(): void {
   }
 
   document.body.classList.add('game-running');
+  document.documentElement.classList.remove('auth-bootstrap');
   document.documentElement.classList.remove('observer-bootstrap');
 
   if (config.IS_DEV) {

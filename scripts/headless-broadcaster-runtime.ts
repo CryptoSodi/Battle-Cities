@@ -1856,7 +1856,7 @@ function monitorHtml(publicLive = false): string {
       function renderTableHead() {
         var head = document.getElementById('match-head');
         var labels = activeView === 'past'
-          ? ['Match', 'State', 'Game type', 'Players', 'Level', 'Ticks', 'Completed', '']
+          ? ['Match', 'State', 'Game type', 'Players', 'Score 1', 'Score 2', 'Level', 'Ticks', 'Completed', '']
           : ['Match', 'State', 'Level', 'Players', 'Observers', 'Tick', 'Started', ''];
         var row = document.createElement('tr');
         labels.forEach(function (label) {
@@ -1883,6 +1883,10 @@ function monitorHtml(publicLive = false): string {
             return player.displayName || 'Player ' + (Number(player.slot) + 1);
           }).join(' vs ') || '--',
         );
+        var scoreOne = getArchivedPlayerScore(match, 0);
+        var scoreTwo = getArchivedPlayerScore(match, 1);
+        appendCell(row, scoreOne === null ? '--' : formatNumber(scoreOne), 'number');
+        appendCell(row, scoreTwo === null ? '--' : formatNumber(scoreTwo), 'number');
         appendCell(row, String(match.level), 'number');
         appendCell(row, formatNumber(match.finalTick || match.frameCount), 'number');
         appendCell(
@@ -1925,7 +1929,21 @@ function monitorHtml(publicLive = false): string {
         observerUrl.searchParams.set('observer', '1');
         observerUrl.searchParams.set('match', match.id || match.matchId);
         observerUrl.searchParams.set('level', String(match.level));
+        observerUrl.searchParams.set(
+          'returnTo',
+          new URL('/live', window.location.origin).toString(),
+        );
         return observerUrl.toString();
+      }
+
+      function getArchivedPlayerScore(match, playerSlot) {
+        var scores = match && match.result && match.result.scores;
+        if (!Array.isArray(scores)) return null;
+        if (typeof scores[playerSlot] === 'number') return scores[playerSlot];
+        var score = scores.find(function (item) {
+          return item && Number(item.playerSlot) === playerSlot;
+        });
+        return score ? Number(score.score) || 0 : null;
       }
 
       function startReplay(match, button) {
