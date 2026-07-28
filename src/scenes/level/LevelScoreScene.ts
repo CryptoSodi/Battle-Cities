@@ -9,7 +9,7 @@ import { TankTier } from '../../tank';
 import { GameSceneType } from '../GameSceneType';
 import { PanelScene, UI } from '../main/panelUi';
 
-const MOBILE_WIDTH = 744;
+const PAGE_GUTTER = 24;
 const SIMULATION_TICKS_PER_SECOND = 60;
 const TIERS = [TankTier.A, TankTier.B, TankTier.C, TankTier.D];
 const TIER_ICONS = [
@@ -49,7 +49,7 @@ export class LevelScoreScene extends PanelScene {
   }
 
   protected getContentWidth(): number {
-    return config.isMobileTouchViewport() ? MOBILE_WIDTH : UI.WIDTH;
+    return Math.min(UI.WIDTH, Math.max(320, this.root.size.width - PAGE_GUTTER * 2));
   }
 
   protected getPageTop(): number {
@@ -107,10 +107,16 @@ export class LevelScoreScene extends PanelScene {
   private renderDesktop(): void {
     const x = this.pageX;
     const y = this.pageY;
-    const width = UI.WIDTH;
+    const width = this.getContentWidth();
+    const actionWidth = this.getBackButtonWidth();
+    const actionX =
+      x + width - actionWidth - this.getBackButtonRightInset();
+    const titleWidth = Math.min(398, Math.max(250, Math.floor(width * 0.33)));
+    const summaryX = x + titleWidth + 8;
+    const summaryWidth = Math.max(120, actionX - summaryX - 8);
 
-    this.renderTitle(x + 12, y - 57, 398, 58, false);
-    this.renderDesktopSummary(x + 422, y - 57, 618, 58);
+    this.renderTitle(x, y - 57, titleWidth, 58, false);
+    this.renderDesktopSummary(summaryX, y - 57, summaryWidth, 58);
     this.renderShell(x - 8, y, width + 16, 18);
 
     const statusY = y + 18;
@@ -143,9 +149,13 @@ export class LevelScoreScene extends PanelScene {
   private renderMobile(): void {
     const x = this.pageX;
     const y = this.pageY;
-    const width = MOBILE_WIDTH;
+    const width = this.getContentWidth();
+    const titleWidth = Math.max(
+      280,
+      width - this.getBackButtonWidth() - 18,
+    );
 
-    this.renderTitle(x, 8, 550, 60, true);
+    this.renderTitle(x, 8, titleWidth, 60, true);
     this.renderShell(x, y, width, 12);
 
     this.renderMobileSummary(x + 14, y + 18, width - 28);
@@ -158,7 +168,13 @@ export class LevelScoreScene extends PanelScene {
     });
     const footerY = rowY + 4;
     this.renderFooterStats(x + 14, footerY, width - 28, 102, true);
-    this.renderShareButton(x + 242, footerY + 118, 260, 60, 26);
+    this.renderShareButton(
+      x + Math.floor((width - 260) / 2),
+      footerY + 118,
+      260,
+      60,
+      26,
+    );
   }
 
   private renderShareButton(
@@ -391,12 +407,8 @@ export class LevelScoreScene extends PanelScene {
 
   private renderDesktopTableHeader(x: number, y: number, width: number): void {
     this.addPanel(x, y, width, 54, UI.PANEL_ALT, UI.PANEL_LINE);
-    const rankWidth = 100;
-    const playerWidth = 300;
-    const tierWidth = 112;
-    const bonusWidth = 170;
-    const totalWidth =
-      width - rankWidth - playerWidth - tierWidth * 4 - bonusWidth;
+    const { rankWidth, playerWidth, tierWidth, bonusWidth, totalWidth } =
+      this.getDesktopTableColumns(width);
 
     this.addText(
       'RANK',
@@ -421,7 +433,11 @@ export class LevelScoreScene extends PanelScene {
     TIERS.forEach((_tier, index) => {
       this.addIcon(
         TIER_ICONS[index],
-        x + rankWidth + playerWidth + index * tierWidth + 35,
+        x +
+          rankWidth +
+          playerWidth +
+          index * tierWidth +
+          Math.floor((tierWidth - 40) / 2),
         y + 7,
         40,
       );
@@ -455,12 +471,8 @@ export class LevelScoreScene extends PanelScene {
     width: number,
     height: number,
   ): void {
-    const rankWidth = 100;
-    const playerWidth = 300;
-    const tierWidth = 112;
-    const bonusWidth = 170;
-    const totalWidth =
-      width - rankWidth - playerWidth - tierWidth * 4 - bonusWidth;
+    const { rankWidth, playerWidth, tierWidth, bonusWidth, totalWidth } =
+      this.getDesktopTableColumns(width);
     const record = result.player.getLevelPointsRecord();
     const rowFill = result.isPrimary ? UI.GREEN_PANEL : UI.PAGE;
     const rowStroke = result.isPrimary ? UI.GREEN : UI.PANEL_LINE;
@@ -478,15 +490,15 @@ export class LevelScoreScene extends PanelScene {
     );
     this.addText(
       result.name,
-      x + rankWidth + 20,
+      x + rankWidth + 10,
       y + 26,
       result.isPrimary ? UI.GREEN : UI.WHITE,
-      28,
+      playerWidth < 220 ? 23 : 28,
       '900',
-      playerWidth - 40,
+      playerWidth - 20,
     );
     if (result.isPrimary) {
-      this.addText('YOU', x + rankWidth + 20, y + 65, UI.YELLOW, 18, '900', 90);
+      this.addText('YOU', x + rankWidth + 10, y + 65, UI.YELLOW, 18, '900', 90);
     }
 
     TIERS.forEach((tier, index) => {
@@ -537,6 +549,25 @@ export class LevelScoreScene extends PanelScene {
       totalWidth,
       'center',
     );
+  }
+
+  private getDesktopTableColumns(width: number): {
+    rankWidth: number;
+    playerWidth: number;
+    tierWidth: number;
+    bonusWidth: number;
+    totalWidth: number;
+  } {
+    const rankWidth = Math.max(56, Math.floor(width * 0.08));
+    const playerWidth = Math.max(140, Math.floor(width * 0.24));
+    const tierWidth = Math.max(42, Math.floor(width * 0.09));
+    const bonusWidth = Math.max(82, Math.floor(width * 0.14));
+    const totalWidth = Math.max(
+      76,
+      width - rankWidth - playerWidth - tierWidth * 4 - bonusWidth,
+    );
+
+    return { rankWidth, playerWidth, tierWidth, bonusWidth, totalWidth };
   }
 
   private renderMobilePlayerCard(
