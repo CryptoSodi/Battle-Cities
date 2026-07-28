@@ -666,9 +666,15 @@ export class BattleCitySimulation {
       if (removed.has(left.id)) continue;
       for (let rightIndex = leftIndex + 1; rightIndex < this.bullets.length; rightIndex += 1) {
         const right = this.bullets[rightIndex];
+        const sameOwner =
+          left.ownerParty === right.ownerParty &&
+          left.ownerIndex === right.ownerIndex;
+        const alliedEnemyBullets =
+          left.ownerParty === 'enemy' && right.ownerParty === 'enemy';
         if (
           removed.has(right.id) ||
-          left.ownerParty === right.ownerParty
+          sameOwner ||
+          alliedEnemyBullets
         ) {
           continue;
         }

@@ -105,7 +105,6 @@ export class Bullet extends GameObject {
     this.updateMatrix();
     const center = this.getCenter();
     emitMuzzleFlash(particles, center.x, center.y, dirX, dirY);
-
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
@@ -178,12 +177,17 @@ export class Bullet extends GameObject {
         return;
       }
 
-      // Player bullets pass thru
-      if (bullet.tags.includes(Tag.Player) && this.tags.includes(Tag.Player)) {
+      // Bullets fired by the same player pass through each other. Bullets from
+      // different players cancel out just like player and enemy bullets.
+      if (
+        bullet.tags.includes(Tag.Player) &&
+        this.tags.includes(Tag.Player) &&
+        bullet.ownerPartyIndex === this.ownerPartyIndex
+      ) {
         return;
       }
 
-      // When player bullet hits enemy bullet and vice versa, they dissappear
+      // Opposing bullets cancel each other.
       this.nullify();
       bullet.nullify();
     });
