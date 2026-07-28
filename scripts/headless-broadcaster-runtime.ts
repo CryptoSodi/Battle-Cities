@@ -29,6 +29,9 @@ const SERVICE_TOKEN = String(process.env.BROADCASTER_SERVICE_TOKEN || '');
 const FRAME_REPLAY_PER_TICK = 8;
 const OBSERVER_DISCOVERY_MS = 2000;
 const MAX_CATCH_UP_TICKS = 4;
+const ARCHIVE_BATCH_FRAMES = 20;
+const ARCHIVE_REPLAY_POLL_MS = 10;
+const MAX_ARCHIVE_REPLAYS = 10;
 
 type LinkId = SimulationPlayerIndex | `observer:${string}`;
 type MatchCategory = 'guest' | 'live' | 'event';
@@ -61,6 +64,31 @@ interface MatchStatus {
   startedAt: string;
   statusUrl: string;
   workerUrl: string;
+}
+
+interface MatchPlayerInfo {
+  playerId: string;
+  displayName: string;
+  slot: SimulationPlayerIndex;
+}
+
+interface MatchArchiveDescriptor {
+  gameType: string;
+  players: MatchPlayerInfo[];
+}
+
+interface MatchArchiveSummary {
+  matchId: string;
+  status: string;
+  gameType: string;
+  category: MatchCategory;
+  level: number;
+  players: MatchPlayerInfo[];
+  frameCount: number;
+  finalTick: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  result: Record<string, unknown> | null;
 }
 
 class WebRtcPeerLink {
@@ -238,6 +266,13 @@ class MatchRuntime {
   private matchStarted = false;
   private stopped = false;
   private resultSubmissionStarted = false;
+  private stopPromise: Promise<void> | null = null;
+  private readonly pendingArchiveFrames: SimulationHostFramePacket[] = [];
+  private archiveStarted = false;
+  private archiveCompleted = false;
+  private archiveStartPromise: Promise<void> | null = null;
+  private archiveFlushPromise: Promise<void> | null = null;
+  private readonly archiveConfig: Record<string, unknown>;
 
   public constructor(
     public readonly id: string,
@@ -250,13 +285,27 @@ class MatchRuntime {
       | 'playerRunConsumables'
       | 'runBoosts'
     > = {},
+    private readonly archiveDescriptor: MatchArchiveDescriptor = {
+      gameType: 'direct',
+      players: [],
+    },
   ) {
+    const seed = seedFromMatchId(id);
+    const disableEnemyShooting =
+      process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1';
     this.simulation = new EngineBattleCitySimulation(loadMap(level), {
       ...simulationOptions,
-      seed: seedFromMatchId(id),
+      seed,
       level,
-      disableEnemyShooting: process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1',
+      disableEnemyShooting,
     });
+    this.archiveConfig = {
+      ...simulationOptions,
+      seed,
+      level,
+      tickRate: this.simulation.tickRate,
+      disableEnemyShooting,
+    };
     this.configureLink(0, `${id}-p1`);
     this.configureLink(1, `${id}-p2`);
     this.tickIntervalMs = 1000 / this.simulation.tickRate;
@@ -266,13 +315,33 @@ class MatchRuntime {
     void this.discoverObservers();
   }
 
-  public stop(): void {
-    if (this.stopped) return;
-    this.stopped = true;
-    clearTimeout(this.tickTimer);
-    clearInterval(this.observerTimer);
-    this.links.forEach((link) => link.close());
-    this.links.clear();
+  public stop(): Promise<void> {
+    if (this.stopPromise !== null) return this.stopPromise;
+    if (this.stopped && (this.archiveCompleted || this.frameHistory.length === 0)) {
+      return Promise.resolve();
+    }
+    this.stopPromise = this.finishStop().finally(() => {
+      this.stopPromise = null;
+    });
+    return this.stopPromise;
+  }
+
+  private async finishStop(): Promise<void> {
+    if (!this.stopped) {
+      this.stopped = true;
+      clearTimeout(this.tickTimer);
+      clearInterval(this.observerTimer);
+      this.links.forEach((link) => link.close());
+      this.links.clear();
+    }
+    if (this.frameHistory.length === 0 || this.archiveCompleted) return;
+    const finalFrame = this.frameHistory[this.frameHistory.length - 1];
+    await this.flushArchiveFrames(true);
+    await this.completeArchive({
+      matchResult: 'aborted',
+      scores: this.simulation.getScores(),
+      playerKillCounts: finalFrame?.playerKillCounts ?? null,
+    });
   }
 
   public status(): MatchStatus {
@@ -295,9 +364,24 @@ class MatchRuntime {
 
   private tick(): void {
     if (this.stopped || !this.matchStarted) return;
+    if (this.resultSubmissionStarted) {
+      this.pumpReplays();
+      return;
+    }
+    if (this.archiveCompleted) {
+      this.resultSubmissionStarted = true;
+      void this.submitResult();
+      return;
+    }
     const frame = this.simulation.step();
     this.frameHistory.push(frame);
     this.frameBySeq.set(frame.seq, frame);
+    this.pendingArchiveFrames.push(frame);
+    if (this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES) {
+      void this.flushArchiveFrames(false).catch((error) => {
+        console.error(`[broadcaster] archive flush failed for ${this.id}`, error);
+      });
+    }
     this.broadcast(frame);
     this.pumpReplays();
     const hitStopSeconds = this.simulation.consumeHitStopSeconds();
@@ -534,17 +618,23 @@ class MatchRuntime {
 
   private async submitResult(): Promise<void> {
     try {
+      const scores = this.simulation.getScores().map((score, playerSlot) => ({
+        playerSlot,
+        score,
+      }));
+      const finalFrame = this.frameHistory[this.frameHistory.length - 1];
+      await this.flushArchiveFrames(true);
+      await this.completeArchive({
+        scores,
+        matchResult: finalFrame?.matchResult ?? null,
+        playerKillCounts: finalFrame?.playerKillCounts ?? null,
+      });
       const response = await apiFetch(
         `/api/multiplayer/matches/${encodeURIComponent(this.id)}/result`,
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            scores: this.simulation.getScores().map((score, playerSlot) => ({
-              playerSlot,
-              score,
-            })),
-          }),
+          body: JSON.stringify({ scores }),
         },
       );
       if (!response.ok) throw new Error(`result submission failed (${response.status})`);
@@ -553,9 +643,251 @@ class MatchRuntime {
       console.error(`[broadcaster] result submission failed for ${this.id}`, error);
     }
   }
+
+  private async ensureArchiveStarted(): Promise<void> {
+    if (this.archiveStarted) return;
+    if (this.archiveStartPromise === null) {
+      this.archiveStartPromise = (async () => {
+        const response = await apiFetch(
+          `/api/multiplayer/archives/${encodeURIComponent(this.id)}/start`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              gameType: this.archiveDescriptor.gameType,
+              category: this.category,
+              level: this.level,
+              seed: this.archiveConfig.seed,
+              simulationConfig: this.archiveConfig,
+              players: this.archiveDescriptor.players,
+              startedAt: this.startedAt.toISOString(),
+            }),
+          },
+        );
+        if (!response.ok) {
+          throw new Error(`archive startup failed (${response.status})`);
+        }
+        this.archiveStarted = true;
+      })().finally(() => {
+        this.archiveStartPromise = null;
+      });
+    }
+    await this.archiveStartPromise;
+  }
+
+  private async flushArchiveFrames(flushAll: boolean): Promise<void> {
+    if (this.archiveFlushPromise !== null) {
+      await this.archiveFlushPromise;
+    }
+    while (
+      this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES ||
+      (flushAll && this.pendingArchiveFrames.length > 0)
+    ) {
+      const batchSize = Math.min(
+        ARCHIVE_BATCH_FRAMES,
+        this.pendingArchiveFrames.length,
+      );
+      const batch = this.pendingArchiveFrames.slice(0, batchSize);
+      this.archiveFlushPromise = (async () => {
+        await this.ensureArchiveStarted();
+        const response = await apiFetch(
+          `/api/multiplayer/archives/${encodeURIComponent(this.id)}/frames`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ frames: batch }),
+          },
+        );
+        if (!response.ok) {
+          throw new Error(`archive frame flush failed (${response.status})`);
+        }
+        this.pendingArchiveFrames.splice(0, batch.length);
+      })();
+      try {
+        await this.archiveFlushPromise;
+      } finally {
+        this.archiveFlushPromise = null;
+      }
+      if (!flushAll) break;
+    }
+  }
+
+  private async completeArchive(result: Record<string, unknown>): Promise<void> {
+    if (this.archiveCompleted) return;
+    await this.ensureArchiveStarted();
+    const response = await apiFetch(
+      `/api/multiplayer/archives/${encodeURIComponent(this.id)}/complete`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          result,
+          completedAt: new Date().toISOString(),
+        }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`archive completion failed (${response.status})`);
+    }
+    this.archiveCompleted = true;
+  }
+}
+
+interface ArchiveObserverPlayback {
+  nextFrameIndex: number;
+  nextFrameAt: number;
+}
+
+class ArchivedReplayRuntime {
+  private readonly links = new Map<`observer:${string}`, WebRtcPeerLink>();
+  private readonly connectedObservers = new Set<`observer:${string}`>();
+  private readonly playback = new Map<
+    `observer:${string}`,
+    ArchiveObserverPlayback
+  >();
+  private readonly observerTimer: NodeJS.Timeout;
+  private readonly playbackTimer: NodeJS.Timeout;
+  private stopped = false;
+
+  public constructor(
+    public readonly archive: MatchArchiveSummary,
+    private readonly frames: SimulationHostFramePacket[],
+  ) {
+    this.observerTimer = setInterval(
+      () => void this.discoverObservers(),
+      OBSERVER_DISCOVERY_MS,
+    );
+    this.playbackTimer = setInterval(
+      () => this.pumpPlayback(),
+      ARCHIVE_REPLAY_POLL_MS,
+    );
+    void this.discoverObservers();
+  }
+
+  public stop(): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    clearInterval(this.observerTimer);
+    clearInterval(this.playbackTimer);
+    this.links.forEach((link) => link.close());
+    this.links.clear();
+    this.connectedObservers.clear();
+    this.playback.clear();
+  }
+
+  public status(): Record<string, unknown> {
+    return {
+      id: this.archive.matchId,
+      level: this.archive.level,
+      category: this.archive.category,
+      status: 'replay',
+      tick: this.archive.finalTick ?? 0,
+      frameSeq: this.archive.frameCount,
+      observerCount: this.connectedObservers.size,
+      startedAt: this.archive.startedAt,
+      completedAt: this.archive.completedAt,
+    };
+  }
+
+  private configureLink(linkId: `observer:${string}`, room: string): void {
+    if (this.links.has(linkId)) return;
+    const link = new WebRtcPeerLink(
+      room,
+      () => undefined,
+      (connected) => this.handleConnection(linkId, connected),
+    );
+    this.links.set(linkId, link);
+    link.start();
+  }
+
+  private handleConnection(
+    linkId: `observer:${string}`,
+    connected: boolean,
+  ): void {
+    if (!connected) {
+      this.connectedObservers.delete(linkId);
+      this.playback.delete(linkId);
+      return;
+    }
+    this.connectedObservers.add(linkId);
+    this.links.get(linkId)?.send({
+      type: 'webrtc-ready',
+      ready: true,
+      syncPlayer: null,
+      serverFrameSeq: 0,
+    } satisfies SimulationReadyPacket);
+    this.playback.set(linkId, {
+      nextFrameIndex: 0,
+      nextFrameAt: performance.now() + 100,
+    });
+    console.log(
+      `[broadcaster] archive observer connected match=${this.archive.matchId}` +
+      ` observers=${this.connectedObservers.size} frames=${this.frames.length}`,
+    );
+  }
+
+  private pumpPlayback(): void {
+    if (this.stopped) return;
+    const now = performance.now();
+    this.playback.forEach((session, linkId) => {
+      let sent = 0;
+      while (
+        session.nextFrameIndex < this.frames.length &&
+        now >= session.nextFrameAt &&
+        sent < MAX_CATCH_UP_TICKS
+      ) {
+        const frame = this.frames[session.nextFrameIndex];
+        if (!(this.links.get(linkId)?.send(frame) ?? false)) break;
+        session.nextFrameIndex += 1;
+        session.nextFrameAt += Math.max(
+          1,
+          Number.isFinite(frame.deltaTime)
+            ? frame.deltaTime * 1000
+            : 1000 / 20,
+        );
+        sent += 1;
+      }
+    });
+  }
+
+  private async discoverObservers(): Promise<void> {
+    if (this.stopped) return;
+    try {
+      const response = await apiFetch(
+        `/api/webrtc/matches/${encodeURIComponent(this.archive.matchId)}/observers`,
+      );
+      if (!response.ok) return;
+      const body = await response.json() as { observers?: string[] };
+      const observerIds = body.observers ?? [];
+      const activeObserverIds = new Set(observerIds);
+      for (const observerId of observerIds) {
+        if (/^[a-z0-9]{8}$/.test(observerId)) {
+          this.configureLink(
+            `observer:${observerId}`,
+            `${this.archive.matchId}-o-${observerId}`,
+          );
+        }
+      }
+      Array.from(this.links.keys()).forEach((linkId) => {
+        const observerId = linkId.slice('observer:'.length);
+        if (!activeObserverIds.has(observerId)) {
+          this.links.get(linkId)?.close();
+          this.links.delete(linkId);
+          this.connectedObservers.delete(linkId);
+          this.playback.delete(linkId);
+        }
+      });
+    } catch (error) {
+      console.warn(
+        `[broadcaster] archive observer discovery failed for ${this.archive.matchId}`,
+        error,
+      );
+    }
+  }
 }
 
 const matches = new Map<string, MatchRuntime>();
+const archiveReplays = new Map<string, ArchivedReplayRuntime>();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://${request.headers.host || HOST}`);
@@ -594,6 +926,20 @@ const server = createServer(async (request, response) => {
       });
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/live/past-matches') {
+      json(response, 200, {
+        matches: await listArchivedMatches(),
+      });
+      return;
+    }
+    const publicReplayRoute = url.pathname.match(
+      /^\/live\/past-matches\/([a-z0-9-]+)\/replay$/,
+    );
+    if (request.method === 'POST' && publicReplayRoute !== null) {
+      const replay = await startArchiveReplay(publicReplayRoute[1]);
+      json(response, 201, replay.status());
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/health') {
       json(response, 200, { ok: true, activeMatches: matches.size, runtime: 'typescript-node' });
       return;
@@ -606,6 +952,18 @@ const server = createServer(async (request, response) => {
       json(response, 200, { matches: Array.from(matches.values()).map((match) => match.status()) });
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/past-matches') {
+      json(response, 200, { matches: await listArchivedMatches() });
+      return;
+    }
+    const replayRoute = url.pathname.match(
+      /^\/past-matches\/([a-z0-9-]+)\/replay$/,
+    );
+    if (request.method === 'POST' && replayRoute !== null) {
+      const replay = await startArchiveReplay(replayRoute[1]);
+      json(response, 201, replay.status());
+      return;
+    }
     if (request.method === 'POST' && url.pathname === '/matches') {
       const body = await readJson(request);
       const matchId = normalizeMatchId(body.matchId) || randomBytes(4).toString('hex');
@@ -615,11 +973,16 @@ const server = createServer(async (request, response) => {
         json(response, 409, { error: 'Match is already running.', ...matches.get(matchId)!.status() });
         return;
       }
+      const simulationOptions = parseSimulationOptions(body);
       const match = new MatchRuntime(
         matchId,
         level,
         category,
-        parseSimulationOptions(body),
+        simulationOptions,
+        {
+          gameType: normalizeGameType(body.gameType, category),
+          players: parseMatchPlayers(body.players),
+        },
       );
       matches.set(matchId, match);
       json(response, 201, match.status());
@@ -637,7 +1000,7 @@ const server = createServer(async (request, response) => {
         return;
       }
       if (request.method === 'DELETE') {
-        match.stop();
+        await match.stop();
         matches.delete(route[1]);
         json(response, 202, match.status());
         return;
@@ -654,13 +1017,25 @@ server.listen(PORT, HOST, () => {
   console.log(`[broadcaster] pure Node runtime listening at http://${HOST}:${PORT}`);
 });
 
-function shutdown(): void {
-  matches.forEach((match) => match.stop());
+async function shutdown(): Promise<void> {
+  archiveReplays.forEach((replay) => replay.stop());
+  await Promise.all(
+    Array.from(matches.values()).map(async (match) => {
+      try {
+        await match.stop();
+      } catch (error) {
+        console.error(
+          `[broadcaster] shutdown archive flush failed for ${match.id}`,
+          error,
+        );
+      }
+    }),
+  );
   server.close(() => process.exit(0));
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => void shutdown());
+process.on('SIGTERM', () => void shutdown());
 
 async function publishSignal(room: string, player: number, kind: 'offer' | 'answer', code: string): Promise<void> {
   const response = await apiFetch(
@@ -691,6 +1066,93 @@ function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   });
 }
 
+async function listArchivedMatches(): Promise<MatchArchiveSummary[]> {
+  const response = await apiFetch('/api/multiplayer/archives?limit=100');
+  if (!response.ok) {
+    throw new Error(`archive list failed (${response.status})`);
+  }
+  const body = await response.json() as { items?: MatchArchiveSummary[] };
+  return Array.isArray(body.items) ? body.items : [];
+}
+
+async function startArchiveReplay(
+  matchId: string,
+): Promise<ArchivedReplayRuntime> {
+  const existing = archiveReplays.get(matchId);
+  if (existing !== undefined) return existing;
+  if (matches.has(matchId)) {
+    throw new Error('A live runtime already exists for this match.');
+  }
+
+  const metadataResponse = await apiFetch(
+    `/api/multiplayer/archives/${encodeURIComponent(matchId)}`,
+  );
+  if (!metadataResponse.ok) {
+    throw new Error(`archive metadata failed (${metadataResponse.status})`);
+  }
+  const metadataBody = await metadataResponse.json() as {
+    item?: MatchArchiveSummary;
+  };
+  const archive = metadataBody.item;
+  if (archive === undefined || archive.status !== 'completed') {
+    throw new Error('Completed match archive not found.');
+  }
+
+  const frames: SimulationHostFramePacket[] = [];
+  let afterSeq = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const frameResponse = await apiFetch(
+      `/api/multiplayer/archives/${encodeURIComponent(matchId)}/frames` +
+      `?afterSeq=${afterSeq}&batchLimit=50`,
+    );
+    if (!frameResponse.ok) {
+      throw new Error(`archive frames failed (${frameResponse.status})`);
+    }
+    const frameBody = await frameResponse.json() as {
+      frames?: SimulationHostFramePacket[];
+      hasMore?: boolean;
+      nextAfterSeq?: number;
+    };
+    const page = Array.isArray(frameBody.frames) ? frameBody.frames : [];
+    if (page.length === 0 && frameBody.hasMore) {
+      throw new Error('Archive frame pagination did not advance.');
+    }
+    for (const frame of page) {
+      const expectedSeq =
+        frames.length === 0 ? 1 : frames[frames.length - 1].seq + 1;
+      if (
+        frame.type !== 'webrtc-host-frame' ||
+        !Number.isInteger(frame.seq) ||
+        frame.seq !== expectedSeq
+      ) {
+        throw new Error(`Archive frame sequence is invalid at ${frame.seq}.`);
+      }
+      frames.push(frame);
+    }
+    hasMore = frameBody.hasMore === true;
+    afterSeq = Number(frameBody.nextAfterSeq ?? afterSeq);
+  }
+  if (frames.length !== archive.frameCount) {
+    throw new Error(
+      `Archive is incomplete: expected ${archive.frameCount} frames, loaded ${frames.length}.`,
+    );
+  }
+
+  while (archiveReplays.size >= MAX_ARCHIVE_REPLAYS) {
+    const oldestId = archiveReplays.keys().next().value as string | undefined;
+    if (oldestId === undefined) break;
+    archiveReplays.get(oldestId)?.stop();
+    archiveReplays.delete(oldestId);
+  }
+  const replay = new ArchivedReplayRuntime(archive, frames);
+  archiveReplays.set(matchId, replay);
+  console.log(
+    `[broadcaster] archive replay loaded match=${matchId} frames=${frames.length}`,
+  );
+  return replay;
+}
+
 function encodeSignal(signal: SignalCode): string {
   return Buffer.from(JSON.stringify(signal), 'utf8').toString('base64');
 }
@@ -718,6 +1180,33 @@ function normalizeMatchId(value: unknown): string {
 
 function normalizeMatchCategory(value: unknown): MatchCategory {
   return value === 'guest' || value === 'event' ? value : 'live';
+}
+
+function normalizeGameType(value: unknown, category: MatchCategory): string {
+  const normalized = String(value || '').trim().toLowerCase();
+  return /^[a-z0-9-]{1,32}$/.test(normalized) ? normalized : category;
+}
+
+function parseMatchPlayers(value: unknown): MatchPlayerInfo[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((player) => player !== null && typeof player === 'object')
+    .map((player) => {
+      const source = player as Record<string, unknown>;
+      const slot = Number(source.slot);
+      return {
+        playerId: String(source.playerId || '').slice(0, 128),
+        displayName: String(source.displayName || 'Player').slice(0, 80),
+        slot: slot === 1 ? 1 : 0,
+      } as MatchPlayerInfo;
+    })
+    .filter(
+      (player, index, players) =>
+        player.playerId !== '' &&
+        players.findIndex((candidate) => candidate.slot === player.slot) === index,
+    )
+    .sort((left, right) => left.slot - right.slot)
+    .slice(0, 2);
 }
 
 function parseSimulationOptions(
@@ -1083,8 +1572,12 @@ function monitorHtml(publicLive = false): string {
       </div>
     </header>
     <main>
+      <div id="mode-tabs" class="tabs">
+        <button class="tab active" type="button" data-view="live">LIVE MATCHES</button>
+        <button class="tab" type="button" data-view="past">PAST MATCHES</button>
+      </div>
       <div class="toolbar">
-        <div class="summary"><strong id="match-count">0</strong><span>active matches</span></div>
+        <div class="summary"><strong id="match-count">0</strong><span id="match-count-label">active matches</span></div>
         <button id="refresh" class="button" type="button">Refresh</button>
       </div>
       <div id="category-tabs" class="tabs"${publicLive ? '' : ' hidden'}>
@@ -1098,10 +1591,10 @@ function monitorHtml(publicLive = false): string {
       <div id="error" class="state-panel" hidden>
         <div><strong>Could not load matches</strong><span id="error-message">Check the service connection and retry.</span><br><br><button id="retry" class="button" type="button">Retry</button></div>
       </div>
-      <div id="empty" class="state-panel" hidden><div><strong>No active matches</strong>The next match will appear here automatically.</div></div>
+      <div id="empty" class="state-panel" hidden><div><strong id="empty-title">No active matches</strong><span id="empty-message">The next match will appear here automatically.</span></div></div>
       <div id="matches" class="table-shell" hidden>
         <table>
-          <thead><tr><th>Match</th><th>State</th><th>Level</th><th>Players</th><th>Observers</th><th>Tick</th><th>Started</th><th></th></tr></thead>
+          <thead id="match-head"><tr><th>Match</th><th>State</th><th>Level</th><th>Players</th><th>Observers</th><th>Tick</th><th>Started</th><th></th></tr></thead>
           <tbody id="match-rows"></tbody>
         </table>
       </div>
@@ -1123,6 +1616,7 @@ function monitorHtml(publicLive = false): string {
       var publicLive = ${publicLive ? 'true' : 'false'};
       var token = sessionStorage.getItem('battlecities-broadcaster-token') || '';
       var config = { clientUrl: 'https://battlecities.com', refreshMs: 2000 };
+      var activeView = 'live';
       var activeCategory = 'guest';
       var currentMatches = [];
       var refreshTimer = null;
@@ -1152,6 +1646,17 @@ function monitorHtml(publicLive = false): string {
       refresh.addEventListener('click', function () { loadMatches(false); });
       document.getElementById('retry').addEventListener('click', function () { loadMatches(false); });
       document.getElementById('close-viewer').addEventListener('click', closeViewer);
+      document.querySelectorAll('[data-view]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          activeView = tab.getAttribute('data-view');
+          document.querySelectorAll('[data-view]').forEach(function (item) {
+            item.classList.toggle('active', item === tab);
+          });
+          closeViewer();
+          currentMatches = [];
+          loadMatches(false);
+        });
+      });
       document.querySelectorAll('[data-category]').forEach(function (tab) {
         tab.addEventListener('click', function () {
           activeCategory = tab.getAttribute('data-category');
@@ -1170,7 +1675,10 @@ function monitorHtml(publicLive = false): string {
         else loading.hidden = false;
         var headers = { accept: 'application/json' };
         if (!publicLive) headers.authorization = 'Bearer ' + token;
-        fetch(publicLive ? '/live/matches' : '/matches', { headers: headers })
+        var endpoint = activeView === 'past'
+          ? (publicLive ? '/live/past-matches' : '/past-matches')
+          : (publicLive ? '/live/matches' : '/matches');
+        fetch(endpoint, { headers: headers })
           .then(function (response) {
             if (response.status === 401) throw new Error('AUTH');
             if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -1212,12 +1720,25 @@ function monitorHtml(publicLive = false): string {
           list = list.filter(function (match) { return match.category === activeCategory; });
         }
         document.getElementById('match-count').textContent = String(list.length);
+        document.getElementById('match-count-label').textContent =
+          activeView === 'past' ? 'past matches' : 'active matches';
+        document.getElementById('empty-title').textContent =
+          activeView === 'past' ? 'No past matches' : 'No active matches';
+        document.getElementById('empty-message').textContent =
+          activeView === 'past'
+            ? 'Completed matches will appear here after their archives are finalized.'
+            : 'The next match will appear here automatically.';
         rows.replaceChildren();
+        renderTableHead();
         if (list.length === 0) {
           showState('empty');
           return;
         }
         list.forEach(function (match) {
+          if (activeView === 'past') {
+            renderPastMatch(match);
+            return;
+          }
           var row = document.createElement('tr');
           appendCell(row, match.id, 'match-id');
           var state = document.createElement('td');
@@ -1250,6 +1771,52 @@ function monitorHtml(publicLive = false): string {
         showState('matches');
       }
 
+      function renderTableHead() {
+        var head = document.getElementById('match-head');
+        var labels = activeView === 'past'
+          ? ['Match', 'State', 'Game type', 'Players', 'Level', 'Ticks', 'Completed', '']
+          : ['Match', 'State', 'Level', 'Players', 'Observers', 'Tick', 'Started', ''];
+        var row = document.createElement('tr');
+        labels.forEach(function (label) {
+          var cell = document.createElement('th');
+          cell.textContent = label;
+          row.appendChild(cell);
+        });
+        head.replaceChildren(row);
+      }
+
+      function renderPastMatch(match) {
+        var row = document.createElement('tr');
+        appendCell(row, match.matchId, 'match-id');
+        var state = document.createElement('td');
+        var status = document.createElement('span');
+        status.className = 'status live';
+        status.textContent = 'Completed';
+        state.appendChild(status);
+        row.appendChild(state);
+        appendCell(row, String(match.gameType || match.category || '--'));
+        appendCell(
+          row,
+          (match.players || []).map(function (player) {
+            return player.displayName || 'Player ' + (Number(player.slot) + 1);
+          }).join(' vs ') || '--',
+        );
+        appendCell(row, String(match.level), 'number');
+        appendCell(row, formatNumber(match.finalTick || match.frameCount), 'number');
+        appendCell(row, formatDateTime(match.completedAt), 'number');
+        var actionCell = document.createElement('td');
+        var button = document.createElement('button');
+        button.className = 'button primary view-button';
+        button.type = 'button';
+        button.textContent = 'Replay';
+        button.addEventListener('click', function () {
+          startReplay(match, button);
+        });
+        actionCell.appendChild(button);
+        row.appendChild(actionCell);
+        rows.appendChild(row);
+      }
+
       function appendCell(row, value, className) {
         var cell = document.createElement('td');
         cell.textContent = value;
@@ -1259,7 +1826,7 @@ function monitorHtml(publicLive = false): string {
 
       function viewMatch(match) {
         var observerUrl = createObserverUrl(match);
-        document.getElementById('viewer-match').textContent = match.id;
+        document.getElementById('viewer-match').textContent = match.id || match.matchId;
         document.getElementById('open-observer').href = observerUrl;
         observerFrame.src = observerUrl;
         viewer.hidden = false;
@@ -1270,9 +1837,43 @@ function monitorHtml(publicLive = false): string {
         var observerUrl = new URL(config.clientUrl);
         observerUrl.searchParams.set('mode', 'webrtc');
         observerUrl.searchParams.set('observer', '1');
-        observerUrl.searchParams.set('match', match.id);
+        observerUrl.searchParams.set('match', match.id || match.matchId);
         observerUrl.searchParams.set('level', String(match.level));
         return observerUrl.toString();
+      }
+
+      function startReplay(match, button) {
+        if (button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading';
+        var headers = { accept: 'application/json' };
+        if (!publicLive) headers.authorization = 'Bearer ' + token;
+        fetch(
+          (publicLive ? '/live/past-matches/' : '/past-matches/') +
+            encodeURIComponent(match.matchId) +
+            '/replay',
+          { method: 'POST', headers: headers },
+        )
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+          })
+          .then(function () {
+            if (publicLive) {
+              window.open(createObserverUrl(match), '_blank', 'noopener,noreferrer');
+            } else {
+              viewMatch(match);
+            }
+          })
+          .catch(function () {
+            document.getElementById('error-message').textContent =
+              'The archived match could not be loaded for replay.';
+            showState('error');
+          })
+          .finally(function () {
+            button.disabled = false;
+            button.textContent = 'Replay';
+          });
       }
 
       function closeViewer() {
@@ -1296,6 +1897,17 @@ function monitorHtml(publicLive = false): string {
       function formatTime(value) {
         var date = new Date(value);
         return Number.isNaN(date.getTime()) ? '--' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      function formatDateTime(value) {
+        var date = new Date(value);
+        return Number.isNaN(date.getTime())
+          ? '--'
+          : date.toLocaleString([], {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
       }
       function scheduleRefresh() {
         if (refreshTimer !== null) clearTimeout(refreshTimer);

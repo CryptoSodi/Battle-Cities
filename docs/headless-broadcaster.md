@@ -48,8 +48,16 @@ token. It authenticates lifecycle and signaling requests.
 ## Service API
 
 Open the operator monitor at `http://127.0.0.1:7777/monitor`. Enter the
-`BROADCASTER_SERVICE_TOKEN` to list all active matches. The View action opens
-the selected match through the configured client frontend in observer mode.
+`BROADCASTER_SERVICE_TOKEN` to list matches. `LIVE MATCHES` shows active
+runtimes. `PAST MATCHES` loads completed archives from the API database. The
+View and Replay actions open the selected match through the configured client
+frontend in observer mode.
+
+Every authoritative host frame is archived in ordered database batches,
+together with player IDs and display names, game type, level, deterministic
+seed, simulation configuration, final scores, kill counts, and result. A past
+replay streams the stored frames from sequence 1 at their original simulation
+rate; it never accepts player input.
 
 Health does not require authentication:
 
@@ -74,11 +82,22 @@ curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
 curl -X DELETE -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
 ```
 
+List completed archives:
+
+```sh
+curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/past-matches
+```
+
 The API creates player runtime configuration separately. Creating a match here
 starts signaling peers immediately, but the simulation clock does not advance
 until both player data channels are connected. A player disconnect does not
 stop simulation or observer frames. Reconnection uses the complete in-memory
 frame history and the existing replay-ready handshake.
+
+The API must have migration `005_match_archives` applied before starting the
+updated broadcaster. Local API development can override the fallback archive
+directory with `BATTLECITY_MATCH_ARCHIVE_DIR`; production archives always use
+the configured PostgreSQL database.
 
 ## Reverse Proxy
 
