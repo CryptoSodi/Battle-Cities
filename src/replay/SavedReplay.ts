@@ -7,6 +7,7 @@ import {
 } from '../game';
 import { InputDeviceType } from '../input';
 import { apiFetch } from '../network/api';
+import { TankTier } from '../tank';
 
 import { EnemyMovementFrame } from './EnemyMovementFrame';
 import { PowerupSpawnFrame } from './PowerupSpawnFrame';
@@ -39,6 +40,7 @@ export interface SavedReplay {
   metadata: SavedReplayMetadata;
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
+  playerTankTiers: TankTier[];
   runConsumables: SessionRunConsumables;
   // Trait boosts the run was played with — they alter the sim (player
   // health/speed, powerup duration), so replays must re-enact them.
@@ -217,6 +219,10 @@ function isValidReplay(value): boolean {
     value.runConsumables = createEmptyRunConsumables();
   }
 
+  if (value.playerTankTiers === undefined) {
+    value.playerTankTiers = [TankTier.A, TankTier.A];
+  }
+
   // Replays recorded before trait boosts existed re-enact with zeros.
   if (value.runBoosts === undefined) {
     value.runBoosts = createEmptyRunBoosts();
@@ -233,8 +239,23 @@ function isValidReplay(value): boolean {
   }
 
   return (
+    isValidPlayerTankTiers(value.playerTankTiers) &&
     isValidRunConsumables(value.runConsumables) &&
     isValidReplayMetadata(value.metadata)
+  );
+}
+
+function isValidPlayerTankTiers(value: any): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (tier) =>
+        tier === TankTier.A ||
+        tier === TankTier.B ||
+        tier === TankTier.C ||
+        tier === TankTier.D,
+    )
   );
 }
 

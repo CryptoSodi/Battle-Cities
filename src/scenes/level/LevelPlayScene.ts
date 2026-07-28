@@ -87,6 +87,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // replay contains the 1/2/3/4 presses, but those presses only work if the
   // same run consumables are loaded before playback starts.
   private recordedRunConsumables: SessionRunConsumables;
+  private recordedPlayerTankTiers: TankTier[] = [TankTier.A, TankTier.A];
   // Trait boosts as they were at recording start (see SavedReplay.runBoosts).
   private recordedRunBoosts: SessionRunBoosts = createEmptyRunBoosts();
   private recordedTickCount = 0;
@@ -195,6 +196,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // themselves (see InputManager.activeDeviceType), so without this a
       // replay could read player input from the wrong device.
       inputManager.setActiveDeviceType(replay.activeDeviceType);
+      replay.playerTankTiers.forEach((tier, playerIndex) => {
+        session.setPlayerTankTier(playerIndex, tier);
+        session.getPlayer(playerIndex)?.setTankTier(tier);
+      });
       session.setRunConsumables(this.cloneRunConsumables(replay.runConsumables));
       // Trait boosts alter the sim (player health/speed, powerup duration),
       // so the replay re-enacts the boosts the run was recorded with.
@@ -207,6 +212,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       this.recordedRunConsumables = this.cloneRunConsumables(
         session.getRunConsumables(),
       );
+      this.recordedPlayerTankTiers = session.getPlayerTankTiers();
       this.recordedRunBoosts = { ...session.getRunBoosts() };
       this.recordedTickCount = 0;
       this.isRecordingReplay = true;
@@ -1111,6 +1117,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         metadata,
         deviceFrames,
         activeDeviceType: this.recordedActiveDeviceType,
+        playerTankTiers: this.recordedPlayerTankTiers.slice(),
         runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
         runBoosts: { ...this.recordedRunBoosts },
         enemyTraces: this.recordedEnemyTraces,

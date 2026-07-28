@@ -333,7 +333,7 @@ export class UiToggleButton extends GameObject {
   }
 }
 
-interface UiActionTarget extends GameObject {
+export interface UiActionTarget extends GameObject {
   setFocused(focused: boolean): void;
 }
 
@@ -611,6 +611,15 @@ export abstract class PanelScene extends GameScene {
     this.root.add(button);
     this.actions.push({ key, target: button, onSelect, autoActivate });
     return button;
+  }
+
+  protected addActionTarget(
+    key: string,
+    target: UiActionTarget,
+    onSelect: () => void,
+    autoActivate = false,
+  ): void {
+    this.actions.push({ key, target, onSelect, autoActivate });
   }
 
   protected addToggle(

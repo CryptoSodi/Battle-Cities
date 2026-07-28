@@ -20,6 +20,7 @@ export enum GameSceneType {
   MainReplay,
   MainShop,
   MainStaking,
+  MainTankSelect,
   MainTrading,
   MainTreasury,
   MainVictory,

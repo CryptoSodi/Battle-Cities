@@ -528,6 +528,9 @@ function isValidReplay(value) {
     typeof value.deviceFrames === 'object' &&
     value.deviceFrames !== null &&
     typeof value.activeDeviceType === 'number' &&
+    Array.isArray(value.playerTankTiers) &&
+    value.playerTankTiers.length > 0 &&
+    value.playerTankTiers.every((tier) => ['a', 'b', 'c', 'd'].includes(tier)) &&
     typeof value.enemyTraces === 'object' &&
     value.enemyTraces !== null &&
     typeof value.runConsumables === 'object' &&
@@ -580,6 +583,10 @@ function normalizeReplay(value) {
       powerupCounts: [],
       extraLives: 0,
     };
+  }
+
+  if (value.playerTankTiers === undefined) {
+    value.playerTankTiers = ['a', 'a'];
   }
 
   if (

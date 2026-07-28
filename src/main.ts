@@ -1092,6 +1092,7 @@ gameLoop.render.addListener((event) => {
       currentSceneType === GameSceneType.MainEvents ||
       currentSceneType === GameSceneType.MainMore ||
       currentSceneType === GameSceneType.MainStaking ||
+      currentSceneType === GameSceneType.MainTankSelect ||
       currentSceneType === GameSceneType.MainTrading ||
       currentSceneType === GameSceneType.MainTreasury ||
       currentSceneType === GameSceneType.MainWiki,

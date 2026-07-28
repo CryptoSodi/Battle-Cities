@@ -54,3 +54,18 @@ test('a connected wallet uses the real storage-backed inventory', (t) => {
   t.is(manager.getInventoryCount(ShopInventoryItemId.Shield), 0);
   t.false(manager.consumeInventoryItem(ShopInventoryItemId.Shield));
 });
+
+test('a tank deployment consumes its variable fuel cost', (t) => {
+  const storage = new GameStorage('test.shop.variable-fuel');
+  storage.save = (): void => undefined;
+  const manager = new ShopManager(storage);
+  manager.connectWallet();
+  storage.setNumber(config.STORAGE_KEY_SHOP_FUEL_BALANCE, 4);
+
+  t.true(manager.canStartRun(4));
+  t.true(manager.consumeFuelForRun(3));
+  t.is(manager.getFuelBalance(), 1);
+  t.false(manager.canStartRun(2));
+  t.false(manager.consumeFuelForRun(2));
+  t.is(manager.getFuelBalance(), 1);
+});

@@ -1,6 +1,7 @@
 import { SessionPlayer } from './SessionPlayer';
 import { PowerupType } from '../powerup';
 import { ShopInventoryItemId } from '../shop';
+import { TankTier } from '../tank';
 
 export interface SessionRunConsumables {
   powerups: PowerupType[];
@@ -43,6 +44,7 @@ export class Session {
   private state: State;
   private runConsumables: SessionRunConsumables;
   private runBoosts: SessionRunBoosts;
+  private playerTankTiers: [TankTier, TankTier];
   private levelEnemyTotal: number;
   private levelEnemiesDefeated: number;
   private levelDurationTicks: number;
@@ -79,6 +81,7 @@ export class Session {
       extraLives: 0,
     };
     this.runBoosts = createEmptyRunBoosts();
+    this.playerTankTiers = [TankTier.A, TankTier.A];
     this.levelEnemyTotal = 0;
     this.levelEnemiesDefeated = 0;
     this.levelDurationTicks = 0;
@@ -111,6 +114,7 @@ export class Session {
     this.endLevelNumber = 1;
     this.state = State.Idle;
     this.playtest = false;
+    this.playerTankTiers = [TankTier.A, TankTier.A];
 
     this.primaryPlayer.reset();
     this.secondaryPlayer.reset();
@@ -229,6 +233,21 @@ export class Session {
     return this.runBoosts;
   }
 
+  public setPlayerTankTier(playerIndex: number, tier: TankTier): void {
+    if (playerIndex < 0 || playerIndex >= this.playerTankTiers.length) {
+      return;
+    }
+    this.playerTankTiers[playerIndex] = isTankTier(tier) ? tier : TankTier.A;
+  }
+
+  public getPlayerTankTier(playerIndex: number): TankTier {
+    return this.playerTankTiers[playerIndex] || TankTier.A;
+  }
+
+  public getPlayerTankTiers(): TankTier[] {
+    return this.playerTankTiers.slice();
+  }
+
   public startLevelStats(enemyTotal: number): void {
     this.levelEnemyTotal = Math.max(0, Math.floor(enemyTotal));
     this.levelEnemiesDefeated = 0;
@@ -264,4 +283,13 @@ function clampBoostPercent(value: number): number {
     return 0;
   }
   return Math.max(0, Math.min(60, Math.floor(parsed)));
+}
+
+function isTankTier(value: TankTier): boolean {
+  return (
+    value === TankTier.A ||
+    value === TankTier.B ||
+    value === TankTier.C ||
+    value === TankTier.D
+  );
 }

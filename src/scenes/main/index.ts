@@ -10,6 +10,7 @@ export * from './MainRankingScene';
 export * from './MainReplayScene';
 export * from './MainShopScene';
 export * from './MainStakingScene';
+export * from './MainTankSelectScene';
 export * from './MainTradingScene';
 export * from './MainTreasuryScene';
 export * from './MainVictoryScene';

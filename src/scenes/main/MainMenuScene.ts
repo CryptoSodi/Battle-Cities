@@ -1,10 +1,8 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
-import { GameUpdateArgs, GameStorage, Session } from '../../game';
+import { GameUpdateArgs, Session } from '../../game';
 import { Menu, SpriteMenuItem } from '../../gameObjects';
 import { InputManager, MenuInputContext } from '../../input';
-import { MapLoader } from '../../map';
 import { PointsHighscoreManager } from '../../points';
-import { ShopManager } from '../../shop';
 import { TradingClient } from '../../trading';
 import { EventClient } from '../../events';
 import { PlayerIdentity } from '../../auth';
@@ -148,10 +146,7 @@ export class MainMenuScene extends GameScene {
   private logoutItem: SpriteMenuItem;
   private state: State = State.Ready;
   private session: Session;
-  private mapLoader: MapLoader;
-  private gameStorage: GameStorage;
   private pointsHighscoreManager: PointsHighscoreManager;
-  private shopManager: ShopManager;
   private playerIdentity: PlayerIdentity;
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
@@ -165,13 +160,9 @@ export class MainMenuScene extends GameScene {
     playerIdentity,
     session,
     spriteLoader,
-    gameStorage,
   }: GameUpdateArgs): void {
     this.session = session;
-    this.mapLoader = mapLoader;
-    this.gameStorage = gameStorage;
     this.pointsHighscoreManager = pointsHighscoreManager;
-    this.shopManager = new ShopManager(gameStorage);
 
     // Trait boosts apply to ALL matches including ranked (user decision).
     // Fetched once per menu visit and parked on the session, so run start
@@ -564,13 +555,7 @@ export class MainMenuScene extends GameScene {
   private handleSinglePlayerSelected = (): void => {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
-    if (!this.prepareTokenRun()) {
-      this.navigator.push(GameSceneType.MainShop);
-      return;
-    }
-
-    this.session.start(1, this.mapLoader.getItemsCount());
-    this.navigator.replace(GameSceneType.LevelLoad);
+    this.navigator.push(GameSceneType.MainTankSelect);
   };
 
   private handleMultiPlayerSelected = (): void => {
@@ -628,16 +613,6 @@ export class MainMenuScene extends GameScene {
 
   private waitForMatchmakingPoll(): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, 1500));
-  }
-
-  private prepareTokenRun(): boolean {
-    if (!this.shopManager.consumeFuelForRun()) {
-      return false;
-    }
-
-    this.session.setRunConsumables(this.shopManager.getEquippedRunConsumables());
-
-    return true;
   }
 
   private handleModesSelected = (): void => {

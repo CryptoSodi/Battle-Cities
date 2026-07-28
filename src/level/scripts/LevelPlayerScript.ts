@@ -14,7 +14,7 @@ import { LevelPlayInputContext } from '../../input';
 import { isMobileTouchLayout } from '../../input/mobile';
 import { PowerupType } from '../../powerup';
 import { ShopInventoryItemId, ShopManager } from '../../shop';
-import { TankFactory, TankParty } from '../../tank';
+import { TankFactory, TankParty, TankTier, TankType } from '../../tank';
 import * as config from '../../config';
 
 import { LevelScript } from '../LevelScript';
@@ -282,7 +282,10 @@ export class LevelPlayerScript extends LevelScript {
 
     const position = this.positions[partyIndex];
 
-    const type = TankFactory.createPlayerType();
+    const type = new TankType(
+      TankParty.Player,
+      this.session.getPlayerTankTier(partyIndex),
+    );
 
     this.eventBus.playerSpawnRequested.notify({
       type,
@@ -300,7 +303,7 @@ export class LevelPlayerScript extends LevelScript {
 
     const { partyIndex } = event;
 
-    const tank = TankFactory.createPlayer(partyIndex);
+    const tank = TankFactory.createPlayer(partyIndex, event.type.clone());
     tank.updateMatrix();
     tank.setCenter(event.centerPosition);
     tank.updateMatrix();
@@ -318,8 +321,11 @@ export class LevelPlayerScript extends LevelScript {
     const isLevelFirstSpawn = playerSession.isLevelFirstSpawn();
     if (isLevelFirstSpawn) {
       const carryoverTier = playerSession.getTankTier();
-      tank.upgrade(carryoverTier, false);
+      if (getTankTierRank(carryoverTier) > getTankTierRank(tank.type.tier)) {
+        tank.upgrade(carryoverTier, false);
+      }
     }
+    playerSession.setTankTier(tank.type.tier);
 
     tank.died.addListener(() => {
       this.eventBus.playerDied.notify({
@@ -489,4 +495,17 @@ export class LevelPlayerScript extends LevelScript {
       tank.freezeState.set(true);
     });
   };
+}
+
+function getTankTierRank(tier: TankTier): number {
+  switch (tier) {
+    case TankTier.B:
+      return 1;
+    case TankTier.C:
+      return 2;
+    case TankTier.D:
+      return 3;
+    default:
+      return 0;
+  }
 }

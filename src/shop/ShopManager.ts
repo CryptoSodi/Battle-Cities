@@ -307,12 +307,13 @@ export class ShopManager {
     return nextItem;
   }
 
-  public canStartRun(): boolean {
-    return this.getFuelBalance() >= config.SHOP_RUN_FUEL_COST;
+  public canStartRun(fuelCost = config.SHOP_RUN_FUEL_COST): boolean {
+    return this.getFuelBalance() >= this.normalizeFuelCost(fuelCost);
   }
 
-  public consumeFuelForRun(): boolean {
-    if (!this.canStartRun()) {
+  public consumeFuelForRun(fuelCost = config.SHOP_RUN_FUEL_COST): boolean {
+    const normalizedFuelCost = this.normalizeFuelCost(fuelCost);
+    if (!this.canStartRun(normalizedFuelCost)) {
       return false;
     }
 
@@ -322,12 +323,17 @@ export class ShopManager {
 
     this.storage.setNumber(
       config.STORAGE_KEY_SHOP_FUEL_BALANCE,
-      this.getFuelBalance() - config.SHOP_RUN_FUEL_COST,
+      this.getFuelBalance() - normalizedFuelCost,
     );
     this.storage.save();
     void this.syncAccountSnapshot();
 
     return true;
+  }
+
+  private normalizeFuelCost(fuelCost: number): number {
+    const parsed = Number(fuelCost);
+    return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
   }
 
   public getEquippedRunConsumables(): ShopRunConsumables {
