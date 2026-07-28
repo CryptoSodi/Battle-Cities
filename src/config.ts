@@ -94,6 +94,9 @@ const BASE_CANVAS_HEIGHT =
 // Mobile scales this wider logical canvas down to the physical viewport so
 // those screens fit without changing gameplay's camera framing.
 const MOBILE_UI_CANVAS_WIDTH = 1288;
+// Narrow desktop windows need the same minimum logical width; otherwise the
+// fixed-width desktop panels are clipped before CSS scales the canvas.
+const DESKTOP_UI_CANVAS_MIN_WIDTH = 1288;
 
 function getViewportSize(): { width: number; height: number } {
   if (typeof window === 'undefined') {
@@ -127,7 +130,6 @@ export function isMobileTouchViewport(): boolean {
 export function getResponsiveCanvasSize(): { width: number; height: number } {
   const viewportSize = getViewportSize();
   const viewportAspectRatio = viewportSize.width / viewportSize.height;
-  const baseAspectRatio = BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT;
 
   if (isMobileTouchViewport()) {
     return {
@@ -136,16 +138,14 @@ export function getResponsiveCanvasSize(): { width: number; height: number } {
     };
   }
 
-  if (viewportAspectRatio >= baseAspectRatio) {
-    return {
-      width: Math.ceil(BASE_CANVAS_HEIGHT * viewportAspectRatio),
-      height: BASE_CANVAS_HEIGHT,
-    };
-  }
+  const desktopCanvasWidth = Math.max(
+    DESKTOP_UI_CANVAS_MIN_WIDTH,
+    Math.ceil(BASE_CANVAS_HEIGHT * viewportAspectRatio),
+  );
 
   return {
-    width: BASE_CANVAS_WIDTH,
-    height: Math.ceil(BASE_CANVAS_WIDTH / viewportAspectRatio),
+    width: desktopCanvasWidth,
+    height: Math.ceil(desktopCanvasWidth / viewportAspectRatio),
   };
 }
 
