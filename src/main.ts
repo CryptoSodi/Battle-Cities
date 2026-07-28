@@ -52,6 +52,7 @@ import * as rectFontConfig from '../data/fonts/rect-font.json';
 import * as mapManifest from '../data/map.manifest.json';
 
 const loadingElement = document.querySelector('[data-loading]');
+const loadingStatusElement = document.querySelector('[data-loading-status]');
 const authShellElement = document.querySelector(
   '[data-auth-shell]',
 ) as HTMLElement;
@@ -64,6 +65,32 @@ const walletLoginButton = document.querySelector(
 const googleLoginButton = document.querySelector(
   '[data-auth-google]',
 ) as HTMLButtonElement;
+
+function setLoadingStatus(message: string): void {
+  if (loadingStatusElement !== null) {
+    loadingStatusElement.textContent = message;
+  }
+}
+
+const SPLASH_MESSAGES = [
+  'Booting battle station...',
+  'Connecting to Solana console...',
+  'Establishing MagicBlock uplink...',
+  'Loading suspiciously tiny tanks...',
+  'Counting shells twice...',
+  'Convincing enemies to follow the rules...',
+];
+
+function startSplashMessages(): () => void {
+  if (isHeadlessBroadcaster) return () => undefined;
+  let messageIndex = 0;
+  setLoadingStatus(SPLASH_MESSAGES[messageIndex]);
+  const timer = window.setInterval(() => {
+    messageIndex = (messageIndex + 1) % SPLASH_MESSAGES.length;
+    setLoadingStatus(SPLASH_MESSAGES[messageIndex]);
+  }, 1200);
+  return () => window.clearInterval(timer);
+}
 const authStatusElement = document.querySelector(
   '[data-auth-status]',
 ) as HTMLElement;
@@ -1119,7 +1146,6 @@ async function preloadUiFont(): Promise<void> {
 
 function getInitialMenuSpriteIds(): string[] {
   const ids = [
-    'menu.logo',
     'menu.item.start',
     'menu.item.shop',
     'menu.item.ranking',
@@ -1175,7 +1201,7 @@ function startBackgroundSpritePreload(): void {
 }
 
 async function main(): Promise<void> {
-  loadingElement.textContent = 'Loading interface...';
+  const stopSplashMessages = startSplashMessages();
   if (!isHeadlessBroadcaster) {
     await preloadUiFont();
   }
@@ -1186,22 +1212,18 @@ async function main(): Promise<void> {
   enterGameView();
 
   log.time('Audio preload');
-  loadingElement.textContent = 'Loading audio...';
   await audioLoader.preloadAllAsync();
   log.timeEnd('Audio preload');
 
   log.time('Rect font preload');
-  loadingElement.textContent = 'Loading rects fonts...';
   await rectFontLoader.preloadAll();
   log.timeEnd('Rect font preload');
 
   log.time('Sprite font preload');
-  loadingElement.textContent = 'Loading sprite fonts...';
   await spriteFontLoader.preloadAllAsync();
   log.timeEnd('Sprite font preload');
 
   log.time('Color sprite font generation');
-  loadingElement.textContent = 'Generating sprite font colors...';
   colorSpriteFontGenerator.generate(
     config.PRIMARY_SPRITE_FONT_ID,
     config.COLOR_WHITE,
@@ -1221,15 +1243,14 @@ async function main(): Promise<void> {
   log.timeEnd('Color sprite font generation');
 
   log.time('Menu sprites preload');
-  loadingElement.textContent = 'Loading main menu...';
   await spriteLoader.preloadAsync(getInitialMenuSpriteIds());
   log.timeEnd('Menu sprites preload');
 
   log.time('Input bindings load');
-  loadingElement.textContent = 'Loading input bindings...';
   inputManager.loadAllBindings();
   log.timeEnd('Input bindings load');
 
+  stopSplashMessages();
   loadingElement.remove();
   if (!isHeadlessBroadcaster) {
     const gameCanvas = gameRenderer.getDomElement();

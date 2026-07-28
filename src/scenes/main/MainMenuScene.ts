@@ -126,7 +126,6 @@ enum State {
 export class MainMenuScene extends GameScene {
   private group: GameObject;
   private background: GameObject;
-  private logo: GameObject;
   private menu: Menu;
   private singlePlayerItem: SpriteMenuItem;
   private multiPlayerItem: SpriteMenuItem;
@@ -208,21 +207,6 @@ export class MainMenuScene extends GameScene {
     const menuY = isMobileLayout
       ? Math.round(this.root.size.height * 0.5) + 72
       : 490;
-
-    this.logo = new GameObject();
-    this.logo.size.set(
-      isMobileLayout ? 504 : 360,
-      isMobileLayout ? 420 : 300,
-    );
-    this.logo.position.setX(
-      (this.root.size.width - this.logo.size.width) / 2,
-    );
-    this.logo.position.setY(isMobileLayout ? 238 : menuY - 252);
-    this.logo.painter = new SpritePainter(
-      spriteLoader.load('menu.logo'),
-      SpriteAlignment.AspectFit,
-    );
-    this.group.add(this.logo);
 
     this.setupHud(spriteLoader);
 

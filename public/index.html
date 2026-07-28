@@ -102,7 +102,29 @@
         </p>
       </section>
     </main>
-    <div data-loading class="loading" hidden>LOADING...</div>
+    <div data-loading class="loading splash" hidden>
+      <div class="splash__content">
+        <img
+          class="splash__logo"
+          src="assets/battle-cities-menu-logo.png"
+          alt="Battle Cities"
+        />
+        <p class="splash__status" data-loading-status role="status" aria-live="polite">
+          Booting battle station...
+        </p>
+        <div class="splash__progress" aria-hidden="true"><span></span></div>
+        <div class="splash__technology" aria-label="Battle Cities technology partners">
+          <span class="splash__technology-brand">
+            <span>Built On</span>
+            <img src="assets/solana-wordmark-white.png" alt="Solana" />
+          </span>
+          <span class="splash__technology-brand">
+            <span>Real-time infrastructure powered by</span>
+            <img src="assets/magicblock-logo.png" alt="MagicBlock" />
+          </span>
+        </div>
+      </div>
+    </div>
     <script src="main.js"></script>
   </body>
 </html>

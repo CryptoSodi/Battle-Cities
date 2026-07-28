@@ -320,12 +320,130 @@ body.scanlines-disabled::after {
 
 .loading {
   align-items: center;
+  background: #050706 url('/assets/main-screen-background.png') center / cover
+    no-repeat;
+  box-sizing: border-box;
   display: flex;
   color: #fff;
   font-family: Lucida Console, Courier, monospace;
-  font-size: 32px;
-  position: relative;
+  inset: 0;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+  position: fixed;
+  width: 100%;
   z-index: 2;
+}
+
+.loading::before {
+  background: rgba(2, 4, 3, 0.78);
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+
+.splash__content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  max-width: 680px;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.splash__logo {
+  display: block;
+  height: auto;
+  max-width: 560px;
+  width: min(82vw, 560px);
+}
+
+.splash__status {
+  color: #fff7df;
+  font: 700 17px/1.2 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
+  margin: 28px 0 12px;
+  letter-spacing: 0;
+  min-height: 21px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.splash__progress {
+  background: rgba(255, 255, 255, 0.16);
+  height: 4px;
+  overflow: hidden;
+  width: min(320px, 72vw);
+}
+
+.splash__progress span {
+  background: #ffb018;
+  display: block;
+  height: 100%;
+  transform: translateX(-70%);
+  width: 56%;
+}
+
+.splash__technology {
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: #d6d0c2;
+  display: flex;
+  flex-wrap: wrap;
+  font: 600 12px/1.4 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
+  gap: 14px 24px;
+  justify-content: center;
+  letter-spacing: 0;
+  margin-top: 30px;
+  padding-top: 18px;
+  width: min(520px, 88vw);
+}
+
+.splash__technology-brand {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.splash__technology-brand img {
+  display: block;
+  height: auto;
+  max-height: 24px;
+  max-width: 92px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .splash__progress span {
+    animation: splash-progress 1100ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes splash-progress {
+  from {
+    transform: translateX(-70%);
+  }
+  to {
+    transform: translateX(150%);
+  }
+}
+
+@media (max-width: 520px) {
+  .loading {
+    padding: 24px 18px;
+  }
+
+  .splash__status {
+    font-size: 15px;
+    margin-top: 22px;
+  }
+
+  .splash__technology {
+    align-items: flex-start;
+    flex-direction: column;
+    width: min(300px, 88vw);
+  }
 }
 
 canvas {
