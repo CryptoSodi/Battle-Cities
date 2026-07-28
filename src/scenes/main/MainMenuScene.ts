@@ -204,17 +204,13 @@ export class MainMenuScene extends GameScene {
       this.root.add(this.background);
     }
 
-    const menuY = isMobileLayout
-      ? Math.round(this.root.size.height * 0.5) + 72
-      : 490;
-
     this.setupHud(spriteLoader);
 
     this.setupEventTicker(spriteLoader, isMobileLayout);
     this.loadEventTicker();
 
-    const menuItemWidth = isMobileLayout ? 380 : 228;
-    const menuItemHeight = isMobileLayout ? 88 : 56;
+    const menuItemWidth = isMobileLayout ? 350 : 228;
+    const menuItemHeight = isMobileLayout ? 80 : 56;
     const createMenuItem = (spriteId: string): SpriteMenuItem =>
       new SpriteMenuItem(
         spriteLoader.load(spriteId),
@@ -272,11 +268,22 @@ export class MainMenuScene extends GameScene {
       this.logoutItem,
     );
 
+    const menuItemSpacing = isMobileLayout ? 84 : 60;
+    const menuY = isMobileLayout
+      ? Math.max(
+          250,
+          Math.min(
+            Math.round(this.root.size.height * 0.43),
+            this.root.size.height - menuItems.length * menuItemSpacing - 24,
+          ),
+        )
+      : 490;
+
     this.menu = new Menu({
-      cursorOffsetX: isMobileLayout ? -86 : 30,
-      cursorSize: isMobileLayout ? 112 : 60,
-      itemHeight: isMobileLayout ? 92 : 60,
-      itemOffsetX: isMobileLayout ? 50 : 126,
+      cursorOffsetX: isMobileLayout ? -70 : 30,
+      cursorSize: isMobileLayout ? 96 : 60,
+      itemHeight: menuItemSpacing,
+      itemOffsetX: isMobileLayout ? 65 : 126,
       itemOffsetY: isMobileLayout ? 2 : 16,
     });
     this.menu.setItems(menuItems);
