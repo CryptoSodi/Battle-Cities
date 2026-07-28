@@ -320,8 +320,7 @@ body.scanlines-disabled::after {
 
 .loading {
   align-items: center;
-  background: #050706 url('/assets/main-screen-background.png') center / cover
-    no-repeat;
+  background: #050706;
   box-sizing: border-box;
   display: flex;
   color: #fff;
@@ -329,17 +328,11 @@ body.scanlines-disabled::after {
   inset: 0;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 32px;
   position: fixed;
   width: 100%;
   z-index: 2;
-}
-
-.loading::before {
-  background: rgba(2, 4, 3, 0.78);
-  content: '';
-  inset: 0;
-  position: absolute;
 }
 
 .splash__content {
@@ -355,8 +348,8 @@ body.scanlines-disabled::after {
 .splash__logo {
   display: block;
   height: auto;
-  max-width: 560px;
-  width: min(82vw, 560px);
+  max-width: 460px;
+  width: min(76vw, 460px);
 }
 
 .splash__status {
