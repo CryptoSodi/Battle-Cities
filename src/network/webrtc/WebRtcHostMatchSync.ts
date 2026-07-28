@@ -1679,17 +1679,22 @@ export class WebRtcHostMatchSync {
       }
       tank.setNetworkControlled(true);
       ticks
-        .splice(0, MAX_ENEMY_TICKS_PER_UPDATE)
+        .splice(
+          0,
+          this.observer ? ticks.length : MAX_ENEMY_TICKS_PER_UPDATE,
+        )
         .forEach((frame) => {
+          const useAbsolutePosition =
+            this.observer || frame.initialSync === true;
           tank.applyNetworkMovement(
             frame.rotation,
             frame.moving,
-            frame.initialSync && Number.isFinite(frame.x)
+            useAbsolutePosition && Number.isFinite(frame.x)
               ? frame.x - tank.position.x
               : Number.isFinite(frame.deltaX)
                 ? frame.deltaX
                 : 0,
-            frame.initialSync && Number.isFinite(frame.y)
+            useAbsolutePosition && Number.isFinite(frame.y)
               ? frame.y - tank.position.y
               : Number.isFinite(frame.deltaY)
                 ? frame.deltaY
