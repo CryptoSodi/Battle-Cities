@@ -272,6 +272,7 @@ class MatchRuntime {
   private archiveCompleted = false;
   private archiveStartPromise: Promise<void> | null = null;
   private archiveFlushPromise: Promise<void> | null = null;
+  private archiveFlushAllRequested = false;
   private readonly archiveConfig: Record<string, unknown>;
 
   public constructor(
@@ -360,6 +361,10 @@ class MatchRuntime {
       statusUrl,
       workerUrl: statusUrl,
     };
+  }
+
+  public isComplete(): boolean {
+    return this.simulation.isComplete();
   }
 
   private tick(): void {
@@ -478,6 +483,9 @@ class MatchRuntime {
         `[broadcaster] match started match=${this.id}` +
         ` players=2/2 tick=${this.simulation.tick}`,
       );
+      void this.ensureArchiveStarted().catch((error) => {
+        console.error(`[broadcaster] archive startup failed for ${this.id}`, error);
+      });
     }
     this.broadcast(this.readyPacket(reconnecting ? linkId : null));
   }
@@ -665,7 +673,7 @@ class MatchRuntime {
           },
         );
         if (!response.ok) {
-          throw new Error(`archive startup failed (${response.status})`);
+          throw new Error(await apiFailure(response, 'archive startup'));
         }
         this.archiveStarted = true;
       })().finally(() => {
@@ -675,41 +683,91 @@ class MatchRuntime {
     await this.archiveStartPromise;
   }
 
-  private async flushArchiveFrames(flushAll: boolean): Promise<void> {
-    if (this.archiveFlushPromise !== null) {
-      await this.archiveFlushPromise;
-    }
+  private flushArchiveFrames(flushAll: boolean): Promise<void> {
+    if (flushAll) this.archiveFlushAllRequested = true;
+    if (this.archiveFlushPromise !== null) return this.archiveFlushPromise;
+
+    let operation: Promise<void>;
+    operation = this.drainArchiveFrames().finally(() => {
+      if (this.archiveFlushPromise === operation) {
+        this.archiveFlushPromise = null;
+      }
+    });
+    this.archiveFlushPromise = operation;
+    return operation;
+  }
+
+  private async drainArchiveFrames(): Promise<void> {
     while (
       this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES ||
-      (flushAll && this.pendingArchiveFrames.length > 0)
+      (this.archiveFlushAllRequested && this.pendingArchiveFrames.length > 0)
     ) {
       const batchSize = Math.min(
         ARCHIVE_BATCH_FRAMES,
         this.pendingArchiveFrames.length,
       );
       const batch = this.pendingArchiveFrames.slice(0, batchSize);
-      this.archiveFlushPromise = (async () => {
-        await this.ensureArchiveStarted();
-        const response = await apiFetch(
-          `/api/multiplayer/archives/${encodeURIComponent(this.id)}/frames`,
-          {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ frames: batch }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error(`archive frame flush failed (${response.status})`);
+      await this.ensureArchiveStarted();
+      const response = await apiFetch(
+        `/api/multiplayer/archives/${encodeURIComponent(this.id)}/frames`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ frames: batch }),
+        },
+      );
+      if (!response.ok) {
+        const detail = (await response.text()).trim().slice(0, 500);
+        if (
+          response.status === 409 &&
+          this.recoverArchiveSequence(detail)
+        ) {
+          continue;
         }
-        this.pendingArchiveFrames.splice(0, batch.length);
-      })();
-      try {
-        await this.archiveFlushPromise;
-      } finally {
-        this.archiveFlushPromise = null;
+        throw new Error(formatApiFailure(response.status, detail, 'archive frame flush'));
       }
-      if (!flushAll) break;
+      this.pendingArchiveFrames.splice(0, batch.length);
+      if (!this.archiveFlushAllRequested) break;
     }
+    if (this.pendingArchiveFrames.length === 0) {
+      this.archiveFlushAllRequested = false;
+    }
+  }
+
+  private recoverArchiveSequence(detail: string): boolean {
+    const conflict = /Expected frame (\d+), received (\d+)/.exec(detail);
+    if (conflict === null) return false;
+
+    const expectedSeq = Number.parseInt(conflict[1], 10);
+    const receivedSeq = Number.parseInt(conflict[2], 10);
+    if (expectedSeq === receivedSeq) return false;
+    const lastFrameSeq = this.frameHistory[this.frameHistory.length - 1]?.seq ?? 0;
+    if (expectedSeq === lastFrameSeq + 1) {
+      this.pendingArchiveFrames.length = 0;
+      console.warn(
+        `[broadcaster] archive queue recovered match=${this.id}` +
+        ` expected=${expectedSeq} pending=0`,
+      );
+      return true;
+    }
+
+    const recovered = this.frameHistory.filter((frame) => frame.seq >= expectedSeq);
+    if (
+      recovered.length === 0 ||
+      recovered[0].seq !== expectedSeq ||
+      recovered.some(
+        (frame, index) => index > 0 && frame.seq !== recovered[index - 1].seq + 1,
+      )
+    ) {
+      return false;
+    }
+    this.pendingArchiveFrames.length = 0;
+    this.pendingArchiveFrames.push(...recovered);
+    console.warn(
+      `[broadcaster] archive queue recovered match=${this.id}` +
+      ` expected=${expectedSeq} pending=${recovered.length}`,
+    );
+    return true;
   }
 
   private async completeArchive(result: Record<string, unknown>): Promise<void> {
@@ -727,7 +785,7 @@ class MatchRuntime {
       },
     );
     if (!response.ok) {
-      throw new Error(`archive completion failed (${response.status})`);
+      throw new Error(await apiFailure(response, 'archive completion'));
     }
     this.archiveCompleted = true;
   }
@@ -936,6 +994,11 @@ const server = createServer(async (request, response) => {
       /^\/live\/past-matches\/([a-z0-9-]+)\/replay$/,
     );
     if (request.method === 'POST' && publicReplayRoute !== null) {
+      const liveMatch = matches.get(publicReplayRoute[1]);
+      if (liveMatch?.isComplete()) {
+        json(response, 201, liveMatch.status());
+        return;
+      }
       const replay = await startArchiveReplay(publicReplayRoute[1]);
       json(response, 201, replay.status());
       return;
@@ -960,6 +1023,11 @@ const server = createServer(async (request, response) => {
       /^\/past-matches\/([a-z0-9-]+)\/replay$/,
     );
     if (request.method === 'POST' && replayRoute !== null) {
+      const liveMatch = matches.get(replayRoute[1]);
+      if (liveMatch?.isComplete()) {
+        json(response, 201, liveMatch.status());
+        return;
+      }
       const replay = await startArchiveReplay(replayRoute[1]);
       json(response, 201, replay.status());
       return;
@@ -1066,13 +1134,27 @@ function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   });
 }
 
+async function apiFailure(response: Response, operation: string): Promise<string> {
+  const detail = (await response.text()).trim().slice(0, 500);
+  return formatApiFailure(response.status, detail, operation);
+}
+
+function formatApiFailure(status: number, detail: string, operation: string): string {
+  return `${operation} failed (${status})${detail === '' ? '' : `: ${detail}`}`;
+}
+
 async function listArchivedMatches(): Promise<MatchArchiveSummary[]> {
-  const response = await apiFetch('/api/multiplayer/archives?limit=100');
+  const response = await apiFetch(
+    '/api/multiplayer/archives?limit=100&includeIncomplete=1',
+  );
   if (!response.ok) {
-    throw new Error(`archive list failed (${response.status})`);
+    throw new Error(await apiFailure(response, 'archive list'));
   }
   const body = await response.json() as { items?: MatchArchiveSummary[] };
-  return Array.isArray(body.items) ? body.items : [];
+  return (Array.isArray(body.items) ? body.items : []).filter((archive) => {
+    const liveMatch = matches.get(archive.matchId);
+    return liveMatch === undefined || liveMatch.isComplete();
+  });
 }
 
 async function startArchiveReplay(
@@ -1094,8 +1176,8 @@ async function startArchiveReplay(
     item?: MatchArchiveSummary;
   };
   const archive = metadataBody.item;
-  if (archive === undefined || archive.status !== 'completed') {
-    throw new Error('Completed match archive not found.');
+  if (archive === undefined || archive.frameCount <= 0) {
+    throw new Error('Saved match archive not found.');
   }
 
   const frames: SimulationHostFramePacket[] = [];
@@ -1726,7 +1808,7 @@ function monitorHtml(publicLive = false): string {
           activeView === 'past' ? 'No past matches' : 'No active matches';
         document.getElementById('empty-message').textContent =
           activeView === 'past'
-            ? 'Completed matches will appear here after their archives are finalized.'
+            ? 'Saved matches will appear here after their first frames are archived.'
             : 'The next match will appear here automatically.';
         rows.replaceChildren();
         renderTableHead();
@@ -1791,7 +1873,7 @@ function monitorHtml(publicLive = false): string {
         var state = document.createElement('td');
         var status = document.createElement('span');
         status.className = 'status live';
-        status.textContent = 'Completed';
+        status.textContent = match.status === 'completed' ? 'Completed' : 'Recovered';
         state.appendChild(status);
         row.appendChild(state);
         appendCell(row, String(match.gameType || match.category || '--'));
@@ -1803,7 +1885,11 @@ function monitorHtml(publicLive = false): string {
         );
         appendCell(row, String(match.level), 'number');
         appendCell(row, formatNumber(match.finalTick || match.frameCount), 'number');
-        appendCell(row, formatDateTime(match.completedAt), 'number');
+        appendCell(
+          row,
+          formatDateTime(match.completedAt || match.updatedAt || match.startedAt),
+          'number',
+        );
         var actionCell = document.createElement('td');
         var button = document.createElement('button');
         button.className = 'button primary view-button';

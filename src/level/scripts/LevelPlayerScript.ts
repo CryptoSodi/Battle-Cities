@@ -145,7 +145,7 @@ export class LevelPlayerScript extends LevelScript {
     } = updateArgs;
     this.isWebRtcClient =
       webRtcMatch.isEnabled() && !webRtcMatch.isBroadcaster();
-    const isWebRtcObserver = webRtcMatch.isObserver();
+    const isWebRtcObserver = !this.headless && webRtcMatch.isObserver();
     if (this.isWebRtcClient) {
       this.localPlayerIndex = webRtcMatch.getLocalPlayerIndex();
     }
