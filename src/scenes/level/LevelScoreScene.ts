@@ -31,11 +31,13 @@ export class LevelScoreScene extends PanelScene {
   private playerIdentity: PlayerIdentity;
   private pointsHighscoreManager: PointsHighscoreManager;
   private players: ResultPlayer[] = [];
+  private isObserver = false;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.session = updateArgs.session;
     this.playerIdentity = updateArgs.playerIdentity;
     this.pointsHighscoreManager = updateArgs.pointsHighscoreManager;
+    this.isObserver = updateArgs.webRtcMatch.isObserver();
 
     this.applyMultiplayerBonus();
     this.players = this.buildPlayerResults();
@@ -723,8 +725,12 @@ export class LevelScoreScene extends PanelScene {
     const sorted = activePlayers
       .map((player, index) => ({
         player,
-        name: index === 0 ? primaryName : 'PLAYER 2',
-        isPrimary: index === 0,
+        name: this.isObserver
+          ? `PLAYER ${index + 1}`
+          : index === 0
+            ? primaryName
+            : 'PLAYER 2',
+        isPrimary: !this.isObserver && index === 0,
       }))
       .sort((a, b) => b.player.getGamePoints() - a.player.getGamePoints());
 

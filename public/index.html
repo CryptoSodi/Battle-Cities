@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Battle Cities</title>
     <link rel="icon" type="image/png" href="data/graphics/favicon.png" />
+    <script>
+      const initialParams = new URLSearchParams(window.location.search);
+      if (
+        initialParams.get('mode') === 'webrtc' &&
+        initialParams.get('observer') === '1'
+      ) {
+        document.documentElement.classList.add('observer-bootstrap');
+      }
+    </script>
+    <style>
+      .observer-bootstrap [data-auth-shell] { display: none !important; }
+      .observer-bootstrap [data-loading] { display: block !important; }
+    </style>
     <link rel="stylesheet" href="main.css" />
     <script defer src="cache-bootstrap.js"></script>
     <!-- Google tag (gtag.js) -->

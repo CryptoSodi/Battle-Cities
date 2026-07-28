@@ -75,6 +75,9 @@ const isHeadlessBroadcaster =
   runtimeParams.get('mode') === 'webrtc' &&
   runtimeParams.get('broadcaster') === '1' &&
   runtimeParams.get('headless') === '1';
+const isWebRtcObserver =
+  runtimeParams.get('mode') === 'webrtc' &&
+  runtimeParams.get('observer') === '1';
 const rendererOverride = runtimeParams.get('renderer');
 const gameRenderer = new GameRenderer({
   // debug: true,
@@ -689,7 +692,7 @@ if (config.IS_DEV && !isHeadlessBroadcaster) {
 }
 
 function waitForLogin(): Promise<void> {
-  if (isHeadlessBroadcaster) {
+  if (isHeadlessBroadcaster || isWebRtcObserver) {
     return Promise.resolve();
   }
 
@@ -924,6 +927,7 @@ function enterGameView(): void {
   }
 
   document.body.classList.add('game-running');
+  document.documentElement.classList.remove('observer-bootstrap');
 
   if (config.IS_DEV) {
     document.body.appendChild(stats.dom);
@@ -1169,7 +1173,7 @@ async function main(): Promise<void> {
     await preloadUiFont();
   }
   await waitForLogin();
-  if (!isHeadlessBroadcaster) {
+  if (!isHeadlessBroadcaster && !isWebRtcObserver) {
     await hydrateShopCacheFromServer();
   }
   enterGameView();

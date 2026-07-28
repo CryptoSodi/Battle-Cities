@@ -269,6 +269,8 @@ export class WebRtcHostMatchSync {
   private readonly pendingEnemyDeaths: WebRtcEnemyDeathFrame[] = [];
   private readonly pendingEnemyDeathSeqs = new Set<number>();
   private lastAppliedEnemyDeathSeq = 0;
+  private readonly pendingPowerupPickups: WebRtcPowerupPickupFrame[] = [];
+  private lastQueuedPowerupPickupSeq = 0;
   private readonly observedEnemies = new WeakSet<EnemyTank>();
   private readonly observedPlayers = new WeakSet<PlayerTank>();
   private readonly playerFireSeqs = new Map<number, number>();
@@ -735,11 +737,29 @@ export class WebRtcHostMatchSync {
   }
 
   public getPowerupPickup(): WebRtcPowerupPickupFrame | null {
-    return (
-      this.activeReplayFrame?.powerupPickup ??
-      this.latestHostFrame?.powerupPickup ??
-      null
-    );
+    const replayPickup = this.activeReplayFrame?.powerupPickup ?? null;
+    if (replayPickup !== null) {
+      this.lastQueuedPowerupPickupSeq = Math.max(
+        this.lastQueuedPowerupPickupSeq,
+        replayPickup.seq,
+      );
+      return replayPickup;
+    }
+    return this.pendingPowerupPickups.shift() ?? null;
+  }
+
+  private queuePowerupPickup(
+    pickup: WebRtcPowerupPickupFrame | null,
+  ): void {
+    if (
+      pickup === null ||
+      !Number.isInteger(pickup.seq) ||
+      pickup.seq <= this.lastQueuedPowerupPickupSeq
+    ) {
+      return;
+    }
+    this.lastQueuedPowerupPickupSeq = pickup.seq;
+    this.pendingPowerupPickups.push(pickup);
   }
 
   private configure(): void {
@@ -1372,6 +1392,7 @@ export class WebRtcHostMatchSync {
   ): void {
     this.pendingAppliedFrameSeqs.push(frame.seq);
     this.queueEnemyDeaths(frame.enemyDeaths ?? []);
+    this.queuePowerupPickup(frame.powerupPickup);
     (frame.players ?? []).forEach((playerFrame) => {
       let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
       if (ticks === undefined) {

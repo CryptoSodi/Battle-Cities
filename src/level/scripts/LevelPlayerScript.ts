@@ -145,6 +145,7 @@ export class LevelPlayerScript extends LevelScript {
     } = updateArgs;
     this.isWebRtcClient =
       webRtcMatch.isEnabled() && !webRtcMatch.isBroadcaster();
+    const isWebRtcObserver = webRtcMatch.isObserver();
     if (this.isWebRtcClient) {
       this.localPlayerIndex = webRtcMatch.getLocalPlayerIndex();
     }
@@ -155,6 +156,7 @@ export class LevelPlayerScript extends LevelScript {
     const runConsumables = session.getRunConsumables();
     if (
       !this.headless &&
+      !isWebRtcObserver &&
       !this.isReplaying &&
       session.getLevelNumber() === 1 &&
       runConsumables.powerupItems.length === 0 &&
@@ -229,7 +231,7 @@ export class LevelPlayerScript extends LevelScript {
         14,
     );
     this.hotbar.setZIndex(500);
-    if (!this.headless && !isMobileTouchLayout()) {
+    if (!this.headless && !isWebRtcObserver && !isMobileTouchLayout()) {
       this.world.sceneRoot.add(this.hotbar);
       this.renderHotbar();
     }
