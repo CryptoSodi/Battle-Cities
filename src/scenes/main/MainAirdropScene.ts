@@ -9,6 +9,8 @@ import { PanelScene, UI } from './panelUi';
 
 const MOBILE_WIDTH = 744;
 const BATTLE_CITIES_X_URL = 'https://x.com/BattleCitiesHQ';
+const BATTLE_CITIES_INSTAGRAM_URL = 'https://www.instagram.com/battlecitieshq';
+const BATTLE_CITIES_DISCORD_URL = 'https://discord.gg/wdWa7SrbQc';
 
 interface EligibilityStat {
   label: string;
@@ -378,15 +380,17 @@ export class MainAirdropScene extends PanelScene {
         key: 'discord',
         label: 'JOIN DISCORD',
         mark: 'D',
-        detail: 'COMMUNITY QUEST',
-        action: 'COMING SOON',
+        detail: 'BATTLE CITIES COMMUNITY',
+        action: 'OPEN DISCORD',
+        url: BATTLE_CITIES_DISCORD_URL,
       },
       {
-        key: 'telegram',
-        label: 'JOIN TELEGRAM',
-        mark: 'T',
-        detail: 'COMMUNITY QUEST',
-        action: 'COMING SOON',
+        key: 'instagram',
+        label: 'FOLLOW INSTAGRAM',
+        mark: 'IG',
+        detail: '@BattleCitiesHQ',
+        action: 'OPEN INSTAGRAM',
+        url: BATTLE_CITIES_INSTAGRAM_URL,
       },
     ];
 
@@ -400,7 +404,7 @@ export class MainAirdropScene extends PanelScene {
       width - (mobile ? this.mobileSize(120) : 120),
     );
     this.addText(
-      '0 / 1',
+      '0 / 3',
       x + width - (mobile ? this.mobileSize(120) : 120),
       y + (mobile ? this.mobileSize(4) : 4),
       UI.MUTED,
