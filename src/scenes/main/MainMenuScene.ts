@@ -12,11 +12,6 @@ import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
 import { RenderObject } from '../../core/RenderObject';
 import { UI_FONT_FAMILY } from '../../core/text/UiTypography';
-import type {
-  MultiplayerAssignment,
-  MultiplayerStartResponse,
-} from '@battlecities/shared';
-import { storeMultiplayerRuntime } from '../../network/multiplayerRuntime';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
@@ -151,7 +146,6 @@ export class MainMenuScene extends GameScene {
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mobileGamepadQrEnabled = false;
-  private multiplayerRequestPending = false;
 
   protected setup({
     inputManager,
@@ -559,61 +553,10 @@ export class MainMenuScene extends GameScene {
   };
 
   private handleMultiPlayerSelected = (): void => {
-    void this.startOnlineMatch();
-  };
-
-  private async startOnlineMatch(): Promise<void> {
-    if (this.multiplayerRequestPending) {
-      return;
-    }
-    this.multiplayerRequestPending = true;
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
-    try {
-      const response = await apiFetch('/api/multiplayer/direct/start', {
-        method: 'POST',
-        headers: { accept: 'application/json' },
-      });
-      let body = (await response.json()) as MultiplayerStartResponse;
-      let assignment = body.assignment;
-      if (assignment === undefined) {
-        throw new Error(body.error || `Matchmaking failed (${response.status})`);
-      }
-
-      while (body.runtime === undefined) {
-        await this.waitForMatchmakingPoll();
-        body = await this.reconnectMatch(assignment);
-        assignment = body.assignment ?? assignment;
-      }
-
-      storeMultiplayerRuntime(body.runtime);
-      window.location.assign('/');
-    } catch (error) {
-      this.multiplayerRequestPending = false;
-      console.error('[multiplayer] matchmaking failed', error);
-      window.alert((error as Error).message || 'Could not start multiplayer');
-    }
-  }
-
-  private async reconnectMatch(
-    assignment: MultiplayerAssignment,
-  ): Promise<MultiplayerStartResponse> {
-    const response = await apiFetch(
-      `/api/multiplayer/matches/${encodeURIComponent(
-        assignment.match.id,
-      )}/reconnect`,
-      { method: 'POST', headers: { accept: 'application/json' } },
-    );
-    const body = (await response.json()) as MultiplayerStartResponse;
-    if (body.assignment === undefined) {
-      throw new Error(body.error || `Match reconnect failed (${response.status})`);
-    }
-    return body;
-  }
-
-  private waitForMatchmakingPoll(): Promise<void> {
-    return new Promise((resolve) => window.setTimeout(resolve, 1500));
-  }
+    this.navigator.push(GameSceneType.MainTankSelect, { multiplayer: true });
+  };
 
   private handleModesSelected = (): void => {
     this.mobileGamepadQrEnabled = false;

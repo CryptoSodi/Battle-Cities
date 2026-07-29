@@ -95,6 +95,7 @@ function isMultiplayerRuntime(value: any): value is MultiplayerRuntimeConfig {
     typeof value.matchId === 'string' &&
     /^match-[0-9a-z-]+$/i.test(value.matchId) &&
     (value.playerSlot === 0 || value.playerSlot === 1) &&
+    ['a', 'b', 'c', 'd'].includes(value.tankTier) &&
     Number.isInteger(value.level) &&
     value.level >= 1 &&
     typeof value.signalingBaseUrl === 'string' &&

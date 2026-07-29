@@ -370,6 +370,10 @@ export class ShopManager {
     return consumables;
   }
 
+  public async syncAccount(): Promise<void> {
+    await this.syncAccountSnapshot();
+  }
+
   public consumeInventoryItem(itemId: ShopInventoryItemId): boolean {
     // Guest items never deplete (see getInventory) — report success without
     // persisting a decrement, like consumeFuelForRun does for guest fuel.

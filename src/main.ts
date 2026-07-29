@@ -33,6 +33,7 @@ import {
 import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { GameSceneRouter, GameSceneType } from './scenes';
+import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
 import { getPhantomProvider } from './wallet';
 import { apiFetch, getApiUrl } from './network/api';
@@ -645,6 +646,11 @@ if (
     : 1;
   if (magicBlockMovement.isOnlineMatch() || webRtcMatch.isEnabled()) {
     session.setMultiplayer();
+  }
+  if (multiplayerRuntime !== null) {
+    const tankTier = multiplayerRuntime.tankTier as TankTier;
+    session.setPlayerTankTier(multiplayerRuntime.playerSlot, tankTier);
+    session.getPlayer(multiplayerRuntime.playerSlot).setTankTier(tankTier);
   }
   session.start(levelNumber, mapLoader.getItemsCount());
   sceneRouter.start(GameSceneType.LevelLoad);

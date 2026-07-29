@@ -3,6 +3,27 @@ import { PlayerSlot } from './match';
 export const DIRECT_MATCH_FUEL_COST = 1 as const;
 export const DEFAULT_EVENT_ENTRY_FUEL_COST = 1 as const;
 
+export type MultiplayerTankTier = 'a' | 'b' | 'c' | 'd';
+
+export function isMultiplayerTankTier(
+  value: unknown,
+): value is MultiplayerTankTier {
+  return value === 'a' || value === 'b' || value === 'c' || value === 'd';
+}
+
+export function getMultiplayerTankFuelCost(tier: MultiplayerTankTier): number {
+  switch (tier) {
+    case 'b':
+      return 2;
+    case 'c':
+      return 3;
+    case 'd':
+      return 4;
+    default:
+      return DIRECT_MATCH_FUEL_COST;
+  }
+}
+
 export type MultiplayerMatchCategory = 'direct' | 'event';
 export type MultiplayerMatchStatus =
   | 'waiting'
@@ -15,6 +36,7 @@ export interface MultiplayerPlayerSummary {
   playerId: string;
   displayName: string;
   slot: PlayerSlot;
+  tankTier: MultiplayerTankTier;
 }
 
 export interface MultiplayerMatchSummary {
@@ -43,6 +65,7 @@ export interface MultiplayerRuntimeConfig {
   matchId: string;
   role: 'player';
   playerSlot: PlayerSlot;
+  tankTier: MultiplayerTankTier;
   level: number;
   signalingBaseUrl: string;
   joinToken: string;

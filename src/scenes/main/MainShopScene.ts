@@ -13,8 +13,11 @@ import {
   UI_TEXT_STROKE_COLOR,
   UI_TEXT_STROKE_WIDTH,
 } from '../../core/text/UiTypography';
-import { GameUpdateArgs } from '../../game';
+import { GameUpdateArgs, Session } from '../../game';
 import { MenuInputContext } from '../../input';
+import { MapLoader } from '../../map';
+import { apiFetch } from '../../network/api';
+import { storeMultiplayerRuntime } from '../../network/multiplayerRuntime';
 import {
   ShopCatalogItem,
   ShopCurrency,
@@ -23,9 +26,15 @@ import {
   ShopLoadoutSlot,
   ShopManager,
 } from '../../shop';
+import { TankTier } from '../../tank';
 import * as config from '../../config';
+import type {
+  MultiplayerAssignment,
+  MultiplayerStartResponse,
+} from '@battlecities/shared';
 
 import { GameScene } from '../GameScene';
+import { GameSceneType } from '../GameSceneType';
 
 enum ShopView {
   Shop,
@@ -44,7 +53,7 @@ enum ShopMarket {
   Sol,
 }
 
-type ShopActionKind = 'view' | 'market' | 'category' | 'page' | 'catalog' | 'slot' | 'wallet' | 'back';
+type ShopActionKind = 'view' | 'market' | 'category' | 'page' | 'catalog' | 'slot' | 'wallet' | 'start' | 'back';
 type ShopNavLayer = 'top' | 'category' | 'items' | 'side';
 
 interface ShopAction {
@@ -60,6 +69,13 @@ interface ShopAction {
   itemId?: ShopItemId;
   itemIndex?: number;
   slot?: ShopLoadoutSlot;
+}
+
+interface ShopLocationParams {
+  battleSetup?: boolean;
+  multiplayer?: boolean;
+  tankTier?: TankTier;
+  fuelCost?: number;
 }
 
 const COLOR_PAGE = '#05080a';
@@ -543,8 +559,10 @@ class ShopCard extends GameObject {
   }
 }
 
-export class MainShopScene extends GameScene {
+export class MainShopScene extends GameScene<ShopLocationParams> {
   private shopManager: ShopManager;
+  private session: Session;
+  private mapLoader: MapLoader;
   private panelHeight = SHOP_HEIGHT;
   private view = ShopView.Shop;
   private market = ShopMarket.Token;
@@ -555,9 +573,16 @@ export class MainShopScene extends GameScene {
   private focusedActionIndex = 0;
   private pendingActionIndex: number = null;
   private verticalParentKeys: { [layer: string]: string } = {};
+  private battleStartPending = false;
 
-  protected setup({ gameStorage }: GameUpdateArgs): void {
+  protected setup({ gameStorage, mapLoader, session }: GameUpdateArgs): void {
     this.shopManager = new ShopManager(gameStorage);
+    this.mapLoader = mapLoader;
+    this.session = session;
+    if (this.isBattleSetup()) {
+      this.view = ShopView.Loadout;
+      this.statusText = 'EQUIP POWERUPS, THEN START';
+    }
     this.renderShop();
   }
 
@@ -631,9 +656,13 @@ export class MainShopScene extends GameScene {
     this.root.add(shellAccent);
 
     const tabY = originY - TAB_HEIGHT + 1;
-    this.addMarketTab(originX + 12, tabY, 'TOKEN SHOP', ShopMarket.Token);
-    this.addMarketTab(originX + 230, tabY, 'SOL SHOP', ShopMarket.Sol);
-    this.addViewTab(originX + 448, tabY, 'LOADOUT', ShopView.Loadout);
+    if (this.isBattleSetup()) {
+      this.addViewTab(originX + 12, tabY, 'LOADOUT', ShopView.Loadout);
+    } else {
+      this.addMarketTab(originX + 12, tabY, 'TOKEN SHOP', ShopMarket.Token);
+      this.addMarketTab(originX + 230, tabY, 'SOL SHOP', ShopMarket.Sol);
+      this.addViewTab(originX + 448, tabY, 'LOADOUT', ShopView.Loadout);
+    }
 
     const sideX = originX + 8;
     const panelY = originY + 16;
@@ -683,36 +712,49 @@ export class MainShopScene extends GameScene {
     shellAccent.position.set(originX + 6, MOBILE_SHELL_Y + 5);
     this.root.add(shellAccent);
 
-    this.addButton(
-      originX,
-      MOBILE_TOP_Y,
-      190,
-      MOBILE_TAB_HEIGHT,
-      'TOKEN SHOP',
-      { key: `market:${ShopMarket.Token}`, kind: 'market', market: ShopMarket.Token },
-      this.view === ShopView.Shop && this.market === ShopMarket.Token,
-      'shop.tab.token',
-    );
-    this.addButton(
-      originX + 198,
-      MOBILE_TOP_Y,
-      170,
-      MOBILE_TAB_HEIGHT,
-      'SOL SHOP',
-      { key: `market:${ShopMarket.Sol}`, kind: 'market', market: ShopMarket.Sol },
-      this.view === ShopView.Shop && this.market === ShopMarket.Sol,
-      'shop.tab.solana',
-    );
-    this.addButton(
-      originX + 376,
-      MOBILE_TOP_Y,
-      180,
-      MOBILE_TAB_HEIGHT,
-      'LOADOUT',
-      { key: `view:${ShopView.Loadout}`, kind: 'view', view: ShopView.Loadout },
-      this.view === ShopView.Loadout,
-      'shop.tab.loadout',
-    );
+    if (this.isBattleSetup()) {
+      this.addButton(
+        originX,
+        MOBILE_TOP_Y,
+        190,
+        MOBILE_TAB_HEIGHT,
+        'LOADOUT',
+        { key: `view:${ShopView.Loadout}`, kind: 'view', view: ShopView.Loadout },
+        true,
+        'shop.tab.loadout',
+      );
+    } else {
+      this.addButton(
+        originX,
+        MOBILE_TOP_Y,
+        190,
+        MOBILE_TAB_HEIGHT,
+        'TOKEN SHOP',
+        { key: `market:${ShopMarket.Token}`, kind: 'market', market: ShopMarket.Token },
+        this.view === ShopView.Shop && this.market === ShopMarket.Token,
+        'shop.tab.token',
+      );
+      this.addButton(
+        originX + 198,
+        MOBILE_TOP_Y,
+        170,
+        MOBILE_TAB_HEIGHT,
+        'SOL SHOP',
+        { key: `market:${ShopMarket.Sol}`, kind: 'market', market: ShopMarket.Sol },
+        this.view === ShopView.Shop && this.market === ShopMarket.Sol,
+        'shop.tab.solana',
+      );
+      this.addButton(
+        originX + 376,
+        MOBILE_TOP_Y,
+        180,
+        MOBILE_TAB_HEIGHT,
+        'LOADOUT',
+        { key: `view:${ShopView.Loadout}`, kind: 'view', view: ShopView.Loadout },
+        this.view === ShopView.Loadout,
+        'shop.tab.loadout',
+      );
+    }
     this.addButton(
       originX + 592,
       MOBILE_TOP_Y,
@@ -1011,9 +1053,10 @@ export class MainShopScene extends GameScene {
 
     const gap = 12;
     const cardWidth = Math.floor((MOBILE_INNER_WIDTH - gap) / 2);
+    const footerReserve = this.isBattleSetup() ? 152 : 70;
     const cardHeight = Math.min(
       232,
-      Math.floor((this.root.size.height - 510 - 70 - gap) / 2),
+      Math.floor((this.root.size.height - 510 - footerReserve - gap) / 2),
     );
     const slots: Array<[ShopLoadoutSlot, string]> = [
       [ShopLoadoutSlot.ActiveOne, 'SLOT 1'],
@@ -1035,15 +1078,30 @@ export class MainShopScene extends GameScene {
     });
 
     const note = new ShopText(
-      'Use 1-4 in game to consume equipped powers',
+      this.isBattleSetup()
+        ? this.statusText
+        : 'Use 1-4 in game to consume equipped powers',
       COLOR_MUTED,
       20,
       '700',
       MOBILE_INNER_WIDTH,
       'center',
     );
-    note.position.set(x, this.root.size.height - 42);
+    note.position.set(
+      x,
+      this.root.size.height - (this.isBattleSetup() ? 116 : 42),
+    );
     this.root.add(note);
+
+    if (this.isBattleSetup()) {
+      this.addBattleStartButton(
+        x + Math.floor((MOBILE_INNER_WIDTH - 250) / 2),
+        this.root.size.height - 82,
+        250,
+        58,
+        2,
+      );
+    }
   }
 
   private renderSidePanel(x: number, y: number): void {
@@ -1324,14 +1382,26 @@ export class MainShopScene extends GameScene {
     );
 
     const note = new ShopText(
-      'Use 1-4 in game to consume equipped powers',
+      this.isBattleSetup()
+        ? this.statusText
+        : 'Use 1-4 in game to consume equipped powers',
       COLOR_MUTED,
       20,
       '700',
-      620,
+      this.isBattleSetup() ? 540 : 620,
     );
     note.position.set(x, slotsY + 252);
     this.root.add(note);
+
+    if (this.isBattleSetup()) {
+      this.addBattleStartButton(
+        x + 650,
+        slotsY + 232,
+        220,
+        54,
+        1,
+      );
+    }
   }
 
   private addMarketTab(
@@ -1659,6 +1729,28 @@ export class MainShopScene extends GameScene {
     return button;
   }
 
+  private addBattleStartButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    row: number,
+  ): void {
+    this.addButton(
+      x,
+      y,
+      width,
+      height,
+      this.battleStartPending ? 'STARTING...' : 'START BATTLE',
+      { key: 'start', kind: 'start' },
+      true,
+    );
+    const action = this.actions[this.actions.length - 1];
+    action.navLayer = 'items';
+    action.navRow = row;
+    action.navCol = 1.5;
+  }
+
   private addResourceChip(
     x: number,
     y: number,
@@ -1832,10 +1924,18 @@ export class MainShopScene extends GameScene {
     }
 
     if (action.kind === 'slot') {
+      if (this.battleStartPending) {
+        return;
+      }
       const itemId = this.shopManager.equipNext(action.slot);
       this.statusText =
         itemId === null ? 'SLOT CLEARED' : `EQUIPPED ${this.getInventoryLabel(itemId)}`;
       this.renderShop(action.key);
+      return;
+    }
+
+    if (action.kind === 'start') {
+      void this.startBattle();
       return;
     }
 
@@ -2200,6 +2300,101 @@ export class MainShopScene extends GameScene {
       return 'side';
     }
     return null;
+  }
+
+  private isBattleSetup(): boolean {
+    return this.params.battleSetup === true && this.params.tankTier !== undefined;
+  }
+
+  private async startBattle(): Promise<void> {
+    if (!this.isBattleSetup() || this.battleStartPending) {
+      return;
+    }
+
+    const tankTier = this.params.tankTier;
+    const fuelCost = Math.max(0, Math.floor(this.params.fuelCost ?? 1));
+    if (!this.shopManager.canStartRun(fuelCost)) {
+      this.statusText = `NEED ${fuelCost} FUEL - VISIT THE SHOP`;
+      this.renderShop('start');
+      return;
+    }
+
+    this.battleStartPending = true;
+    if (this.params.multiplayer === true) {
+      await this.startOnlineBattle(tankTier);
+      return;
+    }
+
+    if (!this.shopManager.consumeFuelForRun(fuelCost)) {
+      this.battleStartPending = false;
+      this.statusText = `NEED ${fuelCost} FUEL - VISIT THE SHOP`;
+      this.renderShop('start');
+      return;
+    }
+
+    this.session.setPlayerTankTier(0, tankTier);
+    this.session.primaryPlayer.setTankTier(tankTier);
+    this.session.setRunConsumables(
+      this.shopManager.getEquippedRunConsumables(),
+    );
+    this.session.start(1, this.mapLoader.getItemsCount());
+    this.navigator.replace(GameSceneType.LevelLoad);
+  }
+
+  private async startOnlineBattle(tankTier: TankTier): Promise<void> {
+    this.statusText = 'MATCHMAKING - WAITING FOR ANOTHER COMMANDER';
+    this.renderShop('start');
+    try {
+      await this.shopManager.syncAccount();
+      const response = await apiFetch('/api/multiplayer/direct/start', {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ tankTier }),
+      });
+      let body = (await response.json()) as MultiplayerStartResponse;
+      let assignment = body.assignment;
+      if (assignment === undefined) {
+        throw new Error(body.error || `Matchmaking failed (${response.status})`);
+      }
+
+      while (body.runtime === undefined) {
+        await this.waitForMatchmakingPoll();
+        body = await this.reconnectMatch(assignment);
+        assignment = body.assignment ?? assignment;
+      }
+
+      storeMultiplayerRuntime(body.runtime);
+      window.location.assign('/');
+    } catch (error) {
+      this.battleStartPending = false;
+      console.error('[multiplayer] matchmaking failed', error);
+      this.statusText =
+        (error as Error).message || 'COULD NOT START MULTIPLAYER';
+      this.renderShop('start');
+    }
+  }
+
+  private async reconnectMatch(
+    assignment: MultiplayerAssignment,
+  ): Promise<MultiplayerStartResponse> {
+    const response = await apiFetch(
+      `/api/multiplayer/matches/${encodeURIComponent(
+        assignment.match.id,
+      )}/reconnect`,
+      { method: 'POST', headers: { accept: 'application/json' } },
+    );
+    const body = (await response.json()) as MultiplayerStartResponse;
+    if (body.assignment === undefined) {
+      throw new Error(body.error || `Match reconnect failed (${response.status})`);
+    }
+    return body;
+  }
+
+  private waitForMatchmakingPoll(): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, 1500));
   }
 
   private getVisibleCatalogItems(): ShopCatalogItem[] {

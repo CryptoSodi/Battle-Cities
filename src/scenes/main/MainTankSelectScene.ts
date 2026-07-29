@@ -1,6 +1,5 @@
 import { GameObject, RectPainter } from '../../core';
-import { GameUpdateArgs, Session } from '../../game';
-import { MapLoader } from '../../map';
+import { GameUpdateArgs } from '../../game';
 import { ShopManager } from '../../shop';
 import {
   TankAttributesFactory,
@@ -10,7 +9,6 @@ import {
   TankType,
 } from '../../tank';
 import * as config from '../../config';
-
 import { GameSceneType } from '../GameSceneType';
 import {
   PanelScene,
@@ -22,12 +20,22 @@ import {
 } from './panelUi';
 
 interface TankOption {
-  tier: TankTier;
+  tier: TankTier | null;
   name: string;
   role: string;
   spriteId: string;
   fuelCost: number;
+  locked?: boolean;
 }
+
+interface TankSelectLocationParams {
+  multiplayer?: boolean;
+}
+
+const DESKTOP_COLUMNS = 4;
+const MOBILE_COLUMNS = 2;
+const DESKTOP_VISIBLE_ROWS = 1;
+const MOBILE_VISIBLE_ROWS = 2;
 
 const TANK_OPTIONS: TankOption[] = [
   {
@@ -58,6 +66,38 @@ const TANK_OPTIONS: TankOption[] = [
     spriteId: 'tank.player.primary.d.up.1',
     fuelCost: 4,
   },
+  {
+    tier: null,
+    name: 'CLASSIFIED I',
+    role: 'FUTURE CHASSIS',
+    spriteId: 'ui.icon.lock',
+    fuelCost: 0,
+    locked: true,
+  },
+  {
+    tier: null,
+    name: 'CLASSIFIED II',
+    role: 'FUTURE CHASSIS',
+    spriteId: 'ui.icon.lock',
+    fuelCost: 0,
+    locked: true,
+  },
+  {
+    tier: null,
+    name: 'CLASSIFIED III',
+    role: 'FUTURE CHASSIS',
+    spriteId: 'ui.icon.lock',
+    fuelCost: 0,
+    locked: true,
+  },
+  {
+    tier: null,
+    name: 'CLASSIFIED IV',
+    role: 'FUTURE CHASSIS',
+    spriteId: 'ui.icon.lock',
+    fuelCost: 0,
+    locked: true,
+  },
 ];
 
 class TankOptionCard extends GameObject implements UiActionTarget {
@@ -66,6 +106,7 @@ class TankOptionCard extends GameObject implements UiActionTarget {
   private readonly footer: UiPanel;
   private readonly footerText: UiText;
   private readonly selected: boolean;
+  private readonly locked: boolean;
   private focused = false;
 
   constructor(
@@ -77,6 +118,7 @@ class TankOptionCard extends GameObject implements UiActionTarget {
   ) {
     super(width, height);
     this.selected = selected;
+    this.locked = option.locked === true;
     this.painter = new RectPainter(UI.CARD, UI.PANEL_LINE);
     this.painter.lineWidth = 2;
 
@@ -108,25 +150,13 @@ class TankOptionCard extends GameObject implements UiActionTarget {
     icon.position.set(Math.floor((width - iconSize) / 2), 88);
     this.add(icon);
 
-    const type = new TankType(TankParty.Player, option.tier);
-    const attributes = TankAttributesFactory.create(type);
-    const stats = [
-      {
-        label: 'ROUNDS',
-        value: attributes.bulletMaxCount > 1 ? 'TWIN' : 'SINGLE',
-      },
-      {
-        label: 'VELOCITY',
-        value: attributes.bulletSpeed >= 900 ? 'HIGH' : 'STANDARD',
-      },
-      {
-        label: 'WALL DAMAGE',
-        value:
-          attributes.bulletWallDamage === TankBulletWallDamage.High
-            ? 'HEAVY'
-            : 'STANDARD',
-      },
-    ];
+    const stats = option.locked
+      ? [
+          { label: 'STATUS', value: 'LOCKED' },
+          { label: 'INTEL', value: 'REDACTED' },
+          { label: 'RELEASE', value: 'SOON' },
+        ]
+      : this.getTankStats(option.tier ?? TankTier.A);
     const statStartY = mobile ? 236 : 232;
     const statFontSize = mobile ? 19 : 17;
     stats.forEach((stat, index) => {
@@ -158,19 +188,26 @@ class TankOptionCard extends GameObject implements UiActionTarget {
     this.footer = new UiPanel(
       width - 16,
       footerHeight,
-      selected ? UI.YELLOW : UI.PRICE,
-      selected ? UI.YELLOW_LIGHT : UI.PRICE_BORDER,
+      option.locked ? UI.PANEL_RAISED : selected ? UI.YELLOW : UI.PRICE,
+      option.locked
+        ? UI.PANEL_LINE
+        : selected
+        ? UI.YELLOW_LIGHT
+        : UI.PRICE_BORDER,
     );
     this.footer.position.set(8, footerY);
     this.add(this.footer);
 
-    const fuelIcon = new UiIcon('shop.fuel', mobile ? 34 : 32);
+    const fuelIcon = new UiIcon(
+      option.locked ? 'ui.icon.lock' : 'shop.fuel',
+      mobile ? 34 : 32,
+    );
     fuelIcon.position.set(Math.floor(width / 2) - 62, footerY + 11);
     this.add(fuelIcon);
 
     this.footerText = new UiText(
-      `${option.fuelCost} FUEL`,
-      selected ? UI.WHITE : UI.PRICE_TEXT,
+      option.locked ? 'LOCKED' : `${option.fuelCost} FUEL`,
+      option.locked ? UI.MUTED_LIGHT : selected ? UI.WHITE : UI.PRICE_TEXT,
       mobile ? 24 : 22,
       '900',
       118,
@@ -192,26 +229,67 @@ class TankOptionCard extends GameObject implements UiActionTarget {
     this.painter.fillColor = highlighted ? UI.CARD_FOCUS : UI.CARD;
     this.painter.strokeColor = highlighted ? UI.YELLOW : UI.PANEL_LINE;
     this.painter.lineWidth = highlighted ? 3 : 2;
-    this.title.setColor(highlighted ? UI.WHITE : UI.GREEN);
-    this.footer.painter.fillColor = highlighted ? UI.YELLOW : UI.PRICE;
-    this.footer.painter.strokeColor = highlighted
+    this.title.setColor(
+      highlighted ? UI.WHITE : this.locked ? UI.MUTED : UI.GREEN,
+    );
+    this.footer.painter.fillColor = this.locked
+      ? UI.PANEL_RAISED
+      : highlighted
+      ? UI.YELLOW
+      : UI.PRICE;
+    this.footer.painter.strokeColor = this.locked
+      ? highlighted
+        ? UI.YELLOW
+        : UI.PANEL_LINE
+      : highlighted
       ? UI.YELLOW_LIGHT
       : UI.PRICE_BORDER;
-    this.footerText.setColor(highlighted ? UI.WHITE : UI.PRICE_TEXT);
+    this.footerText.setColor(
+      this.locked
+        ? highlighted
+          ? UI.WHITE
+          : UI.MUTED_LIGHT
+        : highlighted
+        ? UI.WHITE
+        : UI.PRICE_TEXT,
+    );
     this.setNeedsPaint();
+  }
+
+  private getTankStats(tier: TankTier): Array<{
+    label: string;
+    value: string;
+  }> {
+    const type = new TankType(TankParty.Player, tier);
+    const attributes = TankAttributesFactory.create(type);
+    return [
+      {
+        label: 'ROUNDS',
+        value: attributes.bulletMaxCount > 1 ? 'TWIN' : 'SINGLE',
+      },
+      {
+        label: 'VELOCITY',
+        value: attributes.bulletSpeed >= 900 ? 'HIGH' : 'STANDARD',
+      },
+      {
+        label: 'WALL DAMAGE',
+        value:
+          attributes.bulletWallDamage === TankBulletWallDamage.High
+            ? 'HEAVY'
+            : 'STANDARD',
+      },
+    ];
   }
 }
 
 export class MainTankSelectScene extends PanelScene {
-  private session: Session;
-  private mapLoader: MapLoader;
   private shopManager: ShopManager;
   private selectedIndex = 0;
+  private returnTankIndex = 0;
+  private scrollRow = 0;
 
   protected setup(updateArgs: GameUpdateArgs): void {
-    const { gameStorage, mapLoader, session } = updateArgs;
-    this.session = session;
-    this.mapLoader = mapLoader;
+    const { gameStorage } = updateArgs;
     this.shopManager = new ShopManager(gameStorage);
     super.setup(updateArgs);
   }
@@ -237,13 +315,15 @@ export class MainTankSelectScene extends PanelScene {
     direction: number,
   ): string {
     const columns = this.getColumns();
-    const selectedKey = this.getTankKey(this.selectedIndex);
+    const returnKey = this.getTankKey(this.returnTankIndex);
 
     if (direction > 0 && currentKey === 'back') {
-      return selectedKey;
+      this.scrollToTank(this.returnTankIndex, returnKey);
+      return returnKey;
     }
     if (direction < 0 && currentKey === 'deploy') {
-      return selectedKey;
+      this.scrollToTank(this.returnTankIndex, returnKey);
+      return returnKey;
     }
 
     const index = this.getTankIndex(currentKey);
@@ -251,18 +331,49 @@ export class MainTankSelectScene extends PanelScene {
       return null;
     }
     const row = Math.floor(index / columns);
-    const lastRow = Math.floor((TANK_OPTIONS.length - 1) / columns);
+    const nextRow = row + direction;
+    const totalRows = Math.ceil(TANK_OPTIONS.length / columns);
     if (direction < 0 && row === 0) {
+      this.returnTankIndex = index;
       return 'back';
     }
-    if (direction > 0 && row === lastRow) {
+    if (direction > 0 && nextRow >= totalRows) {
+      this.returnTankIndex = index;
       return 'deploy';
     }
-    return null;
+
+    const column = index % columns;
+    const targetIndex = Math.min(
+      TANK_OPTIONS.length - 1,
+      nextRow * columns + column,
+    );
+    const targetKey = this.getTankKey(targetIndex);
+    this.returnTankIndex = targetIndex;
+    this.scrollToTank(targetIndex, targetKey);
+    return targetKey;
   }
 
   protected load(): void {
     this.statusText = '';
+  }
+
+  protected handleTouchScroll(direction: number): boolean {
+    if (!config.isMobileTouchViewport()) {
+      return false;
+    }
+    const maxScrollRow = this.getMaxScrollRow();
+    const nextScrollRow = Math.max(
+      0,
+      Math.min(this.scrollRow + direction, maxScrollRow),
+    );
+    if (nextScrollRow === this.scrollRow) {
+      return false;
+    }
+    this.scrollRow = nextScrollRow;
+    const firstVisibleIndex = this.scrollRow * this.getColumns();
+    this.returnTankIndex = firstVisibleIndex;
+    this.refresh(this.getTankKey(firstVisibleIndex));
+    return true;
   }
 
   protected renderContent(): void {
@@ -279,7 +390,7 @@ export class MainTankSelectScene extends PanelScene {
     const cardWidth = Math.floor((innerWidth - gap * (columns - 1)) / columns);
     const cardHeight = mobile ? 410 : 410;
     const gridY = y + summaryHeight + 38;
-    const rows = Math.ceil(TANK_OPTIONS.length / columns);
+    const rows = this.getVisibleRows();
     const gridHeight = rows * cardHeight + (rows - 1) * gap;
     const deployY = gridY + gridHeight + (mobile ? 28 : 24);
     const shellHeight = Math.max(
@@ -301,9 +412,27 @@ export class MainTankSelectScene extends PanelScene {
 
     this.renderFuelSummary(innerX, y + 16, innerWidth, summaryHeight - 16);
 
-    TANK_OPTIONS.forEach((option, index) => {
-      const cardX = innerX + (index % columns) * (cardWidth + gap);
-      const cardY = gridY + Math.floor(index / columns) * (cardHeight + gap);
+    const firstVisibleIndex = this.scrollRow * columns;
+    const visibleOptions = TANK_OPTIONS.slice(
+      firstVisibleIndex,
+      firstVisibleIndex + columns * rows,
+    );
+    const lastVisibleIndex = firstVisibleIndex + visibleOptions.length;
+    this.addText(
+      `TANKS ${firstVisibleIndex + 1}-${lastVisibleIndex}/${TANK_OPTIONS.length}`,
+      innerX,
+      gridY - 31,
+      UI.MUTED_LIGHT,
+      mobile ? 21 : 19,
+      '800',
+      innerWidth,
+    );
+
+    visibleOptions.forEach((option, visibleIndex) => {
+      const index = firstVisibleIndex + visibleIndex;
+      const cardX = innerX + (visibleIndex % columns) * (cardWidth + gap);
+      const cardY =
+        gridY + Math.floor(visibleIndex / columns) * (cardHeight + gap);
       const card = new TankOptionCard(
         option,
         cardWidth,
@@ -314,6 +443,11 @@ export class MainTankSelectScene extends PanelScene {
       card.position.set(cardX, cardY);
       this.root.add(card);
       this.addActionTarget(this.getTankKey(index), card, () => {
+        this.returnTankIndex = index;
+        if (option.locked) {
+          this.setStatus('LOCKED - NEW TANK INTEL COMING SOON');
+          return;
+        }
         this.selectedIndex = index;
         this.statusText = '';
         this.refresh(this.getTankKey(index));
@@ -326,9 +460,9 @@ export class MainTankSelectScene extends PanelScene {
       deployY,
       deployWidth,
       mobile ? 64 : 58,
-      'DEPLOY  →',
+      'CONTINUE  →',
       'deploy',
-      () => this.deploySelectedTank(),
+      () => this.continueToLoadout(),
       false,
       'purchase',
       mobile ? 29 : 27,
@@ -354,20 +488,20 @@ export class MainTankSelectScene extends PanelScene {
     this.addText(
       'FUEL AVAILABLE',
       x + 82,
-      y + 13,
+      y + Math.floor((height - (mobile ? 24 : 22)) / 2),
       UI.MUTED,
       mobile ? 20 : 18,
       '800',
-      230,
+      mobile ? 190 : 170,
     );
     this.addText(
       `${this.shopManager.getFuelBalance()}`,
-      x + 82,
-      y + 38,
+      x + (mobile ? 276 : 258),
+      y + Math.floor((height - (mobile ? 34 : 31)) / 2),
       UI.YELLOW,
       mobile ? 30 : 27,
       '900',
-      230,
+      mobile ? 120 : 100,
     );
     this.addText(
       `${option.name}  /  ${option.fuelCost} FUEL PER DEPLOYMENT`,
@@ -381,24 +515,52 @@ export class MainTankSelectScene extends PanelScene {
     );
   }
 
-  private deploySelectedTank(): void {
+  private continueToLoadout(): void {
     const option = TANK_OPTIONS[this.selectedIndex];
-    if (!this.shopManager.consumeFuelForRun(option.fuelCost)) {
+    if (option.locked || option.tier === null) {
+      return;
+    }
+
+    if (!this.shopManager.canStartRun(option.fuelCost)) {
       this.setStatus(`NEED ${option.fuelCost} FUEL - VISIT THE SHOP`);
       return;
     }
 
-    this.session.setPlayerTankTier(0, option.tier);
-    this.session.primaryPlayer.setTankTier(option.tier);
-    this.session.setRunConsumables(
-      this.shopManager.getEquippedRunConsumables(),
-    );
-    this.session.start(1, this.mapLoader.getItemsCount());
-    this.navigator.replace(GameSceneType.LevelLoad);
+    this.navigator.push(GameSceneType.MainShop, {
+      battleSetup: true,
+      multiplayer: this.isMultiplayerSelection(),
+      tankTier: option.tier,
+      fuelCost: option.fuelCost,
+    });
   }
 
   private getColumns(): number {
-    return config.isMobileTouchViewport() ? 2 : 4;
+    return config.isMobileTouchViewport() ? MOBILE_COLUMNS : DESKTOP_COLUMNS;
+  }
+
+  private getVisibleRows(): number {
+    return config.isMobileTouchViewport()
+      ? MOBILE_VISIBLE_ROWS
+      : DESKTOP_VISIBLE_ROWS;
+  }
+
+  private getMaxScrollRow(): number {
+    const totalRows = Math.ceil(TANK_OPTIONS.length / this.getColumns());
+    return Math.max(0, totalRows - this.getVisibleRows());
+  }
+
+  private scrollToTank(index: number, focusKey: string): void {
+    const row = Math.floor(index / this.getColumns());
+    let nextScrollRow = this.scrollRow;
+    if (row < this.scrollRow) {
+      nextScrollRow = row;
+    } else if (row >= this.scrollRow + this.getVisibleRows()) {
+      nextScrollRow = row - this.getVisibleRows() + 1;
+    }
+    if (nextScrollRow !== this.scrollRow) {
+      this.scrollRow = nextScrollRow;
+      this.refresh(focusKey);
+    }
   }
 
   private getTankKey(index: number): string {
@@ -412,4 +574,9 @@ export class MainTankSelectScene extends PanelScene {
     const index = Number(key.slice('tank-'.length));
     return Number.isInteger(index) ? index : -1;
   }
+
+  private isMultiplayerSelection(): boolean {
+    return (this.params as TankSelectLocationParams).multiplayer === true;
+  }
+
 }
