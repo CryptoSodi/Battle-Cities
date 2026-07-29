@@ -31,6 +31,7 @@ interface TankOption {
 interface TankSelectLocationParams {
   multiplayer?: boolean;
   stage?: number;
+  transitionDeadline?: number;
 }
 
 const DESKTOP_COLUMNS = 4;
@@ -288,11 +289,19 @@ export class MainTankSelectScene extends PanelScene {
   private selectedIndex = 0;
   private returnTankIndex = 0;
   private scrollRow = 0;
+  private transitionTimer: UiText = null;
+  private transitionTimerSecond = -1;
+  private transitionExpired = false;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     const { gameStorage } = updateArgs;
     this.shopManager = new ShopManager(gameStorage);
     super.setup(updateArgs);
+  }
+
+  protected update(updateArgs: GameUpdateArgs): void {
+    super.update(updateArgs);
+    this.updateTransitionTimer();
   }
 
   protected getTitle(): string {
@@ -450,8 +459,22 @@ export class MainTankSelectScene extends PanelScene {
       UI.MUTED_LIGHT,
       mobile ? 21 : 19,
       '800',
-      innerWidth,
+      Math.floor(innerWidth * 0.45),
     );
+    const remaining = this.getTransitionSeconds();
+    if (remaining !== null) {
+      this.transitionTimerSecond = remaining;
+      this.transitionTimer = this.addText(
+        this.formatTransitionTime(remaining),
+        innerX + Math.floor(innerWidth * 0.45),
+        gridY - 31,
+        UI.GREEN,
+        mobile ? 21 : 19,
+        '900',
+        Math.ceil(innerWidth * 0.55),
+        'right',
+      );
+    }
 
     visibleOptions.forEach((option, visibleIndex) => {
       const index = firstVisibleIndex + visibleIndex;
@@ -555,6 +578,8 @@ export class MainTankSelectScene extends PanelScene {
       battleSetup: true,
       multiplayer: this.isMultiplayerSelection(),
       stage: (this.params as TankSelectLocationParams).stage,
+      transitionDeadline: (this.params as TankSelectLocationParams)
+        .transitionDeadline,
       tankTier: option.tier,
       fuelCost: option.fuelCost,
     });
@@ -603,6 +628,36 @@ export class MainTankSelectScene extends PanelScene {
 
   private isMultiplayerSelection(): boolean {
     return (this.params as TankSelectLocationParams).multiplayer === true;
+  }
+
+  private updateTransitionTimer(): void {
+    if (this.transitionExpired) return;
+    const seconds = this.getTransitionSeconds();
+    if (seconds === null) return;
+    if (seconds !== this.transitionTimerSecond) {
+      this.transitionTimerSecond = seconds;
+      this.transitionTimer?.setText(this.formatTransitionTime(seconds));
+    }
+    if (seconds === 0) {
+      this.transitionExpired = true;
+      this.navigator.replace(GameSceneType.MainMenu);
+    }
+  }
+
+  private getTransitionSeconds(): number | null {
+    const deadline = Number(
+      (this.params as TankSelectLocationParams).transitionDeadline,
+    );
+    if (!Number.isFinite(deadline)) return null;
+    return Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  }
+
+  private formatTransitionTime(seconds: number): string {
+    const stage = Math.max(
+      1,
+      Math.floor((this.params as TankSelectLocationParams).stage || 1),
+    );
+    return `STAGE ${stage} SLOT ${seconds.toString().padStart(2, '0')}S`;
   }
 
 }

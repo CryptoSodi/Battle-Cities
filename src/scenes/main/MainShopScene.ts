@@ -77,6 +77,8 @@ interface ShopLocationParams {
   tankTier?: TankTier;
   fuelCost?: number;
   stage?: number;
+  transitionDeadline?: number;
+  stageContinuation?: boolean;
 }
 
 const COLOR_PAGE = '#05080a';
@@ -578,11 +580,21 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   private pendingActionIndex: number = null;
   private verticalParentKeys: { [layer: string]: string } = {};
   private battleStartPending = false;
+  private transitionTimerText: ShopText = null;
+  private transitionTimerSecond = -1;
+  private transitionExpired = false;
+  private webRtcMatch: GameUpdateArgs['webRtcMatch'];
 
-  protected setup({ gameStorage, mapLoader, session }: GameUpdateArgs): void {
+  protected setup({
+    gameStorage,
+    mapLoader,
+    session,
+    webRtcMatch,
+  }: GameUpdateArgs): void {
     this.shopManager = new ShopManager(gameStorage);
     this.mapLoader = mapLoader;
     this.session = session;
+    this.webRtcMatch = webRtcMatch;
     if (this.isBattleSetup()) {
       this.view = ShopView.Loadout;
       this.statusText = 'EQUIP POWERUPS, THEN START';
@@ -615,6 +627,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     }
 
     this.activatePendingAction();
+    this.updateTransitionTimer();
 
     super.update(updateArgs);
   }
@@ -633,6 +646,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
 
     if (config.isMobileTouchViewport()) {
       this.renderMobileShop(preferredFocusKey);
+      this.renderTransitionTimer();
       return;
     }
 
@@ -699,6 +713,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     });
 
     this.focusActionByKey(preferredFocusKey);
+    this.renderTransitionTimer();
   }
 
   private renderMobileShop(preferredFocusKey: string): void {
@@ -1754,7 +1769,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       y,
       width,
       height,
-      this.battleStartPending ? 'STARTING...' : 'START BATTLE',
+      this.battleStartPending
+        ? 'STARTING...'
+        : this.params.stageContinuation === true
+          ? 'CONTINUE'
+          : 'START BATTLE',
       { key: 'start', kind: 'start' },
       true,
     );
@@ -2324,6 +2343,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       return;
     }
 
+    if (this.params.stageContinuation === true) {
+      this.completeStageLoadout();
+      return;
+    }
+
     const tankTier = this.params.tankTier;
     const fuelCost = Math.max(0, Math.floor(this.params.fuelCost ?? 1));
     if (!this.shopManager.canStartRun(fuelCost)) {
@@ -2355,6 +2379,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   }
 
   private async startOnlineBattle(tankTier: TankTier): Promise<void> {
+    if (this.getTransitionSeconds() === 0) {
+      this.transitionExpired = true;
+      this.navigator.replace(GameSceneType.MainMenu);
+      return;
+    }
     this.statusText = 'MATCHMAKING - WAITING FOR ANOTHER COMMANDER';
     this.renderShop('start');
     try {
@@ -2391,6 +2420,63 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
         (error as Error).message || 'COULD NOT START MULTIPLAYER';
       this.renderShop('start');
     }
+  }
+
+  private renderTransitionTimer(): void {
+    const seconds = this.getTransitionSeconds();
+    if (seconds === null) return;
+    this.transitionTimerSecond = seconds;
+    const width = config.isMobileTouchViewport() ? 310 : 360;
+    this.transitionTimerText = new ShopText(
+      this.formatTransitionTime(seconds),
+      COLOR_CARD_TITLE,
+      config.isMobileTouchViewport() ? 22 : 20,
+      '900',
+      width,
+      'center',
+    );
+    this.transitionTimerText.position.set(
+      Math.floor((this.root.size.width - width) / 2),
+      config.isMobileTouchViewport() ? 52 : 53,
+    );
+    this.root.add(this.transitionTimerText);
+  }
+
+  private updateTransitionTimer(): void {
+    if (this.transitionExpired) return;
+    const seconds = this.getTransitionSeconds();
+    if (seconds === null) return;
+    if (seconds !== this.transitionTimerSecond) {
+      this.transitionTimerSecond = seconds;
+      this.transitionTimerText?.setText(this.formatTransitionTime(seconds));
+    }
+    if (seconds === 0 && !this.battleStartPending) {
+      this.transitionExpired = true;
+      if (this.params.stageContinuation === true) {
+        this.completeStageLoadout();
+      } else {
+        this.navigator.replace(GameSceneType.MainMenu);
+      }
+    }
+  }
+
+  private getTransitionSeconds(): number | null {
+    const deadline = Number(this.params.transitionDeadline);
+    if (!Number.isFinite(deadline)) return null;
+    return Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  }
+
+  private formatTransitionTime(seconds: number): string {
+    const stage = Math.max(1, Math.floor(this.params.stage || 1));
+    return `STAGE ${stage} LOADOUT ${seconds.toString().padStart(2, '0')}S`;
+  }
+
+  private completeStageLoadout(): void {
+    if (this.battleStartPending) return;
+    this.battleStartPending = true;
+    const stage = Math.max(1, Math.floor(this.params.stage || 1));
+    this.webRtcMatch.prepareStage(stage);
+    this.navigator.replace(GameSceneType.LevelLoad);
   }
 
   private async reconnectMatch(

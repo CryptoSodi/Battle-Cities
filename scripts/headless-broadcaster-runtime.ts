@@ -37,7 +37,7 @@ const MAX_CATCH_UP_TICKS = 4;
 const ARCHIVE_BATCH_FRAMES = 20;
 const ARCHIVE_REPLAY_POLL_MS = 10;
 const MAX_ARCHIVE_REPLAYS = 10;
-const STAGE_REPLACEMENT_GRACE_MS = 30000;
+const STAGE_REPLACEMENT_GRACE_MS = 60000;
 const ORIGINAL_LEVEL_COUNT = 35;
 
 type LinkId = SimulationPlayerIndex | `observer:${string}`;

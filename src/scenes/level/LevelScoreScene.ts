@@ -8,10 +8,12 @@ import { PointsHighscoreManager } from '../../points';
 import { TankTier } from '../../tank';
 
 import { GameSceneType } from '../GameSceneType';
-import { PanelScene, UI } from '../main/panelUi';
+import { PanelScene, UI, UiText } from '../main/panelUi';
 
 const PAGE_GUTTER = 24;
 const SIMULATION_TICKS_PER_SECOND = 60;
+const STAGE_RESULTS_SECONDS = 30;
+const STAGE_LOADOUT_SECONDS = 30;
 const TIERS = [TankTier.A, TankTier.B, TankTier.C, TankTier.D];
 const TIER_ICONS = [
   'tank.enemy.default.a.up.1',
@@ -35,6 +37,10 @@ export class LevelScoreScene extends PanelScene {
   private isObserver = false;
   private isWebRtcMatch = false;
   private webRtcMatch: GameUpdateArgs['webRtcMatch'];
+  private stageResultsRemaining = STAGE_RESULTS_SECONDS;
+  private stageResultsTimer: UiText = null;
+  private stageResultsTimerSecond = STAGE_RESULTS_SECONDS;
+  private transitionFinished = false;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.session = updateArgs.session;
@@ -47,6 +53,29 @@ export class LevelScoreScene extends PanelScene {
     this.applyMultiplayerBonus();
     this.players = this.buildPlayerResults();
     super.setup(updateArgs);
+  }
+
+  protected update(updateArgs: GameUpdateArgs): void {
+    super.update(updateArgs);
+    if (
+      this.transitionFinished ||
+      !this.isWebRtcMatch ||
+      this.session.isGameOver()
+    ) {
+      return;
+    }
+    this.stageResultsRemaining = Math.max(
+      0,
+      this.stageResultsRemaining - updateArgs.deltaTime,
+    );
+    const nextSecond = Math.ceil(this.stageResultsRemaining);
+    if (nextSecond !== this.stageResultsTimerSecond) {
+      this.stageResultsTimerSecond = nextSecond;
+      this.stageResultsTimer?.setText(this.formatTransitionTime(nextSecond));
+    }
+    if (this.stageResultsRemaining === 0) {
+      this.finish();
+    }
   }
 
   protected getTitle(): string {
@@ -384,6 +413,8 @@ export class LevelScoreScene extends PanelScene {
       ? 'STAGE CLEAR'
       : 'MISSION FAILED';
     const color = won ? UI.GREEN : UI.RED_BORDER;
+    const showTimer = this.isWebRtcMatch && !this.session.isGameOver();
+    const timerWidth = mobile ? 148 : 176;
 
     this.addPanel(
       x,
@@ -406,8 +437,20 @@ export class LevelScoreScene extends PanelScene {
       color,
       mobile ? 27 : 30,
       '900',
-      width - height - 36,
+      width - height - 36 - (showTimer ? timerWidth : 0),
     );
+    if (showTimer) {
+      this.stageResultsTimer = this.addText(
+        this.formatTransitionTime(this.stageResultsTimerSecond),
+        x + width - timerWidth - 20,
+        y + (mobile ? 20 : 18),
+        UI.GREEN,
+        mobile ? 24 : 27,
+        '900',
+        timerWidth,
+        'right',
+      );
+    }
   }
 
   private renderDesktopTableHeader(x: number, y: number, width: number): void {
@@ -843,6 +886,10 @@ export class LevelScoreScene extends PanelScene {
   }
 
   private finish(): void {
+    if (this.transitionFinished) {
+      return;
+    }
+    this.transitionFinished = true;
     if (
       this.isObserver &&
       this.session.isGameOver()
@@ -872,6 +919,7 @@ export class LevelScoreScene extends PanelScene {
         this.navigator.replace(GameSceneType.MainTankSelect, {
           multiplayer: true,
           stage: this.session.getLevelNumber() + 1,
+          transitionDeadline: Date.now() + STAGE_LOADOUT_SECONDS * 1000,
         });
         return;
       }
@@ -881,8 +929,25 @@ export class LevelScoreScene extends PanelScene {
       return;
     }
     this.session.activateNextLevel();
+    if (this.isWebRtcMatch && !this.isObserver) {
+      const localPlayer = this.webRtcMatch.getLocalPlayerIndex();
+      this.navigator.replace(GameSceneType.MainShop, {
+        battleSetup: true,
+        multiplayer: true,
+        stageContinuation: true,
+        stage: this.session.getLevelNumber(),
+        tankTier: this.session.getPlayerTankTier(localPlayer),
+        fuelCost: 0,
+        transitionDeadline: Date.now() + STAGE_LOADOUT_SECONDS * 1000,
+      });
+      return;
+    }
     this.webRtcMatch.prepareStage(this.session.getLevelNumber());
     this.navigator.replace(GameSceneType.LevelLoad);
+  }
+
+  private formatTransitionTime(seconds: number): string {
+    return `NEXT ${Math.max(0, seconds).toString().padStart(2, '0')}S`;
   }
 
   private getObserverReturnUrl(): string | null {
