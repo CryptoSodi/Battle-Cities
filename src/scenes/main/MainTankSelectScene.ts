@@ -306,6 +306,22 @@ export class MainTankSelectScene extends PanelScene {
     return config.isMobileTouchViewport() ? 76 : 96;
   }
 
+  protected getBackButtonY(): number {
+    return config.isMobileTouchViewport() ? 8 : 44;
+  }
+
+  protected getBackButtonWidth(): number {
+    return config.isMobileTouchViewport() ? 152 : 140;
+  }
+
+  protected getBackButtonRightInset(): number {
+    return config.isMobileTouchViewport() ? 0 : 12;
+  }
+
+  protected getBackButtonHeight(): number {
+    return config.isMobileTouchViewport() ? 60 : 48;
+  }
+
   protected getInitialFocusKey(): string {
     return this.getTankKey(this.selectedIndex);
   }

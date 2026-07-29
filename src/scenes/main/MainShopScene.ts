@@ -124,6 +124,9 @@ const CARD_GAP_Y = 8;
 const LOADOUT_SLOT_WIDTH = 192;
 const LOADOUT_SLOT_HEIGHT = 132;
 const LOADOUT_SLOT_GAP_X = 22;
+const LOADOUT_GRID_WIDTH =
+  CARD_WIDTH * 4 +
+  (LOADOUT_SLOT_WIDTH + LOADOUT_SLOT_GAP_X - CARD_WIDTH) * 3;
 const LOADOUT_OWNED_TILE_WIDTH = 192;
 const LOADOUT_OWNED_TILE_GAP_X = 22;
 const SIDE_OWNED_COLUMNS = 3;
@@ -664,10 +667,13 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       this.addViewTab(originX + 448, tabY, 'LOADOUT', ShopView.Loadout);
     }
 
+    const battleSetup = this.isBattleSetup();
     const sideX = originX + 8;
     const panelY = originY + 16;
-    const contentPanelX = originX + SIDE_WIDTH + 8;
-    const contentPanelWidth = SHOP_WIDTH - SIDE_WIDTH - 16;
+    const contentPanelX = battleSetup ? originX + 8 : originX + SIDE_WIDTH + 8;
+    const contentPanelWidth = battleSetup
+      ? SHOP_WIDTH - 16
+      : SHOP_WIDTH - SIDE_WIDTH - 16;
     const contentPanel = new ShopPanel(
       contentPanelWidth,
       this.panelHeight - 32,
@@ -678,8 +684,13 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     contentPanel.setZIndex(-1);
     this.root.add(contentPanel);
 
-    this.renderSidePanel(sideX, panelY);
-    this.renderContent(contentPanelX + 24, panelY + 18);
+    if (!battleSetup) {
+      this.renderSidePanel(sideX, panelY);
+    }
+    const contentInsetX = battleSetup
+      ? Math.floor((contentPanelWidth - LOADOUT_GRID_WIDTH) / 2)
+      : 24;
+    this.renderContent(contentPanelX + contentInsetX, panelY + 18);
 
     this.addButton(originX + SHOP_WIDTH - 152, tabY + 5, 140, 48, '←  BACK', {
       key: 'back',
@@ -1388,15 +1399,16 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       COLOR_MUTED,
       20,
       '700',
-      this.isBattleSetup() ? 540 : 620,
+      this.isBattleSetup() ? LOADOUT_GRID_WIDTH : 620,
+      this.isBattleSetup() ? 'center' : 'left',
     );
     note.position.set(x, slotsY + 252);
     this.root.add(note);
 
     if (this.isBattleSetup()) {
       this.addBattleStartButton(
-        x + 650,
-        slotsY + 232,
+        x + Math.floor((LOADOUT_GRID_WIDTH - 220) / 2),
+        slotsY + 292,
         220,
         54,
         1,
