@@ -180,6 +180,7 @@ export class UiButton extends GameObject {
     text: string,
     variant: 'normal' | 'back' | 'purchase' = 'normal',
     fontSize = 26,
+    fontWeight = '800',
   ) {
     super(width, height);
     this.variant = variant;
@@ -196,7 +197,7 @@ export class UiButton extends GameObject {
       text,
       UI.WHITE,
       fontSize,
-      '800',
+      fontWeight,
       width - 4,
       'center',
     );
@@ -408,6 +409,14 @@ export abstract class PanelScene extends GameScene {
     return 'back';
   }
 
+  protected getHeaderActionFontSize(): number {
+    return 26;
+  }
+
+  protected getHeaderActionFontWeight(): string {
+    return '800';
+  }
+
   protected handleHeaderAction(): void {
     this.navigator.back();
   }
@@ -522,6 +531,9 @@ export abstract class PanelScene extends GameScene {
       () => this.handleHeaderAction(),
       false,
       this.getHeaderActionVariant(),
+      this.getHeaderActionFontSize(),
+      false,
+      this.getHeaderActionFontWeight(),
     );
 
     this.renderContent();
@@ -604,8 +616,16 @@ export abstract class PanelScene extends GameScene {
     variant: 'normal' | 'back' | 'purchase' = 'normal',
     fontSize = 26,
     autoActivate = false,
+    fontWeight = '800',
   ): UiButton {
-    const button = new UiButton(width, height, text, variant, fontSize);
+    const button = new UiButton(
+      width,
+      height,
+      text,
+      variant,
+      fontSize,
+      fontWeight,
+    );
     button.position.set(x, y);
     button.setActive(active);
     this.root.add(button);

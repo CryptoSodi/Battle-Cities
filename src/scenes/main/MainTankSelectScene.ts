@@ -322,6 +322,14 @@ export class MainTankSelectScene extends PanelScene {
     return config.isMobileTouchViewport() ? 60 : 48;
   }
 
+  protected getHeaderActionFontSize(): number {
+    return 24;
+  }
+
+  protected getHeaderActionFontWeight(): string {
+    return '700';
+  }
+
   protected getInitialFocusKey(): string {
     return this.getTankKey(this.selectedIndex);
   }

@@ -49,6 +49,10 @@ Build toward:
 - Do not trust client-side damage, score, or match result decisions.
 - Keep the code easy to extend.
 
+## UI Work
+- For every UI implementation or adjustment, read and follow `.agents/skills/battlecity-ui/SKILL.md`.
+- Reuse established UI components and tokens before introducing screen-specific styling.
+
 ## Multiplayer Architecture Rules
 - Server should control:
   - Match state.
