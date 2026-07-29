@@ -101,6 +101,7 @@ interface WebRtcHostFramePacket {
   seq: number;
   tick: number;
   deltaTime: number;
+  stageNumber: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
   playerKillCounts?: [
@@ -171,6 +172,12 @@ interface WebRtcClientReadyPacket {
   type: 'webrtc-client-ready';
   player: 0 | 1;
   appliedSeq: number;
+}
+
+interface WebRtcStageReadyPacket {
+  type: 'webrtc-stage-ready';
+  player: 0 | 1;
+  stageNumber: number;
 }
 
 function log(message: string, data?: any): void {
@@ -313,6 +320,9 @@ export class WebRtcHostMatchSync {
   private observerDiscoveryTimer: number = null;
   private authoritativeScores: [number, number] = [0, 0];
   private resultSubmissionStarted = false;
+  private expectedStageNumber = 1;
+  private stageWaiting = false;
+  private stageReadySentFor = 0;
 
   constructor(
     runtime: MultiplayerRuntimeConfig | null = null,
@@ -340,6 +350,11 @@ export class WebRtcHostMatchSync {
     this.disableEnemyShooting =
       params.get('debugNoEnemyShooting') === '1' ||
       params.get('webrtcNoEnemyShooting') === '1';
+    this.expectedStageNumber = Math.max(
+      1,
+      Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
+    );
+    this.stageWaiting = runtime !== null && this.expectedStageNumber > 1;
 
     let room = runtime?.matchId || normalizeRoom(params.get('match') || '');
     if (this.enabled && this.broadcaster && room === '') {
@@ -478,9 +493,31 @@ export class WebRtcHostMatchSync {
     return (
       this.isEnabled() &&
       !this.broadcaster &&
-      this.clientSyncing &&
-      this.activeReplayFrame === null
+      ((this.clientSyncing && this.activeReplayFrame === null) ||
+        this.stageWaiting)
     );
+  }
+
+  public prepareStage(stageNumber: number): void {
+    if (!this.isEnabled() || this.broadcaster || this.observer) {
+      return;
+    }
+    this.expectedStageNumber = Math.max(1, Math.floor(stageNumber));
+    this.stageWaiting = true;
+    this.stageReadySentFor = 0;
+    this.latestHostFrame = null;
+    this.pendingPlayerTicks.clear();
+    this.pendingEnemyTicks.clear();
+    this.pendingEnemyDeaths.length = 0;
+    this.pendingEnemyDeathSeqs.clear();
+    this.pendingPowerupPickups.length = 0;
+    this.lastAppliedEnemyDeathSeq = 0;
+    this.lastQueuedPowerupPickupSeq = 0;
+    this.lastPlayerFireSeqs.clear();
+    this.lastEnemyFireSeqs.clear();
+    this.lastPlayerPositions.clear();
+    this.lastEnemyPositions.clear();
+    this.sendStageReady();
   }
 
   public beginCatchUpStep(): number | null {
@@ -585,6 +622,9 @@ export class WebRtcHostMatchSync {
     if (this.ready && !this.clientSyncing) {
       this.localElapsedSeconds += deltaTime;
       this.updateNetworkProbe(deltaTime);
+    }
+    if (this.stageWaiting) {
+      this.sendStageReady();
     }
 
     if (this.broadcaster) {
@@ -1252,6 +1292,9 @@ export class WebRtcHostMatchSync {
     if (!this.broadcaster && packet.type === 'webrtc-ready') {
       const ready = packet as WebRtcReadyPacket;
       this.ready = ready.ready === true;
+      if (ready.syncPlayer === this.localPlayerIndex) {
+        this.stageWaiting = false;
+      }
       if (
         !this.observer &&
         ready.syncPlayer === this.localPlayerIndex &&
@@ -1358,6 +1401,13 @@ export class WebRtcHostMatchSync {
       if (!Number.isInteger(frame.seq) || frame.seq <= 0) {
         return;
       }
+      const frameStage = Math.max(1, Math.floor(frame.stageNumber || 1));
+      if (frameStage < this.expectedStageNumber) {
+        return;
+      }
+      if (frameStage === this.expectedStageNumber) {
+        this.stageWaiting = false;
+      }
       this.clientFrameCache.set(frame.seq, frame);
       if (this.clientSyncing) {
         if (frame.seq > this.lastAppliedHostFrameSeq) {
@@ -1423,6 +1473,23 @@ export class WebRtcHostMatchSync {
       }
       ticks.push(initialSync ? { ...enemyFrame, initialSync: true } : enemyFrame);
     });
+  }
+
+  private sendStageReady(): void {
+    if (
+      !this.connected ||
+      !this.ready ||
+      this.stageReadySentFor === this.expectedStageNumber
+    ) {
+      return;
+    }
+    if (this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
+      type: 'webrtc-stage-ready',
+      player: this.localPlayerIndex as 0 | 1,
+      stageNumber: this.expectedStageNumber,
+    } satisfies WebRtcStageReadyPacket)) {
+      this.stageReadySentFor = this.expectedStageNumber;
+    }
   }
 
   private sendLocalInput(
@@ -1559,6 +1626,7 @@ export class WebRtcHostMatchSync {
       seq: ++this.frameSeq,
       tick: this.tick,
       deltaTime: Math.min(Math.max(deltaTime, 0), 0.1),
+      stageNumber: this.expectedStageNumber,
       matchResult,
       playerScores: playerScores.map((score) => {
         return Math.max(0, Math.floor(score));

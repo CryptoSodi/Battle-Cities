@@ -95,6 +95,10 @@ export class SessionPlayer {
     return this.lives;
   }
 
+  public setLivesCount(lives: number): void {
+    this.lives = Math.max(0, Math.floor(lives));
+  }
+
   public isAlive(): boolean {
     return this.lives > 0;
   }

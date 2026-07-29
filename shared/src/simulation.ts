@@ -136,6 +136,7 @@ export class BattleCitySimulation {
   private readonly map: SimulationMapDto;
   private readonly random: DeterministicRandom;
   private readonly disableEnemyShooting: boolean;
+  private readonly stageNumber: number;
   private readonly fieldWidth: number;
   private readonly fieldHeight: number;
   private readonly contentOffsetY: number;
@@ -169,6 +170,7 @@ export class BattleCitySimulation {
     this.deltaTime = 1 / this.tickRate;
     this.random = new DeterministicRandom(options.seed);
     this.disableEnemyShooting = options.disableEnemyShooting === true;
+    this.stageNumber = Math.max(1, Math.floor(options.level ?? 1));
     const legacy = map.field === undefined && (map.version ?? 0) < 2;
     const widthTiles = map.field?.widthTiles ?? (legacy ? LEGACY_FIELD_TILES : DEFAULT_FIELD_TILES);
     const heightTiles = map.field?.heightTiles ?? (legacy ? LEGACY_FIELD_TILES : DEFAULT_FIELD_TILES);
@@ -934,6 +936,7 @@ export class BattleCitySimulation {
       seq: ++this.frameSeq,
       tick: this.currentTick,
       deltaTime: this.deltaTime,
+      stageNumber: this.stageNumber,
       playerScores: this.getScores(),
       sharedElapsedSeconds: this.currentTick * this.deltaTime,
       playerOneElapsedSeconds: this.playerElapsed[0],

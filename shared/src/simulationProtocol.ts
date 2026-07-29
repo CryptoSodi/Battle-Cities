@@ -24,6 +24,12 @@ export interface SimulationInputPacket {
   elapsedSeconds: number;
 }
 
+export interface SimulationStageReadyPacket {
+  type: 'webrtc-stage-ready';
+  player: SimulationPlayerIndex;
+  stageNumber: number;
+}
+
 export interface SimulationPlayerFrame {
   partyIndex: SimulationPlayerIndex;
   tier?: SimulationTankTier;
@@ -87,6 +93,7 @@ export interface SimulationHostFramePacket {
   seq: number;
   tick: number;
   deltaTime: number;
+  stageNumber: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
   playerKillCounts?: [
@@ -139,6 +146,7 @@ export interface SimulationPongPacket {
 
 export type SimulationClientPacket =
   | SimulationInputPacket
+  | SimulationStageReadyPacket
   | SimulationResumePacket
   | SimulationClientReadyPacket
   | SimulationPingPacket

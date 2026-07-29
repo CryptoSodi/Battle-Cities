@@ -30,6 +30,7 @@ interface TankOption {
 
 interface TankSelectLocationParams {
   multiplayer?: boolean;
+  stage?: number;
 }
 
 const DESKTOP_COLUMNS = 4;
@@ -553,6 +554,7 @@ export class MainTankSelectScene extends PanelScene {
     this.navigator.push(GameSceneType.MainShop, {
       battleSetup: true,
       multiplayer: this.isMultiplayerSelection(),
+      stage: (this.params as TankSelectLocationParams).stage,
       tankTier: option.tier,
       fuelCost: option.fuelCost,
     });

@@ -6,7 +6,7 @@ import { Prng } from '../src/core/utils/Prng';
 import { GameState } from '../src/game/GameState';
 import { GameUpdateArgs } from '../src/game/GameUpdateArgs';
 import { Rotation } from '../src/game/Rotation';
-import { Session } from '../src/game/Session';
+import { Session, SessionRunBoosts } from '../src/game/Session';
 import {
   Border,
   BrickSuperTerrainTile,
@@ -58,6 +58,7 @@ import {
   SimulationPowerupFrame,
   SimulationPowerupPickupFrame,
   SimulationRotation,
+  SimulationRunConsumables,
   SimulationTankTier,
 } from '../shared/src/simulationProtocol';
 
@@ -90,6 +91,25 @@ interface PreviousPlayerPosition {
 interface PreviousEnemyPosition {
   x: number;
   y: number;
+}
+
+export interface EngineSimulationRunState {
+  stageNumber: number;
+  tick: number;
+  frameSeq: number;
+  scores: [number, number];
+  lives: [number, number];
+  tankTiers: [SimulationTankTier, SimulationTankTier];
+  runBoosts: SessionRunBoosts;
+  playerRunConsumables: [
+    SimulationRunConsumables,
+    SimulationRunConsumables,
+  ];
+  playerElapsedSeconds: [number, number];
+}
+
+interface EngineSimulationOptions extends SimulationOptions {
+  runState?: EngineSimulationRunState;
 }
 
 class HeadlessWebRtcMatch {
@@ -223,29 +243,50 @@ export class EngineBattleCitySimulation {
   private currentTick = 0;
   private frameSeq = 0;
   private pendingHitStopSeconds = 0;
+  private readonly stageNumber: number;
 
-  public constructor(map: SimulationMapDto, options: SimulationOptions) {
+  public constructor(map: SimulationMapDto, options: EngineSimulationOptions) {
     this.tickRate = Math.max(10, Math.floor(options.tickRate ?? 60));
     this.deltaTime = 1 / this.tickRate;
     this.rng = new Prng(options.seed);
     this.mapConfig.fromDto(map as MapDto);
 
     const level = Math.max(1, Math.floor(options.level ?? 1));
+    this.stageNumber = level;
     this.session.setMultiplayer();
-    this.session.start(level, level);
-    this.session.setRunBoosts({
-      hull: options.runBoosts?.hull ?? 0,
-      armor: options.runBoosts?.armor ?? 0,
-      engine: options.runBoosts?.engine ?? 0,
-      salvage: options.runBoosts?.salvage ?? 0,
-    });
+    this.session.start(level, 35);
+    const runState = options.runState;
+    this.session.setRunBoosts(
+      runState?.runBoosts ?? {
+        hull: options.runBoosts?.hull ?? 0,
+        armor: options.runBoosts?.armor ?? 0,
+        engine: options.runBoosts?.engine ?? 0,
+        salvage: options.runBoosts?.salvage ?? 0,
+      },
+    );
     this.session.setRunConsumables({
       powerups: [],
       powerupItems: [],
       powerupCounts: [],
-      extraLives: Math.max(0, Math.floor(options.extraLives ?? 0)),
+      extraLives: runState === undefined
+        ? Math.max(0, Math.floor(options.extraLives ?? 0))
+        : 0,
     });
-    this.applyInitialPlayerTiers(options.initialPlayerTiers);
+    if (runState === undefined) {
+      this.applyInitialPlayerTiers(options.initialPlayerTiers);
+    } else {
+      this.currentTick = runState.tick;
+      this.frameSeq = runState.frameSeq;
+      this.playerElapsed[0] = runState.playerElapsedSeconds[0];
+      this.playerElapsed[1] = runState.playerElapsedSeconds[1];
+      runState.scores.forEach((score, player) => {
+        this.session.getPlayer(player).setAuthoritativeGamePoints(score);
+      });
+      runState.lives.forEach((lives, player) => {
+        this.session.getPlayer(player).setLivesCount(lives);
+      });
+      this.applyInitialPlayerTiers(runState.tankTiers);
+    }
     prepareLevelSession(
       this.session,
       this.mapConfig.getEnemySpawnList().length,
@@ -290,7 +331,8 @@ export class EngineBattleCitySimulation {
     this.playerOverScript = new LevelPlayerOverScript();
     this.playerScript = new LevelPlayerScript({
       headless: true,
-      playerRunConsumables: options.playerRunConsumables?.map(
+      playerRunConsumables: (runState?.playerRunConsumables ??
+        options.playerRunConsumables)?.map(
         (consumables) => ({
           powerups: consumables.powerups as PowerupType[],
           powerupCounts: consumables.powerups.map((_, index) => {
@@ -502,6 +544,49 @@ export class EngineBattleCitySimulation {
     return this.matchLifecycle.isComplete();
   }
 
+  public isTerminal(): boolean {
+    return this.matchLifecycle.isComplete() &&
+      this.matchLifecycle.getResult() === 'loss';
+  }
+
+  public createNextStageRunState(): EngineSimulationRunState {
+    if (
+      !this.matchLifecycle.isComplete() ||
+      this.matchLifecycle.getResult() !== 'win'
+    ) {
+      throw new Error('Cannot advance an unfinished or lost stage');
+    }
+    const maxLevelPoints = this.session.getMaxLevelPoints();
+    this.session.getPlayers().forEach((player) => {
+      if (
+        player.getLevelPoints() > 0 &&
+        player.getLevelPoints() === maxLevelPoints
+      ) {
+        player.addBonusPoints();
+      }
+    });
+    this.session.activateNextLevel();
+    const playerRunConsumables =
+      this.playerScript.getAuthoritativeRunConsumables() ?? [
+        { powerups: [], powerupCounts: [] },
+        { powerups: [], powerupCounts: [] },
+      ];
+    return {
+      stageNumber: this.session.getLevelNumber(),
+      tick: this.currentTick,
+      frameSeq: this.frameSeq,
+      scores: this.getScores(),
+      lives: this.getLives(),
+      tankTiers: this.session.getPlayerTankTiers() as [
+        SimulationTankTier,
+        SimulationTankTier,
+      ],
+      runBoosts: this.session.getRunBoosts(),
+      playerRunConsumables,
+      playerElapsedSeconds: [...this.playerElapsed] as [number, number],
+    };
+  }
+
   private applyInitialPlayerTiers(
     tiers: [SimulationTankTier, SimulationTankTier] | undefined,
   ): void {
@@ -510,6 +595,7 @@ export class EngineBattleCitySimulation {
     }
     tiers.forEach((tier, player) => {
       this.session.getPlayer(player).setTankTier(tier as TankTier);
+      this.session.setPlayerTankTier(player, tier as TankTier);
     });
   }
 
@@ -557,6 +643,7 @@ export class EngineBattleCitySimulation {
       audioLoader: { load: () => silentSound },
       collisionSystem: this.collisionSystem,
       deltaTime: this.deltaTime,
+      stageNumber: this.stageNumber,
       gameState: this.gameState,
       gameStorage: null,
       hitStop: this.requestHitStop,
@@ -716,6 +803,7 @@ export class EngineBattleCitySimulation {
       seq: ++this.frameSeq,
       tick: this.currentTick,
       deltaTime: this.deltaTime,
+      stageNumber: this.stageNumber,
       matchResult: this.matchLifecycle.getResult(),
       playerScores: this.getScores(),
       playerKillCounts: this.session.getPlayers().map((player) => {

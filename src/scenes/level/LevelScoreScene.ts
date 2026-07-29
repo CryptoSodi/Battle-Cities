@@ -3,6 +3,7 @@ import { GameUpdateArgs, Session } from '../../game';
 import { SessionPlayer } from '../../game/SessionPlayer';
 import { PlayerIdentity } from '../../auth';
 import { getApiBaseUrl } from '../../network/api';
+import { clearMultiplayerRuntime } from '../../network/multiplayerRuntime';
 import { PointsHighscoreManager } from '../../points';
 import { TankTier } from '../../tank';
 
@@ -32,12 +33,16 @@ export class LevelScoreScene extends PanelScene {
   private pointsHighscoreManager: PointsHighscoreManager;
   private players: ResultPlayer[] = [];
   private isObserver = false;
+  private isWebRtcMatch = false;
+  private webRtcMatch: GameUpdateArgs['webRtcMatch'];
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.session = updateArgs.session;
     this.playerIdentity = updateArgs.playerIdentity;
     this.pointsHighscoreManager = updateArgs.pointsHighscoreManager;
     this.isObserver = updateArgs.webRtcMatch.isObserver();
+    this.isWebRtcMatch = updateArgs.webRtcMatch.isEnabled();
+    this.webRtcMatch = updateArgs.webRtcMatch;
 
     this.applyMultiplayerBonus();
     this.players = this.buildPlayerResults();
@@ -838,7 +843,10 @@ export class LevelScoreScene extends PanelScene {
   }
 
   private finish(): void {
-    if (this.isObserver) {
+    if (
+      this.isObserver &&
+      this.session.isGameOver()
+    ) {
       const returnUrl = this.getObserverReturnUrl();
       if (returnUrl !== null) {
         try {
@@ -857,11 +865,23 @@ export class LevelScoreScene extends PanelScene {
       this.navigator.replace(GameSceneType.MainGameOver);
       return;
     }
-    if (this.session.isLastLevel()) {
+    if (this.isWebRtcMatch && !this.isObserver) {
+      const localPlayer = this.webRtcMatch.getLocalPlayerIndex();
+      if (!this.session.getPlayer(localPlayer).isAlive()) {
+        clearMultiplayerRuntime();
+        this.navigator.replace(GameSceneType.MainTankSelect, {
+          multiplayer: true,
+          stage: this.session.getLevelNumber() + 1,
+        });
+        return;
+      }
+    }
+    if (this.session.isLastLevel() && !this.isWebRtcMatch) {
       this.navigator.replace(GameSceneType.MainVictory);
       return;
     }
     this.session.activateNextLevel();
+    this.webRtcMatch.prepareStage(this.session.getLevelNumber());
     this.navigator.replace(GameSceneType.LevelLoad);
   }
 

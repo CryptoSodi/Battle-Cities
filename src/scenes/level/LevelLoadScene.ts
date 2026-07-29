@@ -33,6 +33,7 @@ export class LevelLoadScene extends GameScene {
     mapLoader,
     session,
     spriteLoader,
+    webRtcMatch,
   }: GameUpdateArgs): void {
     this.inputHintSettings = inputHintSettings;
     this.isMagicBlockWatcher = magicBlockMovement.isWatching();
@@ -41,6 +42,9 @@ export class LevelLoadScene extends GameScene {
     this.session = session;
 
     const levelNumber = this.session.getLevelNumber();
+    const mapLevelNumber = webRtcMatch.isEnabled()
+      ? ((levelNumber - 1) % mapLoader.getItemsCount()) + 1
+      : levelNumber;
 
     this.alertModal = new AlertModal({
       containerWidth: 768,
@@ -54,7 +58,7 @@ export class LevelLoadScene extends GameScene {
     this.mapLoader = mapLoader;
     this.mapLoader.loaded.addListenerOnce(this.handleMapLoaded);
     this.mapLoader.error.addListenerOnce(this.handleMapLoadError);
-    this.mapLoader.loadAsync(levelNumber);
+    this.mapLoader.loadAsync(mapLevelNumber);
 
     spriteLoader
       .preloadRequiredByPrefixAsync('tank.')

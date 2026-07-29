@@ -3,6 +3,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { RTCDataChannel, RTCPeerConnection } from 'werift';
+import * as config from '../src/config';
 
 import {
   SimulationClientPacket,
@@ -16,9 +17,13 @@ import {
   SimulationOptions,
   SimulationPowerupType,
   SimulationRunConsumables,
+  SimulationStageReadyPacket,
   SimulationTankTier,
 } from '../shared/src';
-import { EngineBattleCitySimulation } from './engine-battle-city-simulation';
+import {
+  EngineBattleCitySimulation,
+  EngineSimulationRunState,
+} from './engine-battle-city-simulation';
 
 const HOST = process.env.BROADCASTER_HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.BROADCASTER_PORT || '7777', 10);
@@ -32,6 +37,8 @@ const MAX_CATCH_UP_TICKS = 4;
 const ARCHIVE_BATCH_FRAMES = 20;
 const ARCHIVE_REPLAY_POLL_MS = 10;
 const MAX_ARCHIVE_REPLAYS = 10;
+const STAGE_REPLACEMENT_GRACE_MS = 30000;
+const ORIGINAL_LEVEL_COUNT = 35;
 
 type LinkId = SimulationPlayerIndex | `observer:${string}`;
 type MatchCategory = 'guest' | 'live' | 'event';
@@ -55,7 +62,7 @@ interface MatchStatus {
   id: string;
   level: number;
   category: MatchCategory;
-  status: 'running' | 'stopped';
+  status: 'running' | 'transition' | 'stopped';
   tick: number;
   frameSeq: number;
   connectedPlayers: number[];
@@ -249,7 +256,7 @@ class WebRtcPeerLink {
 }
 
 class MatchRuntime {
-  private readonly simulation: EngineBattleCitySimulation;
+  private simulation: EngineBattleCitySimulation;
   private readonly links = new Map<LinkId, WebRtcPeerLink>();
   private readonly connectedPlayers = new Set<SimulationPlayerIndex>();
   private readonly connectedObservers = new Set<`observer:${string}`>();
@@ -274,10 +281,24 @@ class MatchRuntime {
   private archiveFlushPromise: Promise<void> | null = null;
   private archiveFlushAllRequested = false;
   private readonly archiveConfig: Record<string, unknown>;
+  private readonly simulationOptions: Pick<
+    SimulationOptions,
+    | 'extraLives'
+    | 'initialPlayerTiers'
+    | 'playerRunConsumables'
+    | 'runBoosts'
+  >;
+  private pendingRunState: EngineSimulationRunState | null = null;
+  private readonly stageReadyPlayers = new Set<SimulationPlayerIndex>();
+  private transitionStartedAt = 0;
+  private stageTransitionPublished = false;
+  private stageTransitionPublishPending = false;
+  private stageTransitionRetryAt = 0;
+  private stageStartPublishPending = false;
 
   public constructor(
     public readonly id: string,
-    public readonly level: number,
+    public level: number,
     public readonly category: MatchCategory,
     simulationOptions: Pick<
       SimulationOptions,
@@ -291,6 +312,7 @@ class MatchRuntime {
       players: [],
     },
   ) {
+    this.simulationOptions = simulationOptions;
     const seed = seedFromMatchId(id);
     const disableEnemyShooting =
       process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1';
@@ -351,7 +373,11 @@ class MatchRuntime {
       id: this.id,
       level: this.level,
       category: this.category,
-      status: this.stopped ? 'stopped' : 'running',
+      status: this.stopped
+        ? 'stopped'
+        : this.pendingRunState === null
+          ? 'running'
+          : 'transition',
       tick: this.simulation.tick,
       frameSeq: this.simulation.seq,
       connectedPlayers: Array.from(this.connectedPlayers.values()),
@@ -364,7 +390,21 @@ class MatchRuntime {
   }
 
   public isComplete(): boolean {
-    return this.simulation.isComplete();
+    return this.simulation.isTerminal() || this.archiveCompleted;
+  }
+
+  public configureTransitionPlayer(
+    player: SimulationPlayerIndex,
+    tankTier: SimulationTankTier,
+    consumables: SimulationRunConsumables,
+  ): boolean {
+    if (this.pendingRunState === null) return false;
+    this.pendingRunState.tankTiers[player] = tankTier;
+    this.pendingRunState.playerRunConsumables[player] = {
+      powerups: [...consumables.powerups],
+      powerupCounts: [...consumables.powerupCounts],
+    };
+    return true;
   }
 
   private tick(): void {
@@ -376,6 +416,11 @@ class MatchRuntime {
     if (this.archiveCompleted) {
       this.resultSubmissionStarted = true;
       void this.submitResult();
+      return;
+    }
+    if (this.pendingRunState !== null) {
+      this.tryStartNextStage();
+      this.pumpReplays();
       return;
     }
     const frame = this.simulation.step();
@@ -396,9 +441,135 @@ class MatchRuntime {
         hitStopSeconds * 1000;
     }
     if (this.simulation.isComplete() && !this.resultSubmissionStarted) {
-      this.resultSubmissionStarted = true;
-      void this.submitResult();
+      if (this.simulation.isTerminal()) {
+        this.resultSubmissionStarted = true;
+        void this.submitResult();
+      } else {
+        this.beginStageTransition();
+      }
     }
+  }
+
+  private beginStageTransition(): void {
+    if (this.pendingRunState !== null) return;
+    this.pendingRunState = this.simulation.createNextStageRunState();
+    this.level = this.pendingRunState.stageNumber;
+    this.stageReadyPlayers.clear();
+    this.transitionStartedAt = Date.now();
+    this.stageTransitionPublished = false;
+    this.stageTransitionPublishPending = false;
+    this.stageTransitionRetryAt = 0;
+    this.stageStartPublishPending = false;
+    const openSlots = this.pendingRunState.lives
+      .map((lives, slot) => lives > 0 ? null : slot)
+      .filter((slot): slot is SimulationPlayerIndex => slot !== null);
+    openSlots.forEach((slot) => {
+      this.activePlayers.delete(slot);
+      this.syncingPlayers.delete(slot);
+      this.replaySessions.delete(slot);
+      this.links.get(slot)?.close();
+      this.links.delete(slot);
+      this.connectedPlayers.delete(slot);
+      this.configureLink(slot, `${this.id}-p${slot + 1}`);
+    });
+    console.log(
+      `[broadcaster] stage complete match=${this.id}` +
+      ` nextStage=${this.level} openSlots=${openSlots.join(',') || 'none'}`,
+    );
+    this.publishStageTransitionWhenNeeded(openSlots);
+  }
+
+  private tryStartNextStage(): void {
+    const runState = this.pendingRunState;
+    if (runState === null) return;
+    const openSlots = runState.lives
+      .map((lives, slot) => lives > 0 ? null : slot)
+      .filter((slot): slot is SimulationPlayerIndex => slot !== null);
+    if (!this.stageTransitionPublished) {
+      this.publishStageTransitionWhenNeeded(openSlots);
+      return;
+    }
+    const survivorSlots = runState.lives
+      .map((lives, slot) => lives > 0 ? slot : null)
+      .filter((slot): slot is SimulationPlayerIndex => slot !== null);
+    const survivorsReady = survivorSlots.every((slot) =>
+      this.stageReadyPlayers.has(slot),
+    );
+    const replacementJoined = runState.lives.some((lives, slot) =>
+      lives <= 0 && this.stageReadyPlayers.has(slot as SimulationPlayerIndex),
+    );
+    const graceElapsed = Date.now() - this.transitionStartedAt >=
+      STAGE_REPLACEMENT_GRACE_MS;
+    if (!survivorsReady || (!replacementJoined && !graceElapsed && survivorSlots.length < 2)) {
+      return;
+    }
+    if (this.stageStartPublishPending) return;
+    this.stageStartPublishPending = true;
+    void this.publishStageStarted()
+      .then(() => {
+        if (this.pendingRunState === runState) {
+          this.startNextStage(runState);
+        }
+      })
+      .catch((error) => {
+        console.error(`[broadcaster] stage start publish failed for ${this.id}`, error);
+      })
+      .finally(() => {
+        this.stageStartPublishPending = false;
+      });
+  }
+
+  private startNextStage(runState: EngineSimulationRunState): void {
+    runState.lives.forEach((lives, slot) => {
+      if (lives <= 0 && this.stageReadyPlayers.has(slot as SimulationPlayerIndex)) {
+        runState.lives[slot] = config.PLAYER_INITIAL_LIVES;
+        runState.scores[slot] = 0;
+      }
+    });
+    this.simulation = new EngineBattleCitySimulation(loadMap(this.level), {
+      ...this.simulationOptions,
+      seed: seedFromMatchId(`${this.id}:stage:${this.level}`),
+      level: this.level,
+      disableEnemyShooting:
+        process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1',
+      runState,
+    });
+    this.pendingRunState = null;
+    this.activePlayers.clear();
+    this.stageReadyPlayers.forEach((slot) => this.activePlayers.add(slot));
+    this.stageReadyPlayers.clear();
+    this.nextTickAt = performance.now() + this.tickIntervalMs;
+    console.log(
+      `[broadcaster] stage started match=${this.id} stage=${this.level}` +
+      ` players=${Array.from(this.activePlayers).map((slot) => slot + 1).join(',')}`,
+    );
+  }
+
+  private publishStageTransitionWhenNeeded(
+    openSlots: SimulationPlayerIndex[],
+  ): void {
+    if (
+      this.stageTransitionPublished ||
+      this.stageTransitionPublishPending ||
+      Date.now() < this.stageTransitionRetryAt
+    ) {
+      return;
+    }
+    this.stageTransitionPublishPending = true;
+    void this.publishStageTransition(openSlots)
+      .then(() => {
+        this.stageTransitionPublished = true;
+      })
+      .catch((error) => {
+        this.stageTransitionRetryAt = Date.now() + 1000;
+        console.error(
+          `[broadcaster] stage transition publish failed for ${this.id}`,
+          error,
+        );
+      })
+      .finally(() => {
+        this.stageTransitionPublishPending = false;
+      });
   }
 
   private runTickLoop(): void {
@@ -449,9 +620,15 @@ class MatchRuntime {
     }
     const wasConnected = this.connectedPlayers.has(linkId);
     const reconnecting = this.matchStarted && connected;
+    const joiningStageTransition = this.pendingRunState !== null && connected;
     if (connected) {
       this.connectedPlayers.add(linkId);
       if (!this.matchStarted) this.activePlayers.add(linkId);
+      else if (joiningStageTransition) {
+        this.activePlayers.add(linkId);
+        this.syncingPlayers.delete(linkId);
+        this.replaySessions.delete(linkId);
+      }
       else {
         this.activePlayers.delete(linkId);
         this.syncingPlayers.add(linkId);
@@ -487,7 +664,9 @@ class MatchRuntime {
         console.error(`[broadcaster] archive startup failed for ${this.id}`, error);
       });
     }
-    this.broadcast(this.readyPacket(reconnecting ? linkId : null));
+    this.broadcast(this.readyPacket(
+      reconnecting && !joiningStageTransition ? linkId : null,
+    ));
   }
 
   private acceptPacket(linkId: LinkId, packet: SimulationClientPacket): void {
@@ -498,6 +677,22 @@ class MatchRuntime {
       return;
     }
     if (isObserver(linkId)) return;
+    if (packet.type === 'webrtc-stage-ready') {
+      const ready = packet as SimulationStageReadyPacket;
+      if (
+        this.pendingRunState !== null &&
+        ready.player === linkId &&
+        ready.stageNumber === this.pendingRunState.stageNumber &&
+        this.connectedPlayers.has(linkId)
+      ) {
+        this.stageReadyPlayers.add(linkId);
+        console.log(
+          `[broadcaster] stage ready match=${this.id}` +
+          ` stage=${ready.stageNumber} slot=${linkId + 1}`,
+        );
+      }
+      return;
+    }
     if (packet.type === 'webrtc-input') {
       if (this.activePlayers.has(linkId) && packet.player === linkId) {
         this.simulation.acceptInput(packet as SimulationInputPacket);
@@ -649,6 +844,45 @@ class MatchRuntime {
     } catch (error) {
       this.resultSubmissionStarted = false;
       console.error(`[broadcaster] result submission failed for ${this.id}`, error);
+    }
+  }
+
+  private async publishStageTransition(
+    openSlots: SimulationPlayerIndex[],
+  ): Promise<void> {
+    const runState = this.pendingRunState;
+    if (runState === null) return;
+    const response = await apiFetch(
+      `/api/multiplayer/matches/${encodeURIComponent(this.id)}/stage`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          stageNumber: runState.stageNumber,
+          openSlots,
+          scores: runState.scores.map((score, playerSlot) => ({
+            playerSlot,
+            score,
+          })),
+        }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(await apiFailure(response, 'stage transition'));
+    }
+  }
+
+  private async publishStageStarted(): Promise<void> {
+    const response = await apiFetch(
+      `/api/multiplayer/matches/${encodeURIComponent(this.id)}/stage-started`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ stageNumber: this.level }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(await apiFailure(response, 'stage start'));
     }
   }
 
@@ -1074,6 +1308,29 @@ const server = createServer(async (request, response) => {
         return;
       }
     }
+    const playerRoute = url.pathname.match(
+      /^\/matches\/([a-z0-9-]+)\/players\/([12])$/,
+    );
+    if (request.method === 'PUT' && playerRoute !== null) {
+      const match = matches.get(playerRoute[1]);
+      if (match === undefined) {
+        json(response, 404, { error: 'Match not found.' });
+        return;
+      }
+      const body = await readJson(request);
+      const player = Number(playerRoute[2]) - 1 as SimulationPlayerIndex;
+      const tankTier = isTankTier(body.tankTier) ? body.tankTier : 'a';
+      const consumables = parseRunConsumables(body.runConsumables) ?? {
+        powerups: [],
+        powerupCounts: [],
+      };
+      if (!match.configureTransitionPlayer(player, tankTier, consumables)) {
+        json(response, 409, { error: 'Match is not accepting stage players.' });
+        return;
+      }
+      json(response, 200, { ok: true });
+      return;
+    }
     json(response, 404, { error: 'Not found.' });
   } catch (error) {
     console.error(error);
@@ -1248,7 +1505,8 @@ function decodeSignal(code: string): SignalCode {
 }
 
 function loadMap(level: number): SimulationMapDto {
-  const file = resolve(process.cwd(), 'data', 'maps', 'original', `${String(level).padStart(2, '0')}.json`);
+  const mapLevel = ((Math.max(1, level) - 1) % ORIGINAL_LEVEL_COUNT) + 1;
+  const file = resolve(process.cwd(), 'data', 'maps', 'original', `${String(mapLevel).padStart(2, '0')}.json`);
   return JSON.parse(readFileSync(file, 'utf8')) as SimulationMapDto;
 }
 

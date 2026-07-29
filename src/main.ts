@@ -642,7 +642,9 @@ if (
     new URLSearchParams(window.location.search).get('level'),
   );
   const levelNumber = Number.isInteger(requestedLevel)
-    ? Math.min(Math.max(requestedLevel, 1), mapLoader.getItemsCount())
+    ? multiplayerRuntime !== null
+      ? Math.max(requestedLevel, 1)
+      : Math.min(Math.max(requestedLevel, 1), mapLoader.getItemsCount())
     : 1;
   if (magicBlockMovement.isOnlineMatch() || webRtcMatch.isEnabled()) {
     session.setMultiplayer();

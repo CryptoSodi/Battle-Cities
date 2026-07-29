@@ -29,6 +29,7 @@ export type MultiplayerMatchStatus =
   | 'waiting'
   | 'ready'
   | 'live'
+  | 'transition'
   | 'completed'
   | 'closed';
 
@@ -44,6 +45,7 @@ export interface MultiplayerMatchSummary {
   category: MultiplayerMatchCategory;
   eventId: string | null;
   status: MultiplayerMatchStatus;
+  stage: number;
   players: MultiplayerPlayerSummary[];
   createdAt: string;
   startedAt: string | null;

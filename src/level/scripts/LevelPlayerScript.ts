@@ -274,6 +274,19 @@ export class LevelPlayerScript extends LevelScript {
     }
   }
 
+  public getAuthoritativeRunConsumables(): [
+    AuthoritativeRunConsumables,
+    AuthoritativeRunConsumables,
+  ] | null {
+    if (this.playerRunConsumables === null) {
+      return null;
+    }
+    return this.playerRunConsumables.map((consumables) => ({
+      powerups: [...consumables.powerups],
+      powerupCounts: [...consumables.powerupCounts],
+    })) as [AuthoritativeRunConsumables, AuthoritativeRunConsumables];
+  }
+
   private requestSpawn = (partyIndex: number): void => {
     const playerSession = this.session.getPlayer(partyIndex);
     if (!playerSession.isAlive()) {

@@ -76,6 +76,7 @@ interface ShopLocationParams {
   multiplayer?: boolean;
   tankTier?: TankTier;
   fuelCost?: number;
+  stage?: number;
 }
 
 const COLOR_PAGE = '#05080a';
@@ -2364,7 +2365,10 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
           accept: 'application/json',
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ tankTier }),
+        body: JSON.stringify({
+          tankTier,
+          stage: Math.max(1, Math.floor(this.params.stage || 1)),
+        }),
       });
       let body = (await response.json()) as MultiplayerStartResponse;
       let assignment = body.assignment;
