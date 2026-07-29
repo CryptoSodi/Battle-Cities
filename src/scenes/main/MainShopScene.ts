@@ -78,6 +78,8 @@ interface ShopLocationParams {
   fuelCost?: number;
   stage?: number;
   matchId?: string;
+  playerSlot?: number;
+  stageRejoin?: boolean;
   transitionDeadline?: number;
   stageContinuation?: boolean;
 }
@@ -2358,6 +2360,10 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     }
 
     this.battleStartPending = true;
+    if (this.params.stageRejoin === true) {
+      await this.rejoinStage(tankTier);
+      return;
+    }
     if (this.params.multiplayer === true) {
       await this.startOnlineBattle(tankTier);
       return;
@@ -2377,6 +2383,44 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     );
     this.session.start(1, this.mapLoader.getItemsCount());
     this.navigator.replace(GameSceneType.LevelLoad);
+  }
+
+  private async rejoinStage(tankTier: TankTier): Promise<void> {
+    this.statusText = 'REACTIVATING PLAYER SLOT';
+    this.renderShop('start');
+    try {
+      await this.shopManager.syncAccount();
+      const matchId = String(this.params.matchId || '');
+      const stage = Math.max(1, Math.floor(this.params.stage || 1));
+      const response = await apiFetch(
+        `/api/multiplayer/matches/${encodeURIComponent(matchId)}/stage-rejoin`,
+        {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ tankTier, stage }),
+        },
+      );
+      const body = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || body.ok !== true) {
+        throw new Error(body.error || `Stage rejoin failed (${response.status})`);
+      }
+      const playerSlot = this.params.playerSlot === 1 ? 1 : 0;
+      this.session.getPlayer(playerSlot).setLivesCount(
+        config.PLAYER_INITIAL_LIVES,
+      );
+      this.session.getPlayer(playerSlot).setTankTier(tankTier);
+      this.session.setPlayerTankTier(playerSlot, tankTier);
+      this.webRtcMatch.prepareStage(stage);
+      this.navigator.replace(GameSceneType.LevelLoad);
+    } catch (error) {
+      this.battleStartPending = false;
+      console.error('[multiplayer] stage rejoin failed', error);
+      this.statusText = (error as Error).message || 'COULD NOT REJOIN STAGE';
+      this.renderShop('start');
+    }
   }
 
   private async startOnlineBattle(tankTier: TankTier): Promise<void> {

@@ -3,10 +3,7 @@ import { GameUpdateArgs, Session } from '../../game';
 import { SessionPlayer } from '../../game/SessionPlayer';
 import { PlayerIdentity } from '../../auth';
 import { getApiBaseUrl } from '../../network/api';
-import {
-  clearMultiplayerRuntime,
-  readMultiplayerRuntime,
-} from '../../network/multiplayerRuntime';
+import { readMultiplayerRuntime } from '../../network/multiplayerRuntime';
 import { PointsHighscoreManager } from '../../points';
 import { TankTier } from '../../tank';
 
@@ -919,10 +916,12 @@ export class LevelScoreScene extends PanelScene {
       const localPlayer = this.webRtcMatch.getLocalPlayerIndex();
       if (!this.session.getPlayer(localPlayer).isAlive()) {
         const runtime = readMultiplayerRuntime();
-        clearMultiplayerRuntime();
+        this.session.activateNextLevel();
         this.navigator.replace(GameSceneType.MainTankSelect, {
           multiplayer: true,
-          stage: this.session.getLevelNumber() + 1,
+          stageRejoin: true,
+          playerSlot: localPlayer,
+          stage: this.session.getLevelNumber(),
           matchId: runtime?.matchId,
           transitionDeadline: Date.now() + STAGE_LOADOUT_SECONDS * 1000,
         });

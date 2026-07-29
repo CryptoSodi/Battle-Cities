@@ -290,6 +290,7 @@ class MatchRuntime {
   >;
   private pendingRunState: EngineSimulationRunState | null = null;
   private readonly stageReadyPlayers = new Set<SimulationPlayerIndex>();
+  private readonly configuredStagePlayers = new Set<SimulationPlayerIndex>();
   private transitionStartedAt = 0;
   private stageTransitionPublished = false;
   private stageTransitionPublishPending = false;
@@ -397,6 +398,7 @@ class MatchRuntime {
     player: SimulationPlayerIndex,
     tankTier: SimulationTankTier,
     consumables: SimulationRunConsumables,
+    replaceConnection = false,
   ): boolean {
     if (this.pendingRunState === null) return false;
     this.pendingRunState.tankTiers[player] = tankTier;
@@ -404,6 +406,16 @@ class MatchRuntime {
       powerups: [...consumables.powerups],
       powerupCounts: [...consumables.powerupCounts],
     };
+    this.configuredStagePlayers.add(player);
+    if (replaceConnection) {
+      this.links.get(player)?.close();
+      this.links.delete(player);
+      this.connectedPlayers.delete(player);
+      this.activePlayers.delete(player);
+      this.syncingPlayers.delete(player);
+      this.replaySessions.delete(player);
+      this.configureLink(player, `${this.id}-p${player + 1}`);
+    }
     return true;
   }
 
@@ -455,6 +467,7 @@ class MatchRuntime {
     this.pendingRunState = this.simulation.createNextStageRunState();
     this.level = this.pendingRunState.stageNumber;
     this.stageReadyPlayers.clear();
+    this.configuredStagePlayers.clear();
     this.transitionStartedAt = Date.now();
     this.stageTransitionPublished = false;
     this.stageTransitionPublishPending = false;
@@ -467,10 +480,6 @@ class MatchRuntime {
       this.activePlayers.delete(slot);
       this.syncingPlayers.delete(slot);
       this.replaySessions.delete(slot);
-      this.links.get(slot)?.close();
-      this.links.delete(slot);
-      this.connectedPlayers.delete(slot);
-      this.configureLink(slot, `${this.id}-p${slot + 1}`);
     });
     console.log(
       `[broadcaster] stage complete match=${this.id}` +
@@ -538,6 +547,7 @@ class MatchRuntime {
     this.activePlayers.clear();
     this.stageReadyPlayers.forEach((slot) => this.activePlayers.add(slot));
     this.stageReadyPlayers.clear();
+    this.configuredStagePlayers.clear();
     this.nextTickAt = performance.now() + this.tickIntervalMs;
     console.log(
       `[broadcaster] stage started match=${this.id} stage=${this.level}` +
@@ -625,7 +635,6 @@ class MatchRuntime {
       this.connectedPlayers.add(linkId);
       if (!this.matchStarted) this.activePlayers.add(linkId);
       else if (joiningStageTransition) {
-        this.activePlayers.add(linkId);
         this.syncingPlayers.delete(linkId);
         this.replaySessions.delete(linkId);
       }
@@ -679,11 +688,15 @@ class MatchRuntime {
     if (isObserver(linkId)) return;
     if (packet.type === 'webrtc-stage-ready') {
       const ready = packet as SimulationStageReadyPacket;
+      const requiresReactivation =
+        this.pendingRunState !== null &&
+        this.pendingRunState.lives[linkId] <= 0;
       if (
         this.pendingRunState !== null &&
         ready.player === linkId &&
         ready.stageNumber === this.pendingRunState.stageNumber &&
-        this.connectedPlayers.has(linkId)
+        this.connectedPlayers.has(linkId) &&
+        (!requiresReactivation || this.configuredStagePlayers.has(linkId))
       ) {
         this.stageReadyPlayers.add(linkId);
         console.log(
@@ -1320,11 +1333,17 @@ const server = createServer(async (request, response) => {
       const body = await readJson(request);
       const player = Number(playerRoute[2]) - 1 as SimulationPlayerIndex;
       const tankTier = isTankTier(body.tankTier) ? body.tankTier : 'a';
+      const replaceConnection = body.replaceConnection === true;
       const consumables = parseRunConsumables(body.runConsumables) ?? {
         powerups: [],
         powerupCounts: [],
       };
-      if (!match.configureTransitionPlayer(player, tankTier, consumables)) {
+      if (!match.configureTransitionPlayer(
+        player,
+        tankTier,
+        consumables,
+        replaceConnection,
+      )) {
         json(response, 409, { error: 'Match is not accepting stage players.' });
         return;
       }
