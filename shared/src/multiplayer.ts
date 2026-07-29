@@ -46,6 +46,7 @@ export interface MultiplayerMatchSummary {
   eventId: string | null;
   status: MultiplayerMatchStatus;
   stage: number;
+  openSlots: PlayerSlot[];
   players: MultiplayerPlayerSummary[];
   createdAt: string;
   startedAt: string | null;

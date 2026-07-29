@@ -31,6 +31,7 @@ interface TankOption {
 interface TankSelectLocationParams {
   multiplayer?: boolean;
   stage?: number;
+  matchId?: string;
   transitionDeadline?: number;
 }
 
@@ -578,6 +579,7 @@ export class MainTankSelectScene extends PanelScene {
       battleSetup: true,
       multiplayer: this.isMultiplayerSelection(),
       stage: (this.params as TankSelectLocationParams).stage,
+      matchId: (this.params as TankSelectLocationParams).matchId,
       transitionDeadline: (this.params as TankSelectLocationParams)
         .transitionDeadline,
       tankTier: option.tier,

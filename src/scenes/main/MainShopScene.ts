@@ -77,6 +77,7 @@ interface ShopLocationParams {
   tankTier?: TankTier;
   fuelCost?: number;
   stage?: number;
+  matchId?: string;
   transitionDeadline?: number;
   stageContinuation?: boolean;
 }
@@ -2397,6 +2398,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
         body: JSON.stringify({
           tankTier,
           stage: Math.max(1, Math.floor(this.params.stage || 1)),
+          matchId: this.params.matchId,
         }),
       });
       let body = (await response.json()) as MultiplayerStartResponse;
