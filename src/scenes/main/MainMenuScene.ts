@@ -440,7 +440,7 @@ export class MainMenuScene extends GameScene {
     const barX = Math.round((this.root.size.width - barWidth) / 2);
     const barY = isMobileLayout ? 164 : 164;
     const textWidth = isMobileLayout ? 390 : 430;
-    const horizontalInset = isMobileLayout ? 124 : 140;
+    const horizontalInset = isMobileLayout ? 82 : 88;
 
     const bar = new GameObject(barWidth, barHeight);
     bar.position.set(barX, barY);
