@@ -25,6 +25,7 @@ import {
   MainRankingScene,
   MainReplayScene,
   MainShopScene,
+  MainSocialsScene,
   MainStakingScene,
   MainTankSelectScene,
   MainTradingScene,
@@ -64,6 +65,7 @@ export class GameSceneRouter extends SceneRouter<GameScene> {
     this.register(GameSceneType.MainRanking, MainRankingScene);
     this.register(GameSceneType.MainReplay, MainReplayScene);
     this.register(GameSceneType.MainShop, MainShopScene);
+    this.register(GameSceneType.MainSocials, MainSocialsScene);
     this.register(GameSceneType.MainStaking, MainStakingScene);
     this.register(GameSceneType.MainTankSelect, MainTankSelectScene);
     this.register(GameSceneType.MainTrading, MainTradingScene);

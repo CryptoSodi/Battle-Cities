@@ -19,6 +19,7 @@ export enum GameSceneType {
   MainRanking,
   MainReplay,
   MainShop,
+  MainSocials,
   MainStaking,
   MainTankSelect,
   MainTrading,

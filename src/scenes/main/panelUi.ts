@@ -898,7 +898,11 @@ export interface HeadquartersLayout {
 // the Shop and Headquarters screens without duplicating those rules per page.
 export abstract class HeadquartersPanelScene extends PanelScene {
   protected abstract getSectionTitle(): string;
-  protected abstract getSectionIcon(): string;
+  protected abstract getSectionIcon(): string | null;
+
+  protected getSectionIconText(): string {
+    return '';
+  }
 
   protected getTitle(): string {
     return '';
@@ -958,12 +962,23 @@ export abstract class HeadquartersPanelScene extends PanelScene {
       UI.YELLOW,
       UI.YELLOW_LIGHT,
     );
-    this.addIcon(
-      this.getSectionIcon(),
-      headerX + (mobile ? this.scaleSize(22) : 22),
-      headerY + Math.floor((headerHeight - iconSize) / 2),
-      iconSize,
-    );
+    const iconX = headerX + (mobile ? this.scaleSize(22) : 22);
+    const iconY = headerY + Math.floor((headerHeight - iconSize) / 2);
+    const sectionIcon = this.getSectionIcon();
+    if (sectionIcon !== null) {
+      this.addIcon(sectionIcon, iconX, iconY, iconSize);
+    } else {
+      this.addText(
+        this.getSectionIconText(),
+        iconX,
+        iconY + (mobile ? this.scaleSize(7) : 7),
+        UI.BLACK,
+        mobile ? this.scaleSize(28) : 28,
+        '900',
+        iconSize,
+        'center',
+      );
+    }
     this.addText(
       this.getSectionTitle().toUpperCase(),
       headerX + (mobile ? this.scaleSize(76) : 76),

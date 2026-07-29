@@ -9,6 +9,7 @@ export * from './MainMoreScene';
 export * from './MainRankingScene';
 export * from './MainReplayScene';
 export * from './MainShopScene';
+export * from './MainSocialsScene';
 export * from './MainStakingScene';
 export * from './MainTankSelectScene';
 export * from './MainTradingScene';

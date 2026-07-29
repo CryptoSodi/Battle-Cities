@@ -10,7 +10,8 @@ interface HeadquartersEntry {
   key: string;
   label: string;
   detail: string;
-  iconId: string;
+  iconId?: string;
+  iconText?: string;
   sceneType: GameSceneType;
 }
 
@@ -56,6 +57,13 @@ const HEADQUARTERS_ENTRIES: HeadquartersEntry[] = [
     detail: 'TRACK BACT ALLOCATION AND CLAIM STATUS',
     iconId: 'ui.icon.chute',
     sceneType: GameSceneType.MainAirdrop,
+  },
+  {
+    key: 'socials',
+    label: 'SOCIALS',
+    detail: 'OFFICIAL COMMUNITY CHANNELS',
+    iconText: '@',
+    sceneType: GameSceneType.MainSocials,
   },
   {
     key: 'manual',
@@ -274,9 +282,9 @@ export class MainMoreScene extends PanelScene {
       const isManual = entry.key === 'manual';
       const row = Math.floor(index / columns);
       const column = index % columns;
-      const cardX = isManual ? innerX : innerX + column * (cardWidth + gap);
+      const cardX = innerX + column * (cardWidth + gap);
       const cardY = gridY + row * (cardHeight + rowGap);
-      const renderedWidth = isManual ? innerWidth : cardWidth;
+      const renderedWidth = isManual ? cardWidth * 2 + gap : cardWidth;
 
       this.renderOperationCard(
         entry,
@@ -313,12 +321,30 @@ export class MainMoreScene extends PanelScene {
       width - padding * 2,
       'center',
     );
-    this.addIcon(
-      entry.iconId,
-      x + Math.floor((width - iconSize) / 2),
-      y + (mobile ? this.mobileSize(42) : 42),
-      iconSize,
-    );
+    const iconX = x + Math.floor((width - iconSize) / 2);
+    const iconY = y + (mobile ? this.mobileSize(42) : 42);
+    if (entry.iconId !== undefined) {
+      this.addIcon(entry.iconId, iconX, iconY, iconSize);
+    } else {
+      this.addPanel(
+        iconX,
+        iconY,
+        iconSize,
+        iconSize,
+        UI.PANEL_ALT,
+        UI.PANEL_LINE,
+      );
+      this.addText(
+        entry.iconText || '@',
+        iconX,
+        iconY + (mobile ? this.mobileSize(8) : 7),
+        UI.YELLOW,
+        mobile ? this.mobileSize(27) : 28,
+        '900',
+        iconSize,
+        'center',
+      );
+    }
     this.addText(
       entry.detail,
       x + padding,

@@ -1097,6 +1097,7 @@ gameLoop.render.addListener((event) => {
       currentSceneType === GameSceneType.MainBoost ||
       currentSceneType === GameSceneType.MainEvents ||
       currentSceneType === GameSceneType.MainMore ||
+      currentSceneType === GameSceneType.MainSocials ||
       currentSceneType === GameSceneType.MainStaking ||
       currentSceneType === GameSceneType.MainTankSelect ||
       currentSceneType === GameSceneType.MainTrading ||
