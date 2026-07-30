@@ -10,7 +10,7 @@ Last verified against the source router: **2026-07-30**
 | Broadcaster    | `https://broadcaster.battlecities.com` | Authoritative match workers, monitoring, and archive replay                        |
 | Local Game API | `http://127.0.0.1:3001/api`            | Local API development                                                              |
 
-The Game API currently exposes **65 non-CORS operations**. The broadcaster exposes **16 operations**. `OPTIONS` handlers are omitted below.
+The Game API currently exposes **67 non-CORS operations**. The broadcaster exposes **16 operations**. `OPTIONS` handlers are omitted below.
 
 ## Access labels
 
@@ -31,6 +31,8 @@ The Game API currently exposes **65 non-CORS operations**. The broadcaster expos
 | `GET`    | `/health`                            | Public  | Lightweight API process health check                                      |
 | `GET`    | `/ready`                             | Public  | Database and migration readiness check                                    |
 | `POST`   | `/integrations/discord/interactions` | Discord | Verify signed Discord interactions and answer endpoint-validation PINGs   |
+| `GET`    | `/integrations/discord/verification` | Session | Read the logged-in player's Discord verification state                    |
+| `POST`   | `/integrations/discord/verification` | Session | Create a single-use, ten-minute Discord `/verify` code                    |
 | `GET`    | `/auth/google/start`                 | Public  | Start the Google OAuth redirect flow                                      |
 | `GET`    | `/auth/google/callback`              | Public  | Complete Google OAuth and create a session                                |
 | `POST`   | `/auth/google/native`                | Public  | Authenticate with a Google ID token                                       |
