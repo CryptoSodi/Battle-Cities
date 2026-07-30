@@ -1,41 +1,16 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
-import { getApiUrl } from '../network/api';
-
-type PublicRank = {
-  rank: number | null;
-  totalPoints: number;
-  matches: number;
-};
-
-type PublicMatch = {
-  id: string;
-  mode: 'single' | 'multi';
-  levelNumber: number;
-  score: number;
-  gamePoints: number;
-  won: boolean;
-  createdAt: string;
-};
-
-type PublicProfile = {
-  id: string;
-  provider: 'guest' | 'wallet' | 'google';
-  displayName: string;
-  walletAddress: string | null;
-  avatarUrl: string | null;
-  joinedAt: string;
-  highscores: { primary: number; secondary: number };
-  stats: {
-    allTime: PublicRank;
-    currentSeason: PublicRank & { id: string; name: string };
-  };
-  recentMatches: PublicMatch[];
-};
+import {
+  PlayerProfileClient,
+  PlayerProfileRequestError,
+  PublicMatch,
+  PublicProfile,
+} from './PlayerProfileClient';
 
 const loading = requireElement<HTMLElement>('[data-profile-loading]');
 const errorPanel = requireElement<HTMLElement>('[data-profile-error]');
 const content = requireElement<HTMLElement>('[data-profile-content]');
+const profileClient = new PlayerProfileClient();
 
 void loadProfile();
 
@@ -50,27 +25,16 @@ async function loadProfile(): Promise<void> {
   }
 
   try {
-    const response = await fetch(
-      getApiUrl(`/api/players/${encodeURIComponent(playerId)}/profile`),
-      { credentials: 'include' },
-    );
-    if (response.status === 404) {
+    renderProfile(await profileClient.getProfile(playerId));
+  } catch (error) {
+    console.error('[player-profile] load failed', error);
+    if (error instanceof PlayerProfileRequestError && error.status === 404) {
       showError(
         'Player not found',
         'No Battle Cities player exists for this profile address.',
       );
       return;
     }
-    if (!response.ok) {
-      throw new Error(`Profile request failed (${response.status})`);
-    }
-    const body = (await response.json()) as { item?: PublicProfile };
-    if (body.item === undefined) {
-      throw new Error('Profile response is incomplete');
-    }
-    renderProfile(body.item);
-  } catch (error) {
-    console.error('[player-profile] load failed', error);
     showError(
       'Combat record unavailable',
       'The profile service could not be reached. Please try again shortly.',
@@ -168,7 +132,7 @@ async function copyProfileLink(button: HTMLButtonElement): Promise<void> {
     await navigator.clipboard.writeText(window.location.href);
     button.textContent = 'Link copied';
     window.setTimeout(() => {
-      button.textContent = 'Copy profile link';
+      button.textContent = 'Share profile';
     }, 1800);
   } catch {
     button.textContent = 'Copy unavailable';

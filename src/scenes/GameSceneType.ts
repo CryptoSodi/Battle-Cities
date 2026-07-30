@@ -16,6 +16,7 @@ export enum GameSceneType {
   MainHighscore,
   MainMenu,
   MainMore,
+  MainPlayerProfile,
   MainRanking,
   MainReplay,
   MainShop,

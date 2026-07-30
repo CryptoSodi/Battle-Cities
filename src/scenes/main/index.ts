@@ -6,6 +6,7 @@ export * from './MainGameOverScene';
 export * from './MainHighscoreScene';
 export * from './MainMenuScene';
 export * from './MainMoreScene';
+export * from './MainPlayerProfileScene';
 export * from './MainRankingScene';
 export * from './MainReplayScene';
 export * from './MainShopScene';

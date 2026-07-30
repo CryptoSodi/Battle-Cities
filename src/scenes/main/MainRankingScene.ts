@@ -1,5 +1,6 @@
 import * as config from '../../config';
 import { RankingClient, RankingResponse, RankingScope } from '../../ranking';
+import { GameSceneType } from '../GameSceneType';
 
 import { PanelScene, UI } from './panelUi';
 
@@ -688,7 +689,7 @@ export class MainRankingScene extends PanelScene {
   }
 
   private openPlayerProfile(playerId: string): void {
-    window.location.assign(`/player-profile/${encodeURIComponent(playerId)}`);
+    this.navigator.push(GameSceneType.MainPlayerProfile, { playerId });
   }
 
   private switchScope(scope: RankingScope): void {
