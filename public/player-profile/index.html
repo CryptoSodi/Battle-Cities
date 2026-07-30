@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080a07" />
+    <title>Player Profile | Battle Cities</title>
+    <link rel="icon" type="image/png" href="/data/graphics/favicon.png" />
+    <link rel="stylesheet" href="/main.css" />
+    <link rel="stylesheet" href="/player-profile/profile.css" />
+    <script defer src="/player-profile.js"></script>
+  </head>
+  <body class="profile-body">
+    <main class="profile-shell">
+      <header class="profile-header">
+        <a class="profile-brand" href="/" aria-label="Return to Battle Cities">
+          <img src="/assets/battle-cities-menu-logo.png" alt="Battle Cities" />
+        </a>
+        <a class="profile-button profile-button--back" href="/">Back to game</a>
+      </header>
+
+      <section class="profile-loading" data-profile-loading role="status">
+        <span class="profile-loading__bar" aria-hidden="true"></span>
+        Loading combat record...
+      </section>
+
+      <section class="profile-error" data-profile-error hidden>
+        <p class="profile-kicker">Combat record unavailable</p>
+        <h1 data-profile-error-title>Player not found</h1>
+        <p data-profile-error-copy>
+          This profile may have been removed or the address may be incorrect.
+        </p>
+        <a class="profile-button profile-button--primary" href="/"
+          >Return to Battle Cities</a
+        >
+      </section>
+
+      <div class="profile-content" data-profile-content hidden>
+        <section class="profile-hero" aria-labelledby="profile-name">
+          <div class="profile-avatar" data-profile-avatar aria-hidden="true">
+            <img data-profile-avatar-image alt="" hidden />
+            <span data-profile-avatar-fallback>BC</span>
+          </div>
+          <div class="profile-identity">
+            <p class="profile-kicker">Player combat record</p>
+            <h1 id="profile-name" data-profile-name>Player</h1>
+            <div class="profile-meta">
+              <span data-profile-provider>Player</span>
+              <span class="profile-meta__divider" aria-hidden="true"></span>
+              <span>Joined <time data-profile-joined></time></span>
+            </div>
+            <p class="profile-id" data-profile-id></p>
+          </div>
+          <button
+            class="profile-button profile-button--secondary"
+            data-profile-copy
+            type="button"
+          >
+            Copy profile link
+          </button>
+        </section>
+
+        <section class="profile-stats" aria-label="Player statistics">
+          <article class="profile-stat profile-stat--rank">
+            <span class="profile-stat__label">Season rank</span>
+            <strong class="profile-stat__value" data-season-rank
+              >Unranked</strong
+            >
+            <span class="profile-stat__note" data-season-name
+              >Current season</span
+            >
+          </article>
+          <article class="profile-stat">
+            <span class="profile-stat__label">Game points</span>
+            <strong class="profile-stat__value" data-total-points>0</strong>
+            <span class="profile-stat__note">All time</span>
+          </article>
+          <article class="profile-stat">
+            <span class="profile-stat__label">Matches</span>
+            <strong class="profile-stat__value" data-total-matches>0</strong>
+            <span class="profile-stat__note">Recorded runs</span>
+          </article>
+          <article class="profile-stat">
+            <span class="profile-stat__label">Best score</span>
+            <strong class="profile-stat__value" data-best-score>0</strong>
+            <span class="profile-stat__note">Primary mode</span>
+          </article>
+        </section>
+
+        <section class="profile-panel" aria-labelledby="history-title">
+          <div class="profile-panel__header">
+            <div>
+              <p class="profile-kicker">Battle log</p>
+              <h2 id="history-title">Recent matches</h2>
+            </div>
+            <span class="profile-panel__count" data-match-count>0 records</span>
+          </div>
+          <div class="profile-history" data-profile-history></div>
+          <p class="profile-empty" data-profile-empty hidden>
+            No verified combat records yet.
+          </p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

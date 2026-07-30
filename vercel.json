@@ -13,6 +13,10 @@
       "destination": "/privacy/index.html"
     },
     {
+      "source": "/player-profile/:playerId",
+      "destination": "/player-profile/index.html"
+    },
+    {
       "source": "/api/((?!router$).*)",
       "destination": "/api/router?__route=$1"
     }

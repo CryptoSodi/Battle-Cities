@@ -4,6 +4,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: {
     main: './src/main.ts',
+    'player-profile': './src/playerProfile/main.ts',
   },
 
   output: {
