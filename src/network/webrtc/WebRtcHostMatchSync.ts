@@ -1,4 +1,4 @@
-import { Rotation } from '../../game';
+import { Rotation, Session } from '../../game';
 import type { GameUpdateArgs } from '../../game';
 import { EnemyTank, PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
@@ -104,6 +104,7 @@ interface WebRtcHostFramePacket {
   stageNumber: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
+  playerLives?: [number, number];
   playerKillCounts?: [
     [number, number, number, number],
     [number, number, number, number],
@@ -432,6 +433,17 @@ export class WebRtcHostMatchSync {
     return Number.isFinite(score) ? Math.max(0, Math.floor(score)) : null;
   }
 
+  public syncAuthoritativePlayerLives(session: Session): void {
+    if (!this.isEnabled() || this.broadcaster) return;
+    const lives = (this.activeReplayFrame ?? this.latestHostFrame)?.playerLives;
+    if (!Array.isArray(lives) || lives.length !== 2) return;
+    lives.forEach((count, playerIndex) => {
+      if (Number.isFinite(count)) {
+        session.getPlayer(playerIndex).setLivesCount(count);
+      }
+    });
+  }
+
   public consumeMatchResult(): {
     result: 'win' | 'loss';
     playerScores: [number, number];
@@ -598,6 +610,7 @@ export class WebRtcHostMatchSync {
     activeEnemyIds: number[],
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
+    playerLives: [number, number],
     playerScores: [number, number],
     playerKillCounts: [
       [number, number, number, number],
@@ -640,6 +653,7 @@ export class WebRtcHostMatchSync {
         activeEnemyIds,
         powerup,
         powerupPickup,
+        playerLives,
         playerScores,
         playerKillCounts,
         matchResult,
@@ -1607,6 +1621,7 @@ export class WebRtcHostMatchSync {
     activeEnemyIds: number[],
     powerup: WebRtcPowerupFrame | null,
     powerupPickup: WebRtcPowerupPickupFrame | null,
+    playerLives: [number, number],
     playerScores: [number, number],
     playerKillCounts: [
       [number, number, number, number],
@@ -1628,6 +1643,9 @@ export class WebRtcHostMatchSync {
       deltaTime: Math.min(Math.max(deltaTime, 0), 0.1),
       stageNumber: this.expectedStageNumber,
       matchResult,
+      playerLives: playerLives.map((lives) => {
+        return Math.max(0, Math.floor(lives));
+      }) as [number, number],
       playerScores: playerScores.map((score) => {
         return Math.max(0, Math.floor(score));
       }) as [number, number],

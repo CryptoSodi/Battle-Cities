@@ -96,6 +96,7 @@ export interface SimulationHostFramePacket {
   stageNumber: number;
   matchResult?: 'win' | 'loss' | null;
   playerScores: [number, number];
+  playerLives?: [number, number];
   playerKillCounts?: [
     [number, number, number, number],
     [number, number, number, number],

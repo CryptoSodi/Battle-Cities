@@ -938,6 +938,10 @@ export class BattleCitySimulation {
       deltaTime: this.deltaTime,
       stageNumber: this.stageNumber,
       playerScores: this.getScores(),
+      playerLives: this.players.map((player) => player.lives) as [
+        number,
+        number,
+      ],
       sharedElapsedSeconds: this.currentTick * this.deltaTime,
       playerOneElapsedSeconds: this.playerElapsed[0],
       playerTwoElapsedSeconds: this.playerElapsed[1],

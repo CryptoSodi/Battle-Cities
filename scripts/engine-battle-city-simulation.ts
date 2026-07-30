@@ -806,6 +806,7 @@ export class EngineBattleCitySimulation {
       stageNumber: this.stageNumber,
       matchResult: this.matchLifecycle.getResult(),
       playerScores: this.getScores(),
+      playerLives: this.getLives(),
       playerKillCounts: this.session.getPlayers().map((player) => {
         const record = player.getLevelPointsRecord();
         return [

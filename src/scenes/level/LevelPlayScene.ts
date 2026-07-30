@@ -526,6 +526,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
+    updateArgs.webRtcMatch.syncAuthoritativePlayerLives(this.session);
     if (
       updateArgs.webRtcMatch.isWaitingForPeer() ||
       updateArgs.webRtcMatch.shouldHoldClientSimulation()
@@ -613,6 +614,10 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           this.enemyScript.getActiveEnemyIds(),
           this.powerupScript.getWebRtcPowerup(),
           this.powerupScript.getWebRtcPickup(),
+          [
+            this.session.getPlayer(0).getLivesCount(),
+            this.session.getPlayer(1).getLivesCount(),
+          ],
           [
             this.session.getPlayer(0).getGamePoints(),
             this.session.getPlayer(1).getGamePoints(),
