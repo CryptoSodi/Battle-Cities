@@ -112,6 +112,8 @@ Recent match history excludes rejected results. Google email, Google subject, au
 | `POST` | `/airdrops/claim`                       | Session     | Claim an eligible airdrop                                      |
 
 Valid ranking scopes are `gaming` and `trading`.
+Each ranking row includes its public `playerId`; the ranking UI uses it to open
+`/player-profile/:playerId` without exposing account credentials.
 
 ## Staking and trading
 

@@ -6,7 +6,7 @@ process.env.BATTLECITY_STORAGE_MODE = 'local';
 
 const useStandaloneApi =
   String(process.env.BATTLECITY_USE_STANDALONE_API || '').toLowerCase() ===
-  'true' || process.env.BATTLECITY_USE_STANDALONE_API === '1';
+    'true' || process.env.BATTLECITY_USE_STANDALONE_API === '1';
 const standaloneApiTarget =
   process.env.BATTLECITY_API_PROXY_TARGET || 'http://127.0.0.1:3001';
 
@@ -59,7 +59,9 @@ function setReplayCookie(response, replayGuest) {
 
 // Session-cookie -> player record, or null when not logged in.
 async function resolveSessionPlayer(request) {
-  const sessionId = sessionIdentity.resolveSession(request.headers.cookie || '');
+  const sessionId = sessionIdentity.resolveSession(
+    request.headers.cookie || '',
+  );
   if (sessionId === null) {
     return null;
   }
@@ -576,6 +578,7 @@ function attachReplayApi(app) {
       currentSeason: seasonStore.toPublicSeason(currentSeason),
       seasons: seasons.map((season) => seasonStore.toPublicSeason(season)),
       rows: rows.map((row) => ({
+        playerId: row.playerId,
         rank: row.rank,
         displayName: row.displayName,
         walletAddress: row.walletAddress,
@@ -656,10 +659,7 @@ function attachReplayApi(app) {
       return;
     }
 
-    const record = await replayStore.verifyRecord(
-      body.id,
-      replayGuest.guestId,
-    );
+    const record = await replayStore.verifyRecord(body.id, replayGuest.guestId);
     if (record === null) {
       sendJson(response, 404, { error: 'Replay not found' });
       return;

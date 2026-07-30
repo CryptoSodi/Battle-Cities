@@ -14,6 +14,7 @@ export interface SeasonSummary {
 export type RankingScope = 'gaming' | 'trading';
 
 export interface RankingRow {
+  playerId: string;
   rank: number;
   displayName: string;
   walletAddress: string | null;

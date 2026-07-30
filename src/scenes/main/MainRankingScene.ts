@@ -514,7 +514,7 @@ export class MainRankingScene extends PanelScene {
         rowHeight - (mobile ? 8 : 2),
         '',
         this.getRankRowKey(rowIndex),
-        () => undefined,
+        () => this.openPlayerProfile(row.playerId),
         false,
         'normal',
         1,
@@ -685,6 +685,10 @@ export class MainRankingScene extends PanelScene {
 
   private getRankRowKey(index: number): string {
     return `rank-row:${index}`;
+  }
+
+  private openPlayerProfile(playerId: string): void {
+    window.location.assign(`/player-profile/${encodeURIComponent(playerId)}`);
   }
 
   private switchScope(scope: RankingScope): void {
