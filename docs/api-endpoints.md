@@ -10,7 +10,7 @@ Last verified against the source router: **2026-07-30**
 | Broadcaster    | `https://broadcaster.battlecities.com` | Authoritative match workers, monitoring, and archive replay                        |
 | Local Game API | `http://127.0.0.1:3001/api`            | Local API development                                                              |
 
-The Game API currently exposes **64 non-CORS operations**. The broadcaster exposes **16 operations**. `OPTIONS` handlers are omitted below.
+The Game API currently exposes **65 non-CORS operations**. The broadcaster exposes **16 operations**. `OPTIONS` handlers are omitted below.
 
 ## Access labels
 
@@ -21,24 +21,26 @@ The Game API currently exposes **64 non-CORS operations**. The broadcaster expos
 | Member      | The logged-in player must belong to the requested match                          |
 | Broadcaster | `Authorization: Bearer <BROADCASTER_SERVICE_TOKEN>` is required                  |
 | Event admin | `Authorization: Bearer <BATTLECITY_EVENT_ADMIN_SECRET>` is required              |
+| Discord     | A valid Discord Ed25519 request signature is required                            |
 | Conditional | Public response is available, but player-specific information requires a session |
 
 ## Health and authentication
 
-| Method   | Path                         | Access  | Description                                                               |
-| -------- | ---------------------------- | ------- | ------------------------------------------------------------------------- |
-| `GET`    | `/health`                    | Public  | Lightweight API process health check                                      |
-| `GET`    | `/ready`                     | Public  | Database and migration readiness check                                    |
-| `GET`    | `/auth/google/start`         | Public  | Start the Google OAuth redirect flow                                      |
-| `GET`    | `/auth/google/callback`      | Public  | Complete Google OAuth and create a session                                |
-| `POST`   | `/auth/google/native`        | Public  | Authenticate with a Google ID token                                       |
-| `GET`    | `/session`                   | Public  | Read the current session                                                  |
-| `POST`   | `/session`                   | Public  | Create a guest session or verify a signed-wallet login                    |
-| `PUT`    | `/session`                   | Public  | Create a wallet-signing challenge                                         |
-| `DELETE` | `/session`                   | Session | Delete the current session and log out                                    |
-| `GET`    | `/player`                    | Session | Read the current player profile                                           |
-| `PUT`    | `/player`                    | Session | Merge player high scores into the profile                                 |
-| `GET`    | `/players/:playerId/profile` | Public  | Read a public player profile, ranks, highscores, and recent match history |
+| Method   | Path                                 | Access  | Description                                                               |
+| -------- | ------------------------------------ | ------- | ------------------------------------------------------------------------- |
+| `GET`    | `/health`                            | Public  | Lightweight API process health check                                      |
+| `GET`    | `/ready`                             | Public  | Database and migration readiness check                                    |
+| `POST`   | `/integrations/discord/interactions` | Discord | Verify signed Discord interactions and answer endpoint-validation PINGs   |
+| `GET`    | `/auth/google/start`                 | Public  | Start the Google OAuth redirect flow                                      |
+| `GET`    | `/auth/google/callback`              | Public  | Complete Google OAuth and create a session                                |
+| `POST`   | `/auth/google/native`                | Public  | Authenticate with a Google ID token                                       |
+| `GET`    | `/session`                           | Public  | Read the current session                                                  |
+| `POST`   | `/session`                           | Public  | Create a guest session or verify a signed-wallet login                    |
+| `PUT`    | `/session`                           | Public  | Create a wallet-signing challenge                                         |
+| `DELETE` | `/session`                           | Session | Delete the current session and log out                                    |
+| `GET`    | `/player`                            | Session | Read the current player profile                                           |
+| `PUT`    | `/player`                            | Session | Merge player high scores into the profile                                 |
+| `GET`    | `/players/:playerId/profile`         | Public  | Read a public player profile, ranks, highscores, and recent match history |
 
 ## Public player profiles
 
