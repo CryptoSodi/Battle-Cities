@@ -22,29 +22,31 @@ The Game API currently exposes **67 non-CORS operations**. The broadcaster expos
 | Broadcaster | `Authorization: Bearer <BROADCASTER_SERVICE_TOKEN>` is required                  |
 | Event admin | `Authorization: Bearer <BATTLECITY_EVENT_ADMIN_SECRET>` is required              |
 | Discord     | A valid Discord Ed25519 request signature is required                            |
+| Bot service | `Authorization: Bearer <DISCORD_BOT_SERVICE_TOKEN>` is required                  |
 | Conditional | Public response is available, but player-specific information requires a session |
 
 ## Health and authentication
 
-| Method   | Path                                   | Access  | Description                                                                 |
-| -------- | -------------------------------------- | ------- | --------------------------------------------------------------------------- |
-| `GET`    | `/health`                              | Public  | Lightweight API process health check                                        |
-| `GET`    | `/ready`                               | Public  | Database and migration readiness check                                      |
-| `POST`   | `/integrations/discord/interactions`   | Discord | Verify signed Discord interactions and answer endpoint-validation PINGs     |
-| `GET`    | `/integrations/discord/oauth/start`    | Session | Redirect the logged-in player to Discord for account and guild verification |
-| `GET`    | `/integrations/discord/oauth/callback` | Session | Complete the Discord OAuth callback and store verified guild membership     |
-| `GET`    | `/integrations/discord/verification`   | Session | Read the logged-in player's Discord verification state                      |
-| `POST`   | `/integrations/discord/verification`   | Session | Create a single-use, ten-minute Discord `/verify` code                      |
-| `GET`    | `/auth/google/start`                   | Public  | Start the Google OAuth redirect flow                                        |
-| `GET`    | `/auth/google/callback`                | Public  | Complete Google OAuth and create a session                                  |
-| `POST`   | `/auth/google/native`                  | Public  | Authenticate with a Google ID token                                         |
-| `GET`    | `/session`                             | Public  | Read the current session                                                    |
-| `POST`   | `/session`                             | Public  | Create a guest session or verify a signed-wallet login                      |
-| `PUT`    | `/session`                             | Public  | Create a wallet-signing challenge                                           |
-| `DELETE` | `/session`                             | Session | Delete the current session and log out                                      |
-| `GET`    | `/player`                              | Session | Read the current player profile                                             |
-| `PUT`    | `/player`                              | Session | Merge player high scores into the profile                                   |
-| `GET`    | `/players/:playerId/profile`           | Public  | Read a public player profile, ranks, highscores, and recent match history   |
+| Method   | Path                                                  | Access      | Description                                                                 |
+| -------- | ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------- |
+| `GET`    | `/health`                                             | Public      | Lightweight API process health check                                        |
+| `GET`    | `/ready`                                              | Public      | Database and migration readiness check                                      |
+| `POST`   | `/integrations/discord/interactions`                  | Discord     | Verify signed Discord interactions and answer endpoint-validation PINGs     |
+| `GET`    | `/integrations/discord/oauth/start`                   | Session     | Redirect the logged-in player to Discord for account and guild verification |
+| `GET`    | `/integrations/discord/oauth/callback`                | Session     | Complete the Discord OAuth callback and store verified guild membership     |
+| `GET`    | `/integrations/discord/verified-users/:discordUserId` | Bot service | Read a Discord account's verification status for role assignment            |
+| `GET`    | `/integrations/discord/verification`                  | Session     | Read the logged-in player's Discord verification state                      |
+| `POST`   | `/integrations/discord/verification`                  | Session     | Create a single-use, ten-minute Discord `/verify` code                      |
+| `GET`    | `/auth/google/start`                                  | Public      | Start the Google OAuth redirect flow                                        |
+| `GET`    | `/auth/google/callback`                               | Public      | Complete Google OAuth and create a session                                  |
+| `POST`   | `/auth/google/native`                                 | Public      | Authenticate with a Google ID token                                         |
+| `GET`    | `/session`                                            | Public      | Read the current session                                                    |
+| `POST`   | `/session`                                            | Public      | Create a guest session or verify a signed-wallet login                      |
+| `PUT`    | `/session`                                            | Public      | Create a wallet-signing challenge                                           |
+| `DELETE` | `/session`                                            | Session     | Delete the current session and log out                                      |
+| `GET`    | `/player`                                             | Session     | Read the current player profile                                             |
+| `PUT`    | `/player`                                             | Session     | Merge player high scores into the profile                                   |
+| `GET`    | `/players/:playerId/profile`                          | Public      | Read a public player profile, ranks, highscores, and recent match history   |
 
 ## Public player profiles
 
