@@ -1,4 +1,4 @@
-import { apiFetch } from '../network/api';
+import { apiFetch, getApiUrl } from '../network/api';
 
 export interface AirdropCampaign {
   id: string;
@@ -113,5 +113,9 @@ export class AirdropClient {
     } catch {
       return { ok: false, error: 'OFFLINE' };
     }
+  }
+
+  public startDiscordVerification(): void {
+    window.location.assign(getApiUrl('/api/integrations/discord/oauth/start'));
   }
 }

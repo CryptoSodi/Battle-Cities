@@ -11,7 +11,6 @@ import { PanelScene, UI } from './panelUi';
 const MOBILE_WIDTH = 744;
 const BATTLE_CITIES_X_URL = 'https://x.com/BattleCitiesHQ';
 const BATTLE_CITIES_INSTAGRAM_URL = 'https://www.instagram.com/battlecitieshq';
-const BATTLE_CITIES_DISCORD_URL = 'https://discord.gg/wdWa7SrbQc';
 
 interface EligibilityStat {
   label: string;
@@ -25,10 +24,8 @@ export class MainAirdropScene extends PanelScene {
   private campaigns: AirdropCampaign[] = [];
   private eligibility: AirdropEligibility = null;
   private discordVerification: DiscordVerification = null;
-  private discordVerificationCode: string = null;
   private isLoading = false;
   private isClaiming = false;
-  private isCreatingDiscordCode = false;
   private loadRequestId = 0;
 
   protected getTitle(): string {
@@ -96,7 +93,6 @@ export class MainAirdropScene extends PanelScene {
     this.campaigns = [];
     this.eligibility = null;
     this.discordVerification = null;
-    this.discordVerificationCode = null;
 
     this.airdropClient.getDiscordVerification().then((verification) => {
       if (requestId !== this.loadRequestId) {
@@ -541,22 +537,14 @@ export class MainAirdropScene extends PanelScene {
     if (this.discordVerification?.verified) {
       return 'DISCORD VERIFIED';
     }
-    if (this.discordVerificationCode !== null) {
-      return this.discordVerificationCode;
-    }
-    return 'BATTLE CITIES COMMUNITY';
+    return 'AUTHORIZE TO VERIFY';
   }
 
   private getDiscordQuestAction(): string {
     if (this.discordVerification?.verified) {
       return 'VERIFIED';
     }
-    if (this.isCreatingDiscordCode) {
-      return 'GENERATING';
-    }
-    return this.discordVerificationCode === null
-      ? 'GET VERIFY CODE'
-      : 'CHECK STATUS';
+    return 'VERIFY DISCORD';
   }
 
   private handleDiscordQuest(): void {
@@ -564,42 +552,7 @@ export class MainAirdropScene extends PanelScene {
       this.setStatus('DISCORD ALREADY VERIFIED');
       return;
     }
-    if (this.discordVerificationCode !== null) {
-      this.refreshDiscordVerification();
-      return;
-    }
-    if (this.isCreatingDiscordCode) {
-      return;
-    }
-
-    this.isCreatingDiscordCode = true;
-    this.refresh('quest-discord');
-    this.airdropClient.createDiscordVerificationCode().then((result) => {
-      this.isCreatingDiscordCode = false;
-      if (!result.ok || result.code === undefined) {
-        this.setStatus((result.error || 'CODE GENERATION FAILED').toUpperCase());
-        this.refresh('quest-discord');
-        return;
-      }
-
-      this.discordVerificationCode = result.code;
-      this.openSocialQuest(BATTLE_CITIES_DISCORD_URL, 'DISCORD');
-      this.setStatus(`RUN /VERIFY ${result.code} IN DISCORD`);
-      this.refresh('quest-discord');
-    });
-  }
-
-  private refreshDiscordVerification(): void {
-    this.airdropClient.getDiscordVerification().then((verification) => {
-      this.discordVerification = verification;
-      if (verification?.verified) {
-        this.discordVerificationCode = null;
-        this.setStatus('DISCORD VERIFIED');
-      } else {
-        this.setStatus('VERIFICATION NOT FOUND YET');
-      }
-      this.refresh('quest-discord');
-    });
+    this.airdropClient.startDiscordVerification();
   }
 
   private renderCampaignHero(
