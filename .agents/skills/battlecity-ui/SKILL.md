@@ -30,6 +30,8 @@ description: Battle Cities UI standards for canvas screens, responsive desktop a
 ## Responsive Layout
 
 - Full-screen screens must fill the available Android viewport without letterboxed UI gaps.
+- Every mobile `PanelScene` must use the established `744px` logical content width rather than the desktop `UI.WIDTH`, and its scene type must be included in the appropriate mobile presentation class (`panel-screen-active` or its dedicated equivalent) in `src/main.ts`.
+- Verify both parts of that mobile contract when adding a screen: the scene's logical content width and the body-class mapping that controls canvas CSS scaling. Missing either one causes cropped or undersized Android UI.
 - Desktop screens must remain in bounds when the browser becomes narrow; scale or reflow the desktop composition without changing the Android layout.
 - Use stable dimensions and explicit responsive constraints so focus, labels, icons, and dynamic values cannot move surrounding controls.
 

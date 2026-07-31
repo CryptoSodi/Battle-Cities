@@ -38,6 +38,7 @@ interface TankSelectLocationParams {
 }
 
 const DESKTOP_COLUMNS = 4;
+const MOBILE_WIDTH = 744;
 const MOBILE_COLUMNS = 2;
 const DESKTOP_VISIBLE_ROWS = 1;
 const MOBILE_VISIBLE_ROWS = 2;
@@ -313,6 +314,10 @@ export class MainTankSelectScene extends PanelScene {
 
   protected getTitleIcon(): string {
     return 'tank.player.primary.a.up.1';
+  }
+
+  protected getContentWidth(): number {
+    return config.isMobileTouchViewport() ? MOBILE_WIDTH : UI.WIDTH;
   }
 
   protected getPageTop(): number {

@@ -11,6 +11,7 @@ import { GameSceneType } from '../GameSceneType';
 import { PanelScene, UI, UiText } from '../main/panelUi';
 
 const PAGE_GUTTER = 24;
+const MOBILE_WIDTH = 744;
 const SIMULATION_TICKS_PER_SECOND = 60;
 const STAGE_RESULTS_SECONDS = 30;
 const STAGE_LOADOUT_SECONDS = 30;
@@ -83,6 +84,9 @@ export class LevelScoreScene extends PanelScene {
   }
 
   protected getContentWidth(): number {
+    if (config.isMobileTouchViewport()) {
+      return MOBILE_WIDTH;
+    }
     return Math.min(UI.WIDTH, Math.max(320, this.root.size.width - PAGE_GUTTER * 2));
   }
 
