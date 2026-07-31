@@ -58,30 +58,31 @@ body.game-running {
 
 body.game-running::before {
   background: radial-gradient(
-    circle at center,
-    rgba(0, 0, 0, 0) 48%,
-    rgba(0, 0, 0, 0.18) 68%,
-    rgba(0, 0, 0, 0.45) 84%,
-    rgba(0, 0, 0, 0.72) 100%
+    ellipse at center,
+    transparent 30%,
+    rgba(0, 0, 0, 0.4) 100%
   );
   content: '';
   inset: 0;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
+  z-index: 2147483645;
 }
 
 body.game-running::after {
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.12) 0,
-    rgba(255, 255, 255, 0.12) 1px,
-    rgba(0, 0, 0, 0.32) 1px,
-    rgba(0, 0, 0, 0.32) 4px
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.5) 0.5%,
+    transparent 0.5%,
+    transparent 1%
   );
   content: '';
   inset: 0;
+  mix-blend-mode: difference;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
+  z-index: 2147483646;
 }
 
 body.scanlines-disabled::before,
