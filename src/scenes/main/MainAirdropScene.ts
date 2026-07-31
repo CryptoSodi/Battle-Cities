@@ -392,11 +392,11 @@ export class MainAirdropScene extends PanelScene {
       },
       {
         key: 'discord',
-        label: 'JOIN DISCORD',
+        label: 'VERIFY DISCORD',
         mark: 'D',
-        detail: 'BATTLE CITIES COMMUNITY',
-        action: 'OPEN DISCORD',
-        url: BATTLE_CITIES_DISCORD_URL,
+        detail: this.getDiscordQuestDetail(),
+        action: this.getDiscordQuestAction(),
+        onSelect: () => this.handleDiscordQuest(),
       },
       {
         key: 'instagram',
