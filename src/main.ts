@@ -179,11 +179,17 @@ function syncMobileCanvasCssSize(): void {
     `${Math.floor(height)}px`,
   );
 
-  // Keep logical game coordinates unchanged while rendering only as many
-  // pixels as the mobile canvas actually displays. This avoids drawing the
-  // large 1288px-wide logical surface and then shrinking it with CSS.
-  const backingWidth = Math.max(Math.floor(width), 1);
-  const backingHeight = Math.max(Math.floor(height), 1);
+  // Keep logical game coordinates unchanged while using a modest mobile
+  // supersample for crisp HD sprites/text. This is still substantially
+  // cheaper than drawing the full 1288px-wide logical surface.
+  const backingWidth = Math.max(
+    Math.floor(width * config.MOBILE_RENDER_SCALE),
+    1,
+  );
+  const backingHeight = Math.max(
+    Math.floor(height * config.MOBILE_RENDER_SCALE),
+    1,
+  );
   gameRenderer.resizeBackingStore(backingWidth, backingHeight);
   if (particles !== null) {
     particles.resizeBackingStore(backingWidth, backingHeight);

@@ -246,6 +246,9 @@ export const HIT_SPARK_COUNT = 8; // sparks when a tank survives a hit
 // screen instead of being sampled down to the gameplay tile size. Gameplay and
 // world coordinates are unaffected. Lower to 2 for weaker GPUs.
 export const RENDER_SCALE = 1;
+// Mobile backing pixels per displayed CSS pixel. A modest supersample keeps
+// HD sprites/text crisp without returning to the full 1288px logical buffer.
+export const MOBILE_RENDER_SCALE = 1.5;
 
 export const BRICK_TILE_SIZE = TILE_SIZE_SMALL;
 export const BRICK_SUPER_TILE_SIZE = TILE_SIZE_MEDIUM;
