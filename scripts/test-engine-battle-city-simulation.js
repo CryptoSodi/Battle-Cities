@@ -71,6 +71,7 @@ function overlaps(left, right) {
   }
   assert.strictEqual(frame.players.length, 2, 'players must complete browser spawn animation');
   assert.strictEqual(frame.enemies.length, 1, 'enemy must complete browser spawn animation');
+  simulation.world.getPlayerTanks()[0].upgrade('b');
   simulation.acceptInput(input(0, 1, 0, false, true));
 
   for (let tick = 0; tick < 120; tick += 1) {
@@ -138,6 +139,35 @@ function overlaps(left, right) {
     terminalFrame.playerKillCounts,
     [[1, 0, 0, 0], [0, 0, 0, 0]],
     'the terminal host frame must carry each player tier kill breakdown',
+  );
+  const carriedLives = simulation.getLives();
+  const nextStageRunState = simulation.createNextStageRunState();
+  assert.deepStrictEqual(
+    nextStageRunState.lives,
+    carriedLives,
+    'stage transition must preserve each player life count',
+  );
+  assert.deepStrictEqual(
+    nextStageRunState.tankTiers,
+    ['b', 'a'],
+    'stage transition must preserve earned tank upgrades',
+  );
+  const nextStage = new EngineBattleCitySimulation(createMap(), {
+    seed: 12,
+    disableEnemyShooting: true,
+    level: 2,
+    runState: nextStageRunState,
+  });
+  let nextStageFrame;
+  for (let tick = 0; tick < 300; tick += 1) {
+    nextStageFrame = nextStage.step();
+    if (nextStageFrame.players.length === 2) break;
+  }
+  assert.deepStrictEqual(nextStage.getLives(), carriedLives);
+  assert.deepStrictEqual(
+    nextStageFrame.players.map((player) => player.tier),
+    ['b', 'a'],
+    'the next authoritative stage must spawn the carried upgraded tank',
   );
 }
 

@@ -29,7 +29,7 @@ export function prepareLevelSession(
   enemyTotal: number,
 ): void {
   session.startLevelStats(enemyTotal);
-  const extraLives = session.getRunConsumables().extraLives;
+  const extraLives = session.consumeInitialExtraLives();
   for (let index = 0; index < extraLives; index += 1) {
     session.primaryPlayer.addLife();
     if (session.isMultiplayer()) {

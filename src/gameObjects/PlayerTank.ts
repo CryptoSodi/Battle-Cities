@@ -88,7 +88,7 @@ export class PlayerTank extends Tank {
       return;
     }
     this.type.increaseTier(tier);
-    this.applyTier(false);
+    this.applyTier(true);
   }
 
   // If tier is provided - it means that specific tier needs to be activated

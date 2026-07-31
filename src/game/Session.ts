@@ -43,6 +43,7 @@ export class Session {
   private seenIntro: boolean;
   private state: State;
   private runConsumables: SessionRunConsumables;
+  private runExtraLivesApplied: boolean;
   private runBoosts: SessionRunBoosts;
   private playerTankTiers: [TankTier, TankTier];
   private levelEnemyTotal: number;
@@ -80,6 +81,7 @@ export class Session {
       powerupCounts: [],
       extraLives: 0,
     };
+    this.runExtraLivesApplied = false;
     this.runBoosts = createEmptyRunBoosts();
     this.playerTankTiers = [TankTier.A, TankTier.A];
     this.levelEnemyTotal = 0;
@@ -115,6 +117,7 @@ export class Session {
     this.state = State.Idle;
     this.playtest = false;
     this.playerTankTiers = [TankTier.A, TankTier.A];
+    this.runExtraLivesApplied = false;
 
     this.primaryPlayer.reset();
     this.secondaryPlayer.reset();
@@ -205,10 +208,19 @@ export class Session {
 
   public setRunConsumables(runConsumables: SessionRunConsumables): void {
     this.runConsumables = runConsumables;
+    this.runExtraLivesApplied = false;
   }
 
   public getRunConsumables(): SessionRunConsumables {
     return this.runConsumables;
+  }
+
+  public consumeInitialExtraLives(): number {
+    if (this.runExtraLivesApplied) {
+      return 0;
+    }
+    this.runExtraLivesApplied = true;
+    return Math.max(0, Math.floor(this.runConsumables.extraLives || 0));
   }
 
   public clearRunConsumables(): void {
@@ -218,6 +230,7 @@ export class Session {
       powerupCounts: [],
       extraLives: 0,
     };
+    this.runExtraLivesApplied = false;
   }
 
   public setRunBoosts(runBoosts: SessionRunBoosts): void {

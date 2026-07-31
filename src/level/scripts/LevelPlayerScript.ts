@@ -339,6 +339,7 @@ export class LevelPlayerScript extends LevelScript {
       }
     }
     playerSession.setTankTier(tank.type.tier);
+    this.session.setPlayerTankTier(partyIndex, tank.type.tier);
 
     tank.died.addListener(() => {
       this.eventBus.playerDied.notify({
@@ -354,6 +355,7 @@ export class LevelPlayerScript extends LevelScript {
       this.timers[partyIndex].reset(config.PLAYER_SPAWN_DELAY);
 
       playerSession.resetTankTier();
+      this.session.setPlayerTankTier(partyIndex, TankTier.A);
     });
 
     tank.fired.addListener(() => {
@@ -362,6 +364,7 @@ export class LevelPlayerScript extends LevelScript {
 
     tank.upgraded.addListener((event) => {
       playerSession.setTankTier(event.tier);
+      this.session.setPlayerTankTier(partyIndex, event.tier);
     });
 
     tank.slided.addListener(() => {
