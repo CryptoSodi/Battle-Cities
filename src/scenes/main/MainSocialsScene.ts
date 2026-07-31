@@ -40,7 +40,7 @@ const SOCIAL_LINKS: SocialLink[] = [
     detail: 'BATTLE CITIES COMMUNITY',
     action: 'JOIN DISCORD',
     mark: 'D',
-    url: 'https://discord.gg/wdWa7SrbQc',
+            url: 'https://discord.gg/jHmYTCVJgm',
   },
 ];
 

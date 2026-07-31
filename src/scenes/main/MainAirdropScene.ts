@@ -10,6 +10,7 @@ import { PanelScene, UI } from './panelUi';
 
 const MOBILE_WIDTH = 744;
 const BATTLE_CITIES_X_URL = 'https://x.com/BattleCitiesHQ';
+const BATTLE_CITIES_DISCORD_URL = 'https://discord.gg/jHmYTCVJgm';
 const BATTLE_CITIES_INSTAGRAM_URL = 'https://www.instagram.com/battlecitieshq';
 
 interface EligibilityStat {
@@ -393,9 +394,9 @@ export class MainAirdropScene extends PanelScene {
         key: 'discord',
         label: 'JOIN DISCORD',
         mark: 'D',
-        detail: this.getDiscordQuestDetail(),
-        action: this.getDiscordQuestAction(),
-        onSelect: () => this.handleDiscordQuest(),
+        detail: 'BATTLE CITIES COMMUNITY',
+        action: 'OPEN DISCORD',
+        url: BATTLE_CITIES_DISCORD_URL,
       },
       {
         key: 'instagram',
