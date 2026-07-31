@@ -27,6 +27,9 @@ export abstract class RenderContext {
   }
 
   abstract init(): void;
+  // Resize only the physical drawing buffer. Logical scene coordinates stay
+  // unchanged and are projected/scaled into this backing resolution.
+  abstract resizeBackingStore(width: number, height: number): void;
   abstract clear(): void;
   // Submit any pending batched work to the GPU. Called by the frame driver at
   // the end of each frame. No-op for backends that draw immediately.

@@ -8,6 +8,8 @@ import { RenderContext } from '../RenderContext';
 
 export class CanvasRenderContext extends RenderContext {
   private context: NativeContext;
+  private logicalWidth = 1;
+  private logicalHeight = 1;
   private viewScale = 1;
   private viewOffsetX = 0;
   private viewOffsetY = 0;
@@ -20,6 +22,31 @@ export class CanvasRenderContext extends RenderContext {
     // OffscreenCanvas union to include ImageBitmapRenderingContext; '2d'
     // always yields a 2D context at runtime, so narrow explicitly.
     this.context = this.canvas.getContext('2d') as NativeContext;
+    this.logicalWidth = this.canvas.width;
+    this.logicalHeight = this.canvas.height;
+  }
+
+  public resizeBackingStore(width: number, height: number): void {
+    const backingWidth = Math.max(1, Math.round(width));
+    const backingHeight = Math.max(1, Math.round(height));
+    if (
+      this.canvas.width === backingWidth &&
+      this.canvas.height === backingHeight
+    ) {
+      return;
+    }
+
+    this.canvas.width = backingWidth;
+    this.canvas.height = backingHeight;
+    this.context.setTransform(
+      backingWidth / this.logicalWidth,
+      0,
+      0,
+      backingHeight / this.logicalHeight,
+      0,
+      0,
+    );
+    this.context.imageSmoothingEnabled = false;
   }
 
   public setView(scale: number, offsetX: number, offsetY: number): void {
@@ -150,7 +177,10 @@ export class CanvasRenderContext extends RenderContext {
   }
 
   public clear(): void {
+    this.context.save();
+    this.context.setTransform(1, 0, 0, 1, 0, 0);
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.restore();
   }
 
   public clearRect(x: number, y: number, width: number, height: number): void {

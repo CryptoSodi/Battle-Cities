@@ -119,6 +119,7 @@ const gameRenderer = new GameRenderer({
       : 'auto',
   renderScale: config.RENDER_SCALE,
 });
+let particles: ParticleSystem = null;
 
 function syncCanvasCssSize(width: number, height: number): void {
   document.documentElement.style.setProperty('--game-width', width.toString());
@@ -177,6 +178,16 @@ function syncMobileCanvasCssSize(): void {
     '--mobile-game-css-height',
     `${Math.floor(height)}px`,
   );
+
+  // Keep logical game coordinates unchanged while rendering only as many
+  // pixels as the mobile canvas actually displays. This avoids drawing the
+  // large 1288px-wide logical surface and then shrinking it with CSS.
+  const backingWidth = Math.max(Math.floor(width), 1);
+  const backingHeight = Math.max(Math.floor(height), 1);
+  gameRenderer.resizeBackingStore(backingWidth, backingHeight);
+  if (particles !== null) {
+    particles.resizeBackingStore(backingWidth, backingHeight);
+  }
 }
 
 function logCanvasSize(label: string, canvas: HTMLCanvasElement): void {
@@ -688,7 +699,8 @@ const rng = new Prng(Date.now() >>> 0 || 1);
 
 // Cosmetic particle overlay (dust, sparks, debris). Own canvas over the game
 // canvas; matches the game's logical resolution so world coords line up.
-const particles = new ParticleSystem(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+particles = new ParticleSystem(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+syncMobileCanvasCssSize();
 
 const gameLoop = new GameLoop({ timerDriven: isHeadlessBroadcaster });
 

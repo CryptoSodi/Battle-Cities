@@ -66,6 +66,10 @@ export class GameRenderer {
     return this.canvas;
   }
 
+  public resizeBackingStore(width: number, height: number): void {
+    this.context.resizeBackingStore(width, height);
+  }
+
   public render(root: RenderObject, alpha = 0): void {
     // Render interpolation: temporarily move objects to their interpolated
     // position between fixed sim steps (alpha = fraction toward the next step),

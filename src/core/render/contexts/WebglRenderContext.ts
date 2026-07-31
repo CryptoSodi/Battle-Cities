@@ -91,7 +91,10 @@ export class WebglRenderContext extends RenderContext {
   private viewScale = 1;
   private viewOffsetX = 0;
   private viewOffsetY = 0;
-  private backingScale = 1;
+  private logicalWidth = 1;
+  private logicalHeight = 1;
+  private backingScaleX = 1;
+  private backingScaleY = 1;
   private textureMap = new Map<TexImageSource, WebGLTexture>();
   private textCanvasMap = new Map<string, HTMLCanvasElement>();
   private colorCache = new Map<string, [number, number, number, number]>();
@@ -118,15 +121,16 @@ export class WebglRenderContext extends RenderContext {
     // and cropped. Projection stays in logical units regardless.
     const logicalWidth = this.canvas.width;
     const logicalHeight = this.canvas.height;
+    this.logicalWidth = logicalWidth;
+    this.logicalHeight = logicalHeight;
     const maxViewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
     const maxDim = Math.min(4096, (maxViewport && maxViewport[0]) || 4096);
     const maxScale = Math.min(maxDim / logicalWidth, maxDim / logicalHeight);
     const scale = Math.max(1, Math.min(this.renderScale, maxScale));
-    this.backingScale = scale;
-    this.canvas.width = Math.round(logicalWidth * scale);
-    this.canvas.height = Math.round(logicalHeight * scale);
-
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    this.resizeBackingStore(
+      Math.round(logicalWidth * scale),
+      Math.round(logicalHeight * scale),
+    );
     // eslint-disable-next-line no-console
     console.info('[renderer] WebGL backing canvas', {
       logical: `${logicalWidth}x${logicalHeight}`,
@@ -190,6 +194,24 @@ export class WebglRenderContext extends RenderContext {
     gl.uniform1i(this.uTexture, 0);
   }
 
+  public resizeBackingStore(width: number, height: number): void {
+    const backingWidth = Math.max(1, Math.round(width));
+    const backingHeight = Math.max(1, Math.round(height));
+    if (
+      this.canvas.width === backingWidth &&
+      this.canvas.height === backingHeight
+    ) {
+      return;
+    }
+
+    this.flush();
+    this.canvas.width = backingWidth;
+    this.canvas.height = backingHeight;
+    this.backingScaleX = backingWidth / this.logicalWidth;
+    this.backingScaleY = backingHeight / this.logicalHeight;
+    this.gl.viewport(0, 0, backingWidth, backingHeight);
+  }
+
   // Submit all batched quads in a single draw call. Public so the frame driver
   // (GameRenderer) can end the frame; also called internally before any state
   // change that would break draw ordering (texture switch, lines, clears).
@@ -233,14 +255,15 @@ export class WebglRenderContext extends RenderContext {
   public clearRect(x: number, y: number, width: number, height: number): void {
     this.flush();
     const gl = this.gl;
-    const s = this.backingScale;
     gl.enable(gl.SCISSOR_TEST);
     // Scissor origin is bottom-left, so flip y from our top-left space.
     gl.scissor(
-      Math.round(x * s),
-      Math.round(this.canvas.height - (y + height) * s),
-      Math.round(width * s),
-      Math.round(height * s),
+      Math.round(x * this.backingScaleX),
+      Math.round(
+        this.canvas.height - (y + height) * this.backingScaleY,
+      ),
+      Math.round(width * this.backingScaleX),
+      Math.round(height * this.backingScaleY),
     );
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.SCISSOR_TEST);
@@ -377,11 +400,12 @@ export class WebglRenderContext extends RenderContext {
   ): void {
     this.flush();
     const gl = this.gl;
-    const s = this.backingScale;
-    const left = (x * this.viewScale + this.viewOffsetX) * s;
-    const top = (y * this.viewScale + this.viewOffsetY) * s;
-    const clipWidth = width * this.viewScale * s;
-    const clipHeight = height * this.viewScale * s;
+    const left =
+      (x * this.viewScale + this.viewOffsetX) * this.backingScaleX;
+    const top =
+      (y * this.viewScale + this.viewOffsetY) * this.backingScaleY;
+    const clipWidth = width * this.viewScale * this.backingScaleX;
+    const clipHeight = height * this.viewScale * this.backingScaleY;
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(
       Math.round(left),

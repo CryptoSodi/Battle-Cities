@@ -35,6 +35,8 @@ export class ParticleSystem {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly capacity: number;
+  private readonly logicalWidth: number;
+  private readonly logicalHeight: number;
 
   private count = 0;
 
@@ -66,6 +68,8 @@ export class ParticleSystem {
 
   constructor(width: number, height: number, capacity = 2000) {
     this.capacity = capacity;
+    this.logicalWidth = width;
+    this.logicalHeight = height;
 
     this.canvas = document.createElement('canvas');
     this.canvas.width = width;
@@ -89,6 +93,29 @@ export class ParticleSystem {
 
   public getDomElement(): HTMLCanvasElement {
     return this.canvas;
+  }
+
+  public resizeBackingStore(width: number, height: number): void {
+    const backingWidth = Math.max(1, Math.round(width));
+    const backingHeight = Math.max(1, Math.round(height));
+    if (
+      this.canvas.width === backingWidth &&
+      this.canvas.height === backingHeight
+    ) {
+      return;
+    }
+
+    this.canvas.width = backingWidth;
+    this.canvas.height = backingHeight;
+    this.context.setTransform(
+      backingWidth / this.logicalWidth,
+      0,
+      0,
+      backingHeight / this.logicalHeight,
+      0,
+      0,
+    );
+    this.context.imageSmoothingEnabled = false;
   }
 
   public getCount(): number {
@@ -176,7 +203,7 @@ export class ParticleSystem {
 
   public render(): void {
     const context = this.context;
-    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
     if (this.count === 0 && this.flashAlpha <= 0) {
       return;
@@ -184,8 +211,8 @@ export class ParticleSystem {
 
     const scale = this.viewScale;
     const cullScale = this.cullScale;
-    const canvasWidth = this.canvas.width;
-    const canvasHeight = this.canvas.height;
+    const canvasWidth = this.logicalWidth;
+    const canvasHeight = this.logicalHeight;
 
     for (let index = 0; index < this.count; index += 1) {
       const alpha = this.life[index] / this.maxLife[index];
@@ -226,7 +253,7 @@ export class ParticleSystem {
     if (this.flashAlpha > 0) {
       context.globalAlpha = this.flashAlpha;
       context.fillStyle = 'rgb(255,255,255)';
-      context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      context.fillRect(0, 0, this.logicalWidth, this.logicalHeight);
       context.globalAlpha = 1;
     }
   }
@@ -234,7 +261,7 @@ export class ParticleSystem {
   public clear(): void {
     this.count = 0;
     this.flashAlpha = 0;
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.context.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
   }
 
   private swapRemove(index: number): void {
