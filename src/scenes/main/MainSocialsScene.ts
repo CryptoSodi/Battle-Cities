@@ -1,3 +1,4 @@
+import { AirdropClient, DiscordVerification } from '../../airdrops';
 import { HeadquartersPanelScene, UI } from './panelUi';
 
 interface SocialLink {
@@ -6,7 +7,8 @@ interface SocialLink {
   detail: string;
   action: string;
   mark: string;
-  url: string;
+  url?: string;
+  onSelect?: () => void;
 }
 
 const SOCIAL_LINKS: SocialLink[] = [
@@ -34,17 +36,13 @@ const SOCIAL_LINKS: SocialLink[] = [
     mark: 'IG',
     url: 'https://www.instagram.com/battlecitieshq',
   },
-  {
-    key: 'discord',
-    title: 'DISCORD',
-    detail: 'BATTLE CITIES COMMUNITY',
-    action: 'JOIN DISCORD',
-    mark: 'D',
-            url: 'https://discord.gg/jHmYTCVJgm',
-  },
 ];
 
 export class MainSocialsScene extends HeadquartersPanelScene {
+  private airdropClient = new AirdropClient();
+  private discordVerification: DiscordVerification = null;
+  private verificationRequestId = 0;
+
   protected getSectionTitle(): string {
     return 'Socials';
   }
@@ -58,7 +56,7 @@ export class MainSocialsScene extends HeadquartersPanelScene {
   }
 
   protected getInitialFocusKey(): string {
-    return this.getSocialKey(SOCIAL_LINKS[0]);
+    return this.getSocialKey(this.getSocialLinks()[0]);
   }
 
   protected getPreferredVerticalNavigationKey(
@@ -66,10 +64,11 @@ export class MainSocialsScene extends HeadquartersPanelScene {
     direction: number,
   ): string {
     if (direction > 0 && currentKey === 'back') {
-      return this.getSocialKey(SOCIAL_LINKS[0]);
+      return this.getSocialKey(this.getSocialLinks()[0]);
     }
 
-    const index = SOCIAL_LINKS.findIndex(
+    const socials = this.getSocialLinks();
+    const index = socials.findIndex(
       (social) => this.getSocialKey(social) === currentKey,
     );
     if (index < 0) {
@@ -83,13 +82,22 @@ export class MainSocialsScene extends HeadquartersPanelScene {
     }
 
     const targetIndex = index + direction * columns;
-    return targetIndex >= 0 && targetIndex < SOCIAL_LINKS.length
-      ? this.getSocialKey(SOCIAL_LINKS[targetIndex])
+    return targetIndex >= 0 && targetIndex < socials.length
+      ? this.getSocialKey(socials[targetIndex])
       : null;
   }
 
   protected load(): void {
     this.statusText = '';
+    this.discordVerification = null;
+    const requestId = ++this.verificationRequestId;
+    this.airdropClient.getDiscordVerification().then((verification) => {
+      if (requestId !== this.verificationRequestId) {
+        return;
+      }
+      this.discordVerification = verification;
+      this.refresh();
+    });
   }
 
   protected renderContent(): void {
@@ -133,7 +141,7 @@ export class MainSocialsScene extends HeadquartersPanelScene {
     const cardHeight = this.scaleSize(mobile ? 238 : 224);
     const cardsY = bodyY + this.scaleSize(130);
 
-    SOCIAL_LINKS.forEach((social, index) => {
+    this.getSocialLinks().forEach((social, index) => {
       const row = Math.floor(index / columns);
       const column = index % columns;
       this.renderSocialCard(
@@ -220,6 +228,13 @@ export class MainSocialsScene extends HeadquartersPanelScene {
   }
 
   private openSocial(social: SocialLink): void {
+    if (social.onSelect !== undefined) {
+      social.onSelect();
+      return;
+    }
+    if (social.url === undefined) {
+      return;
+    }
     const opened = window.open(social.url, '_blank');
     if (opened === null) {
       window.location.href = social.url;
@@ -228,5 +243,28 @@ export class MainSocialsScene extends HeadquartersPanelScene {
 
     opened.opener = null;
     this.setStatus(`${social.title} OPENED`);
+  }
+
+  private getSocialLinks(): SocialLink[] {
+    const verified = this.discordVerification?.verified === true;
+    return [
+      ...SOCIAL_LINKS,
+      {
+        key: 'discord',
+        title: 'DISCORD',
+        detail: verified ? 'DISCORD VERIFIED' : 'AUTHORIZE TO VERIFY',
+        action: verified ? 'VERIFIED' : 'VERIFY DISCORD',
+        mark: 'D',
+        onSelect: () => this.handleDiscordVerification(),
+      },
+    ];
+  }
+
+  private handleDiscordVerification(): void {
+    if (this.discordVerification?.verified) {
+      this.setStatus('DISCORD ALREADY VERIFIED');
+      return;
+    }
+    this.airdropClient.startDiscordVerification();
   }
 }
