@@ -8,4 +8,6 @@ LocalServer/target/
 
 .vercel
 .env*
+!deploy/ubuntu/.env.example
+deploy/ubuntu/backups/
 .rtk/

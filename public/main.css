@@ -378,6 +378,15 @@ body.scanlines-disabled::after {
   width: 56%;
 }
 
+.splash__version {
+  color: #777d7c;
+  font: 600 11px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
+  letter-spacing: 1px;
+  margin: 12px 0 0;
+  text-transform: uppercase;
+}
+
 .splash__technology {
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
@@ -389,7 +398,7 @@ body.scanlines-disabled::after {
   gap: 14px 24px;
   justify-content: center;
   letter-spacing: 0;
-  margin-top: 30px;
+  margin-top: 20px;
   padding-top: 18px;
   width: min(520px, 88vw);
 }

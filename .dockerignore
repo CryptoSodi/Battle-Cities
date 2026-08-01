@@ -1,0 +1,17 @@
+.git/
+.github/
+.vercel/
+.rtk/
+.env*
+!deploy/ubuntu/.env.example
+node_modules/
+api-server/node_modules/
+mobile/node_modules/
+dist/
+dist-broadcaster/
+api-server/dist/
+server-data/
+deploy/ubuntu/backups/
+target/
+LocalServer/target/
+

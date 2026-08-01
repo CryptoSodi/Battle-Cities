@@ -54,6 +54,7 @@ import * as mapManifest from '../data/map.manifest.json';
 
 const loadingElement = document.querySelector('[data-loading]');
 const loadingStatusElement = document.querySelector('[data-loading-status]');
+const loadingVersionElement = document.querySelector('[data-loading-version]');
 const authShellElement = document.querySelector(
   '[data-auth-shell]',
 ) as HTMLElement;
@@ -71,6 +72,10 @@ function setLoadingStatus(message: string): void {
   if (loadingStatusElement !== null) {
     loadingStatusElement.textContent = message;
   }
+}
+
+if (loadingVersionElement !== null) {
+  loadingVersionElement.textContent = `VER: ${process.env.BATTLECITY_VERSION}`;
 }
 
 const SPLASH_MESSAGES = [

@@ -42,6 +42,9 @@ Vercel and Windows instructions. See
 [Headless WebRTC Broadcaster](docs/headless-broadcaster.md) for broadcaster
 runtime and service API details.
 
+For the combined Ubuntu API, broadcaster, PostgreSQL, and HTTPS deployment, see
+[BattleCities Ubuntu deployment](deploy/ubuntu/README.md).
+
 ## License
 
 **MIT**

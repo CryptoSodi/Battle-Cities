@@ -1,0 +1,14 @@
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3001
+}
+
+{$BROADCASTER_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy broadcaster:7777
+}
+

@@ -13,6 +13,7 @@
     "start:prod2": "webpack-dev-server --open --config webpack/prod2.config.js",
     "broadcaster:build": "tsc -p tsconfig.broadcaster.json",
     "broadcaster:headless": "node scripts/headless-broadcaster-service.js",
+    "broadcaster:start": "node dist-broadcaster/scripts/headless-broadcaster-runtime.js",
     "broadcaster:test": "npm run broadcaster:build && node scripts/test-engine-battle-city-simulation.js && node scripts/test-headless-broadcaster.js",
     "test:service-worker": "node scripts/test-service-worker.js",
     "server:local": "cargo run --manifest-path LocalServer/Cargo.toml",

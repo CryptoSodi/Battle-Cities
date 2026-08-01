@@ -1,5 +1,28 @@
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const { execFileSync } = require('child_process');
+const path = require('path');
+
+const projectRoot = path.resolve(__dirname, '..');
+
+function getBuildVersion() {
+  if (process.env.BATTLECITY_VERSION) {
+    return process.env.BATTLECITY_VERSION;
+  }
+
+  try {
+    const commitCount = execFileSync('git', ['rev-list', '--count', 'HEAD'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return `0.1.${commitCount}`;
+  } catch (_error) {
+    return '0.1.dev';
+  }
+}
+
+const buildVersion = getBuildVersion();
 
 module.exports = {
   entry: {
@@ -41,6 +64,7 @@ module.exports = {
       'process.env.BATTLECITY_API_BASE_URL': JSON.stringify(
         process.env.BATTLECITY_API_BASE_URL || '',
       ),
+      'process.env.BATTLECITY_VERSION': JSON.stringify(buildVersion),
     }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
