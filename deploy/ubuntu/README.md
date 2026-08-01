@@ -241,6 +241,35 @@ removing the old deployment.
 
 ## Updates
 
+Every push to `master` can deploy automatically through
+`.github/workflows/deploy-api.yml`. The workflow uses a dedicated SSH identity
+restricted to the root-owned `/usr/local/sbin/deploy-battlecities` command; it
+cannot open an interactive shell or forward ports.
+
+The command is installed from `deploy/ubuntu/deploy-api.sh` and:
+
+1. serializes deployments with `flock`;
+2. refuses to overwrite tracked local changes;
+3. fast-forwards the checkout to `origin/master`;
+4. installs dependencies only when their manifests change;
+5. builds the combined API and broadcaster;
+6. runs PostgreSQL migrations;
+7. restarts the API and verifies `/api/ready`.
+
+The workflow requires these repository secrets:
+
+```text
+BATTLECITIES_DEPLOY_HOST
+BATTLECITIES_DEPLOY_USER
+BATTLECITIES_DEPLOY_SSH_KEY
+BATTLECITIES_DEPLOY_KNOWN_HOSTS
+```
+
+Do not reuse an administrator SSH key. Use a dedicated Ed25519 key authorized
+with a forced command for the `battlecities-deploy` Unix account.
+
+Manual fallback:
+
 ```bash
 sudo systemctl stop battlecities-api
 sudo -u battlecities git -C /opt/battlecities pull --ff-only
