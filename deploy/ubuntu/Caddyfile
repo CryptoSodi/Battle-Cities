@@ -1,14 +1,8 @@
-{
-	email {$CADDY_ACME_EMAIL}
-}
-
-{$API_DOMAIN} {
+api.battlecities.com {
 	encode zstd gzip
-	reverse_proxy api:3001
-}
 
-{$BROADCASTER_DOMAIN} {
-	encode zstd gzip
-	reverse_proxy broadcaster:7777
-}
+	@broadcasterControl path /matches /matches/* /past-matches /past-matches/*
+	respond @broadcasterControl 404
 
+	reverse_proxy 127.0.0.1:3001
+}

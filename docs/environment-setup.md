@@ -1,113 +1,65 @@
-# Deployment Environment Setup
+# Deployment environment setup
 
-Battle Cities uses three separately configured processes. Keep their variables
-separate because the frontend environment is compiled into public JavaScript.
+BattleCities has two public deployments:
 
-| Project | Runs on | Purpose |
-| --- | --- | --- |
-| Game client | Vercel frontend project | Loads the game and calls the public API |
-| API | Vercel API project | Owns accounts, matches, signaling, and broadcaster lifecycle calls |
-| Headless broadcaster | Windows or a server | Runs authoritative match simulations and WebRTC peers |
+| Deployment | Responsibility |
+| --- | --- |
+| Vercel game client | Static game UI and browser assets |
+| Native Ubuntu backend | API, authoritative broadcaster, PostgreSQL, and HTTPS |
 
-## 1. Vercel Game Client
+The backend exposes everything through `https://api.battlecities.com`. There is
+no separate broadcaster hostname or process.
 
-In the frontend Vercel project, open **Settings > Environment Variables** and
-configure:
+## Game client
+
+Configure only:
 
 ```env
 BATTLECITY_API_BASE_URL=https://api.battlecities.com
 ```
 
-Apply it to Production and Preview as needed, then redeploy the frontend. This
-is a build-time variable, so changing it does not affect an existing deployment
-until that deployment is rebuilt.
+Never put database, Google, Discord, broadcaster, or admin secrets in the game
+client project.
 
-Never configure `BROADCASTER_SERVICE_TOKEN` or `BROADCASTER_BASE_URL` in the
-frontend project. Frontend environment variables are not private secrets.
+## Native backend
 
-## 2. Vercel API
-
-In the API Vercel project, configure:
+Use `/etc/battlecities/api.env`, based on
+[`deploy/ubuntu/.env.example`](../deploy/ubuntu/.env.example). The embedded
+runtime requires:
 
 ```env
-BROADCASTER_BASE_URL=https://broadcaster.battlecities.com
-BROADCASTER_SERVICE_TOKEN=replace-with-a-strong-random-secret
+BATTLECITY_EMBED_BROADCASTER=1
+BROADCASTER_BASE_URL=http://127.0.0.1:3001
+BROADCASTER_API_URL=http://127.0.0.1:3001
+BROADCASTER_PUBLIC_URL=https://api.battlecities.com
+BROADCASTER_CLIENT_URL=https://www.battlecities.com
 ```
 
-`BROADCASTER_SERVICE_TOKEN` must be identical to the token used by the
-headless broadcaster. Generate a dedicated value, keep it out of source
-control, and do not reuse a user password or frontend secret.
+The process generates an ephemeral broadcaster token automatically at startup.
+It still protects service-control routes against public callers, but operators
+do not need to configure or copy it.
 
-The API project also needs its normal database, OAuth, web-origin, and storage
-variables documented in [`api-server/README.md`](../api-server/README.md).
-Redeploy the API after changing its environment variables.
+Use a PostgreSQL application URL in `api.env` and keep the database-owner URL
+in the root-readable `/etc/battlecities/migrate.env` only.
 
-## 3. Windows Headless Broadcaster
+## Build and start
 
-Open PowerShell in the repository root and set the environment for the current
-terminal session:
-
-```powershell
-$env:BROADCASTER_SERVICE_TOKEN = 'same-secret-used-by-the-vercel-api'
-$env:BROADCASTER_API_URL = 'https://api.battlecities.com'
-$env:BROADCASTER_PUBLIC_URL = 'https://broadcaster.battlecities.com'
-$env:BROADCASTER_CLIENT_URL = 'https://battlecities.com'
-$env:BROADCASTER_HOST = '127.0.0.1'
-$env:BROADCASTER_PORT = '7777'
-$env:BROADCASTER_DISABLE_ENEMY_SHOOTING = '0'
-
-npm run broadcaster:headless
+```bash
+npm ci
+npm --prefix api-server ci
+npm run server:build
+npm run server:start
 ```
 
-These PowerShell variables last only for that terminal session. This is useful
-for local testing because closing the terminal removes the secret from the
-process environment.
+For production `systemd`, PostgreSQL, Caddy, memory tuning, Neon migration, and
+backup instructions, follow
+[`deploy/ubuntu/README.md`](../deploy/ubuntu/README.md).
 
-`BROADCASTER_DISABLE_ENEMY_SHOOTING=1` is an optional test setting. Production
-should use `0` or omit it.
-
-Verify the local service from another PowerShell window:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:7777/health
-```
-
-The operator monitor is available at:
+## Public checks
 
 ```text
-http://127.0.0.1:7777/monitor
+https://api.battlecities.com/api/health  API health
+https://api.battlecities.com/api/ready   PostgreSQL readiness
+https://api.battlecities.com/health      Embedded broadcaster health
+https://api.battlecities.com/            Broadcaster monitor
 ```
-
-Enter the same `BROADCASTER_SERVICE_TOKEN` in the monitor login.
-
-## Public Hostname Requirement
-
-The Vercel API cannot reach `127.0.0.1` on the Windows machine. A reverse proxy
-or tunnel must route:
-
-```text
-https://broadcaster.battlecities.com -> http://127.0.0.1:7777
-```
-
-Until that route is active, the local health check can pass while Vercel still
-receives a `502` from the public broadcaster hostname.
-
-Verify the complete public route with:
-
-```powershell
-Invoke-RestMethod https://broadcaster.battlecities.com/health
-```
-
-## Configuration Summary
-
-| Location | Variable | Production value |
-| --- | --- | --- |
-| Vercel client | `BATTLECITY_API_BASE_URL` | `https://api.battlecities.com` |
-| Vercel API | `BROADCASTER_BASE_URL` | `https://broadcaster.battlecities.com` |
-| Vercel API | `BROADCASTER_SERVICE_TOKEN` | Shared private secret |
-| Windows broadcaster | `BROADCASTER_SERVICE_TOKEN` | Same shared private secret |
-| Windows broadcaster | `BROADCASTER_API_URL` | `https://api.battlecities.com` |
-| Windows broadcaster | `BROADCASTER_PUBLIC_URL` | `https://broadcaster.battlecities.com` |
-| Windows broadcaster | `BROADCASTER_CLIENT_URL` | `https://battlecities.com` |
-| Windows broadcaster | `BROADCASTER_HOST` | `127.0.0.1` |
-| Windows broadcaster | `BROADCASTER_PORT` | `7777` |

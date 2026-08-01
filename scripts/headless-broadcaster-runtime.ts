@@ -1194,7 +1194,29 @@ class ArchivedReplayRuntime {
 const matches = new Map<string, MatchRuntime>();
 const archiveReplays = new Map<string, ArchivedReplayRuntime>();
 
-const server = createServer(async (request, response) => {
+export function isBroadcasterRequestPath(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/monitor' ||
+    pathname === '/live' ||
+    pathname === '/monitor/config' ||
+    pathname === '/live/config' ||
+    pathname === '/live/matches' ||
+    pathname === '/live/past-matches' ||
+    /^\/live\/past-matches\/[a-z0-9-]+\/replay$/.test(pathname) ||
+    pathname === '/health' ||
+    pathname === '/matches' ||
+    pathname === '/past-matches' ||
+    /^\/past-matches\/[a-z0-9-]+\/replay$/.test(pathname) ||
+    /^\/matches\/[a-z0-9-]+$/.test(pathname) ||
+    /^\/matches\/[a-z0-9-]+\/players\/[12]$/.test(pathname)
+  );
+}
+
+export async function handleBroadcasterRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
   const url = new URL(request.url || '/', `http://${request.headers.host || HOST}`);
   try {
     if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/monitor')) {
@@ -1355,14 +1377,23 @@ const server = createServer(async (request, response) => {
     console.error(error);
     json(response, 500, { error: error instanceof Error ? error.message : 'Internal server error.' });
   }
-});
+}
 
-server.listen(PORT, HOST, () => {
-  console.log(`[broadcaster] pure Node runtime listening at http://${HOST}:${PORT}`);
-});
+let standaloneServer: ReturnType<typeof createServer> | null = null;
 
-async function shutdown(): Promise<void> {
+export function startStandaloneBroadcaster(): void {
+  if (standaloneServer !== null) return;
+  standaloneServer = createServer((request, response) => {
+    void handleBroadcasterRequest(request, response);
+  });
+  standaloneServer.listen(PORT, HOST, () => {
+    console.log(`[broadcaster] pure Node runtime listening at http://${HOST}:${PORT}`);
+  });
+}
+
+export async function shutdownBroadcaster(): Promise<void> {
   archiveReplays.forEach((replay) => replay.stop());
+  archiveReplays.clear();
   await Promise.all(
     Array.from(matches.values()).map(async (match) => {
       try {
@@ -1375,11 +1406,28 @@ async function shutdown(): Promise<void> {
       }
     }),
   );
-  server.close(() => process.exit(0));
+  matches.clear();
 }
 
-process.on('SIGINT', () => void shutdown());
-process.on('SIGTERM', () => void shutdown());
+async function shutdownStandaloneBroadcaster(): Promise<void> {
+  await shutdownBroadcaster();
+  const server = standaloneServer;
+  standaloneServer = null;
+  if (server === null) return;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => error === undefined ? resolve() : reject(error));
+  });
+}
+
+if (require.main === module) {
+  startStandaloneBroadcaster();
+  process.on('SIGINT', () => {
+    void shutdownStandaloneBroadcaster().then(() => process.exit(0));
+  });
+  process.on('SIGTERM', () => {
+    void shutdownStandaloneBroadcaster().then(() => process.exit(0));
+  });
+}
 
 async function publishSignal(room: string, player: number, kind: 'offer' | 'answer', code: string): Promise<void> {
   const response = await apiFetch(

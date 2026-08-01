@@ -1,116 +1,66 @@
-# Headless WebRTC Broadcaster
+# Embedded authoritative WebRTC broadcaster
 
-The broadcaster is a pure Node.js service. It runs one independent
-`BattleCitySimulation` and WebRTC peer pipeline per active match. It does not
-launch Chrome, create a canvas, render a HUD, initialize audio, or accept local
-game input.
+The broadcaster is a pure Node/`werift` authoritative simulation. Production
+runs it inside the API Node process rather than on a separate host or port.
 
-The simulation and packet types live in `shared/src`, so Node and browser code
-compile against the same authoritative contract.
+## Production runtime
 
-## Network Contract
+`api-server/src/index.ts` imports the compiled broadcaster when
+`BATTLECITY_EMBED_BROADCASTER=1`. The same HTTP server on port `3001` dispatches
+both API and broadcaster requests.
 
-- Public hostname: `https://broadcaster.battlecities.com`
-- Local service: `http://127.0.0.1:7777`
-- Signaling API: `https://api.battlecities.com`
-
-The public hostname should reverse-proxy to `127.0.0.1:7777`. The broadcaster
-uses the existing HTTP WebRTC signaling endpoints directly.
-
-## Start
-
-For the complete frontend Vercel, API Vercel, and Windows environment setup,
-see [Deployment Environment Setup](environment-setup.md).
-
-```powershell
-$env:BROADCASTER_SERVICE_TOKEN = 'same-secret-used-by-the-vercel-api'
-$env:BROADCASTER_API_URL = 'https://api.battlecities.com'
-$env:BROADCASTER_PUBLIC_URL = 'https://broadcaster.battlecities.com'
-$env:BROADCASTER_CLIENT_URL = 'https://battlecities.com'
-$env:BROADCASTER_HOST = '127.0.0.1'
-$env:BROADCASTER_PORT = '7777'
-npm run broadcaster:headless
+```env
+BATTLECITY_EMBED_BROADCASTER=1
+BROADCASTER_BASE_URL=http://127.0.0.1:3001
+BROADCASTER_API_URL=http://127.0.0.1:3001
+BROADCASTER_PUBLIC_URL=https://api.battlecities.com
+BROADCASTER_CLIENT_URL=https://www.battlecities.com
 ```
 
-Optional environment variables:
+Embedded mode generates its private service token automatically in memory.
 
-- `BROADCASTER_HOST` defaults to `127.0.0.1`.
-- `BROADCASTER_PORT` defaults to `7777`.
-- `BROADCASTER_API_URL` defaults to `http://127.0.0.1:3000`.
-- `BROADCASTER_PUBLIC_URL` defaults to the local service URL.
-- `BROADCASTER_CLIENT_URL` defaults to `https://battlecities.com` and controls
-  the observer frontend opened by the monitor.
-- `BROADCASTER_DISABLE_ENEMY_SHOOTING=1` disables authoritative enemy firing.
+Build and start:
 
-`BROADCASTER_SERVICE_TOKEN` is required in production and must match the API's
-token. It authenticates lifecycle and signaling requests.
-
-## Service API
-
-Open the operator monitor at `http://127.0.0.1:7777/monitor`. Enter the
-`BROADCASTER_SERVICE_TOKEN` to list matches. `LIVE MATCHES` shows active
-runtimes. `PAST MATCHES` loads completed archives from the API database. The
-View and Replay actions open the selected match through the configured client
-frontend in observer mode.
-
-Every authoritative host frame is archived in ordered database batches,
-together with player IDs and display names, game type, level, deterministic
-seed, simulation configuration, final scores, kill counts, and result. A past
-replay streams the stored frames from sequence 1 at their original simulation
-rate; it never accepts player input.
-
-Health does not require authentication:
-
-```sh
-curl http://127.0.0.1:7777/health
+```bash
+npm run server:build
+npm run server:start
 ```
 
-Create a match:
+No second `npm start`, port `7777`, Cloudflare tunnel, or broadcaster DNS record
+is required.
 
-```sh
-curl -X POST http://127.0.0.1:7777/matches \
-  -H "Authorization: Bearer replace-me" \
-  -H "Content-Type: application/json" \
-  -d '{"matchId":"test-1","level":1}'
+## Runtime routes
+
+Public monitor and health routes are served from `api.battlecities.com`:
+
+```text
+GET /
+GET /monitor
+GET /live
+GET /live/matches
+GET /live/past-matches
+GET /health
 ```
 
-List, inspect, and stop matches:
+Match-control routes under `/matches` and `/past-matches` require the
+automatically generated bearer token. Players never receive it. Player
+signaling remains under the authenticated API routes.
 
-```sh
-curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches
-curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
-curl -X DELETE -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/matches/test-1
-```
+Production Caddy also returns `404` for external requests to these control
+paths. Only loopback calls made by the combined API process reach them.
 
-List completed archives:
+## Lifecycle and persistence
 
-```sh
-curl -H "Authorization: Bearer replace-me" http://127.0.0.1:7777/past-matches
-```
+- Match simulations and WebRTC peer objects are in memory.
+- Match assignments and broadcaster lifecycle state are in PostgreSQL.
+- Authoritative frames/results are archived through PostgreSQL archive tables.
+- Graceful `SIGTERM` stops matches and flushes archive state before the API
+  process exits.
+- A process restart ends active in-memory matches; clients use the existing
+  reconnect/match state flow after service recovery.
 
-The API creates player runtime configuration separately. Creating a match here
-starts signaling peers immediately, but the simulation clock does not advance
-until both player data channels are connected. A player disconnect does not
-stop simulation or observer frames. Reconnection uses the complete in-memory
-frame history and the existing replay-ready handshake.
+## Standalone compatibility mode
 
-The API must have migration `005_match_archives` applied before starting the
-updated broadcaster. Local API development can override the fallback archive
-directory with `BATTLECITY_MATCH_ARCHIVE_DIR`; production archives always use
-the configured PostgreSQL database.
-
-## Reverse Proxy
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name broadcaster.battlecities.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:7777;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-}
-```
+`npm run broadcaster:headless` remains available for focused local testing and
+the broadcaster test suite. Standalone mode still requires an explicitly set
+`BROADCASTER_SERVICE_TOKEN`; it is not used by the Ubuntu deployment.

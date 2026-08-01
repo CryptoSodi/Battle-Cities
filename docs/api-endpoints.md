@@ -7,7 +7,7 @@ Last verified against the source router: **2026-07-30**
 | Service        | Base URL                               | Purpose                                                                            |
 | -------------- | -------------------------------------- | ---------------------------------------------------------------------------------- |
 | Game API       | `https://api.battlecities.com/api`     | Authentication, player data, economy, events, matchmaking, signaling, and archives |
-| Broadcaster    | `https://broadcaster.battlecities.com` | Authoritative match workers, monitoring, and archive replay                        |
+| Broadcaster    | `https://api.battlecities.com`         | Embedded authoritative workers, monitoring, and archive replay                     |
 | Local Game API | `http://127.0.0.1:3001/api`            | Local API development                                                              |
 
 The Game API currently exposes **67 non-CORS operations**. The broadcaster exposes **16 operations**. `OPTIONS` handlers are omitted below.
@@ -19,7 +19,7 @@ The Game API currently exposes **67 non-CORS operations**. The broadcaster expos
 | Public      | No player login required                                                         |
 | Session     | A valid BattleCities session cookie is required                                  |
 | Member      | The logged-in player must belong to the requested match                          |
-| Broadcaster | `Authorization: Bearer <BROADCASTER_SERVICE_TOKEN>` is required                  |
+| Broadcaster | An automatically generated internal bearer token is required                    |
 | Event admin | `Authorization: Bearer <BATTLECITY_EVENT_ADMIN_SECRET>` is required              |
 | Discord     | A valid Discord Ed25519 request signature is required                            |
 | Bot service | `Authorization: Bearer <DISCORD_BOT_SERVICE_TOKEN>` is required                  |
@@ -249,11 +249,11 @@ Player signaling authorization requires:
 - The server-assigned player slot.
 - `Authorization: Bearer <joinToken>`.
 
-Observer signaling uses a previously registered observer ID. The broadcaster uses `BROADCASTER_SERVICE_TOKEN`.
+Observer signaling uses a previously registered observer ID. Embedded mode generates its internal broadcaster credential at startup.
 
 ## Broadcaster archive transport
 
-Every endpoint in this section requires `BROADCASTER_SERVICE_TOKEN`.
+Every endpoint in this section requires the internal broadcaster credential.
 
 | Method | Path                                                                | Description                 |
 | ------ | ------------------------------------------------------------------- | --------------------------- |
@@ -266,7 +266,7 @@ Every endpoint in this section requires `BROADCASTER_SERVICE_TOKEN`.
 
 ## Broadcaster HTTP service
 
-The routes below are served by `https://broadcaster.battlecities.com`, not by the Vercel API.
+The routes below are served by the broadcaster embedded in the native API process at `https://api.battlecities.com`.
 
 ### Public monitoring
 
@@ -284,7 +284,7 @@ The routes below are served by `https://broadcaster.battlecities.com`, not by th
 
 ### Service-token control API
 
-All routes in this subsection require `BROADCASTER_SERVICE_TOKEN`.
+All routes in this subsection require the internal broadcaster credential.
 
 | Method   | Path                                      | Description                                                  |
 | -------- | ----------------------------------------- | ------------------------------------------------------------ |
@@ -296,43 +296,27 @@ All routes in this subsection require `BROADCASTER_SERVICE_TOKEN`.
 | `GET`    | `/past-matches`                           | List archived matches                                        |
 | `POST`   | `/past-matches/:matchId/replay`           | Start an authenticated archive replay                        |
 
-Creating a broadcaster match accepts `201 Created`. `409 Match is already running` is also treated as success by the Game API so Vercel retries remain idempotent.
+Creating a broadcaster match accepts `201 Created`. `409 Match is already running` is also treated as success so request retries remain idempotent.
 
 ## Required service configuration
 
-### Vercel API
+### Combined Ubuntu API
 
-Configure these values on the `battle-cities-api` Vercel project:
+Configure these values only in `/etc/battlecities/api.env`:
 
 ```env
-BROADCASTER_BASE_URL=https://broadcaster.battlecities.com
-BROADCASTER_SERVICE_TOKEN=<strong-random-secret>
+BATTLECITY_EMBED_BROADCASTER=1
+BROADCASTER_BASE_URL=http://127.0.0.1:3001
+BROADCASTER_API_URL=http://127.0.0.1:3001
+BROADCASTER_PUBLIC_URL=https://api.battlecities.com
+BROADCASTER_CLIENT_URL=https://www.battlecities.com
 ```
 
-### Broadcaster host
+Build with `npm run server:build` and start the single process with
+`npm run server:start`. Caddy forwards `api.battlecities.com` to
+`127.0.0.1:3001`; no port `7777` or broadcaster hostname is used.
 
-Run these commands in PowerShell from the BattleCity repository on the broadcaster machine:
-
-```powershell
-$env:BROADCASTER_SERVICE_TOKEN = '<same-secret-used-by-the-vercel-api>'
-$env:BROADCASTER_API_URL = 'https://api.battlecities.com'
-$env:BROADCASTER_PUBLIC_URL = 'https://broadcaster.battlecities.com'
-$env:BROADCASTER_CLIENT_URL = 'https://battlecities.com'
-$env:BROADCASTER_HOST = '127.0.0.1'
-$env:BROADCASTER_PORT = '7777'
-
-npm run broadcaster:headless
-```
-
-The Cloudflare tunnel for `broadcaster.battlecities.com` must forward to:
-
-```text
-http://127.0.0.1:7777
-```
-
-`BROADCASTER_SERVICE_TOKEN` must contain the same secret on Vercel and the broadcaster host. Do not use the literal placeholder shown above.
-
-Never expose `BROADCASTER_SERVICE_TOKEN`, database credentials, Google client secrets, or event-admin secrets to browser code.
+The embedded broadcaster credential is generated in memory and is never returned to browsers. Never expose database credentials, Google client secrets, or event-admin secrets to browser code.
 
 ## Source of truth
 

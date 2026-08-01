@@ -1,0 +1,17 @@
+[Unit]
+Description=BattleCities PostgreSQL migrations
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=battlecities
+Group=battlecities
+WorkingDirectory=/opt/battlecities
+EnvironmentFile=/etc/battlecities/migrate.env
+ExecStart=/usr/bin/npm --prefix api-server run db:migrate
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+

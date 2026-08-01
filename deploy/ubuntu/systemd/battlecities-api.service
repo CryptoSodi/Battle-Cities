@@ -1,0 +1,25 @@
+[Unit]
+Description=BattleCities API and authoritative broadcaster
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=battlecities
+Group=battlecities
+WorkingDirectory=/opt/battlecities
+EnvironmentFile=/etc/battlecities/api.env
+ExecStart=/usr/bin/node --max-old-space-size=512 /opt/battlecities/api-server/dist/api-server/src/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

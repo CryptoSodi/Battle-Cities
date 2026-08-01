@@ -968,9 +968,12 @@ export class LevelScoreScene extends PanelScene {
         url.hostname === '127.0.0.1' ||
         /^192\.168\./.test(url.hostname) ||
         /^10\./.test(url.hostname);
+      const isBattleCitiesObserverHost =
+        url.hostname === 'api.battlecities.com' ||
+        url.hostname === 'broadcaster.battlecities.com';
       if (
         (url.protocol !== 'https:' && url.protocol !== 'http:') ||
-        (url.hostname !== 'broadcaster.battlecities.com' && !isLocal)
+        (!isBattleCitiesObserverHost && !isLocal)
       ) {
         return null;
       }

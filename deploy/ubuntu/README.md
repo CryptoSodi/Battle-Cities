@@ -1,209 +1,264 @@
-# BattleCities Ubuntu deployment
+# BattleCities native Ubuntu deployment
 
-This stack runs the BattleCities API, headless broadcaster, PostgreSQL, and
-Caddy on one Ubuntu server. The API and broadcaster use the same application
-image but remain separate processes so either service can restart without
-interrupting the other.
+This deployment is designed for a small 1 vCPU / 1 GB RAM Ubuntu server. It
+runs PostgreSQL and Caddy as native system services and runs the API plus the
+authoritative WebRTC broadcaster inside one Node process.
 
-The game UI may remain on Vercel. It calls `https://api.battlecities.com`; the
-API calls the broadcaster over the private Docker network.
+Only one BattleCities command is started:
 
-## Services
+```text
+api.battlecities.com -> Caddy -> 127.0.0.1:3001
+                                    |
+                                    +-- API routes
+                                    +-- matchmaking
+                                    +-- WebRTC broadcaster and match simulation
+```
 
-| Service | Public address | Internal address |
-| --- | --- | --- |
-| API | `https://api.battlecities.com` | `http://api:3001` |
-| Broadcaster | `https://broadcaster.battlecities.com` | `http://broadcaster:7777` |
-| PostgreSQL | Not public | `postgres:5432` |
-| Caddy | TCP 80/443 and UDP 443 | Reverse proxy and automatic TLS |
+There is no `broadcaster.battlecities.com`, port `7777`, Docker, or Vercel Blob
+configuration. Authoritative match archives are stored in PostgreSQL.
 
-Authoritative match archives are stored in PostgreSQL. The legacy Vercel Blob
-replay path is not used or configured by this deployment.
+Caddy rejects public `/matches` and `/past-matches` control requests. The API
+reaches those routes directly over `127.0.0.1:3001`, protected by an
+automatically generated in-memory token.
 
-## 1. Prepare the server
+## 1. Server and DNS
 
-Ubuntu 24.04 with at least 4 vCPU, 8 GB RAM, and SSD storage is recommended for
-running authoritative matches and WebRTC peers on the same machine.
+Point only `api.battlecities.com` at the Ubuntu server. Allow inbound TCP 22,
+80, and 443. PostgreSQL must not be exposed publicly.
 
-Point these DNS records at the Ubuntu server:
+For Cloudflare, proxy `api.battlecities.com` and use SSL/TLS mode **Full
+(strict)**. Remove the old broadcaster tunnel/DNS record after cutover.
 
-- `api.battlecities.com`
-- `broadcaster.battlecities.com`
-
-Allow inbound TCP 22, 80, and 443. Allow UDP 443 for HTTP/3. Do not expose
-PostgreSQL port 5432.
-
-The stack creates a database owner used only by migrations and a separate
-least-privilege login used by the running API.
-
-Install Docker and Git:
+One gigabyte is tight. Add 2 GB of emergency swap before starting matches:
 
 ```bash
+swapon --show
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+Do not create a second swap file if `swapon --show` already lists one.
+
+## 2. Install native services
+
+Install Node.js 22 LTS, then verify that `node` and `npm` are available under
+`/usr/bin`. Install PostgreSQL, Caddy, and Git from the Ubuntu packages:
+
+```bash
+node --version
+npm --version
 sudo apt update
-sudo apt install -y ca-certificates curl git docker.io docker-compose-v2
-sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"
+sudo apt install -y git postgresql postgresql-client caddy
 ```
 
-Sign out and back in after adding the Docker group.
-
-## 2. Configure BattleCities
+Create a locked service account and install the repository:
 
 ```bash
-git clone https://github.com/CryptoSodi/Battle-Cities.git
-cd Battle-Cities
-cp deploy/ubuntu/.env.example deploy/ubuntu/.env
-chmod 600 deploy/ubuntu/.env
-nano deploy/ubuntu/.env
+sudo useradd --system --create-home \
+  --home-dir /var/lib/battlecities \
+  --shell /usr/sbin/nologin battlecities
+sudo git clone https://github.com/CryptoSodi/Battle-Cities.git /opt/battlecities
+sudo chown -R battlecities:battlecities /opt/battlecities
+sudo -u battlecities npm --prefix /opt/battlecities ci
+sudo -u battlecities npm --prefix /opt/battlecities/api-server ci
+sudo -u battlecities npm --prefix /opt/battlecities run server:build
 ```
 
-Generate independent secrets, for example:
+If the account already exists, skip `useradd`. If Node is installed somewhere
+other than `/usr/bin/node`, update `ExecStart` in the service file.
+
+## 3. Configure PostgreSQL
+
+Generate two different alphanumeric passwords without adding them to shell
+history:
 
 ```bash
-openssl rand -hex 32
+read -rsp 'Database owner password: ' DB_OWNER_PASSWORD; echo
+read -rsp 'Database app password: ' DB_APP_PASSWORD; echo
 ```
 
-Set a different generated value for each secret, including the PostgreSQL owner
-and application passwords. Keep PostgreSQL passwords alphanumeric because they
-are embedded in internal connection URLs. Copy the Google and Discord
-credentials from the old API deployment; do not copy
-`BATTLECITY_API_BASE_URL` because that belongs only to the game UI.
-
-Validate the resolved configuration before starting containers:
+Create the database owner and the least-privilege account used by the API:
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml config --quiet
+sudo -u postgres psql \
+  --set=database_name=battlecities \
+  --set=owner_user=battlecities_owner \
+  --set=owner_password="$DB_OWNER_PASSWORD" \
+  --set=app_user=battlecities_app \
+  --set=app_password="$DB_APP_PASSWORD" \
+  --file=/opt/battlecities/deploy/ubuntu/postgres/setup-database.sql
 ```
 
-Keep these public OAuth callback URLs configured at their providers:
+Keep those two variables until the environment files are configured. Tune
+PostgreSQL for the small machine by locating its configuration:
+
+```bash
+sudo -u postgres psql -tAc 'SHOW config_file'
+```
+
+Open that file with `sudoedit` and set:
+
+```conf
+listen_addresses = '127.0.0.1'
+max_connections = 20
+shared_buffers = 64MB
+effective_cache_size = 256MB
+maintenance_work_mem = 32MB
+work_mem = 1MB
+```
+
+Then restart PostgreSQL:
+
+```bash
+sudo systemctl restart postgresql
+```
+
+## 4. Configure the combined API
+
+```bash
+sudo install -d -m 750 -o root -g battlecities /etc/battlecities
+sudo cp /opt/battlecities/deploy/ubuntu/.env.example \
+  /etc/battlecities/api.env
+sudo cp /opt/battlecities/deploy/ubuntu/.migration.env.example \
+  /etc/battlecities/migrate.env
+sudo chown root:battlecities /etc/battlecities/api.env
+sudo chmod 640 /etc/battlecities/api.env
+sudo chown root:root /etc/battlecities/migrate.env
+sudo chmod 600 /etc/battlecities/migrate.env
+sudoedit /etc/battlecities/api.env
+sudoedit /etc/battlecities/migrate.env
+```
+
+Put `DB_APP_PASSWORD` in `api.env` and `DB_OWNER_PASSWORD` in `migrate.env`.
+Generate independent OAuth/admin state secrets with `openssl rand -hex 32`.
+The embedded broadcaster authorization token is generated automatically in
+memory at startup. Copy Google and Discord credentials from the old API
+deployment.
+
+The important combined-runtime values are:
+
+```env
+BATTLECITY_EMBED_BROADCASTER=1
+BROADCASTER_BASE_URL=http://127.0.0.1:3001
+BROADCASTER_API_URL=http://127.0.0.1:3001
+BROADCASTER_PUBLIC_URL=https://api.battlecities.com
+```
+
+Keep these OAuth callbacks configured:
 
 - Google: `https://api.battlecities.com/api/auth/google/callback`
 - Discord: `https://api.battlecities.com/api/integrations/discord/oauth/callback`
 
-If Cloudflare proxies the two DNS records, use SSL/TLS mode **Full (strict)**.
-Caddy still owns the origin certificate and HTTPS connection.
-
-## 3A. Start with a new database
-
-From the repository root:
+Clear the temporary shell variables:
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml up -d --build
+unset DB_OWNER_PASSWORD DB_APP_PASSWORD
 ```
 
-The `migrate` service waits for PostgreSQL and applies all migrations before the
-API starts. It is safe to run the command again after future deployments.
+## 5A. New empty database
 
-## 3B. Move the existing Neon database
-
-Use this path instead of 3A when preserving production players, purchases,
-matches, events, Discord links, and match archives.
-
-First start only the new PostgreSQL container:
+Install and run the migration unit:
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml up -d postgres
-mkdir -p deploy/ubuntu/backups
+sudo cp /opt/battlecities/deploy/ubuntu/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start battlecities-migrate.service
+sudo systemctl status battlecities-migrate.service --no-pager
 ```
 
-Read the old Neon connection string without placing it in shell history, then
-create a custom-format backup:
+Continue to section 6.
+
+## 5B. Move the existing Neon database
+
+Use this instead of 5A to preserve production accounts, purchases, events,
+matches, Discord links, and authoritative match archives.
+
+Install a `pg_dump` client with the same or newer major version as Neon. Read
+the Neon URL without adding it to shell history:
 
 ```bash
-read -rsp "Old Neon DATABASE_URL: " OLD_DATABASE_URL; echo
-docker run --rm \
-  -e OLD_DATABASE_URL="$OLD_DATABASE_URL" \
-  -v "$PWD/deploy/ubuntu/backups:/backup" \
-  postgres:17-alpine \
-  sh -c 'pg_dump "$OLD_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/neon.dump'
+read -rsp 'Old Neon DATABASE_URL: ' OLD_DATABASE_URL; echo
+mkdir -p "$HOME/battlecities-backup"
+pg_dump "$OLD_DATABASE_URL" \
+  --format=custom --no-owner --no-acl \
+  --file="$HOME/battlecities-backup/neon.dump"
 unset OLD_DATABASE_URL
 ```
 
-Restore only into the fresh BattleCities PostgreSQL database. The following
-command replaces objects in that target database:
+Read the local owner URL from `migrate.env` manually and restore only into the
+new BattleCities database. `--clean` replaces objects in that target database:
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml exec -T postgres \
-  pg_restore --username battlecities_owner --dbname battlecities \
+read -rsp 'Local owner DATABASE_URL: ' LOCAL_OWNER_URL; echo
+pg_restore --dbname="$LOCAL_OWNER_URL" \
   --clean --if-exists --no-owner --no-acl \
-  < deploy/ubuntu/backups/neon.dump
-```
-
-If `POSTGRES_USER` or `POSTGRES_DB` was changed in `.env`, use the same values in
-the restore command. Restore the application user's grants over all imported
-objects (also substitute the user/database values if changed):
-
-```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml exec -T postgres \
-  psql --username battlecities_owner --dbname battlecities \
+  "$HOME/battlecities-backup/neon.dump"
+psql "$LOCAL_OWNER_URL" \
   --set=app_user=battlecities_app \
-  < deploy/ubuntu/postgres/grant-app-user.sql
+  --file=/opt/battlecities/deploy/ubuntu/postgres/grant-app-user.sql
+unset LOCAL_OWNER_URL
+sudo systemctl start battlecities-migrate.service
 ```
 
-Use a PostgreSQL dump image with the same or newer major version than the source
-Neon database.
-
-Now build the application and apply any migrations added after the backup:
+## 6. Enable HTTPS and start the one application service
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml up -d --build
+sudo cp /opt/battlecities/deploy/ubuntu/Caddyfile /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+sudo systemctl enable battlecities-api.service caddy postgresql
+sudo systemctl start battlecities-api.service
 ```
 
-## 4. Verify the deployment
+There is no broadcaster service to start.
+
+## 7. Verify
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml ps
+systemctl status battlecities-api postgresql caddy --no-pager
 curl --fail https://api.battlecities.com/api/health
 curl --fail https://api.battlecities.com/api/ready
-curl --fail https://broadcaster.battlecities.com/health
+curl --fail https://api.battlecities.com/health
 ```
 
-Follow logs without printing environment secrets:
+`/api/health` checks the API. `/health` checks the embedded authoritative
+broadcaster. Opening `https://api.battlecities.com/` displays its monitor.
+
+Follow runtime logs and memory usage:
 
 ```bash
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml logs -f api broadcaster postgres caddy
+journalctl -u battlecities-api -f
+free -h
+ps -o pid,%cpu,%mem,rss,cmd -C node -C postgres -C caddy
 ```
 
-Then test Google login, Discord verification, player/shop data, two-player
-matchmaking, WebRTC reconnect, authoritative scores, and match archives.
+Test Google login, Discord verification, player/shop writes, two-player
+matchmaking, reconnect, authoritative scoring, and archive playback before
+removing the old deployment.
 
 ## Updates
 
 ```bash
-git pull --ff-only
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml up -d --build
+sudo systemctl stop battlecities-api
+sudo -u battlecities git -C /opt/battlecities pull --ff-only
+sudo -u battlecities npm --prefix /opt/battlecities ci
+sudo -u battlecities npm --prefix /opt/battlecities/api-server ci
+sudo -u battlecities npm --prefix /opt/battlecities run server:build
+sudo systemctl start battlecities-migrate.service
+sudo systemctl start battlecities-api
 ```
 
-Compose starts a one-shot migration container before replacing the healthy API.
+## Database backups
 
-## PostgreSQL backup
-
-Create backups regularly and copy them off this server:
+Store backups off the server as well:
 
 ```bash
-mkdir -p deploy/ubuntu/backups
-docker compose --env-file deploy/ubuntu/.env \
-  -f deploy/ubuntu/compose.yaml exec -T postgres \
-  pg_dump --username battlecities_owner --dbname battlecities \
-  --format=custom --no-owner --no-acl \
-  > "deploy/ubuntu/backups/battlecities-$(date +%F-%H%M).dump"
+read -rsp 'Local owner DATABASE_URL: ' LOCAL_OWNER_URL; echo
+mkdir -p "$HOME/battlecities-backup"
+pg_dump "$LOCAL_OWNER_URL" --format=custom --no-owner --no-acl \
+  --file="$HOME/battlecities-backup/battlecities-$(date +%F-%H%M).dump"
+unset LOCAL_OWNER_URL
 ```
-
-## Safe production cutover
-
-1. Bring up and test this stack before changing production DNS.
-2. Put writes into a short maintenance window.
-3. Take and restore one final Neon backup.
-4. Point the API and broadcaster DNS records to Ubuntu.
-5. Test login, database reads/writes, Discord, and a complete multiplayer match.
-6. Keep Neon and the old deployment available briefly as rollback targets.
-7. After the rollback window, rotate secrets stored in the old Vercel projects.
