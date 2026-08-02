@@ -44,6 +44,12 @@ interface WebRtcInputPacket {
   elapsedSeconds: number;
 }
 
+interface WebRtcClientDebugPacket {
+  type: 'webrtc-client-debug';
+  player: 0 | 1;
+  disableEnemyShooting: boolean;
+}
+
 interface PredictedInput {
   packet: WebRtcInputPacket;
   deltaTime: number;
@@ -269,6 +275,7 @@ export class WebRtcHostMatchSync {
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
   private readonly syncingPlayers = new Set<number>();
+  private readonly enemyShootingDisabledPlayers = new Set<number>();
   private readonly frameHistory: WebRtcHostFramePacket[] = [];
   private readonly frameHistoryBySeq = new Map<number, WebRtcHostFramePacket>();
   private readonly replaySessions = new Map<
@@ -701,7 +708,11 @@ export class WebRtcHostMatchSync {
   }
 
   public shouldDisableEnemyShooting(): boolean {
-    return this.isHost() && this.disableEnemyShooting;
+    return (
+      this.isHost() &&
+      (this.disableEnemyShooting ||
+        this.enemyShootingDisabledPlayers.size > 0)
+    );
   }
 
   public handlePlayerTank(tank: PlayerTank, updateArgs: GameUpdateArgs): boolean {
@@ -1005,6 +1016,7 @@ export class WebRtcHostMatchSync {
     this.connectedPlayers.clear();
     this.activePlayers.clear();
     this.syncingPlayers.clear();
+    this.enemyShootingDisabledPlayers.clear();
     this.frameHistory.length = 0;
     this.frameHistoryBySeq.clear();
     this.replaySessions.clear();
@@ -1170,6 +1182,7 @@ export class WebRtcHostMatchSync {
       } else {
         this.connectedPlayers.delete(linkId);
         this.activePlayers.delete(linkId);
+        this.enemyShootingDisabledPlayers.delete(linkId);
         this.replaySessions.delete(linkId);
         this.pendingActivations.delete(linkId);
         this.pendingRemotePowerSlots.delete(linkId);
@@ -1218,8 +1231,11 @@ export class WebRtcHostMatchSync {
       } else if (!this.ready) {
         this.ready = false;
       }
-    } else if (!this.observer && this.clientSyncing) {
-      this.sendResumeRequest();
+    } else if (!this.observer) {
+      this.sendClientDebugSettings();
+      if (this.clientSyncing) {
+        this.sendResumeRequest();
+      }
     }
     this.showClientStatus();
   }
@@ -1251,6 +1267,14 @@ export class WebRtcHostMatchSync {
       player: this.localPlayerIndex as 0 | 1,
       lastAppliedFrameSeq: this.lastAppliedHostFrameSeq,
     } satisfies WebRtcResumePacket);
+  }
+
+  private sendClientDebugSettings(): void {
+    this.sendToPlayer(this.localPlayerIndex as 0 | 1, {
+      type: 'webrtc-client-debug',
+      player: this.localPlayerIndex as 0 | 1,
+      disableEnemyShooting: this.disableEnemyShooting,
+    } satisfies WebRtcClientDebugPacket);
   }
 
   private handleResumeRequest(
@@ -1577,6 +1601,19 @@ export class WebRtcHostMatchSync {
         return;
       }
       this.handleClientReady(linkId, packet as WebRtcClientReadyPacket);
+      return;
+    }
+
+    if (this.broadcaster && packet.type === 'webrtc-client-debug') {
+      const debug = packet as WebRtcClientDebugPacket;
+      if (isObserverLink(linkId) || debug.player !== linkId) {
+        return;
+      }
+      if (debug.disableEnemyShooting === true) {
+        this.enemyShootingDisabledPlayers.add(linkId);
+      } else {
+        this.enemyShootingDisabledPlayers.delete(linkId);
+      }
       return;
     }
 
