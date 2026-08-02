@@ -59,14 +59,31 @@ export class GhostTank extends GameObject {
     this.setVisible(true);
   }
 
-  public spawnGhostFire(): void {
-    const bullet = new GhostBullet();
-    bullet.updateMatrix();
-    bullet.setCenter(this.getSelfCenter());
-    bullet.translateY(this.size.height / 2 - bullet.size.height / 2);
-    bullet.updateMatrix();
-    this.add(bullet);
-    this.parent.attach(bullet);
+  public spawnGhostFire(
+    x = this.position.x,
+    y = this.position.y,
+    rotation = this.rotation,
+  ): void {
+    const previousX = this.position.x;
+    const previousY = this.position.y;
+    const previousRotation = this.rotation;
+    try {
+      this.position.set(x, y);
+      this.rotation = rotation;
+      this.updateMatrix(true);
+
+      const bullet = new GhostBullet();
+      bullet.updateMatrix();
+      bullet.setCenter(this.getSelfCenter());
+      bullet.translateY(this.size.height / 2 - bullet.size.height / 2);
+      bullet.updateMatrix();
+      this.add(bullet);
+      this.parent.attach(bullet);
+    } finally {
+      this.position.set(previousX, previousY);
+      this.rotation = previousRotation;
+      this.updateMatrix(true);
+    }
   }
 
   protected setup({ spriteLoader }: { spriteLoader: SpriteLoader }): void {
@@ -103,8 +120,10 @@ export class GhostTank extends GameObject {
 
   protected update({ deltaTime }: { deltaTime: number }): void {
     if (this.hasTarget) {
-      const nextX = this.position.x + (this.targetX - this.position.x) * GHOST_SMOOTHING;
-      const nextY = this.position.y + (this.targetY - this.position.y) * GHOST_SMOOTHING;
+      const nextX =
+        this.position.x + (this.targetX - this.position.x) * GHOST_SMOOTHING;
+      const nextY =
+        this.position.y + (this.targetY - this.position.y) * GHOST_SMOOTHING;
       if (this.position.x !== nextX || this.position.y !== nextY) {
         this.dirtyPaintBox();
         this.position.set(nextX, nextY);

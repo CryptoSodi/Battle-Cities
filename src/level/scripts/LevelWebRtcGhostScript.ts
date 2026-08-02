@@ -12,6 +12,7 @@ export class LevelWebRtcGhostScript extends LevelScript {
   private sync = WebRtcGhostSync.getInstance();
   private ghosts = new Map<number, GhostTank>();
   private webRtcServerGhostEnabled = false;
+  private webRtcServerFireSeq: number = null;
   private sendTimer = 0;
   private localPlayerIndex = 0;
   private localFireSeq = 0;
@@ -51,6 +52,7 @@ export class LevelWebRtcGhostScript extends LevelScript {
   private updateWebRtcServerGhost(updateArgs: GameUpdateArgs): void {
     const snapshot = updateArgs.webRtcMatch.getLocalServerTankSnapshot();
     if (snapshot === null) {
+      this.webRtcServerFireSeq = null;
       this.removeGhost(this.localPlayerIndex);
       return;
     }
@@ -63,6 +65,18 @@ export class LevelWebRtcGhostScript extends LevelScript {
       snapshot.moving ? TankState.Moving : TankState.Idle,
       snapshot.tier,
     );
+
+    if (
+      this.webRtcServerFireSeq !== null &&
+      snapshot.fireSeq > this.webRtcServerFireSeq
+    ) {
+      ghost.spawnGhostFire(
+        snapshot.fireX,
+        snapshot.fireY,
+        snapshot.fireRotation,
+      );
+    }
+    this.webRtcServerFireSeq = snapshot.fireSeq;
   }
 
   public prepareRemoteTankForServerPath(): void {

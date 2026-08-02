@@ -89,6 +89,10 @@ export interface WebRtcServerTankSnapshot {
   y: number;
   rotation: Rotation;
   moving: boolean;
+  fireSeq: number;
+  fireX: number;
+  fireY: number;
+  fireRotation: Rotation;
 }
 
 interface LocalAuthoritativeFrame {
@@ -383,6 +387,7 @@ export class WebRtcHostMatchSync {
     this.authorizationToken = runtime?.joinToken ||
       (this.broadcaster ? params.get('serviceToken') || '' : '');
     this.disableEnemyShooting =
+      params.get('noEnemyShooting') === '1' ||
       params.get('debugNoEnemyShooting') === '1' ||
       params.get('webrtcNoEnemyShooting') === '1';
     this.networkStatsEnabled = params.get('webrtcStats') === '1';
@@ -534,6 +539,12 @@ export class WebRtcHostMatchSync {
       y: frame.y,
       rotation: frame.rotation,
       moving: frame.moving,
+      fireSeq: Number.isFinite(frame.fireSeq)
+        ? Math.max(0, Math.floor(frame.fireSeq))
+        : 0,
+      fireX: Number.isFinite(frame.fireX) ? frame.fireX : frame.x,
+      fireY: Number.isFinite(frame.fireY) ? frame.fireY : frame.y,
+      fireRotation: frame.fireRotation ?? frame.rotation,
     };
   }
 
