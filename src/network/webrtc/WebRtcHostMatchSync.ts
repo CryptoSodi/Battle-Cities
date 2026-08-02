@@ -233,6 +233,7 @@ export class WebRtcHostMatchSync {
   private readonly signalingBaseUrl: string;
   private readonly authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
+  private readonly networkStatsEnabled: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
@@ -354,6 +355,7 @@ export class WebRtcHostMatchSync {
     this.disableEnemyShooting =
       params.get('debugNoEnemyShooting') === '1' ||
       params.get('webrtcNoEnemyShooting') === '1';
+    this.networkStatsEnabled = params.get('webrtcStats') === '1';
     this.expectedStageNumber = Math.max(
       1,
       Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
@@ -892,7 +894,11 @@ export class WebRtcHostMatchSync {
     }
     this.started = true;
     this.links.forEach((sync) => sync.start());
-    if (!this.headlessBroadcaster && !this.broadcaster) {
+    if (
+      this.networkStatsEnabled &&
+      !this.headlessBroadcaster &&
+      !this.broadcaster
+    ) {
       this.ensureNetworkStatsElement();
     }
   }
