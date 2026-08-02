@@ -289,6 +289,7 @@ export class WebRtcHostMatchSync {
     OrderedInputBuffer<WebRtcInputPacket>
   >();
   private readonly lastAppliedRemoteFireSeqs = new Map<number, number>();
+  private readonly pendingRemoteFireSeqs = new Map<number, number[]>();
   private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
   private readonly pendingLocalInputs: PredictedInput[] = [];
@@ -1022,6 +1023,7 @@ export class WebRtcHostMatchSync {
     this.pendingActivations.clear();
     this.remoteInputBuffers.clear();
     this.lastAppliedRemoteFireSeqs.clear();
+    this.pendingRemoteFireSeqs.clear();
     this.lastProcessedRemoteInputSeqs.clear();
     this.pendingRemotePowerSlots.clear();
     this.pendingLocalInputs.length = 0;
@@ -1183,6 +1185,7 @@ export class WebRtcHostMatchSync {
         this.replaySessions.delete(linkId);
         this.pendingActivations.delete(linkId);
         this.remoteInputBuffers.delete(linkId);
+        this.pendingRemoteFireSeqs.delete(linkId);
         this.pendingRemotePowerSlots.delete(linkId);
         if (this.matchStarted) {
           this.syncingPlayers.add(linkId);
@@ -1369,6 +1372,7 @@ export class WebRtcHostMatchSync {
     this.activePlayers.add(playerIndex);
     this.remoteInputBuffers.delete(playerIndex);
     this.lastAppliedRemoteFireSeqs.delete(playerIndex);
+    this.pendingRemoteFireSeqs.delete(playerIndex);
     this.pendingRemotePowerSlots.delete(playerIndex);
   }
 
@@ -1665,6 +1669,16 @@ export class WebRtcHostMatchSync {
       if (!this.getRemoteInputBuffer(linkId).accept(input)) {
         return;
       }
+      if (input.fire) {
+        let fireSeqs = this.pendingRemoteFireSeqs.get(linkId);
+        if (fireSeqs === undefined) {
+          fireSeqs = [];
+          this.pendingRemoteFireSeqs.set(linkId, fireSeqs);
+        }
+        if (fireSeqs.length < 16) {
+          fireSeqs.push(input.seq);
+        }
+      }
       if (input.powerSlot !== null && input.powerSlot !== undefined) {
         let slots = this.pendingRemotePowerSlots.get(linkId);
         if (slots === undefined) {
@@ -1841,11 +1855,22 @@ export class WebRtcHostMatchSync {
       return;
     }
 
+    const fireSeqs = this.pendingRemoteFireSeqs.get(tank.partyIndex);
+    const shouldFire =
+      fireSeqs !== undefined && fireSeqs.length > 0 && fireSeqs[0] <= input.seq;
+    if (shouldFire) {
+      while (fireSeqs.length > 0 && fireSeqs[0] <= input.seq) {
+        fireSeqs.shift();
+      }
+    }
+    const appliedInput = shouldFire && !input.fire
+      ? { ...input, fire: true }
+      : input;
     const lastFireSeq =
       this.lastAppliedRemoteFireSeqs.get(tank.partyIndex) ?? 0;
     const appliedFireSeq = applyRemotePlayerInput(
       tank,
-      input,
+      appliedInput,
       deltaTime,
       lastFireSeq,
     );
@@ -2383,6 +2408,7 @@ export class WebRtcHostMatchSync {
       }
       this.observedPlayers.add(tank);
       this.remoteInputBuffers.delete(tank.partyIndex);
+      this.pendingRemoteFireSeqs.delete(tank.partyIndex);
       tank.fired.addListener(() => {
         this.playerFireSeqs.set(
           tank.partyIndex,

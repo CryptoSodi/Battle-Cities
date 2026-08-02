@@ -118,6 +118,7 @@ class HeadlessWebRtcMatch {
       OrderedInputBuffer<SimulationInputPacket>,
       OrderedInputBuffer<SimulationInputPacket>,
     ],
+    private readonly pendingFireSeqs: readonly [number[], number[]],
     private readonly pendingPowerSlots: Map<SimulationPlayerIndex, number[]>,
     private disableEnemyShooting: boolean,
   ) {}
@@ -144,10 +145,20 @@ class HeadlessWebRtcMatch {
       return true;
     }
 
+    const fireSeqs = this.pendingFireSeqs[playerIndex];
+    const shouldFire = fireSeqs.length > 0 && fireSeqs[0] <= input.seq;
+    if (shouldFire) {
+      while (fireSeqs.length > 0 && fireSeqs[0] <= input.seq) {
+        fireSeqs.shift();
+      }
+    }
+    const appliedInput = shouldFire && !input.fire
+      ? { ...input, fire: true }
+      : input;
     const lastFireSeq = this.lastFireSeqs.get(tank.partyIndex) ?? 0;
     const appliedFireSeq = applyRemotePlayerInput(
       tank,
-      input,
+      appliedInput,
       updateArgs.deltaTime,
       lastFireSeq,
     );
@@ -167,6 +178,7 @@ class HeadlessWebRtcMatch {
     const playerIndex = tank.partyIndex as SimulationPlayerIndex;
     this.controlledTanks.set(playerIndex, tank);
     this.inputBuffers[playerIndex].clear();
+    this.pendingFireSeqs[playerIndex].length = 0;
   }
 
   public isEnabled(): boolean {
@@ -228,6 +240,7 @@ export class EngineBattleCitySimulation {
     OrderedInputBuffer<SimulationInputPacket>,
     OrderedInputBuffer<SimulationInputPacket>,
   ] = [new OrderedInputBuffer(), new OrderedInputBuffer()];
+  private readonly pendingFireSeqs: [number[], number[]] = [[], []];
   private readonly webRtcMatch: HeadlessWebRtcMatch;
   private readonly pendingPowerSlots = new Map<
     SimulationPlayerIndex,
@@ -334,6 +347,7 @@ export class EngineBattleCitySimulation {
 
     this.webRtcMatch = new HeadlessWebRtcMatch(
       this.inputBuffers,
+      this.pendingFireSeqs,
       this.pendingPowerSlots,
       options.disableEnemyShooting === true,
     );
@@ -492,6 +506,12 @@ export class EngineBattleCitySimulation {
 
     if (!this.inputBuffers[packet.player].accept(packet)) {
       return false;
+    }
+    if (packet.fire) {
+      const fireSeqs = this.pendingFireSeqs[packet.player];
+      if (fireSeqs.length < 16) {
+        fireSeqs.push(packet.seq);
+      }
     }
     if (packet.powerSlot !== null && packet.powerSlot !== undefined) {
       let slots = this.pendingPowerSlots.get(packet.player);

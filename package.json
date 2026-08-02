@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "prepare": "node scripts/install-git-hooks.js",
     "build": "npm run build:prod",
     "build:prod": "webpack --config webpack/prod.config.js && node scripts/generate-web-manifest.js",
     "build:prod2": "webpack --config webpack/prod2.config.js",

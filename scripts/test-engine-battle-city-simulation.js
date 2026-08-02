@@ -643,6 +643,69 @@ function overlaps(left, right) {
 }
 
 {
+  const map = createMap({
+    spawn: {
+      player: {
+        locations: [
+          { x: 64, y: 256 },
+          { x: 704, y: 704 },
+        ],
+      },
+      enemy: {
+        locations: [{ x: 64, y: 64 }],
+        list: [],
+      },
+    },
+  });
+  const realtime = new EngineBattleCitySimulation(map, {
+    seed: 24,
+    disableEnemyShooting: true,
+  });
+  const latestOnly = new EngineBattleCitySimulation(map, {
+    seed: 24,
+    disableEnemyShooting: true,
+  });
+  for (let tick = 0; tick < 300; tick += 1) {
+    realtime.step();
+    latestOnly.step();
+  }
+
+  for (let seq = 1; seq <= 20; seq += 1) {
+    assert.strictEqual(
+      realtime.acceptInput(input(0, seq, 90, true, seq === 3)),
+      true,
+    );
+  }
+  latestOnly.acceptInput(input(0, 20, 90, true));
+  const realtimeFrame = realtime.step();
+  const latestOnlyFrame = latestOnly.step();
+
+  assert.strictEqual(
+    realtimeFrame.lastProcessedInputSeq[0],
+    20,
+    'the server must discard stale sampled inputs when its realtime backlog grows',
+  );
+  assert.deepStrictEqual(
+    {
+      x: realtimeFrame.players[0].x,
+      y: realtimeFrame.players[0].y,
+      rotation: realtimeFrame.players[0].rotation,
+    },
+    {
+      x: latestOnlyFrame.players[0].x,
+      y: latestOnlyFrame.players[0].y,
+      rotation: latestOnlyFrame.players[0].rotation,
+    },
+    'backlog catch-up must apply only the newest movement state for the current server tick',
+  );
+  assert.strictEqual(
+    realtimeFrame.players[0].fireSeq,
+    1,
+    'backlog catch-up must preserve a fire action from skipped movement samples',
+  );
+}
+
+{
   const simulation = new EngineBattleCitySimulation(
     createMap({
       terrain: {

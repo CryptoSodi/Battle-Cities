@@ -1,0 +1,4 @@
+#!/bin/sh
+
+node scripts/increment-build-version.js || exit 1
+git add version.json

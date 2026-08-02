@@ -1,9 +1,10 @@
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const { execFileSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
+const versionPath = path.resolve(projectRoot, 'version.json');
 
 function getBuildVersion() {
   if (process.env.BATTLECITY_VERSION) {
@@ -11,18 +12,19 @@ function getBuildVersion() {
   }
 
   try {
-    const commitCount = execFileSync('git', ['rev-list', '--count', 'HEAD'], {
-      cwd: projectRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    return `0.1.${commitCount}`;
+    const version = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+    return `${version.major}.${version.minor}.${version.build}`;
   } catch (_error) {
     return '0.1.dev';
   }
 }
 
-const buildVersion = getBuildVersion();
+const buildVersionDefinition = process.env.BATTLECITY_VERSION
+  ? JSON.stringify(process.env.BATTLECITY_VERSION)
+  : webpack.DefinePlugin.runtimeValue(
+      () => JSON.stringify(getBuildVersion()),
+      { fileDependencies: [versionPath] },
+    );
 
 module.exports = {
   entry: {
@@ -65,7 +67,7 @@ module.exports = {
       'process.env.BATTLECITY_API_BASE_URL': JSON.stringify(
         process.env.BATTLECITY_API_BASE_URL || '',
       ),
-      'process.env.BATTLECITY_VERSION': JSON.stringify(buildVersion),
+      'process.env.BATTLECITY_VERSION': buildVersionDefinition,
     }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
