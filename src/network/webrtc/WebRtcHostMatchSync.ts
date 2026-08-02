@@ -316,6 +316,9 @@ export class WebRtcHostMatchSync {
   private lastRttMs: number = null;
   private rttMs: number = null;
   private jitterMs: number = null;
+  private networkStatsElement: HTMLElement = null;
+  private rttValueElement: HTMLElement = null;
+  private jitterValueElement: HTMLElement = null;
   private readonly joinButtons = new Map<number, HTMLButtonElement>();
   private observerHeartbeatTimer: number = null;
   private observerDiscoveryTimer: number = null;
@@ -889,6 +892,9 @@ export class WebRtcHostMatchSync {
     }
     this.started = true;
     this.links.forEach((sync) => sync.start());
+    if (!this.headlessBroadcaster && !this.broadcaster) {
+      this.ensureNetworkStatsElement();
+    }
   }
 
   private handleConnection(
@@ -975,6 +981,7 @@ export class WebRtcHostMatchSync {
       this.lastRttMs = null;
       this.rttMs = null;
       this.jitterMs = null;
+      this.updateNetworkStatsElement();
       if (!this.observer && this.ready && this.lastAppliedHostFrameSeq > 0) {
         this.beginClientSync();
       } else if (!this.ready) {
@@ -2054,6 +2061,59 @@ export class WebRtcHostMatchSync {
       this.rttMs === null
         ? sampleRttMs
         : this.rttMs + (sampleRttMs - this.rttMs) * JITTER_SMOOTHING;
+    this.updateNetworkStatsElement();
+  }
+
+  private updateNetworkStatsElement(): void {
+    if (this.networkStatsElement === null) {
+      return;
+    }
+    this.rttValueElement.textContent = this.formatMilliseconds(this.rttMs);
+    this.jitterValueElement.textContent = this.formatMilliseconds(
+      this.jitterMs,
+    );
+  }
+
+  private formatMilliseconds(value: number): string {
+    return value === null || !Number.isFinite(value)
+      ? '-- ms'
+      : `${value.toFixed(1)} ms`;
+  }
+
+  private ensureNetworkStatsElement(): HTMLElement {
+    if (this.networkStatsElement !== null) {
+      return this.networkStatsElement;
+    }
+
+    const element = document.createElement('aside');
+    element.className = 'webrtc-network-stats';
+    element.setAttribute('aria-label', 'WebRTC network latency');
+
+    const title = document.createElement('strong');
+    title.className = 'webrtc-network-stats__title';
+    title.textContent = 'WEBRTC';
+    element.appendChild(title);
+
+    const addRow = (label: string): HTMLElement => {
+      const row = document.createElement('div');
+      row.className = 'webrtc-network-stats__row';
+
+      const labelElement = document.createElement('span');
+      labelElement.textContent = label;
+
+      const valueElement = document.createElement('output');
+      valueElement.textContent = '-- ms';
+
+      row.append(labelElement, valueElement);
+      element.appendChild(row);
+      return valueElement;
+    };
+
+    this.rttValueElement = addRow('PING');
+    this.jitterValueElement = addRow('JITTER');
+    document.body.appendChild(element);
+    this.networkStatsElement = element;
+    return element;
   }
 
   private createPlayerUrl(playerIndex: 0 | 1): string {
