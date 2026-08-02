@@ -17,6 +17,10 @@
       "destination": "/player-profile/index.html"
     },
     {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
       "source": "/api/((?!router$).*)",
       "destination": "/api/router?__route=$1"
     }
@@ -100,6 +104,24 @@
     },
     {
       "source": "/mobile-gamepad/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/admin/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/admin.js",
       "headers": [
         {
           "key": "Cache-Control",

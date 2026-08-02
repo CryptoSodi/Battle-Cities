@@ -224,6 +224,10 @@ Clients must not choose their own slot. `joinToken` is bound server-side to the 
 
 `:eventId` accepts an event ID or event slug.
 
+Admin-created tournaments are published through the same event matchmaking
+routes. Their configured level and one-time fuel entry cost are enforced by the
+API.
+
 | Method | Path                                     | Access            | Description                                        |
 | ------ | ---------------------------------------- | ----------------- | -------------------------------------------------- |
 | `POST` | `/events/:eventId/enter`                 | Session           | Pay the one-time event entry fuel                  |
@@ -317,6 +321,31 @@ Build with `npm run server:build` and start the single process with
 `127.0.0.1:3001`; no port `7777` or broadcaster hostname is used.
 
 The embedded broadcaster credential is generated in memory and is never returned to browsers. Never expose database credentials, Google client secrets, or event-admin secrets to browser code.
+
+## Google-authenticated admin API
+
+The command center is served at `https://www.battlecities.com/admin/`. Every
+admin request requires a valid Google session for the exact normalized email
+`tassaduq009@gmail.com`; hiding the page is not the security boundary.
+
+| Method  | Path                                                   | Description                                      |
+| ------- | ------------------------------------------------------ | ------------------------------------------------ |
+| `GET`   | `/admin/session`                                       | Verify the current Google administrator session |
+| `GET`   | `/admin/overview`                                      | Read operational counters                       |
+| `GET`   | `/admin/matches`                                       | List matches and participants                    |
+| `GET`   | `/admin/players?q=<query>`                              | Search player and economy records                |
+| `GET`   | `/admin/tournaments`                                   | List configured tournaments                     |
+| `POST`  | `/admin/tournaments`                                   | Create a tournament                              |
+| `GET`   | `/admin/tournaments/:id`                               | Read a tournament                                |
+| `PATCH` | `/admin/tournaments/:id`                               | Update a tournament                              |
+| `GET`   | `/admin/tournaments/:id/leaderboard`                   | Read accepted scores and prior distributions     |
+| `POST`  | `/admin/tournaments/:id/prizes/distribute`             | Atomically distribute the approved allocations   |
+
+Prize distribution is only permitted after the tournament ends. Recipients
+must have an accepted score, the allocation total cannot exceed the configured
+pool, and one database transaction credits balances, creates ledger records,
+and records the distribution. Repeating the request is idempotent and does not
+pay players twice.
 
 ## Source of truth
 

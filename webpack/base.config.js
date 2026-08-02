@@ -26,6 +26,7 @@ const buildVersion = getBuildVersion();
 
 module.exports = {
   entry: {
+    admin: './src/admin/main.ts',
     main: './src/main.ts',
     'player-profile': './src/playerProfile/main.ts',
   },

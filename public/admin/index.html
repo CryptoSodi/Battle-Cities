@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080a07" />
+    <title>Command Center | Battle Cities</title>
+    <link rel="icon" type="image/png" href="/data/graphics/favicon.png" />
+    <link rel="stylesheet" href="/main.css" />
+    <link rel="stylesheet" href="/admin/admin.css" />
+    <script defer src="/admin.js"></script>
+  </head>
+  <body class="admin-body">
+    <main class="admin-shell">
+      <section class="admin-gate" data-admin-loading>
+        <span class="admin-loader" aria-hidden="true"></span>
+        Verifying command access...
+      </section>
+
+      <section class="admin-gate" data-admin-login hidden>
+        <p class="admin-kicker">Restricted system</p>
+        <h1>Battle Cities Command Center</h1>
+        <p>Authenticate with the authorized Google administrator account.</p>
+        <a class="admin-button admin-button--primary" data-admin-login-link href="#">Continue with Google</a>
+        <a class="admin-button admin-button--back" href="/">Back to game</a>
+      </section>
+
+      <section class="admin-gate" data-admin-forbidden hidden>
+        <p class="admin-kicker">Access denied</p>
+        <h1>Unauthorized commander</h1>
+        <p>This Google account is not allowed to operate the Battle Cities admin system.</p>
+        <button class="admin-button admin-button--back" data-admin-forbidden-logout type="button">Sign out</button>
+      </section>
+
+      <div data-admin-app hidden>
+        <header class="admin-header">
+          <div>
+            <p class="admin-kicker">Battle Cities operations</p>
+            <h1>Command Center</h1>
+          </div>
+          <div class="admin-identity">
+            <span data-admin-email></span>
+            <a class="admin-button admin-button--back" href="/">Back</a>
+            <button class="admin-button admin-button--quiet" data-admin-logout type="button">Sign out</button>
+          </div>
+        </header>
+
+        <nav class="admin-tabs" aria-label="Admin sections">
+          <button class="admin-tab is-active" data-admin-tab="overview" type="button">Overview</button>
+          <button class="admin-tab" data-admin-tab="matches" type="button">Matches</button>
+          <button class="admin-tab" data-admin-tab="players" type="button">Players</button>
+          <button class="admin-tab" data-admin-tab="tournaments" type="button">Tournaments</button>
+        </nav>
+
+        <p class="admin-message" data-admin-message role="status" hidden></p>
+
+        <section class="admin-section is-active" data-admin-section="overview">
+          <div class="admin-section__title"><div><p class="admin-kicker">Live database</p><h2>Operational status</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="overview" type="button">Refresh</button></div>
+          <div class="admin-metrics" data-admin-metrics></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="matches" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Match control</p><h2>All matches</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="matches" type="button">Refresh</button></div>
+          <div class="admin-filters">
+            <label>Status<select data-match-status><option value="">All statuses</option><option>waiting</option><option>ready</option><option>live</option><option>transition</option><option>completed</option><option>closed</option></select></label>
+            <label>Category<select data-match-category><option value="">All categories</option><option>direct</option><option>event</option></select></label>
+          </div>
+          <div class="admin-table-wrap"><table><thead><tr><th>Match</th><th>Type / event</th><th>Status</th><th>Players</th><th>Broadcaster</th><th>Created</th></tr></thead><tbody data-match-rows></tbody></table></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="players" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></div>
+          <form class="admin-search" data-player-search><label for="player-query">Search players</label><div><input id="player-query" data-player-query type="search" placeholder="Name, email, or player ID" /><button class="admin-button admin-button--primary" type="submit">Search</button></div></form>
+          <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="tournaments" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Competition control</p><h2>Tournaments</h2></div><button class="admin-button admin-button--primary" data-tournament-new type="button">New tournament</button></div>
+          <div class="admin-tournament-layout">
+            <div class="admin-card"><h3>Schedule</h3><div class="admin-tournament-list" data-tournament-list></div></div>
+            <form class="admin-card admin-form" data-tournament-form hidden>
+              <div class="admin-card__title"><h3 data-tournament-form-title>Create tournament</h3><button class="admin-button admin-button--quiet" data-tournament-cancel type="button">Close</button></div>
+              <input data-tournament-id type="hidden" />
+              <label>Name<input data-tournament-name required minlength="3" maxlength="80" /></label>
+              <label>Slug<input data-tournament-slug required minlength="3" maxlength="80" pattern="[a-z0-9-]+" /></label>
+              <label>Description<textarea data-tournament-description maxlength="600" rows="3"></textarea></label>
+              <div class="admin-form__grid"><label>Starts<input data-tournament-start type="datetime-local" required /></label><label>Ends<input data-tournament-end type="datetime-local" required /></label></div>
+              <div class="admin-form__grid"><label>Status<select data-tournament-status><option>draft</option><option>scheduled</option><option>live</option><option>ended</option><option>cancelled</option></select></label><label>Level<input data-tournament-level type="number" min="1" max="35" value="1" required /></label></div>
+              <div class="admin-form__grid"><label>Entry fuel<input data-tournament-fuel type="number" min="0" value="1" required /></label><label>Prize currency<select data-tournament-currency><option value="token">BACT</option><option value="fuel">Fuel</option></select></label></div>
+              <label>Prize pool<input data-tournament-pool type="number" min="0" value="0" required /></label>
+              <button class="admin-button admin-button--primary" type="submit">Save tournament</button>
+            </form>
+            <section class="admin-card admin-payout" data-tournament-payout hidden>
+              <div class="admin-card__title"><div><p class="admin-kicker">Verified scores</p><h3 data-payout-title>Leaderboard</h3></div><span data-payout-budget></span></div>
+              <div class="admin-table-wrap"><table><thead><tr><th>Rank</th><th>Player</th><th>Score</th><th>Prize amount</th></tr></thead><tbody data-payout-rows></tbody></table></div>
+              <div class="admin-payout__footer"><strong data-payout-total>Allocated: 0</strong><button class="admin-button admin-button--danger" data-payout-submit type="button">Distribute prizes</button></div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
