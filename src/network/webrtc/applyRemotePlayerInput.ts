@@ -8,6 +8,28 @@ export interface RemotePlayerInput {
   fire: boolean;
 }
 
+export function applyPredictedPlayerMovement(
+  tank: PlayerTank,
+  input: RemotePlayerInput,
+  deltaTime: number,
+  checkIce = true,
+): void {
+  if (tank.isStunned()) {
+    tank.idle(false);
+    return;
+  }
+
+  if (input.direction !== null) {
+    tank.rotate(input.direction);
+  }
+  if (input.moving && input.direction !== null) {
+    tank.move(deltaTime);
+    return;
+  }
+
+  tank.idle(checkIce);
+}
+
 export function applyRemotePlayerInput(
   tank: PlayerTank,
   input: RemotePlayerInput,
@@ -20,19 +42,6 @@ export function applyRemotePlayerInput(
     tank.fire();
   }
 
-  if (tank.isStunned()) {
-    tank.idle(false);
-    return appliedFireSeq;
-  }
-
-  if (input.direction !== null) {
-    tank.rotate(input.direction);
-  }
-  if (input.moving && input.direction !== null) {
-    tank.move(deltaTime);
-    return appliedFireSeq;
-  }
-
-  tank.idle();
+  applyPredictedPlayerMovement(tank, input, deltaTime);
   return appliedFireSeq;
 }

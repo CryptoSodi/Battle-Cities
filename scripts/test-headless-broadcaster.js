@@ -81,6 +81,11 @@ function assertNoTankWallOverlap(simulation) {
     ],
     'default player spawns must match the engine base-container offsets',
   );
+  assert.deepStrictEqual(
+    frame.lastProcessedInputSeq,
+    [0, 0],
+    'frames must expose the authoritative input acknowledgement baseline',
+  );
 }
 
 {
@@ -120,6 +125,11 @@ function assertNoTankWallOverlap(simulation) {
       fireRotation: 0,
     },
     'players must fire before turning/moving and snap to the 32px movement grid',
+  );
+  assert.deepStrictEqual(
+    frame.lastProcessedInputSeq,
+    [1, 0],
+    'the host frame must acknowledge the latest processed input per player',
   );
   assert.deepStrictEqual(
     {

@@ -92,6 +92,7 @@ export interface SimulationHostFramePacket {
   type: 'webrtc-host-frame';
   seq: number;
   tick: number;
+  lastProcessedInputSeq: [number, number];
   deltaTime: number;
   stageNumber: number;
   matchResult?: 'win' | 'loss' | null;

@@ -115,9 +115,11 @@ interface EngineSimulationOptions extends SimulationOptions {
 class HeadlessWebRtcMatch {
   private readonly lastFireSeqs = new Map<number, number>();
   private readonly controlledTanks = new Map<number, PlayerTank>();
+  private readonly lastProcessedInputSeq: [number, number] = [0, 0];
 
   public constructor(
     private readonly inputs: Map<SimulationPlayerIndex, LatestInput>,
+    private readonly pendingFireSeqs: Map<SimulationPlayerIndex, number>,
     private readonly pendingPowerSlots: Map<SimulationPlayerIndex, number[]>,
     private readonly disableEnemyShooting: boolean,
   ) {}
@@ -143,22 +145,37 @@ class HeadlessWebRtcMatch {
     }
 
     const lastFireSeq = this.lastFireSeqs.get(tank.partyIndex) ?? 0;
+    const pendingFireSeq = this.pendingFireSeqs.get(playerIndex);
+    const appliedFireSeq = applyRemotePlayerInput(
+      tank,
+      {
+        ...latest.packet,
+        fire:
+          pendingFireSeq !== undefined && pendingFireSeq > lastFireSeq,
+      },
+      updateArgs.deltaTime,
+      lastFireSeq,
+    );
     this.lastFireSeqs.set(
       tank.partyIndex,
-      applyRemotePlayerInput(
-        tank,
-        latest.packet,
-        updateArgs.deltaTime,
-        lastFireSeq,
-      ),
+      appliedFireSeq,
     );
+    if (pendingFireSeq !== undefined && appliedFireSeq >= pendingFireSeq) {
+      this.pendingFireSeqs.delete(playerIndex);
+    }
+    this.lastProcessedInputSeq[playerIndex] = latest.packet.seq;
     return true;
+  }
+
+  public getLastProcessedInputSeq(): [number, number] {
+    return [...this.lastProcessedInputSeq] as [number, number];
   }
 
   public observeAuthoritativePlayerTank(tank: PlayerTank): void {
     const playerIndex = tank.partyIndex as SimulationPlayerIndex;
     this.controlledTanks.set(playerIndex, tank);
     this.inputs.delete(playerIndex);
+    this.pendingFireSeqs.delete(playerIndex);
   }
 
   public isEnabled(): boolean {
@@ -213,6 +230,8 @@ export class EngineBattleCitySimulation {
   private readonly world: LevelWorld;
   private readonly updateArgs: GameUpdateArgs;
   private readonly inputs = new Map<SimulationPlayerIndex, LatestInput>();
+  private readonly pendingFireSeqs = new Map<SimulationPlayerIndex, number>();
+  private readonly webRtcMatch: HeadlessWebRtcMatch;
   private readonly pendingPowerSlots = new Map<
     SimulationPlayerIndex,
     number[]
@@ -316,12 +335,13 @@ export class EngineBattleCitySimulation {
     this.root.add(this.world.field);
     this.createTerrain();
 
-    const webRtcMatch = new HeadlessWebRtcMatch(
+    this.webRtcMatch = new HeadlessWebRtcMatch(
       this.inputs,
+      this.pendingFireSeqs,
       this.pendingPowerSlots,
       options.disableEnemyShooting === true,
     );
-    this.updateArgs = this.createUpdateArgs(webRtcMatch);
+    this.updateArgs = this.createUpdateArgs(this.webRtcMatch);
 
     this.baseScript = new LevelBaseScript(true);
     this.enemyScript = new LevelEnemyScript(false, true);
@@ -405,7 +425,7 @@ export class EngineBattleCitySimulation {
     });
 
     this.playerScript.tankCreated.addListener((tank) => {
-      webRtcMatch.observeAuthoritativePlayerTank(tank);
+      this.webRtcMatch.observeAuthoritativePlayerTank(tank);
       this.observeTankFire(tank, this.playerFire);
     });
     this.enemyScript.tankCreated.addListener((tank) => {
@@ -475,6 +495,9 @@ export class EngineBattleCitySimulation {
       packet,
       receivedAt: Date.now(),
     });
+    if (packet.fire) {
+      this.pendingFireSeqs.set(packet.player, packet.seq);
+    }
     if (packet.powerSlot !== null && packet.powerSlot !== undefined) {
       let slots = this.pendingPowerSlots.get(packet.player);
       if (slots === undefined) {
@@ -802,6 +825,7 @@ export class EngineBattleCitySimulation {
       type: 'webrtc-host-frame',
       seq: ++this.frameSeq,
       tick: this.currentTick,
+      lastProcessedInputSeq: this.webRtcMatch.getLastProcessedInputSeq(),
       deltaTime: this.deltaTime,
       stageNumber: this.stageNumber,
       matchResult: this.matchLifecycle.getResult(),

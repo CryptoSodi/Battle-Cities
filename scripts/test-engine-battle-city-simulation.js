@@ -102,6 +102,7 @@ function overlaps(left, right) {
   assert.strictEqual(frame.enemies.length, 1, 'enemy must complete browser spawn animation');
   simulation.world.getPlayerTanks()[0].upgrade('b');
   simulation.acceptInput(input(0, 1, 0, false, true));
+  simulation.acceptInput(input(0, 2, 0, false, false));
 
   for (let tick = 0; tick < 120; tick += 1) {
     frame = simulation.step();
@@ -111,6 +112,11 @@ function overlaps(left, right) {
     frame.activeEnemyIds,
     [],
     'a player bullet must naturally destroy and remove an enemy',
+  );
+  assert.deepStrictEqual(
+    frame.lastProcessedInputSeq,
+    [2, 0],
+    'frames must acknowledge the latest movement input even when it follows a fire edge',
   );
   assert.strictEqual(
     frame.enemyDeaths.length,

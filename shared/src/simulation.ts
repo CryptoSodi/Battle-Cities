@@ -149,7 +149,9 @@ export class BattleCitySimulation {
   private readonly enemies = new Map<number, TankState>();
   private readonly bullets: BulletState[] = [];
   private readonly inputs = new Map<SimulationPlayerIndex, LatestInput>();
+  private readonly pendingFireSeqs = new Map<SimulationPlayerIndex, number>();
   private readonly playerElapsed: [number, number] = [0, 0];
+  private readonly lastProcessedInputSeq: [number, number] = [0, 0];
   private readonly scores: [number, number] = [0, 0];
   private nextEnemyIndex = 0;
   private nextEnemySpawnTick: number;
@@ -209,6 +211,9 @@ export class BattleCitySimulation {
       return false;
     }
     this.inputs.set(packet.player, { packet, receivedTick: this.currentTick });
+    if (packet.fire) {
+      this.pendingFireSeqs.set(packet.player, packet.seq);
+    }
     if (Number.isFinite(packet.elapsedSeconds)) {
       this.playerElapsed[packet.player] = Math.max(0, packet.elapsedSeconds);
     }
@@ -285,8 +290,16 @@ export class BattleCitySimulation {
         return;
       }
       const packet = input.packet;
-      if (packet.fire && packet.seq > player.lastInputFireSeq) {
-        player.lastInputFireSeq = packet.seq;
+      this.lastProcessedInputSeq[index as SimulationPlayerIndex] = packet.seq;
+      const pendingFireSeq = this.pendingFireSeqs.get(
+        index as SimulationPlayerIndex,
+      );
+      if (
+        pendingFireSeq !== undefined &&
+        pendingFireSeq > player.lastInputFireSeq
+      ) {
+        player.lastInputFireSeq = pendingFireSeq;
+        this.pendingFireSeqs.delete(index as SimulationPlayerIndex);
         this.fire(player, 'player');
       }
       if (packet.direction !== null) {
@@ -935,6 +948,7 @@ export class BattleCitySimulation {
       type: 'webrtc-host-frame',
       seq: ++this.frameSeq,
       tick: this.currentTick,
+      lastProcessedInputSeq: [...this.lastProcessedInputSeq] as [number, number],
       deltaTime: this.deltaTime,
       stageNumber: this.stageNumber,
       playerScores: this.getScores(),

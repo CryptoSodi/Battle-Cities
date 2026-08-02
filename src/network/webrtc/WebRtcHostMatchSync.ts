@@ -10,13 +10,19 @@ import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
 import { getApiUrl } from '../api';
 import { getApiBaseUrl } from '../api';
 import type { MultiplayerRuntimeConfig } from '@battlecities/shared';
-import { applyRemotePlayerInput } from './applyRemotePlayerInput';
+import {
+  applyPredictedPlayerMovement,
+  applyRemotePlayerInput,
+} from './applyRemotePlayerInput';
 
-const INPUT_HEARTBEAT_MS = 150;
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
 const MAX_PLAYER_TICKS_PER_UPDATE = 2;
 const PLAYER_TICK_CATCH_UP_BACKLOG = 6;
+const MAX_PENDING_PREDICTED_INPUTS = 240;
+const RECONCILIATION_IGNORE_DISTANCE = 0.5;
+const RECONCILIATION_SNAP_DISTANCE = 32;
+const RECONCILIATION_BLEND = 0.35;
 const NETWORK_PROBE_INTERVAL_SECONDS = 0.5;
 const JITTER_SMOOTHING = 0.2;
 const OBSERVER_HEARTBEAT_MS = 5000;
@@ -36,6 +42,11 @@ interface WebRtcInputPacket {
   fire: boolean;
   powerSlot?: number | null;
   elapsedSeconds: number;
+}
+
+interface PredictedInput {
+  packet: WebRtcInputPacket;
+  deltaTime: number;
 }
 
 interface WebRtcEnemyFrame {
@@ -71,6 +82,11 @@ interface WebRtcPlayerFrame {
   initialSync?: boolean;
 }
 
+interface LocalAuthoritativeFrame {
+  frame: WebRtcPlayerFrame;
+  acknowledgedInputSeq: number;
+}
+
 interface WebRtcPowerupFrame {
   id: number;
   kind: PowerupType;
@@ -100,6 +116,7 @@ interface WebRtcHostFramePacket {
   type: 'webrtc-host-frame';
   seq: number;
   tick: number;
+  lastProcessedInputSeq: [number, number];
   deltaTime: number;
   stageNumber: number;
   matchResult?: 'win' | 'loss' | null;
@@ -248,13 +265,16 @@ export class WebRtcHostMatchSync {
   private inputSeq = 0;
   private frameSeq = 0;
   private tick = 0;
-  private lastInputAt = 0;
-  private lastDirection: Rotation | null = null;
-  private lastMoving = false;
   private readonly latestRemoteInputs = new Map<number, WebRtcInputPacket>();
   private readonly latestRemoteInputReceivedAt = new Map<number, number>();
   private readonly lastAppliedRemoteFireSeqs = new Map<number, number>();
+  private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
+  private readonly pendingRemoteFireSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
+  private readonly pendingLocalInputs: PredictedInput[] = [];
+  private pendingLocalAuthoritativeFrame: LocalAuthoritativeFrame = null;
+  private localPredictionTank: PlayerTank = null;
+  private lastAcknowledgedLocalInputSeq = 0;
   private latestHostFrame: WebRtcHostFramePacket = null;
   private activeReplayFrame: WebRtcHostFramePacket = null;
   private consumedMatchResultSeq = 0;
@@ -565,6 +585,9 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeaths.length = 0;
     this.pendingEnemyDeathSeqs.clear();
     this.pendingPowerupPickups.length = 0;
+    this.pendingLocalInputs.length = 0;
+    this.pendingLocalAuthoritativeFrame = null;
+    this.localPredictionTank = null;
     this.lastAppliedEnemyDeathSeq = 0;
     this.lastQueuedPowerupPickupSeq = 0;
     this.lastPlayerFireSeqs.clear();
@@ -637,10 +660,25 @@ export class WebRtcHostMatchSync {
     }
 
     if (tank.partyIndex === this.localPlayerIndex) {
-      this.sendLocalInput(
+      tank.setNetworkControlled(false);
+      if (this.localPredictionTank !== tank) {
+        this.localPredictionTank = tank;
+        this.pendingLocalInputs.length = 0;
+        this.pendingLocalAuthoritativeFrame = null;
+      }
+      const predictedInput = this.sendLocalInput(
         updateArgs,
         this.localPlayerIndex as 0 | 1,
       );
+      if (predictedInput !== null) {
+        applyPredictedPlayerMovement(
+          tank,
+          predictedInput.packet,
+          predictedInput.deltaTime,
+        );
+      } else {
+        tank.idle(false);
+      }
     }
 
     return true;
@@ -754,15 +792,19 @@ export class WebRtcHostMatchSync {
       return;
     }
     players.forEach((tank) => {
-      if (tank !== null && tank !== undefined) {
-        tank.setNetworkControlled(true);
+      if (tank === null || tank === undefined) {
+        return;
       }
+      tank.setNetworkControlled(
+        this.observer || tank.partyIndex !== this.localPlayerIndex,
+      );
     });
     if (this.activeReplayFrame !== null) {
       this.applyReplayPlayerFrames(players, frame.players ?? []);
       this.applyReplayEnemyFrames(enemies, frame.enemies ?? []);
       return;
     }
+    this.reconcileLocalPlayer(players);
     this.applyPlayerFrames(players);
     this.applyEnemyFrames(enemies);
   }
@@ -907,7 +949,12 @@ export class WebRtcHostMatchSync {
     this.latestRemoteInputs.clear();
     this.latestRemoteInputReceivedAt.clear();
     this.lastAppliedRemoteFireSeqs.clear();
+    this.lastProcessedRemoteInputSeqs.clear();
+    this.pendingRemoteFireSeqs.clear();
     this.pendingRemotePowerSlots.clear();
+    this.pendingLocalInputs.length = 0;
+    this.pendingLocalAuthoritativeFrame = null;
+    this.localPredictionTank = null;
     this.recoveryFrames.clear();
     this.clientFrameCache.clear();
     this.pendingAppliedFrameSeqs.length = 0;
@@ -932,9 +979,7 @@ export class WebRtcHostMatchSync {
     this.inputSeq = 0;
     this.frameSeq = 0;
     this.tick = 0;
-    this.lastInputAt = 0;
-    this.lastDirection = null;
-    this.lastMoving = false;
+    this.lastAcknowledgedLocalInputSeq = 0;
     this.latestHostFrame = null;
     this.activeReplayFrame = null;
     this.consumedMatchResultSeq = 0;
@@ -1127,6 +1172,9 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeaths.length = 0;
     this.pendingEnemyDeathSeqs.clear();
     this.pendingAppliedFrameSeqs.length = 0;
+    this.pendingLocalInputs.length = 0;
+    this.pendingLocalAuthoritativeFrame = null;
+    this.localPredictionTank = null;
     this.clientFrameCache.forEach((frame, seq) => {
       if (seq > this.lastAppliedHostFrameSeq) {
         this.recoveryFrames.set(seq, frame);
@@ -1521,6 +1569,9 @@ export class WebRtcHostMatchSync {
       }
       this.latestRemoteInputs.set(linkId, input);
       this.latestRemoteInputReceivedAt.set(linkId, Date.now());
+      if (input.fire) {
+        this.pendingRemoteFireSeqs.set(linkId, input.seq);
+      }
       if (input.powerSlot !== null && input.powerSlot !== undefined) {
         let slots = this.pendingRemotePowerSlots.get(linkId);
         if (slots === undefined) {
@@ -1588,6 +1639,22 @@ export class WebRtcHostMatchSync {
     this.queueEnemyDeaths(frame.enemyDeaths ?? []);
     this.queuePowerupPickup(frame.powerupPickup);
     (frame.players ?? []).forEach((playerFrame) => {
+      if (
+        !this.observer &&
+        playerFrame.partyIndex === this.localPlayerIndex
+      ) {
+        const priorInitialSync =
+          this.pendingLocalAuthoritativeFrame?.frame.initialSync === true;
+        this.pendingLocalAuthoritativeFrame = {
+          frame:
+            initialSync || playerFrame.initialSync === true || priorInitialSync
+              ? { ...playerFrame, initialSync: true }
+              : playerFrame,
+          acknowledgedInputSeq:
+            frame.lastProcessedInputSeq?.[playerFrame.partyIndex] ?? 0,
+        };
+        return;
+      }
       let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
       if (ticks === undefined) {
         ticks = [];
@@ -1595,11 +1662,6 @@ export class WebRtcHostMatchSync {
       }
       if (playerFrame.initialSync === true) {
         ticks.length = 0;
-        if (playerFrame.partyIndex === this.localPlayerIndex) {
-          this.lastInputAt = 0;
-          this.lastDirection = null;
-          this.lastMoving = false;
-        }
       }
       ticks.push(initialSync ? { ...playerFrame, initialSync: true } : playerFrame);
     });
@@ -1639,25 +1701,10 @@ export class WebRtcHostMatchSync {
   private sendLocalInput(
     updateArgs: GameUpdateArgs,
     player: 0 | 1,
-  ): void {
+  ): PredictedInput | null {
     const input = this.readInput(updateArgs);
-    const now = Date.now();
-    if (
-      !input.fire &&
-      input.powerSlot === null &&
-      input.direction === this.lastDirection &&
-      input.moving === this.lastMoving &&
-      now - this.lastInputAt < INPUT_HEARTBEAT_MS
-    ) {
-      return;
-    }
-
     this.inputSeq += 1;
-    this.lastInputAt = now;
-    this.lastDirection = input.direction;
-    this.lastMoving = input.moving;
-
-    this.sendToPlayer(player, {
+    const packet: WebRtcInputPacket = {
       type: 'webrtc-input',
       player,
       seq: this.inputSeq,
@@ -1667,7 +1714,23 @@ export class WebRtcHostMatchSync {
       fire: input.fire,
       powerSlot: input.powerSlot,
       elapsedSeconds: this.localElapsedSeconds,
-    } satisfies WebRtcInputPacket);
+    };
+    if (!this.sendToPlayer(player, packet)) {
+      return null;
+    }
+
+    const predictedInput = {
+      packet,
+      deltaTime: Math.max(0, updateArgs.deltaTime),
+    };
+    this.pendingLocalInputs.push(predictedInput);
+    if (this.pendingLocalInputs.length > MAX_PENDING_PREDICTED_INPUTS) {
+      this.pendingLocalInputs.splice(
+        0,
+        this.pendingLocalInputs.length - MAX_PENDING_PREDICTED_INPUTS,
+      );
+    }
+    return predictedInput;
   }
 
   private applyRemoteInput(tank: PlayerTank, deltaTime: number): void {
@@ -1684,10 +1747,25 @@ export class WebRtcHostMatchSync {
 
     const lastFireSeq =
       this.lastAppliedRemoteFireSeqs.get(tank.partyIndex) ?? 0;
+    const pendingFireSeq = this.pendingRemoteFireSeqs.get(tank.partyIndex);
+    const appliedFireSeq = applyRemotePlayerInput(
+      tank,
+      {
+        ...input,
+        fire:
+          pendingFireSeq !== undefined && pendingFireSeq > lastFireSeq,
+      },
+      deltaTime,
+      lastFireSeq,
+    );
     this.lastAppliedRemoteFireSeqs.set(
       tank.partyIndex,
-      applyRemotePlayerInput(tank, input, deltaTime, lastFireSeq),
+      appliedFireSeq,
     );
+    if (pendingFireSeq !== undefined && appliedFireSeq >= pendingFireSeq) {
+      this.pendingRemoteFireSeqs.delete(tank.partyIndex);
+    }
+    this.lastProcessedRemoteInputSeqs.set(tank.partyIndex, input.seq);
   }
 
   private readInput(updateArgs: GameUpdateArgs): {
@@ -1770,6 +1848,10 @@ export class WebRtcHostMatchSync {
       type: 'webrtc-host-frame',
       seq: ++this.frameSeq,
       tick: this.tick,
+      lastProcessedInputSeq: [
+        this.lastProcessedRemoteInputSeqs.get(0) ?? 0,
+        this.lastProcessedRemoteInputSeqs.get(1) ?? 0,
+      ],
       deltaTime: Math.min(Math.max(deltaTime, 0), 0.1),
       stageNumber: this.expectedStageNumber,
       matchResult,
@@ -2002,8 +2084,113 @@ export class WebRtcHostMatchSync {
     });
   }
 
+  private reconcileLocalPlayer(players: PlayerTank[]): void {
+    const authoritative = this.pendingLocalAuthoritativeFrame;
+    if (authoritative === null || this.observer) {
+      return;
+    }
+    const tank = players.find((candidate) => {
+      return (
+        candidate !== null &&
+        candidate !== undefined &&
+        candidate.partyIndex === this.localPlayerIndex
+      );
+    });
+    if (tank === undefined) {
+      return;
+    }
+    this.pendingLocalAuthoritativeFrame = null;
+    tank.setNetworkControlled(false);
+    tank.setNetworkTier(authoritative.frame.tier ?? TankTier.A);
+
+    const replacedTank = this.localPredictionTank !== tank;
+    if (replacedTank) {
+      this.localPredictionTank = tank;
+    }
+    const initialSync = authoritative.frame.initialSync === true || replacedTank;
+    const acknowledgedInputSeq = Math.max(
+      this.lastAcknowledgedLocalInputSeq,
+      Math.floor(authoritative.acknowledgedInputSeq || 0),
+    );
+    this.lastAcknowledgedLocalInputSeq = acknowledgedInputSeq;
+
+    if (initialSync) {
+      this.pendingLocalInputs.length = 0;
+    } else {
+      const firstPendingIndex = this.pendingLocalInputs.findIndex((input) => {
+        return input.packet.seq > acknowledgedInputSeq;
+      });
+      if (firstPendingIndex < 0) {
+        this.pendingLocalInputs.length = 0;
+      } else if (firstPendingIndex > 0) {
+        this.pendingLocalInputs.splice(0, firstPendingIndex);
+      }
+    }
+
+    const frame = authoritative.frame;
+    if (!Number.isFinite(frame.x) || !Number.isFinite(frame.y)) {
+      return;
+    }
+    const previousX = tank.position.x;
+    const previousY = tank.position.y;
+    tank.applyNetworkMovement(
+      frame.rotation,
+      frame.moving,
+      frame.x - tank.position.x,
+      frame.y - tank.position.y,
+    );
+
+    if (!initialSync) {
+      this.pendingLocalInputs.forEach((input) => {
+        applyPredictedPlayerMovement(
+          tank,
+          input.packet,
+          input.deltaTime,
+          false,
+        );
+      });
+    }
+
+    const targetX = tank.position.x;
+    const targetY = tank.position.y;
+    const targetRotation = tank.rotation;
+    const targetMoving = tank.state === TankState.Moving;
+    const errorX = targetX - previousX;
+    const errorY = targetY - previousY;
+    const errorDistance = Math.sqrt(errorX * errorX + errorY * errorY);
+
+    let correctedX = targetX;
+    let correctedY = targetY;
+    if (!initialSync && errorDistance < RECONCILIATION_SNAP_DISTANCE) {
+      if (errorDistance <= RECONCILIATION_IGNORE_DISTANCE) {
+        correctedX = previousX;
+        correctedY = previousY;
+      } else {
+        correctedX = previousX + errorX * RECONCILIATION_BLEND;
+        correctedY = previousY + errorY * RECONCILIATION_BLEND;
+      }
+    }
+    tank.applyNetworkMovement(
+      targetRotation,
+      targetMoving,
+      correctedX - targetX,
+      correctedY - targetY,
+    );
+
+    const lastFireSeq =
+      this.lastPlayerFireSeqs.get(frame.partyIndex) ?? 0;
+    if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
+      this.lastPlayerFireSeqs.set(frame.partyIndex, frame.fireSeq);
+      tank.fireFromNetwork(frame.fireX, frame.fireY, frame.fireRotation);
+    }
+  }
+
   private applyPlayerFrames(players: PlayerTank[]): void {
     this.pendingPlayerTicks.forEach((ticks, partyIndex) => {
+      if (!this.observer && partyIndex === this.localPlayerIndex) {
+        this.pendingPlayerTicks.delete(partyIndex);
+        return;
+      }
       const tank = players.find((candidate) => {
         return (
           candidate !== null &&
@@ -2098,6 +2285,7 @@ export class WebRtcHostMatchSync {
       this.observedPlayers.add(tank);
       this.latestRemoteInputs.delete(tank.partyIndex);
       this.latestRemoteInputReceivedAt.delete(tank.partyIndex);
+      this.pendingRemoteFireSeqs.delete(tank.partyIndex);
       tank.fired.addListener(() => {
         this.playerFireSeqs.set(
           tank.partyIndex,
