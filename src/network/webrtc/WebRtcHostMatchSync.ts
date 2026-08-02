@@ -9,7 +9,10 @@ import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
 import { WebRtcDataPacket, WebRtcGhostSync } from './WebRtcGhostSync';
 import { getApiUrl } from '../api';
 import { getApiBaseUrl } from '../api';
-import type { MultiplayerRuntimeConfig } from '@battlecities/shared';
+import type {
+  MultiplayerRuntimeConfig,
+  SimulationClientDebugPacket,
+} from '@battlecities/shared';
 import {
   applyPredictedPlayerMovement,
   applyRemotePlayerInput,
@@ -42,12 +45,6 @@ interface WebRtcInputPacket {
   fire: boolean;
   powerSlot?: number | null;
   elapsedSeconds: number;
-}
-
-interface WebRtcClientDebugPacket {
-  type: 'webrtc-client-debug';
-  player: 0 | 1;
-  disableEnemyShooting: boolean;
 }
 
 interface PredictedInput {
@@ -1274,7 +1271,7 @@ export class WebRtcHostMatchSync {
       type: 'webrtc-client-debug',
       player: this.localPlayerIndex as 0 | 1,
       disableEnemyShooting: this.disableEnemyShooting,
-    } satisfies WebRtcClientDebugPacket);
+    } satisfies SimulationClientDebugPacket);
   }
 
   private handleResumeRequest(
@@ -1605,7 +1602,7 @@ export class WebRtcHostMatchSync {
     }
 
     if (this.broadcaster && packet.type === 'webrtc-client-debug') {
-      const debug = packet as WebRtcClientDebugPacket;
+      const debug = packet as SimulationClientDebugPacket;
       if (isObserverLink(linkId) || debug.player !== linkId) {
         return;
       }

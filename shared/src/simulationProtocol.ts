@@ -146,13 +146,20 @@ export interface SimulationPongPacket {
   senderPlayerIndex: number;
 }
 
+export interface SimulationClientDebugPacket {
+  type: 'webrtc-client-debug';
+  player: SimulationPlayerIndex;
+  disableEnemyShooting: boolean;
+}
+
 export type SimulationClientPacket =
   | SimulationInputPacket
   | SimulationStageReadyPacket
   | SimulationResumePacket
   | SimulationClientReadyPacket
   | SimulationPingPacket
-  | SimulationPongPacket;
+  | SimulationPongPacket
+  | SimulationClientDebugPacket;
 
 export interface SimulationMapDto {
   version?: number;

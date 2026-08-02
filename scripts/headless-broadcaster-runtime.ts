@@ -6,6 +6,7 @@ import { RTCDataChannel, RTCPeerConnection } from 'werift';
 import * as config from '../src/config';
 
 import {
+  SimulationClientDebugPacket,
   SimulationClientPacket,
   SimulationClientReadyPacket,
   SimulationHostFramePacket,
@@ -259,6 +260,10 @@ class MatchRuntime {
   private simulation: EngineBattleCitySimulation;
   private readonly links = new Map<LinkId, WebRtcPeerLink>();
   private readonly connectedPlayers = new Set<SimulationPlayerIndex>();
+  private readonly enemyShootingDisabledPlayers =
+    new Set<SimulationPlayerIndex>();
+  private readonly environmentDisablesEnemyShooting =
+    process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1';
   private readonly connectedObservers = new Set<`observer:${string}`>();
   private readonly activePlayers = new Set<SimulationPlayerIndex>();
   private readonly syncingPlayers = new Set<SimulationPlayerIndex>();
@@ -315,8 +320,7 @@ class MatchRuntime {
   ) {
     this.simulationOptions = simulationOptions;
     const seed = seedFromMatchId(id);
-    const disableEnemyShooting =
-      process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1';
+    const disableEnemyShooting = this.environmentDisablesEnemyShooting;
     this.simulation = new EngineBattleCitySimulation(loadMap(level), {
       ...simulationOptions,
       seed,
@@ -539,8 +543,7 @@ class MatchRuntime {
       ...this.simulationOptions,
       seed: seedFromMatchId(`${this.id}:stage:${this.level}`),
       level: this.level,
-      disableEnemyShooting:
-        process.env.BROADCASTER_DISABLE_ENEMY_SHOOTING === '1',
+      disableEnemyShooting: this.isEnemyShootingDisabled(),
       runState,
     });
     this.pendingRunState = null;
@@ -646,6 +649,9 @@ class MatchRuntime {
       this.connectedPlayers.delete(linkId);
       this.activePlayers.delete(linkId);
       this.replaySessions.delete(linkId);
+      if (this.enemyShootingDisabledPlayers.delete(linkId)) {
+        this.applyEnemyShootingSetting();
+      }
       if (this.matchStarted) this.syncingPlayers.add(linkId);
     }
     if (connected && !wasConnected) {
@@ -686,6 +692,26 @@ class MatchRuntime {
       return;
     }
     if (isObserver(linkId)) return;
+    if (packet.type === 'webrtc-client-debug') {
+      const debug = packet as SimulationClientDebugPacket;
+      if (
+        debug.player !== linkId ||
+        typeof debug.disableEnemyShooting !== 'boolean'
+      ) {
+        return;
+      }
+      if (debug.disableEnemyShooting) {
+        this.enemyShootingDisabledPlayers.add(linkId);
+      } else {
+        this.enemyShootingDisabledPlayers.delete(linkId);
+      }
+      this.applyEnemyShootingSetting();
+      console.log(
+        `[broadcaster] enemy shooting ${this.isEnemyShootingDisabled() ? 'disabled' : 'enabled'}` +
+        ` match=${this.id} slot=${linkId + 1}`,
+      );
+      return;
+    }
     if (packet.type === 'webrtc-stage-ready') {
       const ready = packet as SimulationStageReadyPacket;
       const requiresReactivation =
@@ -716,6 +742,19 @@ class MatchRuntime {
     else if (packet.type === 'webrtc-client-ready') {
       this.handleClientReady(linkId, packet as SimulationClientReadyPacket);
     }
+  }
+
+  private isEnemyShootingDisabled(): boolean {
+    return (
+      this.environmentDisablesEnemyShooting ||
+      this.enemyShootingDisabledPlayers.size > 0
+    );
+  }
+
+  private applyEnemyShootingSetting(): void {
+    const disabled = this.isEnemyShootingDisabled();
+    this.simulation.setEnemyShootingDisabled(disabled);
+    this.archiveConfig.disableEnemyShooting = disabled;
   }
 
   private handleResume(player: SimulationPlayerIndex, packet: SimulationResumePacket): void {

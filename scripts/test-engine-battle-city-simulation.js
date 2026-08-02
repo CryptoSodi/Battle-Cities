@@ -578,6 +578,67 @@ function overlaps(left, right) {
 {
   const simulation = new EngineBattleCitySimulation(
     createMap({
+      terrain: {
+        regions: [
+          { type: 'steel', x: 0, y: 160, width: 832, height: 64 },
+        ],
+      },
+    }),
+    { seed: 22, disableEnemyShooting: false },
+  );
+  let frame;
+  let enemyPartyIndex;
+  let fireSeq = 0;
+  for (let tick = 0; tick < 360; tick += 1) {
+    frame = simulation.step();
+    const firedEnemy = frame.enemies.find((enemy) => enemy.fireSeq > 0);
+    if (firedEnemy !== undefined) {
+      enemyPartyIndex = firedEnemy.partyIndex;
+      fireSeq = firedEnemy.fireSeq;
+      break;
+    }
+  }
+  assert.notStrictEqual(
+    enemyPartyIndex,
+    undefined,
+    'the enemy fixture must fire before the runtime debug setting changes',
+  );
+
+  simulation.setEnemyShootingDisabled(true);
+  for (let tick = 0; tick < 240; tick += 1) {
+    frame = simulation.step();
+    const enemy = frame.enemies.find(
+      (candidate) => candidate.partyIndex === enemyPartyIndex,
+    );
+    assert.ok(enemy, 'the enemy fixture must remain alive behind the steel wall');
+    assert.strictEqual(
+      enemy.fireSeq,
+      fireSeq,
+      'the runtime debug setting must stop authoritative enemy fire immediately',
+    );
+  }
+
+  simulation.setEnemyShootingDisabled(false);
+  let shootingResumed = false;
+  for (let tick = 0; tick < 240; tick += 1) {
+    frame = simulation.step();
+    const enemy = frame.enemies.find(
+      (candidate) => candidate.partyIndex === enemyPartyIndex,
+    );
+    if (enemy !== undefined && enemy.fireSeq > fireSeq) {
+      shootingResumed = true;
+      break;
+    }
+  }
+  assert.ok(
+    shootingResumed,
+    'authoritative enemy fire must resume after the runtime setting is cleared',
+  );
+}
+
+{
+  const simulation = new EngineBattleCitySimulation(
+    createMap({
       spawn: {
         player: { locations: [{ x: 64, y: 704 }, { x: 704, y: 704 }] },
         enemy: {

@@ -121,7 +121,7 @@ class HeadlessWebRtcMatch {
     private readonly inputs: Map<SimulationPlayerIndex, LatestInput>,
     private readonly pendingFireSeqs: Map<SimulationPlayerIndex, number>,
     private readonly pendingPowerSlots: Map<SimulationPlayerIndex, number[]>,
-    private readonly disableEnemyShooting: boolean,
+    private disableEnemyShooting: boolean,
   ) {}
 
   public handlePlayerTank(
@@ -206,6 +206,10 @@ class HeadlessWebRtcMatch {
 
   public shouldDisableEnemyShooting(): boolean {
     return this.disableEnemyShooting;
+  }
+
+  public setEnemyShootingDisabled(disabled: boolean): void {
+    this.disableEnemyShooting = disabled;
   }
 }
 
@@ -478,6 +482,10 @@ export class EngineBattleCitySimulation {
     const seconds = this.pendingHitStopSeconds;
     this.pendingHitStopSeconds = 0;
     return seconds;
+  }
+
+  public setEnemyShootingDisabled(disabled: boolean): void {
+    this.webRtcMatch.setEnemyShootingDisabled(disabled);
   }
 
   public acceptInput(packet: SimulationInputPacket): boolean {
