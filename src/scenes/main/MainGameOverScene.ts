@@ -17,6 +17,7 @@ export class MainGameOverScene extends GameScene {
   protected setup({ audioManager, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
     clearMultiplayerRuntime();
+    webRtcMatch.deactivatePlayerRuntime();
 
     this.timer.done.addListener(this.handleDone);
 

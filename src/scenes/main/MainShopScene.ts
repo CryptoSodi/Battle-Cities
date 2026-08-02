@@ -2458,7 +2458,15 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       }
 
       storeMultiplayerRuntime(body.runtime);
-      window.location.assign('/');
+      await this.shopManager.syncAccount();
+      this.webRtcMatch.activatePlayerRuntime(body.runtime);
+      const playerSlot = body.runtime.playerSlot;
+      const runtimeTankTier = body.runtime.tankTier as TankTier;
+      this.session.setMultiplayer();
+      this.session.setPlayerTankTier(playerSlot, runtimeTankTier);
+      this.session.getPlayer(playerSlot).setTankTier(runtimeTankTier);
+      this.session.start(body.runtime.level, this.mapLoader.getItemsCount());
+      this.navigator.clearAndPush(GameSceneType.LevelLoad);
     } catch (error) {
       this.battleStartPending = false;
       console.error('[multiplayer] matchmaking failed', error);

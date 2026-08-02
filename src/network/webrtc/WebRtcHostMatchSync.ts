@@ -223,15 +223,15 @@ function isPowerSlot(value: number | null | undefined): boolean {
 }
 
 export class WebRtcHostMatchSync {
-  private readonly enabled: boolean;
-  private readonly broadcaster: boolean;
-  private readonly headlessBroadcaster: boolean;
-  private readonly observer: boolean;
-  private readonly observerId: string;
-  private readonly room: string;
-  private readonly localPlayerIndex: number;
-  private readonly signalingBaseUrl: string;
-  private readonly authorizationToken: string;
+  private enabled: boolean;
+  private broadcaster: boolean;
+  private headlessBroadcaster: boolean;
+  private observer: boolean;
+  private observerId: string;
+  private room: string;
+  private localPlayerIndex: number;
+  private signalingBaseUrl: string;
+  private authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
@@ -280,8 +280,8 @@ export class WebRtcHostMatchSync {
   private lastAppliedEnemyDeathSeq = 0;
   private readonly pendingPowerupPickups: WebRtcPowerupPickupFrame[] = [];
   private lastQueuedPowerupPickupSeq = 0;
-  private readonly observedEnemies = new WeakSet<EnemyTank>();
-  private readonly observedPlayers = new WeakSet<PlayerTank>();
+  private observedEnemies = new WeakSet<EnemyTank>();
+  private observedPlayers = new WeakSet<PlayerTank>();
   private readonly playerFireSeqs = new Map<number, number>();
   private readonly lastPlayerFireSeqs = new Map<number, number>();
   private readonly latestPlayerFire = new Map<
@@ -398,6 +398,43 @@ export class WebRtcHostMatchSync {
 
   public isEnabled(): boolean {
     return this.enabled && this.room !== '';
+  }
+
+  public activatePlayerRuntime(runtime: MultiplayerRuntimeConfig): void {
+    if (this.broadcaster || this.observer) {
+      throw new Error('Cannot replace a broadcaster or observer runtime.');
+    }
+
+    const sameConnection =
+      this.isEnabled() &&
+      this.room === runtime.matchId &&
+      this.localPlayerIndex === runtime.playerSlot &&
+      this.signalingBaseUrl === runtime.signalingBaseUrl;
+    if (sameConnection) {
+      this.expectedStageNumber = Math.max(1, Math.floor(runtime.level));
+      return;
+    }
+
+    this.resetPlayerRuntime();
+    this.enabled = true;
+    this.broadcaster = false;
+    this.headlessBroadcaster = false;
+    this.observer = false;
+    this.observerId = '';
+    this.room = runtime.matchId;
+    this.localPlayerIndex = runtime.playerSlot;
+    this.signalingBaseUrl = runtime.signalingBaseUrl;
+    this.authorizationToken = runtime.joinToken;
+    this.expectedStageNumber = Math.max(1, Math.floor(runtime.level));
+    this.stageWaiting = this.expectedStageNumber > 1;
+    this.configure();
+  }
+
+  public deactivatePlayerRuntime(): void {
+    if (this.broadcaster || this.observer) {
+      return;
+    }
+    this.resetPlayerRuntime();
   }
 
   public isHost(): boolean {
@@ -855,6 +892,86 @@ export class WebRtcHostMatchSync {
           }
         : {}),
     });
+  }
+
+  private resetPlayerRuntime(): void {
+    this.links.forEach((sync) => sync.stop());
+    this.links.clear();
+    this.connectedPlayers.clear();
+    this.activePlayers.clear();
+    this.syncingPlayers.clear();
+    this.frameHistory.length = 0;
+    this.frameHistoryBySeq.clear();
+    this.replaySessions.clear();
+    this.pendingActivations.clear();
+    this.latestRemoteInputs.clear();
+    this.latestRemoteInputReceivedAt.clear();
+    this.lastAppliedRemoteFireSeqs.clear();
+    this.pendingRemotePowerSlots.clear();
+    this.recoveryFrames.clear();
+    this.clientFrameCache.clear();
+    this.pendingAppliedFrameSeqs.length = 0;
+    this.pendingPlayerTicks.clear();
+    this.pendingEnemyTicks.clear();
+    this.pendingEnemyDeaths.length = 0;
+    this.pendingEnemyDeathSeqs.clear();
+    this.pendingPowerupPickups.length = 0;
+    this.playerFireSeqs.clear();
+    this.lastPlayerFireSeqs.clear();
+    this.latestPlayerFire.clear();
+    this.lastPlayerPositions.clear();
+    this.enemyFireSeqs.clear();
+    this.lastEnemyFireSeqs.clear();
+    this.latestEnemyFire.clear();
+    this.queuedEnemyDeaths.length = 0;
+    this.lastEnemyPositions.clear();
+    this.playerElapsedSeconds.clear();
+    this.observedEnemies = new WeakSet<EnemyTank>();
+    this.observedPlayers = new WeakSet<PlayerTank>();
+
+    this.inputSeq = 0;
+    this.frameSeq = 0;
+    this.tick = 0;
+    this.lastInputAt = 0;
+    this.lastDirection = null;
+    this.lastMoving = false;
+    this.latestHostFrame = null;
+    this.activeReplayFrame = null;
+    this.consumedMatchResultSeq = 0;
+    this.lastAppliedHostFrameSeq = 0;
+    this.replayTargetSeq = 0;
+    this.replayDeliveryComplete = false;
+    this.lastReadyAckSeq = -1;
+    this.clientSyncing = false;
+    this.recoveryUnavailable = false;
+    this.lastAppliedEnemyDeathSeq = 0;
+    this.lastQueuedPowerupPickupSeq = 0;
+    this.enemyDeathSeq = 0;
+    this.started = false;
+    this.matchStarted = false;
+    this.connected = false;
+    this.ready = false;
+    this.localElapsedSeconds = 0;
+    this.sharedElapsedSeconds = 0;
+    this.hasSynchronizedClock = false;
+    this.probeTimer = 0;
+    this.probeSeq = 0;
+    this.lastRttMs = null;
+    this.rttMs = null;
+    this.jitterMs = null;
+    this.authoritativeScores = [0, 0];
+    this.resultSubmissionStarted = false;
+    this.expectedStageNumber = 1;
+    this.stageWaiting = false;
+    this.stageReadySentFor = 0;
+    this.enabled = false;
+    this.room = '';
+    this.authorizationToken = '';
+
+    this.networkStatsElement?.remove();
+    this.networkStatsElement = null;
+    this.rttValueElement = null;
+    this.jitterValueElement = null;
   }
 
   private configureLink(linkId: WebRtcLinkId): void {

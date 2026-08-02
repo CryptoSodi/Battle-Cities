@@ -22,6 +22,7 @@ export class MainVictoryScene extends GameScene {
   protected setup({ audioManager, audioLoader, webRtcMatch }: GameUpdateArgs): void {
     this.audioManager = audioManager;
     clearMultiplayerRuntime();
+    webRtcMatch.deactivatePlayerRuntime();
 
     this.victorySound = audioLoader.load('victory');
     this.victorySound.ended.addListener(this.handleVictorySoundEnded);
