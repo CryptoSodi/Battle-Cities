@@ -11,6 +11,7 @@ const MIRROR_SMOOTHING = 0.45;
 export class LevelWebRtcGhostScript extends LevelScript {
   private sync = WebRtcGhostSync.getInstance();
   private ghosts = new Map<number, GhostTank>();
+  private webRtcServerGhostEnabled = false;
   private sendTimer = 0;
   private localPlayerIndex = 0;
   private localFireSeq = 0;
@@ -24,6 +25,8 @@ export class LevelWebRtcGhostScript extends LevelScript {
 
   protected setup(updateArgs: GameUpdateArgs): void {
     if (updateArgs.webRtcMatch.isEnabled()) {
+      this.localPlayerIndex = updateArgs.webRtcMatch.getLocalPlayerIndex();
+      this.webRtcServerGhostEnabled = updateArgs.webRtcMatch.isServerGhostEnabled();
       return;
     }
 
@@ -32,12 +35,34 @@ export class LevelWebRtcGhostScript extends LevelScript {
     this.sync.start();
   }
 
-  protected update({ deltaTime }: { deltaTime: number }): void {
+  protected update(updateArgs: GameUpdateArgs): void {
+    if (this.webRtcServerGhostEnabled) {
+      this.updateWebRtcServerGhost(updateArgs);
+      return;
+    }
+
     if (!this.sync.isEnabled()) {
       return;
     }
 
-    this.updateSource(deltaTime);
+    this.updateSource(updateArgs.deltaTime);
+  }
+
+  private updateWebRtcServerGhost(updateArgs: GameUpdateArgs): void {
+    const snapshot = updateArgs.webRtcMatch.getLocalServerTankSnapshot();
+    if (snapshot === null) {
+      this.removeGhost(this.localPlayerIndex);
+      return;
+    }
+
+    const ghost = this.getGhost(snapshot.partyIndex);
+    ghost.applySnapshot(
+      snapshot.x,
+      snapshot.y,
+      snapshot.rotation,
+      snapshot.moving ? TankState.Moving : TankState.Idle,
+      snapshot.tier,
+    );
   }
 
   public prepareRemoteTankForServerPath(): void {

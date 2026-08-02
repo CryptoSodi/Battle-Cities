@@ -82,6 +82,15 @@ interface WebRtcPlayerFrame {
   initialSync?: boolean;
 }
 
+export interface WebRtcServerTankSnapshot {
+  partyIndex: 0 | 1;
+  tier: TankTier;
+  x: number;
+  y: number;
+  rotation: Rotation;
+  moving: boolean;
+}
+
 interface LocalAuthoritativeFrame {
   frame: WebRtcPlayerFrame;
   acknowledgedInputSeq: number;
@@ -251,6 +260,7 @@ export class WebRtcHostMatchSync {
   private authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
+  private readonly serverGhostEnabled: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
@@ -376,6 +386,12 @@ export class WebRtcHostMatchSync {
       params.get('debugNoEnemyShooting') === '1' ||
       params.get('webrtcNoEnemyShooting') === '1';
     this.networkStatsEnabled = params.get('webrtcStats') === '1';
+    this.serverGhostEnabled =
+      params.get('serverGhost') === '1' ||
+      params.get('webrtcServerGhost') === '1' ||
+      params.get('ghostMirror') === '1' ||
+      params.get('ghostmirror') === '1' ||
+      params.get('ghosmirror') === '1';
     this.expectedStageNumber = Math.max(
       1,
       Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
@@ -483,6 +499,42 @@ export class WebRtcHostMatchSync {
 
   public getLocalPlayerIndex(): number {
     return this.localPlayerIndex;
+  }
+
+  public isServerGhostEnabled(): boolean {
+    return (
+      this.isEnabled() &&
+      !this.broadcaster &&
+      !this.observer &&
+      this.serverGhostEnabled
+    );
+  }
+
+  public getLocalServerTankSnapshot(): WebRtcServerTankSnapshot | null {
+    if (!this.isServerGhostEnabled() || !this.connected) {
+      return null;
+    }
+
+    const frame = this.latestHostFrame?.players?.find((candidate) => {
+      return candidate.partyIndex === this.localPlayerIndex;
+    });
+    if (
+      frame === undefined ||
+      !frame.alive ||
+      !Number.isFinite(frame.x) ||
+      !Number.isFinite(frame.y)
+    ) {
+      return null;
+    }
+
+    return {
+      partyIndex: frame.partyIndex,
+      tier: frame.tier ?? TankTier.A,
+      x: frame.x,
+      y: frame.y,
+      rotation: frame.rotation,
+      moving: frame.moving,
+    };
   }
 
   public getSharedElapsedSeconds(): number {
