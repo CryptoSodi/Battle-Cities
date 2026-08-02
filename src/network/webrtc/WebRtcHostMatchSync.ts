@@ -18,7 +18,7 @@ import {
   applyRemotePlayerInput,
 } from './applyRemotePlayerInput';
 import {
-  calculateHalfLatencyDelayTicks,
+  calculateLatencyDelayTicks,
   HalfLatencyInputBuffer,
 } from './HalfLatencyInputBuffer';
 import { OrderedInputBuffer } from './OrderedInputBuffer';
@@ -273,7 +273,7 @@ export class WebRtcHostMatchSync {
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
   private readonly serverGhostEnabled: boolean;
-  private readonly halfLatencyInputEnabled: boolean;
+  private readonly inputDelayRttFraction: number;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
@@ -411,9 +411,17 @@ export class WebRtcHostMatchSync {
       params.get('ghostMirror') === '1' ||
       params.get('ghostmirror') === '1' ||
       params.get('ghosmirror') === '1';
-    this.halfLatencyInputEnabled =
+    const twoThirdsLatencyInputEnabled =
+      params.get('twoThirdsLatencyInput') === '1' ||
+      params.get('webrtcTwoThirdsLatencyInput') === '1';
+    const halfLatencyInputEnabled =
       params.get('halfLatencyInput') === '1' ||
       params.get('webrtcHalfLatencyInput') === '1';
+    this.inputDelayRttFraction = twoThirdsLatencyInputEnabled
+      ? 2 / 3
+      : halfLatencyInputEnabled
+        ? 1 / 2
+        : 0;
     this.expectedStageNumber = Math.max(
       1,
       Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
@@ -756,7 +764,7 @@ export class WebRtcHostMatchSync {
         updateArgs,
         this.localPlayerIndex as 0 | 1,
       );
-      const predictedInput = this.halfLatencyInputEnabled
+      const predictedInput = this.inputDelayRttFraction > 0
         ? this.delayedLocalInputs.consume(this.tick)
         : sentInput;
       if (predictedInput !== null) {
@@ -1847,11 +1855,15 @@ export class WebRtcHostMatchSync {
       packet,
       deltaTime: Math.max(0, updateArgs.deltaTime),
     };
-    if (this.halfLatencyInputEnabled) {
+    if (this.inputDelayRttFraction > 0) {
       this.delayedLocalInputs.schedule(
         predictedInput,
         this.tick,
-        calculateHalfLatencyDelayTicks(this.rttMs, predictedInput.deltaTime),
+        calculateLatencyDelayTicks(
+          this.rttMs,
+          predictedInput.deltaTime,
+          this.inputDelayRttFraction,
+        ),
       );
       return predictedInput;
     }
@@ -2265,7 +2277,7 @@ export class WebRtcHostMatchSync {
     this.lastAcknowledgedLocalInputSeq = acknowledgedInputSeq;
 
     const frame = authoritative.frame;
-    if (this.halfLatencyInputEnabled && !initialSync) {
+    if (this.inputDelayRttFraction > 0 && !initialSync) {
       this.pendingLocalInputs.length = 0;
       this.applyAuthoritativeLocalFire(tank, frame);
       return;
@@ -2273,7 +2285,7 @@ export class WebRtcHostMatchSync {
 
     if (initialSync) {
       this.pendingLocalInputs.length = 0;
-      if (!this.halfLatencyInputEnabled) {
+      if (this.inputDelayRttFraction <= 0) {
         this.delayedLocalInputs.clear();
       }
     } else {

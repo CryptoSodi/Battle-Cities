@@ -7,16 +7,21 @@ interface ScheduledInput<T> {
   applyTick: number;
 }
 
-export function calculateHalfLatencyDelayTicks(
+export function calculateLatencyDelayTicks(
   rttMs: number | null,
   deltaTime: number,
+  rttFraction: number,
 ): number {
   const effectiveRttMs =
     rttMs !== null && Number.isFinite(rttMs) && rttMs >= 0
       ? rttMs
       : DEFAULT_RTT_MS;
   const tickMs = Math.max(1, deltaTime * 1000);
-  const delayMs = Math.min(effectiveRttMs / 2, MAX_INPUT_DELAY_MS);
+  const boundedRttFraction = Math.min(1, Math.max(0, rttFraction));
+  const delayMs = Math.min(
+    effectiveRttMs * boundedRttFraction,
+    MAX_INPUT_DELAY_MS,
+  );
   return Math.max(0, Math.round(delayMs / tickMs));
 }
 

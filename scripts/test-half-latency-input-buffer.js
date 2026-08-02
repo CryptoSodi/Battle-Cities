@@ -1,21 +1,26 @@
 const assert = require('assert');
 
 const {
-  calculateHalfLatencyDelayTicks,
+  calculateLatencyDelayTicks,
   HalfLatencyInputBuffer,
 } = require(
   '../dist-broadcaster/src/network/webrtc/HalfLatencyInputBuffer.js'
 );
 
 assert.strictEqual(
-  calculateHalfLatencyDelayTicks(200, 1 / 60),
+  calculateLatencyDelayTicks(200, 1 / 60, 1 / 2),
   6,
   'a 200 ms RTT must delay local input by six 60 Hz ticks',
 );
 assert.strictEqual(
-  calculateHalfLatencyDelayTicks(null, 1 / 60),
-  6,
-  'input delay must use the 200 ms fallback before the first RTT probe',
+  calculateLatencyDelayTicks(200, 1 / 60, 2 / 3),
+  8,
+  'two-thirds of a 200 ms RTT must delay input by eight 60 Hz ticks',
+);
+assert.strictEqual(
+  calculateLatencyDelayTicks(null, 1 / 60, 2 / 3),
+  8,
+  'two-thirds input delay must use the 200 ms fallback before the first RTT probe',
 );
 
 {
@@ -45,4 +50,4 @@ assert.strictEqual(
   assert.strictEqual(buffer.consume(2), null);
 }
 
-console.log('half-latency input scheduler: ok');
+console.log('latency input scheduler: ok');
