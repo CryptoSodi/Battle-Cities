@@ -17,6 +17,10 @@ import {
   applyPredictedPlayerMovement,
   applyRemotePlayerInput,
 } from './applyRemotePlayerInput';
+import {
+  calculateHalfLatencyDelayTicks,
+  HalfLatencyInputBuffer,
+} from './HalfLatencyInputBuffer';
 import { OrderedInputBuffer } from './OrderedInputBuffer';
 
 const REMOTE_INPUT_TIMEOUT_MS = 500;
@@ -269,6 +273,7 @@ export class WebRtcHostMatchSync {
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
   private readonly serverGhostEnabled: boolean;
+  private readonly halfLatencyInputEnabled: boolean;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
@@ -293,6 +298,8 @@ export class WebRtcHostMatchSync {
   private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
   private readonly pendingLocalInputs: PredictedInput[] = [];
+  private readonly delayedLocalInputs =
+    new HalfLatencyInputBuffer<PredictedInput>();
   private pendingLocalAuthoritativeFrame: LocalAuthoritativeFrame = null;
   private localPredictionTank: PlayerTank = null;
   private lastAcknowledgedLocalInputSeq = 0;
@@ -404,6 +411,9 @@ export class WebRtcHostMatchSync {
       params.get('ghostMirror') === '1' ||
       params.get('ghostmirror') === '1' ||
       params.get('ghosmirror') === '1';
+    this.halfLatencyInputEnabled =
+      params.get('halfLatencyInput') === '1' ||
+      params.get('webrtcHalfLatencyInput') === '1';
     this.expectedStageNumber = Math.max(
       1,
       Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
@@ -656,6 +666,7 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeathSeqs.clear();
     this.pendingPowerupPickups.length = 0;
     this.pendingLocalInputs.length = 0;
+    this.delayedLocalInputs.clear();
     this.pendingLocalAuthoritativeFrame = null;
     this.localPredictionTank = null;
     this.lastAppliedEnemyDeathSeq = 0;
@@ -738,12 +749,16 @@ export class WebRtcHostMatchSync {
       if (this.localPredictionTank !== tank) {
         this.localPredictionTank = tank;
         this.pendingLocalInputs.length = 0;
+        this.delayedLocalInputs.clear();
         this.pendingLocalAuthoritativeFrame = null;
       }
-      const predictedInput = this.sendLocalInput(
+      const sentInput = this.sendLocalInput(
         updateArgs,
         this.localPlayerIndex as 0 | 1,
       );
+      const predictedInput = this.halfLatencyInputEnabled
+        ? this.delayedLocalInputs.consume(this.tick)
+        : sentInput;
       if (predictedInput !== null) {
         applyPredictedPlayerMovement(
           tank,
@@ -1027,6 +1042,7 @@ export class WebRtcHostMatchSync {
     this.lastProcessedRemoteInputSeqs.clear();
     this.pendingRemotePowerSlots.clear();
     this.pendingLocalInputs.length = 0;
+    this.delayedLocalInputs.clear();
     this.pendingLocalAuthoritativeFrame = null;
     this.localPredictionTank = null;
     this.recoveryFrames.clear();
@@ -1253,6 +1269,7 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeathSeqs.clear();
     this.pendingAppliedFrameSeqs.length = 0;
     this.pendingLocalInputs.length = 0;
+    this.delayedLocalInputs.clear();
     this.pendingLocalAuthoritativeFrame = null;
     this.localPredictionTank = null;
     this.clientFrameCache.forEach((frame, seq) => {
@@ -1830,6 +1847,15 @@ export class WebRtcHostMatchSync {
       packet,
       deltaTime: Math.max(0, updateArgs.deltaTime),
     };
+    if (this.halfLatencyInputEnabled) {
+      this.delayedLocalInputs.schedule(
+        predictedInput,
+        this.tick,
+        calculateHalfLatencyDelayTicks(this.rttMs, predictedInput.deltaTime),
+      );
+      return predictedInput;
+    }
+
     this.pendingLocalInputs.push(predictedInput);
     if (this.pendingLocalInputs.length > MAX_PENDING_PREDICTED_INPUTS) {
       this.pendingLocalInputs.splice(
@@ -2238,8 +2264,18 @@ export class WebRtcHostMatchSync {
     );
     this.lastAcknowledgedLocalInputSeq = acknowledgedInputSeq;
 
+    const frame = authoritative.frame;
+    if (this.halfLatencyInputEnabled && !initialSync) {
+      this.pendingLocalInputs.length = 0;
+      this.applyAuthoritativeLocalFire(tank, frame);
+      return;
+    }
+
     if (initialSync) {
       this.pendingLocalInputs.length = 0;
+      if (!this.halfLatencyInputEnabled) {
+        this.delayedLocalInputs.clear();
+      }
     } else {
       const firstPendingIndex = this.pendingLocalInputs.findIndex((input) => {
         return input.packet.seq > acknowledgedInputSeq;
@@ -2251,7 +2287,6 @@ export class WebRtcHostMatchSync {
       }
     }
 
-    const frame = authoritative.frame;
     if (!Number.isFinite(frame.x) || !Number.isFinite(frame.y)) {
       return;
     }
@@ -2301,8 +2336,14 @@ export class WebRtcHostMatchSync {
       correctedY - targetY,
     );
 
-    const lastFireSeq =
-      this.lastPlayerFireSeqs.get(frame.partyIndex) ?? 0;
+    this.applyAuthoritativeLocalFire(tank, frame);
+  }
+
+  private applyAuthoritativeLocalFire(
+    tank: PlayerTank,
+    frame: WebRtcPlayerFrame,
+  ): void {
+    const lastFireSeq = this.lastPlayerFireSeqs.get(frame.partyIndex) ?? 0;
     if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
       this.lastPlayerFireSeqs.set(frame.partyIndex, frame.fireSeq);
       tank.fireFromNetwork(frame.fireX, frame.fireY, frame.fireRotation);

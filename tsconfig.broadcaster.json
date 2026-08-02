@@ -20,6 +20,7 @@
   "include": [
     "scripts/headless-broadcaster-runtime.ts",
     "scripts/engine-battle-city-simulation.ts",
+    "src/network/webrtc/HalfLatencyInputBuffer.ts",
     "src/types/**/*.d.ts",
     "shared/src/**/*.ts"
   ]
