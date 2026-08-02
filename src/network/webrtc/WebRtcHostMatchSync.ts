@@ -17,6 +17,7 @@ import {
   applyPredictedPlayerMovement,
   applyRemotePlayerInput,
 } from './applyRemotePlayerInput';
+import { OrderedInputBuffer } from './OrderedInputBuffer';
 
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
@@ -283,11 +284,12 @@ export class WebRtcHostMatchSync {
   private inputSeq = 0;
   private frameSeq = 0;
   private tick = 0;
-  private readonly latestRemoteInputs = new Map<number, WebRtcInputPacket>();
-  private readonly latestRemoteInputReceivedAt = new Map<number, number>();
+  private readonly remoteInputBuffers = new Map<
+    number,
+    OrderedInputBuffer<WebRtcInputPacket>
+  >();
   private readonly lastAppliedRemoteFireSeqs = new Map<number, number>();
   private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
-  private readonly pendingRemoteFireSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
   private readonly pendingLocalInputs: PredictedInput[] = [];
   private pendingLocalAuthoritativeFrame: LocalAuthoritativeFrame = null;
@@ -1018,11 +1020,9 @@ export class WebRtcHostMatchSync {
     this.frameHistoryBySeq.clear();
     this.replaySessions.clear();
     this.pendingActivations.clear();
-    this.latestRemoteInputs.clear();
-    this.latestRemoteInputReceivedAt.clear();
+    this.remoteInputBuffers.clear();
     this.lastAppliedRemoteFireSeqs.clear();
     this.lastProcessedRemoteInputSeqs.clear();
-    this.pendingRemoteFireSeqs.clear();
     this.pendingRemotePowerSlots.clear();
     this.pendingLocalInputs.length = 0;
     this.pendingLocalAuthoritativeFrame = null;
@@ -1182,6 +1182,7 @@ export class WebRtcHostMatchSync {
         this.enemyShootingDisabledPlayers.delete(linkId);
         this.replaySessions.delete(linkId);
         this.pendingActivations.delete(linkId);
+        this.remoteInputBuffers.delete(linkId);
         this.pendingRemotePowerSlots.delete(linkId);
         if (this.matchStarted) {
           this.syncingPlayers.add(linkId);
@@ -1366,8 +1367,7 @@ export class WebRtcHostMatchSync {
     this.replaySessions.delete(playerIndex);
     this.pendingActivations.delete(playerIndex);
     this.activePlayers.add(playerIndex);
-    this.latestRemoteInputs.delete(playerIndex);
-    this.latestRemoteInputReceivedAt.delete(playerIndex);
+    this.remoteInputBuffers.delete(playerIndex);
     this.lastAppliedRemoteFireSeqs.delete(playerIndex);
     this.pendingRemotePowerSlots.delete(playerIndex);
   }
@@ -1658,16 +1658,12 @@ export class WebRtcHostMatchSync {
         isObserverLink(linkId) ||
         !this.activePlayers.has(linkId) ||
         input.player !== linkId ||
-        !isPowerSlot(input.powerSlot) ||
-        input.seq <=
-          (this.latestRemoteInputs.get(linkId)?.seq ?? 0)
+        !isPowerSlot(input.powerSlot)
       ) {
         return;
       }
-      this.latestRemoteInputs.set(linkId, input);
-      this.latestRemoteInputReceivedAt.set(linkId, Date.now());
-      if (input.fire) {
-        this.pendingRemoteFireSeqs.set(linkId, input.seq);
+      if (!this.getRemoteInputBuffer(linkId).accept(input)) {
+        return;
       }
       if (input.powerSlot !== null && input.powerSlot !== undefined) {
         let slots = this.pendingRemotePowerSlots.get(linkId);
@@ -1831,27 +1827,25 @@ export class WebRtcHostMatchSync {
   }
 
   private applyRemoteInput(tank: PlayerTank, deltaTime: number): void {
-    const input = this.latestRemoteInputs.get(tank.partyIndex);
-    const receivedAt =
-      this.latestRemoteInputReceivedAt.get(tank.partyIndex) ?? 0;
+    const inputBuffer = this.remoteInputBuffers.get(tank.partyIndex);
     if (
-      input === undefined ||
-      Date.now() - receivedAt > REMOTE_INPUT_TIMEOUT_MS
+      inputBuffer === undefined ||
+      inputBuffer.isStale(Date.now(), REMOTE_INPUT_TIMEOUT_MS)
     ) {
+      tank.idle(false);
+      return;
+    }
+    const input = inputBuffer.consumeNext();
+    if (input === null) {
       tank.idle(false);
       return;
     }
 
     const lastFireSeq =
       this.lastAppliedRemoteFireSeqs.get(tank.partyIndex) ?? 0;
-    const pendingFireSeq = this.pendingRemoteFireSeqs.get(tank.partyIndex);
     const appliedFireSeq = applyRemotePlayerInput(
       tank,
-      {
-        ...input,
-        fire:
-          pendingFireSeq !== undefined && pendingFireSeq > lastFireSeq,
-      },
+      input,
       deltaTime,
       lastFireSeq,
     );
@@ -1859,10 +1853,18 @@ export class WebRtcHostMatchSync {
       tank.partyIndex,
       appliedFireSeq,
     );
-    if (pendingFireSeq !== undefined && appliedFireSeq >= pendingFireSeq) {
-      this.pendingRemoteFireSeqs.delete(tank.partyIndex);
-    }
     this.lastProcessedRemoteInputSeqs.set(tank.partyIndex, input.seq);
+  }
+
+  private getRemoteInputBuffer(
+    playerIndex: number,
+  ): OrderedInputBuffer<WebRtcInputPacket> {
+    let inputBuffer = this.remoteInputBuffers.get(playerIndex);
+    if (inputBuffer === undefined) {
+      inputBuffer = new OrderedInputBuffer<WebRtcInputPacket>();
+      this.remoteInputBuffers.set(playerIndex, inputBuffer);
+    }
+    return inputBuffer;
   }
 
   private readInput(updateArgs: GameUpdateArgs): {
@@ -2380,9 +2382,7 @@ export class WebRtcHostMatchSync {
         return;
       }
       this.observedPlayers.add(tank);
-      this.latestRemoteInputs.delete(tank.partyIndex);
-      this.latestRemoteInputReceivedAt.delete(tank.partyIndex);
-      this.pendingRemoteFireSeqs.delete(tank.partyIndex);
+      this.remoteInputBuffers.delete(tank.partyIndex);
       tank.fired.addListener(() => {
         this.playerFireSeqs.set(
           tank.partyIndex,

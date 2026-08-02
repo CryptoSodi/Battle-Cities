@@ -39,6 +39,7 @@ import { LevelWinScript } from '../src/level/scripts/LevelWinScript';
 import { MapConfig } from '../src/map/MapConfig';
 import { MapDto } from '../src/map/MapDto';
 import { applyRemotePlayerInput } from '../src/network/webrtc/applyRemotePlayerInput';
+import { OrderedInputBuffer } from '../src/network/webrtc/OrderedInputBuffer';
 import { PowerupType } from '../src/powerup';
 import { TankDeathReason } from '../src/tank/TankDeathReason';
 import { TankTier } from '../src/tank/TankTier';
@@ -68,11 +69,6 @@ const BASE_WALL_REGIONS = [
   { x: 0, y: 32, width: 32, height: 64 },
   { x: 96, y: 32, width: 32, height: 64 },
 ] as const;
-
-interface LatestInput {
-  packet: SimulationInputPacket;
-  receivedAt: number;
-}
 
 interface FireState {
   tank: Tank;
@@ -118,8 +114,10 @@ class HeadlessWebRtcMatch {
   private readonly lastProcessedInputSeq: [number, number] = [0, 0];
 
   public constructor(
-    private readonly inputs: Map<SimulationPlayerIndex, LatestInput>,
-    private readonly pendingFireSeqs: Map<SimulationPlayerIndex, number>,
+    private readonly inputBuffers: readonly [
+      OrderedInputBuffer<SimulationInputPacket>,
+      OrderedInputBuffer<SimulationInputPacket>,
+    ],
     private readonly pendingPowerSlots: Map<SimulationPlayerIndex, number[]>,
     private disableEnemyShooting: boolean,
   ) {}
@@ -135,24 +133,21 @@ class HeadlessWebRtcMatch {
       return true;
     }
 
-    const latest = this.inputs.get(playerIndex);
-    if (
-      latest === undefined ||
-      Date.now() - latest.receivedAt > REMOTE_INPUT_TIMEOUT_MS
-    ) {
+    const inputBuffer = this.inputBuffers[playerIndex];
+    if (inputBuffer.isStale(Date.now(), REMOTE_INPUT_TIMEOUT_MS)) {
+      tank.idle(false);
+      return true;
+    }
+    const input = inputBuffer.consumeNext();
+    if (input === null) {
       tank.idle(false);
       return true;
     }
 
     const lastFireSeq = this.lastFireSeqs.get(tank.partyIndex) ?? 0;
-    const pendingFireSeq = this.pendingFireSeqs.get(playerIndex);
     const appliedFireSeq = applyRemotePlayerInput(
       tank,
-      {
-        ...latest.packet,
-        fire:
-          pendingFireSeq !== undefined && pendingFireSeq > lastFireSeq,
-      },
+      input,
       updateArgs.deltaTime,
       lastFireSeq,
     );
@@ -160,10 +155,7 @@ class HeadlessWebRtcMatch {
       tank.partyIndex,
       appliedFireSeq,
     );
-    if (pendingFireSeq !== undefined && appliedFireSeq >= pendingFireSeq) {
-      this.pendingFireSeqs.delete(playerIndex);
-    }
-    this.lastProcessedInputSeq[playerIndex] = latest.packet.seq;
+    this.lastProcessedInputSeq[playerIndex] = input.seq;
     return true;
   }
 
@@ -174,8 +166,7 @@ class HeadlessWebRtcMatch {
   public observeAuthoritativePlayerTank(tank: PlayerTank): void {
     const playerIndex = tank.partyIndex as SimulationPlayerIndex;
     this.controlledTanks.set(playerIndex, tank);
-    this.inputs.delete(playerIndex);
-    this.pendingFireSeqs.delete(playerIndex);
+    this.inputBuffers[playerIndex].clear();
   }
 
   public isEnabled(): boolean {
@@ -233,8 +224,10 @@ export class EngineBattleCitySimulation {
   private readonly session = new Session();
   private readonly world: LevelWorld;
   private readonly updateArgs: GameUpdateArgs;
-  private readonly inputs = new Map<SimulationPlayerIndex, LatestInput>();
-  private readonly pendingFireSeqs = new Map<SimulationPlayerIndex, number>();
+  private readonly inputBuffers: [
+    OrderedInputBuffer<SimulationInputPacket>,
+    OrderedInputBuffer<SimulationInputPacket>,
+  ] = [new OrderedInputBuffer(), new OrderedInputBuffer()];
   private readonly webRtcMatch: HeadlessWebRtcMatch;
   private readonly pendingPowerSlots = new Map<
     SimulationPlayerIndex,
@@ -340,8 +333,7 @@ export class EngineBattleCitySimulation {
     this.createTerrain();
 
     this.webRtcMatch = new HeadlessWebRtcMatch(
-      this.inputs,
-      this.pendingFireSeqs,
+      this.inputBuffers,
       this.pendingPowerSlots,
       options.disableEnemyShooting === true,
     );
@@ -492,19 +484,14 @@ export class EngineBattleCitySimulation {
     if (
       (packet.player !== 0 && packet.player !== 1) ||
       !Number.isInteger(packet.seq) ||
-      packet.seq <= (this.inputs.get(packet.player)?.packet.seq ?? 0) ||
       !isRotation(packet.direction) ||
       !isPowerSlot(packet.powerSlot)
     ) {
       return false;
     }
 
-    this.inputs.set(packet.player, {
-      packet,
-      receivedAt: Date.now(),
-    });
-    if (packet.fire) {
-      this.pendingFireSeqs.set(packet.player, packet.seq);
+    if (!this.inputBuffers[packet.player].accept(packet)) {
+      return false;
     }
     if (packet.powerSlot !== null && packet.powerSlot !== undefined) {
       let slots = this.pendingPowerSlots.get(packet.player);

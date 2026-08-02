@@ -576,6 +576,73 @@ function overlaps(left, right) {
 }
 
 {
+  const map = createMap({
+    spawn: {
+      player: {
+        locations: [
+          { x: 64, y: 256 },
+          { x: 704, y: 704 },
+        ],
+      },
+      enemy: {
+        locations: [{ x: 64, y: 64 }],
+        list: [],
+      },
+    },
+  });
+  const steady = new EngineBattleCitySimulation(map, {
+    seed: 23,
+    disableEnemyShooting: true,
+  });
+  const burst = new EngineBattleCitySimulation(map, {
+    seed: 23,
+    disableEnemyShooting: true,
+  });
+  for (let tick = 0; tick < 300; tick += 1) {
+    steady.step();
+    burst.step();
+  }
+
+  const directions = [0, 90, 180, 270];
+  let steadyFrame;
+  let burstFrame;
+  const firstBurstAcks = [];
+  for (let baseSeq = 0; baseSeq < 80; baseSeq += directions.length) {
+    directions.forEach((direction, index) => {
+      const packet = input(0, baseSeq + index + 1, direction, true);
+      assert.strictEqual(steady.acceptInput(packet), true);
+      steadyFrame = steady.step();
+      assert.strictEqual(burst.acceptInput(packet), true);
+    });
+    directions.forEach(() => {
+      burstFrame = burst.step();
+      if (baseSeq === 0) {
+        firstBurstAcks.push(burstFrame.lastProcessedInputSeq[0]);
+      }
+    });
+  }
+
+  assert.deepStrictEqual(
+    firstBurstAcks,
+    [1, 2, 3, 4],
+    'the server must acknowledge burst inputs only as they are simulated',
+  );
+  assert.deepStrictEqual(
+    {
+      x: burstFrame.players[0].x,
+      y: burstFrame.players[0].y,
+      rotation: burstFrame.players[0].rotation,
+    },
+    {
+      x: steadyFrame.players[0].x,
+      y: steadyFrame.players[0].y,
+      rotation: steadyFrame.players[0].rotation,
+    },
+    'rapid ordered inputs must produce the same authoritative movement when they arrive in bursts',
+  );
+}
+
+{
   const simulation = new EngineBattleCitySimulation(
     createMap({
       terrain: {
