@@ -119,6 +119,9 @@ export class LevelMatchLifecycle {
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
     const playerSession = this.session.getPlayer(event.partyIndex);
+    if (!playerSession.isAlive()) {
+      return;
+    }
     playerSession.addPowerupPoints(event.type);
     if (event.type === PowerupType.Life) {
       playerSession.addLife();

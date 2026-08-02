@@ -128,13 +128,16 @@ export class SessionPlayer {
   }
 
   public addLife(): void {
+    if (!this.isAlive()) {
+      return;
+    }
     this.lives += 1;
 
     this.lifeup.notify(null);
   }
 
   public removeLife(): void {
-    this.lives -= 1;
+    this.lives = Math.max(0, this.lives - 1);
   }
 
   public setInputVariant(inputVariant: InputVariant): void {

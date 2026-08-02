@@ -61,6 +61,35 @@ function overlaps(left, right) {
 
 {
   const simulation = new EngineBattleCitySimulation(createMap(), {
+    seed: 10,
+    disableEnemyShooting: true,
+  });
+  simulation.session.getPlayer(0).setLivesCount(0);
+  simulation.session.getPlayer(1).setLivesCount(2);
+  simulation.eventBus.powerupPicked.notify({
+    type: 'life',
+    partyIndex: 1,
+    centerPosition: { x: 0, y: 0 },
+  });
+  assert.deepStrictEqual(
+    simulation.getLives(),
+    [0, 3],
+    'a life collected by player two must never revive eliminated player one',
+  );
+  simulation.eventBus.powerupPicked.notify({
+    type: 'life',
+    partyIndex: 0,
+    centerPosition: { x: 0, y: 0 },
+  });
+  assert.deepStrictEqual(
+    simulation.getLives(),
+    [0, 3],
+    'an eliminated player must ignore delayed life pickup events',
+  );
+}
+
+{
+  const simulation = new EngineBattleCitySimulation(createMap(), {
     seed: 11,
     disableEnemyShooting: true,
   });
