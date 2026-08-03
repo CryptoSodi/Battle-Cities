@@ -21,8 +21,8 @@
       "destination": "/admin/index.html"
     },
     {
-      "source": "/api/((?!router$).*)",
-      "destination": "/api/router?__route=$1"
+      "source": "/api/:path*",
+      "destination": "/api/router?__route=:path*"
     }
   ],
   "headers": [
