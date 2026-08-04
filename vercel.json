@@ -22,7 +22,7 @@
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/router?__route=:path*"
+      "destination": "/api/router?__route=:path"
     }
   ],
   "headers": [

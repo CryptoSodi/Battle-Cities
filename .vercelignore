@@ -1,7 +1,0 @@
-*
-!api-server
-!api-server/
-!api-server/**
-!shared
-!shared/
-!shared/**
