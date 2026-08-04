@@ -8,7 +8,7 @@ export interface RemotePlayerInput {
   fire: boolean;
 }
 
-export function applyPredictedPlayerMovement(
+function applyPlayerInputCommand(
   tank: PlayerTank,
   input: RemotePlayerInput,
   deltaTime: number,
@@ -42,6 +42,6 @@ export function applyRemotePlayerInput(
     tank.fire();
   }
 
-  applyPredictedPlayerMovement(tank, input, deltaTime);
+  applyPlayerInputCommand(tank, input, deltaTime);
   return appliedFireSeq;
 }

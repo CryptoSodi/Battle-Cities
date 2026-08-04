@@ -13,24 +13,13 @@ import type {
   MultiplayerRuntimeConfig,
   SimulationClientDebugPacket,
 } from '@battlecities/shared';
-import {
-  applyPredictedPlayerMovement,
-  applyRemotePlayerInput,
-} from './applyRemotePlayerInput';
-import {
-  calculateLatencyDelayTicks,
-  HalfLatencyInputBuffer,
-} from './HalfLatencyInputBuffer';
+import { applyRemotePlayerInput } from './applyRemotePlayerInput';
 import { OrderedInputBuffer } from './OrderedInputBuffer';
 
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
 const MAX_PLAYER_TICKS_PER_UPDATE = 2;
 const PLAYER_TICK_CATCH_UP_BACKLOG = 6;
-const MAX_PENDING_PREDICTED_INPUTS = 240;
-const RECONCILIATION_IGNORE_DISTANCE = 0.5;
-const RECONCILIATION_SNAP_DISTANCE = 32;
-const RECONCILIATION_BLEND = 0.35;
 const NETWORK_PROBE_INTERVAL_SECONDS = 0.5;
 const JITTER_SMOOTHING = 0.2;
 const OBSERVER_HEARTBEAT_MS = 5000;
@@ -50,11 +39,6 @@ interface WebRtcInputPacket {
   fire: boolean;
   powerSlot?: number | null;
   elapsedSeconds: number;
-}
-
-interface PredictedInput {
-  packet: WebRtcInputPacket;
-  deltaTime: number;
 }
 
 interface WebRtcEnemyFrame {
@@ -101,11 +85,6 @@ export interface WebRtcServerTankSnapshot {
   fireX: number;
   fireY: number;
   fireRotation: Rotation;
-}
-
-interface LocalAuthoritativeFrame {
-  frame: WebRtcPlayerFrame;
-  acknowledgedInputSeq: number;
 }
 
 interface WebRtcPowerupFrame {
@@ -273,7 +252,6 @@ export class WebRtcHostMatchSync {
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
   private readonly serverGhostEnabled: boolean;
-  private readonly inputDelayRttFraction: number;
   private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
@@ -297,12 +275,6 @@ export class WebRtcHostMatchSync {
   private readonly pendingRemoteFireSeqs = new Map<number, number[]>();
   private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
-  private readonly pendingLocalInputs: PredictedInput[] = [];
-  private readonly delayedLocalInputs =
-    new HalfLatencyInputBuffer<PredictedInput>();
-  private pendingLocalAuthoritativeFrame: LocalAuthoritativeFrame = null;
-  private localPredictionTank: PlayerTank = null;
-  private lastAcknowledgedLocalInputSeq = 0;
   private latestHostFrame: WebRtcHostFramePacket = null;
   private activeReplayFrame: WebRtcHostFramePacket = null;
   private consumedMatchResultSeq = 0;
@@ -411,17 +383,6 @@ export class WebRtcHostMatchSync {
       params.get('ghostMirror') === '1' ||
       params.get('ghostmirror') === '1' ||
       params.get('ghosmirror') === '1';
-    const twoThirdsLatencyInputEnabled =
-      params.get('twoThirdsLatencyInput') === '1' ||
-      params.get('webrtcTwoThirdsLatencyInput') === '1';
-    const halfLatencyInputEnabled =
-      params.get('halfLatencyInput') === '1' ||
-      params.get('webrtcHalfLatencyInput') === '1';
-    this.inputDelayRttFraction = twoThirdsLatencyInputEnabled
-      ? 2 / 3
-      : halfLatencyInputEnabled
-        ? 1 / 2
-        : 0;
     this.expectedStageNumber = Math.max(
       1,
       Math.floor(runtime?.level ?? (Number(params.get('level')) || 1)),
@@ -673,10 +634,6 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeaths.length = 0;
     this.pendingEnemyDeathSeqs.clear();
     this.pendingPowerupPickups.length = 0;
-    this.pendingLocalInputs.length = 0;
-    this.delayedLocalInputs.clear();
-    this.pendingLocalAuthoritativeFrame = null;
-    this.localPredictionTank = null;
     this.lastAppliedEnemyDeathSeq = 0;
     this.lastQueuedPowerupPickupSeq = 0;
     this.lastPlayerFireSeqs.clear();
@@ -753,29 +710,11 @@ export class WebRtcHostMatchSync {
     }
 
     if (tank.partyIndex === this.localPlayerIndex) {
-      tank.setNetworkControlled(false);
-      if (this.localPredictionTank !== tank) {
-        this.localPredictionTank = tank;
-        this.pendingLocalInputs.length = 0;
-        this.delayedLocalInputs.clear();
-        this.pendingLocalAuthoritativeFrame = null;
-      }
-      const sentInput = this.sendLocalInput(
+      tank.setNetworkControlled(true);
+      this.sendLocalInput(
         updateArgs,
         this.localPlayerIndex as 0 | 1,
       );
-      const predictedInput = this.inputDelayRttFraction > 0
-        ? this.delayedLocalInputs.consume(this.tick)
-        : sentInput;
-      if (predictedInput !== null) {
-        applyPredictedPlayerMovement(
-          tank,
-          predictedInput.packet,
-          predictedInput.deltaTime,
-        );
-      } else {
-        tank.idle(false);
-      }
     }
 
     return true;
@@ -901,7 +840,6 @@ export class WebRtcHostMatchSync {
       this.applyReplayEnemyFrames(enemies, frame.enemies ?? []);
       return;
     }
-    this.reconcileLocalPlayer(players);
     this.applyPlayerFrames(players);
     this.applyEnemyFrames(enemies);
   }
@@ -1049,10 +987,6 @@ export class WebRtcHostMatchSync {
     this.pendingRemoteFireSeqs.clear();
     this.lastProcessedRemoteInputSeqs.clear();
     this.pendingRemotePowerSlots.clear();
-    this.pendingLocalInputs.length = 0;
-    this.delayedLocalInputs.clear();
-    this.pendingLocalAuthoritativeFrame = null;
-    this.localPredictionTank = null;
     this.recoveryFrames.clear();
     this.clientFrameCache.clear();
     this.pendingAppliedFrameSeqs.length = 0;
@@ -1077,7 +1011,6 @@ export class WebRtcHostMatchSync {
     this.inputSeq = 0;
     this.frameSeq = 0;
     this.tick = 0;
-    this.lastAcknowledgedLocalInputSeq = 0;
     this.latestHostFrame = null;
     this.activeReplayFrame = null;
     this.consumedMatchResultSeq = 0;
@@ -1276,10 +1209,6 @@ export class WebRtcHostMatchSync {
     this.pendingEnemyDeaths.length = 0;
     this.pendingEnemyDeathSeqs.clear();
     this.pendingAppliedFrameSeqs.length = 0;
-    this.pendingLocalInputs.length = 0;
-    this.delayedLocalInputs.clear();
-    this.pendingLocalAuthoritativeFrame = null;
-    this.localPredictionTank = null;
     this.clientFrameCache.forEach((frame, seq) => {
       if (seq > this.lastAppliedHostFrameSeq) {
         this.recoveryFrames.set(seq, frame);
@@ -1771,22 +1700,6 @@ export class WebRtcHostMatchSync {
     this.queueEnemyDeaths(frame.enemyDeaths ?? []);
     this.queuePowerupPickup(frame.powerupPickup);
     (frame.players ?? []).forEach((playerFrame) => {
-      if (
-        !this.observer &&
-        playerFrame.partyIndex === this.localPlayerIndex
-      ) {
-        const priorInitialSync =
-          this.pendingLocalAuthoritativeFrame?.frame.initialSync === true;
-        this.pendingLocalAuthoritativeFrame = {
-          frame:
-            initialSync || playerFrame.initialSync === true || priorInitialSync
-              ? { ...playerFrame, initialSync: true }
-              : playerFrame,
-          acknowledgedInputSeq:
-            frame.lastProcessedInputSeq?.[playerFrame.partyIndex] ?? 0,
-        };
-        return;
-      }
       let ticks = this.pendingPlayerTicks.get(playerFrame.partyIndex);
       if (ticks === undefined) {
         ticks = [];
@@ -1833,7 +1746,7 @@ export class WebRtcHostMatchSync {
   private sendLocalInput(
     updateArgs: GameUpdateArgs,
     player: 0 | 1,
-  ): PredictedInput | null {
+  ): void {
     const input = this.readInput(updateArgs);
     this.inputSeq += 1;
     const packet: WebRtcInputPacket = {
@@ -1847,35 +1760,7 @@ export class WebRtcHostMatchSync {
       powerSlot: input.powerSlot,
       elapsedSeconds: this.localElapsedSeconds,
     };
-    if (!this.sendToPlayer(player, packet)) {
-      return null;
-    }
-
-    const predictedInput = {
-      packet,
-      deltaTime: Math.max(0, updateArgs.deltaTime),
-    };
-    if (this.inputDelayRttFraction > 0) {
-      this.delayedLocalInputs.schedule(
-        predictedInput,
-        this.tick,
-        calculateLatencyDelayTicks(
-          this.rttMs,
-          predictedInput.deltaTime,
-          this.inputDelayRttFraction,
-        ),
-      );
-      return predictedInput;
-    }
-
-    this.pendingLocalInputs.push(predictedInput);
-    if (this.pendingLocalInputs.length > MAX_PENDING_PREDICTED_INPUTS) {
-      this.pendingLocalInputs.splice(
-        0,
-        this.pendingLocalInputs.length - MAX_PENDING_PREDICTED_INPUTS,
-      );
-    }
-    return predictedInput;
+    this.sendToPlayer(player, packet);
   }
 
   private applyRemoteInput(tank: PlayerTank, deltaTime: number): void {
@@ -2246,128 +2131,8 @@ export class WebRtcHostMatchSync {
     });
   }
 
-  private reconcileLocalPlayer(players: PlayerTank[]): void {
-    const authoritative = this.pendingLocalAuthoritativeFrame;
-    if (authoritative === null || this.observer) {
-      return;
-    }
-    const tank = players.find((candidate) => {
-      return (
-        candidate !== null &&
-        candidate !== undefined &&
-        candidate.partyIndex === this.localPlayerIndex
-      );
-    });
-    if (tank === undefined) {
-      return;
-    }
-    this.pendingLocalAuthoritativeFrame = null;
-    tank.setNetworkControlled(false);
-    tank.setNetworkTier(authoritative.frame.tier ?? TankTier.A);
-
-    const replacedTank = this.localPredictionTank !== tank;
-    if (replacedTank) {
-      this.localPredictionTank = tank;
-    }
-    const initialSync = authoritative.frame.initialSync === true || replacedTank;
-    const acknowledgedInputSeq = Math.max(
-      this.lastAcknowledgedLocalInputSeq,
-      Math.floor(authoritative.acknowledgedInputSeq || 0),
-    );
-    this.lastAcknowledgedLocalInputSeq = acknowledgedInputSeq;
-
-    const frame = authoritative.frame;
-    if (this.inputDelayRttFraction > 0 && !initialSync) {
-      this.pendingLocalInputs.length = 0;
-      this.applyAuthoritativeLocalFire(tank, frame);
-      return;
-    }
-
-    if (initialSync) {
-      this.pendingLocalInputs.length = 0;
-      if (this.inputDelayRttFraction <= 0) {
-        this.delayedLocalInputs.clear();
-      }
-    } else {
-      const firstPendingIndex = this.pendingLocalInputs.findIndex((input) => {
-        return input.packet.seq > acknowledgedInputSeq;
-      });
-      if (firstPendingIndex < 0) {
-        this.pendingLocalInputs.length = 0;
-      } else if (firstPendingIndex > 0) {
-        this.pendingLocalInputs.splice(0, firstPendingIndex);
-      }
-    }
-
-    if (!Number.isFinite(frame.x) || !Number.isFinite(frame.y)) {
-      return;
-    }
-    const previousX = tank.position.x;
-    const previousY = tank.position.y;
-    tank.applyNetworkMovement(
-      frame.rotation,
-      frame.moving,
-      frame.x - tank.position.x,
-      frame.y - tank.position.y,
-    );
-
-    if (!initialSync) {
-      this.pendingLocalInputs.forEach((input) => {
-        applyPredictedPlayerMovement(
-          tank,
-          input.packet,
-          input.deltaTime,
-          false,
-        );
-      });
-    }
-
-    const targetX = tank.position.x;
-    const targetY = tank.position.y;
-    const targetRotation = tank.rotation;
-    const targetMoving = tank.state === TankState.Moving;
-    const errorX = targetX - previousX;
-    const errorY = targetY - previousY;
-    const errorDistance = Math.sqrt(errorX * errorX + errorY * errorY);
-
-    let correctedX = targetX;
-    let correctedY = targetY;
-    if (!initialSync && errorDistance < RECONCILIATION_SNAP_DISTANCE) {
-      if (errorDistance <= RECONCILIATION_IGNORE_DISTANCE) {
-        correctedX = previousX;
-        correctedY = previousY;
-      } else {
-        correctedX = previousX + errorX * RECONCILIATION_BLEND;
-        correctedY = previousY + errorY * RECONCILIATION_BLEND;
-      }
-    }
-    tank.applyNetworkMovement(
-      targetRotation,
-      targetMoving,
-      correctedX - targetX,
-      correctedY - targetY,
-    );
-
-    this.applyAuthoritativeLocalFire(tank, frame);
-  }
-
-  private applyAuthoritativeLocalFire(
-    tank: PlayerTank,
-    frame: WebRtcPlayerFrame,
-  ): void {
-    const lastFireSeq = this.lastPlayerFireSeqs.get(frame.partyIndex) ?? 0;
-    if (tank.collider.isInitialized() && frame.fireSeq > lastFireSeq) {
-      this.lastPlayerFireSeqs.set(frame.partyIndex, frame.fireSeq);
-      tank.fireFromNetwork(frame.fireX, frame.fireY, frame.fireRotation);
-    }
-  }
-
   private applyPlayerFrames(players: PlayerTank[]): void {
     this.pendingPlayerTicks.forEach((ticks, partyIndex) => {
-      if (!this.observer && partyIndex === this.localPlayerIndex) {
-        this.pendingPlayerTicks.delete(partyIndex);
-        return;
-      }
       const tank = players.find((candidate) => {
         return (
           candidate !== null &&
