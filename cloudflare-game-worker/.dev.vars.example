@@ -1,0 +1,2 @@
+BROADCASTER_SERVICE_TOKEN=replace-with-the-same-service-token-used-by-oracle
+WEBSOCKET_TICKET_SECRET=replace-with-a-random-secret-of-at-least-32-characters

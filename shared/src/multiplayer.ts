@@ -64,13 +64,14 @@ export interface MultiplayerAssignment {
 
 export interface MultiplayerRuntimeConfig {
   protocolVersion: 1;
-  mode: 'webrtc';
+  mode: 'webrtc' | 'websocket';
   matchId: string;
   role: 'player';
   playerSlot: PlayerSlot;
   tankTier: MultiplayerTankTier;
   level: number;
-  signalingBaseUrl: string;
+  signalingBaseUrl?: string;
+  websocketUrl?: string;
   joinToken: string;
 }
 

@@ -90,7 +90,7 @@ function clearWebRtcMatchUrl(): void {
 function isMultiplayerRuntime(value: any): value is MultiplayerRuntimeConfig {
   return (
     value?.protocolVersion === 1 &&
-    value?.mode === 'webrtc' &&
+    (value?.mode === 'webrtc' || value?.mode === 'websocket') &&
     value?.role === 'player' &&
     typeof value.matchId === 'string' &&
     /^match-[0-9a-z-]+$/i.test(value.matchId) &&
@@ -98,8 +98,9 @@ function isMultiplayerRuntime(value: any): value is MultiplayerRuntimeConfig {
     ['a', 'b', 'c', 'd'].includes(value.tankTier) &&
     Number.isInteger(value.level) &&
     value.level >= 1 &&
-    typeof value.signalingBaseUrl === 'string' &&
-    /^https?:\/\//.test(value.signalingBaseUrl) &&
+    (value.mode === 'websocket'
+      ? typeof value.websocketUrl === 'string' && /^wss?:\/\//.test(value.websocketUrl)
+      : typeof value.signalingBaseUrl === 'string' && /^https?:\/\//.test(value.signalingBaseUrl)) &&
     typeof value.joinToken === 'string' &&
     value.joinToken.length >= 32
   );

@@ -1,0 +1,3 @@
+# Preserve the shareable profile route while allowing its stylesheet through.
+/player-profile/profile.css /player-profile/profile.css 200
+/player-profile/* /player-profile/index.html 200

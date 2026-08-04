@@ -29,11 +29,11 @@ Project is not commercial and was created for learning purposes only.
 
 ## Deployment Environments
 
-Online matches use the Vercel game client and one native Ubuntu backend:
+Online matches use the Cloudflare Pages game client and one native Ubuntu backend:
 
 | Project | Required multiplayer environment |
 | --- | --- |
-| Vercel game client | `BATTLECITY_API_BASE_URL=https://api.battlecities.com` |
+| Cloudflare Pages game client | `BATTLECITY_API_BASE_URL=https://api.battlecities.com` |
 | Ubuntu API + broadcaster | `BATTLECITY_EMBED_BROADCASTER=1`, PostgreSQL, and private server secrets |
 
 See [Deployment Environment Setup](docs/environment-setup.md) for the complete

@@ -8,5 +8,6 @@
     "resolveJsonModule": true,
     "target": "es5",
     "typeRoots": ["./src/types", "./node_modules/@types"]
-  }
+  },
+  "include": ["src/**/*.ts", "shared/src/**/*.ts"]
 }

@@ -15,6 +15,10 @@ import type {
 } from '@battlecities/shared';
 import { applyRemotePlayerInput } from './applyRemotePlayerInput';
 import { OrderedInputBuffer } from './OrderedInputBuffer';
+import {
+  MatchTransportLink,
+  WebSocketMatchLink,
+} from '../websocket/WebSocketMatchLink';
 
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
@@ -248,11 +252,13 @@ export class WebRtcHostMatchSync {
   private room: string;
   private localPlayerIndex: number;
   private signalingBaseUrl: string;
+  private websocketUrl: string;
+  private transportMode: 'webrtc' | 'websocket';
   private authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
   private readonly serverGhostEnabled: boolean;
-  private readonly links = new Map<WebRtcLinkId, WebRtcGhostSync>();
+  private readonly links = new Map<WebRtcLinkId, MatchTransportLink>();
   private readonly connectedPlayers = new Set<number>();
   private readonly activePlayers = new Set<number>();
   private readonly syncingPlayers = new Set<number>();
@@ -354,7 +360,9 @@ export class WebRtcHostMatchSync {
     location = window.location,
   ) {
     const params = new URLSearchParams(location.search);
-    this.enabled = runtime !== null || params.get('mode') === 'webrtc';
+    this.transportMode = runtime?.mode ??
+      (params.get('mode') === 'websocket' ? 'websocket' : 'webrtc');
+    this.enabled = runtime !== null || ['webrtc', 'websocket'].includes(params.get('mode') || '');
     this.broadcaster =
       runtime === null && this.enabled && params.get('broadcaster') === '1';
     this.headlessBroadcaster =
@@ -370,6 +378,7 @@ export class WebRtcHostMatchSync {
     this.localPlayerIndex = runtime?.playerSlot ??
       (params.get('join') === '1' || params.get('player') === '2' ? 1 : 0);
     this.signalingBaseUrl = runtime?.signalingBaseUrl || getApiBaseUrl();
+    this.websocketUrl = runtime?.websocketUrl || params.get('websocketUrl') || '';
     this.authorizationToken = runtime?.joinToken ||
       (this.broadcaster ? params.get('serviceToken') || '' : '');
     this.disableEnemyShooting =
@@ -436,7 +445,10 @@ export class WebRtcHostMatchSync {
       this.isEnabled() &&
       this.room === runtime.matchId &&
       this.localPlayerIndex === runtime.playerSlot &&
-      this.signalingBaseUrl === runtime.signalingBaseUrl;
+      this.transportMode === runtime.mode &&
+      (runtime.mode === 'websocket'
+        ? this.websocketUrl === runtime.websocketUrl
+        : this.signalingBaseUrl === runtime.signalingBaseUrl);
     if (sameConnection) {
       this.expectedStageNumber = Math.max(1, Math.floor(runtime.level));
       return;
@@ -451,6 +463,8 @@ export class WebRtcHostMatchSync {
     this.room = runtime.matchId;
     this.localPlayerIndex = runtime.playerSlot;
     this.signalingBaseUrl = runtime.signalingBaseUrl;
+    this.websocketUrl = runtime.websocketUrl || '';
+    this.transportMode = runtime.mode;
     this.authorizationToken = runtime.joinToken;
     this.expectedStageNumber = Math.max(1, Math.floor(runtime.level));
     this.stageWaiting = this.expectedStageNumber > 1;
@@ -1043,6 +1057,7 @@ export class WebRtcHostMatchSync {
     this.enabled = false;
     this.room = '';
     this.authorizationToken = '';
+    this.websocketUrl = '';
 
     this.networkStatsElement?.remove();
     this.networkStatsElement = null;
@@ -1052,6 +1067,15 @@ export class WebRtcHostMatchSync {
 
   private configureLink(linkId: WebRtcLinkId): void {
     if (this.links.has(linkId)) {
+      return;
+    }
+    if (this.transportMode === 'websocket') {
+      if (this.broadcaster || this.observer || linkId !== this.localPlayerIndex) return;
+      const sync = new WebSocketMatchLink(this.websocketUrl);
+      sync.subscribePackets((packet) => this.acceptPacket(packet, linkId));
+      sync.subscribeConnection((connected) => this.handleConnection(linkId, connected));
+      this.links.set(linkId, sync);
+      if (this.started) sync.start();
       return;
     }
     const sync = new WebRtcGhostSync();

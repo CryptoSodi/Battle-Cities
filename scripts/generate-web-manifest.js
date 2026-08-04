@@ -12,6 +12,7 @@ if (!fs.existsSync(distDir)) {
 
 if (fs.existsSync(serviceWorkerPath)) {
   const buildSeed =
+    process.env.CF_PAGES_COMMIT_SHA ||
     process.env.VERCEL_GIT_COMMIT_SHA ||
     process.env.GITHUB_SHA ||
     String(Date.now());

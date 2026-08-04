@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "battlecities-game",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "alias": {
+    "@hapi/joi": "../node_modules/@hapi/joi/lib/index.js"
+  },
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "MATCHES", "class_name": "BattleCityMatch" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["BattleCityMatch"] }
+  ],
+  "vars": {
+    "API_BASE_URL": "https://api.battlecities.com"
+  }
+}

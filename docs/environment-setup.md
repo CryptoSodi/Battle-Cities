@@ -4,7 +4,7 @@ BattleCities has two public deployments:
 
 | Deployment | Responsibility |
 | --- | --- |
-| Vercel game client | Static game UI and browser assets |
+| Cloudflare Pages game client | Static game UI and browser assets |
 | Native Ubuntu backend | API, authoritative broadcaster, PostgreSQL, and HTTPS |
 
 The backend exposes everything through `https://api.battlecities.com`. There is
