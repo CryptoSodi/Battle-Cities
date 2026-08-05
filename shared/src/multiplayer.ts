@@ -51,6 +51,8 @@ export interface MultiplayerMatchSummary {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  /** The authoritative runtime selected when this match was created. */
+  headlessTarget?: 'worker' | 'bom1' | 'usa';
 }
 
 export interface MultiplayerAssignment {

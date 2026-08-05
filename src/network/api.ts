@@ -24,8 +24,27 @@ export function apiFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const target = readHeadlessTarget();
+  if (target !== null) {
+    headers.set('X-BattleCities-Headless', target);
+  }
   return fetch(getApiUrl(path), {
     credentials: 'include',
     ...init,
+    headers,
   });
+}
+
+function readHeadlessTarget(): 'worker' | 'bom1' | 'usa' | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const target = new URLSearchParams(window.location.search)
+    .get('headless')
+    ?.trim()
+    .toLowerCase();
+  return target === 'worker' || target === 'bom1' || target === 'usa'
+    ? target
+    : null;
 }
