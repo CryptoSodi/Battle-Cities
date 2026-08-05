@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Battle Cities Headless Latency</title>
+    <style>
+      :root { color-scheme: dark; --bg:#11140f; --panel:#1c2117; --line:#5d6735; --text:#f4f1d2; --muted:#b7b37e; --green:#7ec850; --yellow:#f0c94d; --red:#e25b43; }
+      * { box-sizing: border-box; }
+      body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% 0,#202819 0,var(--bg) 54%); color:var(--text); font-family:"Arial Black",Impact,system-ui,sans-serif; }
+      main { width:min(960px,calc(100vw - 28px)); margin:0 auto; padding:28px 0; }
+      h1,p { margin:0; } h1 { font-size:clamp(30px,6vw,54px); line-height:1; color:var(--yellow); } p { margin-top:8px; color:var(--muted); font:700 16px Arial,system-ui,sans-serif; }
+      .panel { margin-top:18px; padding:18px; background:linear-gradient(180deg,var(--panel),#252b1d); border:3px solid var(--line); box-shadow:0 12px 0 rgba(0,0,0,.25); }
+      .stats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }.stat { min-height:96px; padding:14px; border:2px solid var(--line); background:rgba(0,0,0,.22); }.stat span { display:block; color:var(--muted); font:800 13px Arial,system-ui,sans-serif; }.stat strong { display:block; margin-top:12px; font-size:28px; line-height:1; overflow-wrap:anywhere; }
+      .row { display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:end; } label { display:block; margin-bottom:8px; color:var(--yellow); font-size:15px; } input,button { min-height:46px; border:2px solid var(--line); font:900 16px Arial,system-ui,sans-serif; } input { width:100%; padding:0 12px; background:#090b08; color:var(--text); } button { padding:0 16px; background:var(--green); color:#071006; cursor:pointer; } button:disabled { cursor:not-allowed; opacity:.55; } button:focus-visible { outline:3px solid var(--yellow); outline-offset:3px; }
+      .bad { color:var(--red); } pre { min-height:150px; max-height:280px; overflow:auto; margin:0; padding:14px; background:#080a07; border:2px solid var(--line); color:var(--text); font:700 13px Consolas,monospace; white-space:pre-wrap; }
+      @media (max-width:760px) { .row,.stats { grid-template-columns:1fr; } button { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>HEADLESS LATENCY</h1>
+      <p>Direct ping test for the Vercel authoritative WebSocket endpoint. This does not create a game match.</p>
+      <section class="panel"><div class="row"><div><label for="endpoint">ENDPOINT</label><input id="endpoint" autocomplete="off" /></div><button id="start">START TEST</button><button id="stop" disabled>STOP</button></div></section>
+      <section class="panel stats"><div class="stat"><span>STATUS</span><strong id="status">IDLE</strong></div><div class="stat"><span>OPEN TIME</span><strong id="open-time">--</strong></div><div class="stat"><span>PING RTT</span><strong id="rtt">--</strong></div><div class="stat"><span>JITTER</span><strong id="jitter">--</strong></div><div class="stat"><span>SERVER REGION</span><strong id="region">--</strong></div></section>
+      <section class="panel"><pre id="log"></pre></section>
+    </main>
+    <script>
+      const byId = (id) => document.getElementById(id); const endpoint = byId('endpoint'), start = byId('start'), stop = byId('stop'), status = byId('status'), openTime = byId('open-time'), rtt = byId('rtt'), jitter = byId('jitter'), region = byId('region'), log = byId('log');
+      endpoint.value = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws-latency'; let socket, timer, sequence = 0, openedAt = 0, previousRtt = null, samples = new Map(), rtts = [], jitters = [];
+      const mean = (values) => values.length ? values.reduce((sum,value) => sum + value,0) / values.length : NaN; const displayMs = (value) => Number.isFinite(value) ? Math.round(value) + 'ms' : '--';
+      function write(message) { log.textContent = '[' + new Date().toLocaleTimeString() + '] ' + message + '\n' + log.textContent; }
+      function setStatus(value, failed) { status.textContent = value; status.classList.toggle('bad', Boolean(failed)); }
+      function sendPing() { if (!socket || socket.readyState !== WebSocket.OPEN) return; const id = ++sequence; samples.set(id, performance.now()); socket.send(JSON.stringify({ type:'ping', sequence:id, sentAt:Date.now() })); }
+      function refresh() { rtt.textContent = displayMs(mean(rtts.slice(-30))); jitter.textContent = displayMs(mean(jitters.slice(-30))); }
+      function begin() { end(false); sequence=0; previousRtt=null; samples=new Map(); rtts=[]; jitters=[]; log.textContent=''; region.textContent='--'; openTime.textContent='--'; rtt.textContent='--'; jitter.textContent='--'; openedAt=performance.now(); setStatus('CONNECTING'); socket=new WebSocket(endpoint.value.trim()); socket.onopen=()=>{openTime.textContent=displayMs(performance.now()-openedAt); setStatus('RUNNING'); write('Socket open. Sending samples every 250ms.'); timer=setInterval(sendPing,250); sendPing();}; socket.onmessage=(event)=>{let packet; try { packet=JSON.parse(String(event.data)); } catch { return; } if (packet.type !== 'pong') return; const sent=samples.get(packet.sequence); if (sent === undefined) return; samples.delete(packet.sequence); const value=performance.now()-sent; rtts.push(value); if (previousRtt !== null) jitters.push(Math.abs(value-previousRtt)); previousRtt=value; refresh(); const nextRegion=String(packet.serverRegion || 'unknown').toUpperCase(); if (region.textContent !== nextRegion) { region.textContent=nextRegion; write('Server region: ' + nextRegion); }}; socket.onerror=()=>{setStatus('ERROR',true);write('WebSocket error.');}; socket.onclose=(event)=>{clearInterval(timer);timer=0;start.disabled=false;stop.disabled=true;if(status.textContent!=='IDLE')setStatus('CLOSED',event.code!==1000);write('Socket closed: '+event.code);}; start.disabled=true;stop.disabled=false; }
+      function end(reset=true) { clearInterval(timer); timer=0; if(socket){socket.close(1000,'test stopped');socket=null;} start.disabled=false;stop.disabled=true;if(reset)setStatus('IDLE'); }
+      start.onclick=begin; stop.onclick=()=>{end();write('Stopped by user.');};
+    </script>
+  </body>
+</html>

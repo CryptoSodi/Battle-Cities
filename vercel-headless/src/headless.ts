@@ -376,6 +376,10 @@ const server = createServer(async (request, response) => {
 server.on('upgrade', (request, socket, head) => {
   const url = requestUrl(request);
   const route = resolveRoute(url);
+  if (route === '/ws-latency') {
+    sockets.handleUpgrade(request, socket, head, (websocket) => connectLatencySocket(websocket));
+    return;
+  }
   const player = route.match(PLAYER_ROUTE);
   if (player === null) return rejectUpgrade(socket, 404, 'Not found');
   const matchId = player[1].toLowerCase();
@@ -390,6 +394,25 @@ server.on('upgrade', (request, socket, head) => {
   }
   sockets.handleUpgrade(request, socket, head, (websocket) => match.connect(slot, websocket));
 });
+
+function connectLatencySocket(socket: WebSocket): void {
+  socket.on('message', (data) => {
+    let packet: { type?: unknown; sequence?: unknown; sentAt?: unknown };
+    try {
+      packet = JSON.parse(String(data)) as { type?: unknown; sequence?: unknown; sentAt?: unknown };
+    } catch {
+      return;
+    }
+    if (packet.type !== 'ping') return;
+    socket.send(JSON.stringify({
+      type: 'pong',
+      sequence: packet.sequence,
+      sentAt: packet.sentAt,
+      serverRegion: getRegion(),
+      runtime: 'vercel-fluid-websocket',
+    }));
+  });
+}
 
 async function handleHttp(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = requestUrl(request);
