@@ -1753,7 +1753,7 @@ export class WebRtcHostMatchSync {
   private sendStageReady(): void {
     if (
       !this.connected ||
-      !this.ready ||
+      (!this.ready && !this.stageWaiting) ||
       this.stageReadySentFor === this.expectedStageNumber
     ) {
       return;
