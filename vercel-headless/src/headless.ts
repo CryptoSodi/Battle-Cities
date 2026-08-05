@@ -397,20 +397,30 @@ server.on('upgrade', (request, socket, head) => {
 
 function connectLatencySocket(socket: WebSocket): void {
   socket.on('message', (data) => {
-    let packet: { type?: unknown; sequence?: unknown; sentAt?: unknown };
+    let packet: { type?: unknown; sequence?: unknown; sentAt?: unknown; id?: unknown; message?: unknown };
     try {
-      packet = JSON.parse(String(data)) as { type?: unknown; sequence?: unknown; sentAt?: unknown };
+      packet = JSON.parse(String(data)) as { type?: unknown; sequence?: unknown; sentAt?: unknown; id?: unknown; message?: unknown };
     } catch {
       return;
     }
-    if (packet.type !== 'ping') return;
-    socket.send(JSON.stringify({
-      type: 'pong',
-      sequence: packet.sequence,
-      sentAt: packet.sentAt,
-      serverRegion: getRegion(),
-      runtime: 'vercel-fluid-websocket',
-    }));
+    if (packet.type === 'ping') {
+      socket.send(JSON.stringify({
+        type: 'pong',
+        sequence: packet.sequence,
+        sentAt: packet.sentAt,
+        serverRegion: getRegion(),
+        runtime: 'vercel-fluid-websocket',
+      }));
+      return;
+    }
+    if (packet.type === 'echo' && typeof packet.message === 'string') {
+      socket.send(JSON.stringify({
+        type: 'echo',
+        id: packet.id,
+        message: packet.message.slice(0, 256),
+        serverRegion: getRegion(),
+      }));
+    }
   });
 }
 
