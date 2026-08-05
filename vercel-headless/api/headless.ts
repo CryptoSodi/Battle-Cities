@@ -1,4 +1,5 @@
 import { delimiter, resolve } from 'path';
+import '@hapi/joi';
 
 const standaloneNodeModules = resolve(__dirname, '..', 'node_modules');
 process.env.NODE_PATH = [standaloneNodeModules, process.env.NODE_PATH]
