@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "node -e \"console.log('[battlecities-headless] shared engine bundle ready')\"",
+  "outputDirectory": "public",
+  "installCommand": "npm install --ignore-scripts",
+  "fluid": true,
+  "regions": ["bom1"],
+  "functions": {
+    "api/headless.ts": {
+      "maxDuration": 60,
+      "regions": ["bom1"]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/headless/:path*",
+      "destination": "/api/headless?__headless=:path*"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "battlecities-headless-bom1",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hapi/joi": "^17.1.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/ws": "^8.18.1",
+    "typescript": "4.9.5"
+  }
+}
