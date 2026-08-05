@@ -14,6 +14,10 @@
   },
   "rewrites": [
     {
+      "source": "/ws-latency",
+      "destination": "/api/headless?__headless=ws-latency"
+    },
+    {
       "source": "/api/headless/:path*",
       "destination": "/api/headless?__headless=:path*"
     }
