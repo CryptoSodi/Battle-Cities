@@ -11,3 +11,4 @@ LocalServer/target/
 !deploy/ubuntu/.env.example
 deploy/ubuntu/backups/
 .rtk/
+.tmp_magicblock_push/
