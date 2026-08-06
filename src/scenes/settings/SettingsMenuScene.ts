@@ -59,7 +59,30 @@ export class SettingsMenuScene extends PanelScene {
 
     this.renderHeader(x, mobile ? 8 : y - 57, mobile);
     this.renderShell(x, y, width, mobile);
+    this.renderVersion(x, y, width, mobile);
     this.renderSettingRows(x, y, width, mobile);
+  }
+
+  private renderVersion(
+    x: number,
+    y: number,
+    width: number,
+    mobile: boolean,
+  ): void {
+    const shellHeight = Math.max(
+      320,
+      this.root.size.height - y - (mobile ? 12 : 18),
+    );
+    const inset = mobile ? 24 : 48;
+    this.addText(
+      `VERSION ${process.env.BATTLECITY_VERSION}`,
+      x + inset,
+      y + shellHeight - (mobile ? 40 : 44),
+      UI.MUTED,
+      mobile ? 18 : 20,
+      '800',
+      width - inset * 2,
+    );
   }
 
   private renderHeader(x: number, y: number, mobile: boolean): void {
