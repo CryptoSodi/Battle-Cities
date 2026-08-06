@@ -59,13 +59,6 @@ const HEADQUARTERS_ENTRIES: HeadquartersEntry[] = [
     sceneType: GameSceneType.MainAirdrop,
   },
   {
-    key: 'socials',
-    label: 'SOCIALS',
-    detail: 'OFFICIAL COMMUNITY CHANNELS',
-    iconText: '@',
-    sceneType: GameSceneType.MainSocials,
-  },
-  {
     key: 'manual',
     label: 'FIELD MANUAL',
     detail: 'TANKS, WEAPONS, POWERUPS AND ENEMY INTELLIGENCE',
