@@ -122,6 +122,7 @@ export class MainMenuScene extends GameScene {
   private menu: Menu;
   private singlePlayerItem: SpriteMenuItem;
   private multiPlayerItem: SpriteMenuItem;
+  private socialsItem: SpriteMenuItem;
   private modesItem: SpriteMenuItem;
   private editorItem: SpriteMenuItem;
   private replayItem: SpriteMenuItem;
@@ -206,8 +207,11 @@ export class MainMenuScene extends GameScene {
     this.singlePlayerItem = createMenuItem('menu.item.start');
     this.singlePlayerItem.selected.addListener(this.handleSinglePlayerSelected);
 
-    this.multiPlayerItem = createMenuItem('menu.item.2players');
+this.multiPlayerItem = createMenuItem('menu.item.2players');
     this.multiPlayerItem.selected.addListener(this.handleMultiPlayerSelected);
+
+    this.socialsItem = createMenuItem('menu.item.socials');
+    this.socialsItem.selected.addListener(this.handleSocialsSelected);
 
     this.modesItem = createMenuItem('menu.item.modes');
     this.modesItem.selected.addListener(this.handleModesSelected);
@@ -242,6 +246,8 @@ export class MainMenuScene extends GameScene {
     ) {
       menuItems.push(this.multiPlayerItem);
     }
+
+    menuItems.push(this.socialsItem);
 
     if (config.IS_DEV) {
       menuItems.push(
@@ -562,6 +568,12 @@ export class MainMenuScene extends GameScene {
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainTankSelect, { multiplayer: true });
+  };
+
+  private handleSocialsSelected = (): void => {
+    this.mobileGamepadQrEnabled = false;
+    this.removeMobileGamepadQrElement();
+    this.navigator.push(GameSceneType.MainSocials);
   };
 
   private handleModesSelected = (): void => {

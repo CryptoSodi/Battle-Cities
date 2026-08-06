@@ -161,6 +161,15 @@
       140
     ]
   },
+  "menu.item.socials": {
+    "file": "assets/menu/socials.png",
+    "rect": [
+      0,
+      0,
+      1956,
+      522
+    ]
+  },
   "bullet.down": {
     "file": "data/graphics/bullets.png",
     "rect": [
