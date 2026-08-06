@@ -5,9 +5,24 @@ const path = require('path');
 const distDir = path.resolve(__dirname, '..', 'dist');
 const serviceWorkerPath = path.join(distDir, 'service-worker.js');
 const manifestPath = path.join(distDir, 'web-version.json');
+const indexPath = path.join(distDir, 'index.html');
 
 if (!fs.existsSync(distDir)) {
   throw new Error('dist directory does not exist; run webpack first');
+}
+
+// Point index.html at the content-hashed main bundle. Because the filename
+// embeds the content hash, every release gets a fresh URL -- the core of the
+// over-the-air (no APK rebuild) update path. Fall back to the previous plain
+// name if the hashed file is unexpectedly absent.
+const mainEntry = fs
+  .readdirSync(distDir)
+  .find((file) => /^main\.[a-f0-9]{16,32}\.js$/.test(file)) || 'main.js';
+if (fs.existsSync(indexPath)) {
+  const html = fs
+    .readFileSync(indexPath, 'utf8')
+    .replace('src="main.js"', `src="${mainEntry}"`);
+  fs.writeFileSync(indexPath, html);
 }
 
 if (fs.existsSync(serviceWorkerPath)) {

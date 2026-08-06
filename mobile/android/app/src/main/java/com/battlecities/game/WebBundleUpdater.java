@@ -195,7 +195,12 @@ final class WebBundleUpdater {
     private static void download(ManifestFile file, File destination) throws Exception {
         ensureDirectory(destination.getParentFile());
         String path = new URI(null, null, "/" + file.path, null).toASCIIString();
-        HttpURLConnection connection = connect(new URL(BASE_URL + path));
+        // Cache-bust with the manifest hash so a stale edge/CDN copy can never
+        // cause a sha256 verification failure. The CDN must serve the exact
+        // content the manifest advertises.
+        HttpURLConnection connection = connect(
+            new URL(BASE_URL + path + "?bundle=" + file.sha256)
+        );
         File temporary = new File(destination.getParentFile(), destination.getName() + ".download");
         try {
             requireSuccess(connection, file.path);
