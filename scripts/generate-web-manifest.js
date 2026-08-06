@@ -38,7 +38,14 @@ if (fs.existsSync(serviceWorkerPath)) {
 }
 
 const files = listFiles(distDir)
-  .filter((file) => file !== 'web-version.json')
+  // Config-only files that are consumed by the hosting platform (_headers,
+  // _redirects) and the manifest itself are not app assets: they are never
+  // served to clients, so the Android OTA updater must not try to download
+  // them (a failed download would abort the whole bundle update).
+  .filter(
+    (file) =>
+      file !== 'web-version.json' && file !== '_headers' && file !== '_redirects',
+  )
   .map((file) => {
     const contents = fs.readFileSync(path.join(distDir, file));
     return {
