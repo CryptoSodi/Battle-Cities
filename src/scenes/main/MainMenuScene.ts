@@ -247,8 +247,6 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
       menuItems.push(this.multiPlayerItem);
     }
 
-    menuItems.push(this.socialsItem);
-
     if (config.IS_DEV) {
       menuItems.push(
         this.modesItem,
@@ -261,6 +259,7 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
       this.shopItem,
       this.rankingItem,
       this.moreItem,
+      this.socialsItem,
       this.settingsItem,
       this.logoutItem,
     );
