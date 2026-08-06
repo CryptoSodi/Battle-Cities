@@ -235,7 +235,13 @@ export class MainMenuScene extends GameScene {
     this.logoutItem = createMenuItem('menu.item.logout');
     this.logoutItem.selected.addListener(this.handleLogoutSelected);
 
-    const menuItems = [this.singlePlayerItem, this.multiPlayerItem];
+    const menuItems = [this.singlePlayerItem];
+
+    if (
+      new URLSearchParams(window.location.search).get('enable2players') === '1'
+    ) {
+      menuItems.push(this.multiPlayerItem);
+    }
 
     if (config.IS_DEV) {
       menuItems.push(
