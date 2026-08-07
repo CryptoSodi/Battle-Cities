@@ -56,6 +56,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 .admin-search { max-width: 650px; margin-bottom: 16px; }
 .admin-search > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .admin-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--admin-line); }
+.admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.admin-pagination span { color: var(--admin-muted); font: 700 9px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
 table { width: 100%; min-width: 850px; border-collapse: collapse; }
 th, td { padding: 12px; border-bottom: 1px solid #273136; text-align: left; vertical-align: top; }
 th { color: var(--admin-amber); background: #070b0c; font-size: 8px; }

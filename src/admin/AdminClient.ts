@@ -15,8 +15,8 @@ export class AdminClient {
     return this.request('/api/admin/overview');
   }
 
-  getMatches(status = '', category = ''): Promise<any> {
-    const query = new URLSearchParams({ limit: '100' });
+  getMatches(status = '', category = '', offset = 0): Promise<any> {
+    const query = new URLSearchParams({ limit: '100', offset: String(offset) });
     if (status !== '') query.set('status', status);
     if (category !== '') query.set('category', category);
     return this.request(`/api/admin/matches?${query}`);
@@ -26,8 +26,9 @@ export class AdminClient {
     query = '',
     lastSeenFrom = '',
     lastSeenTo = '',
+    offset = 0,
   ): Promise<any> {
-    const search = new URLSearchParams({ limit: '100' });
+    const search = new URLSearchParams({ limit: '100', offset: String(offset) });
     if (query !== '') search.set('q', query);
     if (lastSeenFrom !== '') search.set('lastSeenFrom', lastSeenFrom);
     if (lastSeenTo !== '') search.set('lastSeenTo', lastSeenTo);

@@ -6,6 +6,8 @@ import { AdminClient, AdminRequestError } from './AdminClient';
 const client = new AdminClient();
 let tournaments: any[] = [];
 let payoutTournament: any = null;
+let matchOffset = 0;
+let playerOffset = 0;
 
 void initialize();
 
@@ -134,27 +136,101 @@ function openMatchObserver(matchId: string): void {
   window.open(url.toString(), '_blank', 'noopener');
 }
 
-async function loadMatches(): Promise<void> {
+async function loadMatches(resetPage = true): Promise<void> {
   await guarded(async () => {
+    if (resetPage) matchOffset = 0;
     const status = requireElement<HTMLSelectElement>('[data-match-status]').value;
     const category = requireElement<HTMLSelectElement>('[data-match-category]').value;
-    const result = await client.getMatches(status, category);
+    const result = await client.getMatches(status, category, matchOffset);
     const body = requireElement('[data-match-rows]');
     body.replaceChildren(...result.items.map(matchRow));
-    if (result.items.length === 0) body.append(emptyRow(7, 'No matches found'));
+    if (result.items.length === 0 && matchOffset === 0) {
+      body.append(emptyRow(7, 'No matches found'));
+    } else if (result.items.length === 0 && matchOffset > 0) {
+      matchOffset = Math.max(0, matchOffset - result.limit);
+      return void loadMatches(false);
+    }
+    renderPagination('[data-match-pagination]', {
+      offset: matchOffset,
+      limit: Number(result.limit),
+      total: Number(result.total),
+      onPrev: () => {
+        matchOffset = Math.max(0, matchOffset - Number(result.limit));
+        void loadMatches(false);
+      },
+      onNext: () => {
+        matchOffset += Number(result.limit);
+        void loadMatches(false);
+      },
+    });
   });
 }
 
-async function loadPlayers(): Promise<void> {
+async function loadPlayers(resetPage = true): Promise<void> {
   await guarded(async () => {
+    if (resetPage) playerOffset = 0;
     const query = requireElement<HTMLInputElement>('[data-player-query]').value.trim();
     const lastSeenFrom = requireElement<HTMLInputElement>('[data-player-from]').value;
     const lastSeenTo = requireElement<HTMLInputElement>('[data-player-to]').value;
-    const result = await client.getPlayers(query, lastSeenFrom, lastSeenTo);
+    const result = await client.getPlayers(query, lastSeenFrom, lastSeenTo, playerOffset);
     const body = requireElement('[data-player-rows]');
     body.replaceChildren(...result.items.map(playerRow));
-    if (result.items.length === 0) body.append(emptyRow(6, 'No players found'));
+    if (result.items.length === 0 && playerOffset === 0) {
+      body.append(emptyRow(6, 'No players found'));
+    } else if (result.items.length === 0 && playerOffset > 0) {
+      playerOffset = Math.max(0, playerOffset - Number(result.limit));
+      return void loadPlayers(false);
+    }
+    renderPagination('[data-player-pagination]', {
+      offset: playerOffset,
+      limit: Number(result.limit),
+      total: Number(result.total),
+      onPrev: () => {
+        playerOffset = Math.max(0, playerOffset - Number(result.limit));
+        void loadPlayers(false);
+      },
+      onNext: () => {
+        playerOffset += Number(result.limit);
+        void loadPlayers(false);
+      },
+    });
   });
+}
+
+function renderPagination(
+  rootSelector: string,
+  config: {
+    offset: number;
+    limit: number;
+    total: number;
+    onPrev: () => void;
+    onNext: () => void;
+  },
+): void {
+  const container = requireElement(rootSelector);
+  const page = Math.floor(config.offset / config.limit) + 1;
+  const pages = Math.max(1, Math.ceil(config.total / config.limit));
+  const nav = document.createElement('div');
+  nav.className = 'admin-pagination';
+
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'admin-button admin-button--secondary';
+  prev.textContent = 'Previous';
+  prev.disabled = config.offset <= 0;
+  prev.addEventListener('click', config.onPrev);
+
+  const label = document.createElement('span');
+  label.textContent = `Page ${page} of ${pages} · ${config.total} total`;
+
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'admin-button admin-button--secondary';
+  next.textContent = 'Next';
+  next.disabled = config.offset + config.limit >= Math.max(1, config.total);
+  next.addEventListener('click', config.onNext);
+
+  container.replaceChildren(prev, label, next);
 }
 
 async function loadTournaments(): Promise<void> {
