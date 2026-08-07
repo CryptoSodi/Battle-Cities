@@ -19,6 +19,7 @@ import {
   MatchTransportLink,
   WebSocketMatchLink,
 } from '../websocket/WebSocketMatchLink';
+import { ArchiveMatchLink } from '../websocket/ArchiveMatchLink';
 
 const REMOTE_INPUT_TIMEOUT_MS = 500;
 const MAX_ENEMY_TICKS_PER_UPDATE = 2;
@@ -253,7 +254,8 @@ export class WebRtcHostMatchSync {
   private localPlayerIndex: number;
   private signalingBaseUrl: string;
   private websocketUrl: string;
-  private transportMode: 'webrtc' | 'websocket';
+  private ticket = '';
+  private transportMode: 'webrtc' | 'websocket' | 'archive';
   private authorizationToken: string;
   private readonly disableEnemyShooting: boolean;
   private readonly networkStatsEnabled: boolean;
@@ -360,9 +362,11 @@ export class WebRtcHostMatchSync {
     location = window.location,
   ) {
     const params = new URLSearchParams(location.search);
-    this.transportMode = runtime?.mode ??
-      (params.get('mode') === 'websocket' ? 'websocket' : 'webrtc');
-    this.enabled = runtime !== null || ['webrtc', 'websocket'].includes(params.get('mode') || '');
+this.transportMode = runtime?.mode ??
+      (params.get('mode') === 'websocket' || params.get('mode') === 'archive'
+        ? (params.get('mode') as 'websocket' | 'archive')
+        : 'webrtc');
+    this.enabled = runtime !== null || ['webrtc', 'websocket', 'archive'].includes(params.get('mode') || '');
     this.broadcaster =
       runtime === null && this.enabled && params.get('broadcaster') === '1';
     this.headlessBroadcaster =
@@ -379,6 +383,7 @@ export class WebRtcHostMatchSync {
       (params.get('join') === '1' || params.get('player') === '2' ? 1 : 0);
     this.signalingBaseUrl = runtime?.signalingBaseUrl || getApiBaseUrl();
     this.websocketUrl = runtime?.websocketUrl || params.get('websocketUrl') || '';
+    this.ticket = params.get('ticket') || '';
     this.authorizationToken = runtime?.joinToken ||
       (this.broadcaster ? params.get('serviceToken') || '' : '');
     this.disableEnemyShooting =
@@ -955,7 +960,11 @@ export class WebRtcHostMatchSync {
       this.configureLink(1);
       this.startObserverDiscovery();
     } else if (this.observer) {
-      this.startObserverHeartbeat();
+      if (this.transportMode === 'archive') {
+        this.configureLink(observerLinkId(this.observerId));
+      } else {
+        this.startObserverHeartbeat();
+      }
     } else {
       this.configureLink(this.localPlayerIndex as 0 | 1);
     }
@@ -1085,6 +1094,20 @@ if (this.transportMode === 'websocket') {
       sync.subscribeConnection((connected) => this.handleConnection(linkId, connected));
       this.links.set(linkId, sync);
       if (this.started) sync.start();
+      return;
+    }
+    if (this.transportMode === 'archive') {
+      if (this.observer && isObserverLink(linkId)) {
+        const sync = new ArchiveMatchLink(
+          getApiBaseUrl(),
+          this.room,
+          this.ticket,
+        );
+        sync.subscribePackets((packet) => this.acceptPacket(packet, linkId));
+        sync.subscribeConnection((connected) => this.handleConnection(linkId, connected));
+        this.links.set(linkId, sync);
+        if (this.started) sync.start();
+      }
       return;
     }
     const sync = new WebRtcGhostSync();

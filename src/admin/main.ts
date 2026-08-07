@@ -135,6 +135,32 @@ async function openMatchObserver(match: any): Promise<void> {
   if (match.headlessTarget) {
     url.searchParams.set('headless', match.headlessTarget);
   }
+  if (match.status === 'completed' || match.status === 'closed') {
+    // Replay a finished match from its archived frames instead of a live
+    // websocket. The observer fetches frames by match id using the ticket.
+    try {
+      const result = await client.spectate(match.id);
+      if (result?.mode === 'archive') {
+        url.searchParams.set('mode', 'archive');
+        url.searchParams.set('observerId', result.observerId);
+        url.searchParams.set('ticket', result.ticket);
+        window.open(url.toString(), '_blank', 'noopener');
+        return;
+      }
+      if (result?.websocketUrl) {
+        url.searchParams.set('mode', 'websocket');
+        url.searchParams.set('observerId', result.observerId);
+        url.searchParams.set('websocketUrl', result.websocketUrl);
+        window.open(url.toString(), '_blank', 'noopener');
+        return;
+      }
+    } catch (error) {
+      console.warn('[admin] finished-match replay unavailable', error);
+    }
+    url.searchParams.set('mode', 'webrtc');
+    window.open(url.toString(), '_blank', 'noopener');
+    return;
+  }
   if (match.headlessTarget === undefined || match.headlessTarget === 'usa') {
     url.searchParams.set('mode', 'webrtc');
     window.open(url.toString(), '_blank', 'noopener');
