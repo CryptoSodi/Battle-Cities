@@ -47,6 +47,14 @@ function bindEvents(): void {
   document.querySelectorAll<HTMLInputElement>('[data-player-from], [data-player-to]').forEach((input) => {
     input.addEventListener('change', () => void loadPlayers());
   });
+  const playerDateClear = document.querySelector<HTMLButtonElement>('[data-player-date-clear]');
+  if (playerDateClear !== null) {
+    playerDateClear.addEventListener('click', () => {
+      requireElement<HTMLInputElement>('[data-player-from]').value = '';
+      requireElement<HTMLInputElement>('[data-player-to]').value = '';
+      void loadPlayers();
+    });
+  }
   requireElement<HTMLButtonElement>('[data-tournament-new]').addEventListener('click', () => openTournamentForm());
   requireElement<HTMLButtonElement>('[data-tournament-cancel]').addEventListener('click', closeTournamentForm);
   requireElement<HTMLFormElement>('[data-tournament-form]').addEventListener('submit', (event) => void saveTournament(event));
