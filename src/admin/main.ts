@@ -91,8 +91,26 @@ async function loadOverview(): Promise<void> {
       ['Pending payouts', overview.pendingPayouts],
     ];
     const root = requireElement('[data-admin-metrics]');
-    root.replaceChildren(...metrics.map(([label, value]) => metric(String(label), Number(value))));
+    root.replaceChildren(
+      ...metrics.map(([label, value]) =>
+        metric(String(label), Number(value), METRIC_MATCH_LABELS.has(String(label))),
+      ),
+    );
   });
+}
+
+const METRIC_MATCH_LABELS = new Set<string>([
+  'All matches',
+  'Active matches',
+  'Completed matches',
+]);
+
+function openMatchObserver(matchId: string): void {
+  const url = new URL(`${window.location.origin}/`);
+  url.searchParams.set('mode', 'webrtc');
+  url.searchParams.set('observer', '1');
+  url.searchParams.set('match', matchId);
+  window.open(url.toString(), '_blank', 'noopener');
 }
 
 async function loadMatches(): Promise<void> {
@@ -102,7 +120,7 @@ async function loadMatches(): Promise<void> {
     const result = await client.getMatches(status, category);
     const body = requireElement('[data-match-rows]');
     body.replaceChildren(...result.items.map(matchRow));
-    if (result.items.length === 0) body.append(emptyRow(6, 'No matches found'));
+    if (result.items.length === 0) body.append(emptyRow(7, 'No matches found'));
   });
 }
 
@@ -138,8 +156,21 @@ function matchRow(match: any): HTMLTableRowElement {
     ),
     statusCell(match.broadcasterStatus || 'not started'),
     tableCell(formatDateTime(match.createdAt), `Stage ${match.currentStage}`),
+    replayCell(match),
   );
   return row;
+}
+
+function replayCell(match: any): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'admin-button admin-button--replay';
+  button.textContent = 'Replay';
+  button.title = 'Open the observer to watch or replay this match';
+  button.addEventListener('click', () => openMatchObserver(match.id));
+  cell.append(button);
+  return cell;
 }
 
 function playerRow(player: any): HTMLTableRowElement {
@@ -312,14 +343,26 @@ async function guarded(operation: () => Promise<void>): Promise<void> {
   }
 }
 
-function metric(label: string, value: number): HTMLElement {
+function metric(label: string, value: number, clickable = false): HTMLElement {
   const item = document.createElement('article');
-  item.className = 'admin-metric';
+  item.className = clickable ? 'admin-metric admin-metric--link' : 'admin-metric';
   const caption = document.createElement('span');
   caption.textContent = label;
   const number = document.createElement('strong');
   number.textContent = formatNumber(value);
   item.append(caption, number);
+  if (clickable) {
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.title = 'Open the matches list';
+    item.addEventListener('click', () => void selectTab('matches'));
+    item.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        void selectTab('matches');
+      }
+    });
+  }
   return item;
 }
 

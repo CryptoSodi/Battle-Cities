@@ -40,6 +40,10 @@ h3 { margin-bottom: 0; font-size: 13px; }
 .admin-metric { min-height: 125px; padding: 18px; border: 1px solid var(--admin-line); border-left: 4px solid var(--admin-amber); background: var(--admin-panel-2); }
 .admin-metric span { display: block; margin-bottom: 20px; color: var(--admin-muted); font: 700 9px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
 .admin-metric strong { color: var(--admin-green); font: 700 clamp(24px, 4vw, 38px)/1 "Press Start 2P", monospace; }
+.admin-metric--link { cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease; }
+.admin-metric--link:hover { border-color: var(--admin-green); background: var(--admin-panel); }
+.admin-metric--link:focus-visible { outline: 2px solid var(--admin-green); outline-offset: 2px; }
+.admin-button--replay { min-height: 30px; padding: 6px 10px; color: var(--admin-green); border-color: var(--admin-line); background: transparent; white-space: nowrap; }
 .admin-filters, .admin-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .admin-filters { margin-bottom: 16px; }
 label { display: grid; gap: 8px; color: var(--admin-muted); font: 700 9px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
