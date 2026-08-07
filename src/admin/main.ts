@@ -128,11 +128,31 @@ function applyMatchFilter(statusFilter: string): void {
   requireElement<HTMLSelectElement>('[data-match-category]').value = '';
 }
 
-function openMatchObserver(matchId: string): void {
+async function openMatchObserver(match: any): Promise<void> {
   const url = new URL(`${window.location.origin}/`);
-  url.searchParams.set('mode', 'webrtc');
   url.searchParams.set('observer', '1');
-  url.searchParams.set('match', matchId);
+  url.searchParams.set('match', match.id);
+  if (match.headlessTarget) {
+    url.searchParams.set('headless', match.headlessTarget);
+  }
+  if (match.headlessTarget === undefined || match.headlessTarget === 'usa') {
+    url.searchParams.set('mode', 'webrtc');
+    window.open(url.toString(), '_blank', 'noopener');
+    return;
+  }
+  try {
+    const result = await client.spectate(match.id);
+    if (result?.websocketUrl) {
+      url.searchParams.set('mode', 'websocket');
+      url.searchParams.set('observerId', result.observerId);
+      url.searchParams.set('websocketUrl', result.websocketUrl);
+      window.open(url.toString(), '_blank', 'noopener');
+      return;
+    }
+  } catch (error) {
+    console.warn('[admin] websocket spectator unavailable, falling back to replay', error);
+  }
+  url.searchParams.set('mode', 'webrtc');
   window.open(url.toString(), '_blank', 'noopener');
 }
 
@@ -276,12 +296,12 @@ function replayCell(match: any): HTMLTableCellElement {
         ? 'Watch live'
         : 'Watch';
     button.title = 'Open the observer to watch this live match';
-    button.addEventListener('click', () => openMatchObserver(match.id));
+    button.addEventListener('click', () => void openMatchObserver(match));
   } else {
     button.className = 'admin-button admin-button--replay';
     button.textContent = 'Replay';
     button.title = 'Replay the completed match';
-    button.addEventListener('click', () => openMatchObserver(match.id));
+    button.addEventListener('click', () => void openMatchObserver(match));
   }
   cell.append(button);
   return cell;

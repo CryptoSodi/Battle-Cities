@@ -39,6 +39,13 @@ export class AdminClient {
     return this.request('/api/admin/tournaments');
   }
 
+  spectate(matchId: string): Promise<any> {
+    return this.request(
+      `/api/multiplayer/matches/${encodeURIComponent(matchId)}/spectate`,
+      { method: 'POST', body: '{}' },
+    );
+  }
+
   getTournamentLeaderboard(id: string): Promise<any> {
     return this.request(`/api/admin/tournaments/${encodeURIComponent(id)}/leaderboard`);
   }

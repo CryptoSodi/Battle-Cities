@@ -1069,8 +1069,17 @@ export class WebRtcHostMatchSync {
     if (this.links.has(linkId)) {
       return;
     }
-    if (this.transportMode === 'websocket') {
-      if (this.broadcaster || this.observer || linkId !== this.localPlayerIndex) return;
+if (this.transportMode === 'websocket') {
+      if (this.broadcaster || linkId !== this.localPlayerIndex) {
+        if (this.observer && this.websocketUrl !== '' && isObserverLink(linkId)) {
+          const sync = new WebSocketMatchLink(this.websocketUrl);
+          sync.subscribePackets((packet) => this.acceptPacket(packet, linkId));
+          sync.subscribeConnection((connected) => this.handleConnection(linkId, connected));
+          this.links.set(linkId, sync);
+          if (this.started) sync.start();
+        }
+        return;
+      }
       const sync = new WebSocketMatchLink(this.websocketUrl);
       sync.subscribePackets((packet) => this.acceptPacket(packet, linkId));
       sync.subscribeConnection((connected) => this.handleConnection(linkId, connected));

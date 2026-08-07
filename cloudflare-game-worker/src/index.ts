@@ -35,10 +35,17 @@ interface TicketPayload {
   nonce: string;
 }
 
+interface ObserverTicketPayload {
+  matchId: string;
+  observerId: string;
+}
+
 const MATCH_ROUTE = /^\/matches\/(match-[0-9a-z-]+)$/i;
 const PLAYER_ROUTE = /^\/matches\/(match-[0-9a-z-]+)\/players\/([01])$/i;
 const PLAYER_CONFIG_ROUTE = /^\/matches\/(match-[0-9a-z-]+)\/players\/([12])$/i;
+const OBSERVER_ROUTE = /^\/matches\/(match-[0-9a-z-]+)\/observers\/([a-z0-9]{8})$/i;
 const MAX_FRAME_HISTORY = 60 * 60;
+const ARCHIVE_BATCH_FRAMES = 30;
 
 export class BattleCityMatch extends DurableObject<WorkerEnv> {
   private simulation: EngineBattleCitySimulation | null = null;
@@ -52,7 +59,15 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   private nextTickAt = 0;
   private readonly sockets = new Map<SimulationPlayerIndex, WebSocket>();
   private readonly activePlayers = new Set<SimulationPlayerIndex>();
+  private readonly spectatorSockets = new Map<string, WebSocket>();
   private readonly frameHistory: SimulationHostFramePacket[] = [];
+  private readonly pendingArchiveFrames: SimulationHostFramePacket[] = [];
+  private archiveStartPromise: Promise<void> | null = null;
+  private archiveFlushPromise: Promise<void> | null = null;
+  private archiveStarted = false;
+  private archiveCompleted = false;
+  private archiveDisabled = false;
+  private category = 'live';
   private simulationOptions: Partial<SimulationOptions> = {};
   private pendingRunState: EngineSimulationRunState | null = null;
   private readonly stageReadyPlayers = new Set<SimulationPlayerIndex>();
@@ -83,6 +98,13 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
       }>());
     }
     if (request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+      const observerId = request.headers.get('x-battlecity-observer-id') || '';
+      if (observerId !== '') {
+        if (!/^[a-z0-9]{8}$/.test(observerId)) {
+          return new Response('Invalid observer ID', { status: 400 });
+        }
+        return this.connectObserver(observerId);
+      }
       const slot = Number(request.headers.get('x-battlecity-player-slot'));
       if (slot !== 0 && slot !== 1) return new Response('Invalid player slot', { status: 400 });
       return this.connect(slot);
@@ -97,6 +119,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     this.matchId = body.matchId;
     this.level = Math.max(1, Math.floor(body.level || 1));
     this.startedAt = Date.now();
+    this.category = body.category || 'live';
     this.simulationOptions = {
       extraLives: body.extraLives,
       initialPlayerTiers: body.initialPlayerTiers,
@@ -131,6 +154,164 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     }
     setTimeout(() => this.broadcastReady(reconnecting ? slot : null), 0);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private connectObserver(observerId: string): Response {
+    if (this.simulation === null || this.stopped) return new Response('Match is not running', { status: 409 });
+    const existing = this.spectatorSockets.get(observerId);
+    if (existing !== undefined && existing.readyState === WebSocket.OPEN) {
+      existing.close(1012, 'replaced by reconnect');
+    }
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    server.accept();
+    this.spectatorSockets.set(observerId, server);
+    server.addEventListener('message', (event) => this.receiveObserver(server, event.data));
+    server.addEventListener('close', () => this.disconnectSpectator(observerId, server));
+    server.addEventListener('error', () => this.disconnectSpectator(observerId, server));
+    const serverSeq = this.simulation?.seq ?? 0;
+    this.sendObserver(server, {
+      type: 'webrtc-ready',
+      ready: this.matchStarted,
+      syncPlayer: null,
+      serverFrameSeq: serverSeq,
+    });
+    this.sendObserverReplay(server, serverSeq);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private receiveObserver(socket: WebSocket, data: string | ArrayBuffer): void {
+    if (typeof data !== 'string') return;
+    let packet: SimulationClientPacket;
+    try {
+      packet = JSON.parse(data) as SimulationClientPacket;
+    } catch {
+      return;
+    }
+    if (packet.type === 'webrtc-ping') {
+      this.sendObserver(socket, {
+        type: 'webrtc-pong',
+        id: (packet as { id?: number }).id,
+        sentAt: (packet as { sentAt?: number }).sentAt,
+        senderPlayerIndex: -1,
+      });
+    }
+  }
+
+  private disconnectSpectator(observerId: string, socket: WebSocket): void {
+    if (this.spectatorSockets.get(observerId) !== socket) return;
+    this.spectatorSockets.delete(observerId);
+  }
+
+  private sendObserverReplay(socket: WebSocket, serverSeq: number): void {
+    if (serverSeq <= 0 || this.frameHistory.length === 0) return;
+    const oldest = this.frameHistory[0].seq;
+    if (oldest > 1) {
+      this.sendObserver(socket, { type: 'webrtc-replay-unavailable', oldestAvailableSeq: oldest, serverSeq });
+      return;
+    }
+    this.sendObserver(socket, { type: 'webrtc-replay-start', fromSeq: 1, targetSeq: serverSeq });
+    this.frameHistory.forEach((frame) => {
+      if (frame.seq <= serverSeq) this.sendObserver(socket, frame);
+    });
+    this.sendObserver(socket, { type: 'webrtc-replay-complete', targetSeq: serverSeq });
+  }
+
+  private queueArchiveFrame(frame: SimulationHostFramePacket): void {
+    if (this.archiveDisabled || this.archiveCompleted) return;
+    this.pendingArchiveFrames.push(frame);
+    if (this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES) {
+      this.ctx.waitUntil(this.flushArchiveFrames(false));
+    }
+  }
+
+  private async ensureArchiveStarted(): Promise<void> {
+    if (this.archiveStarted) return;
+    if (this.archiveStartPromise !== null) return this.archiveStartPromise;
+    this.archiveStartPromise = (async () => {
+      const response = await this.archiveFetch(
+        `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/start`,
+        {
+          gameType: 'websocket',
+          category: this.category,
+          level: this.level,
+          seed: seedFromMatchId(this.matchId),
+          simulationConfig: { seed: seedFromMatchId(this.matchId) },
+          players: [],
+          startedAt: new Date(this.startedAt).toISOString(),
+        },
+      );
+      if (!response.ok) throw new Error(`archive startup failed (${response.status})`);
+      this.archiveStarted = true;
+    })().finally(() => {
+      this.archiveStartPromise = null;
+    });
+    return this.archiveStartPromise;
+  }
+
+  private async flushArchiveFrames(flushAll: boolean): Promise<void> {
+    if (this.archiveDisabled || this.archiveCompleted) return;
+    if (this.archiveFlushPromise !== null) return this.archiveFlushPromise;
+    const operation = (async () => {
+      while (
+        this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES ||
+        (flushAll && this.pendingArchiveFrames.length > 0)
+      ) {
+        try {
+          await this.ensureArchiveStarted();
+        } catch (error) {
+          this.archiveDisabled = true;
+          console.warn(`[worker] archive disabled`, { matchId: this.matchId, error });
+          return;
+        }
+        const batch = this.pendingArchiveFrames.splice(
+          0,
+          Math.min(ARCHIVE_BATCH_FRAMES, this.pendingArchiveFrames.length),
+        );
+        try {
+          const response = await this.archiveFetch(
+            `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/frames`,
+            { frames: batch },
+          );
+          if (!response.ok) throw new Error(`archive frames failed (${response.status})`);
+        } catch (error) {
+          this.pendingArchiveFrames.unshift(...batch);
+          this.archiveDisabled = true;
+          console.error(`[batch] archive disabled frames match=${this.matchId}`, error);
+          return;
+        }
+      }
+    })();
+    this.archiveFlushPromise = operation.finally(() => {
+      if (this.archiveFlushPromise === operation) this.archiveFlushPromise = null;
+    });
+    return this.archiveFlushPromise;
+  }
+
+  private async completeArchiveFrames(): Promise<void> {
+    if (this.archiveCompleted || this.archiveDisabled) return;
+    try {
+      await this.ensureArchiveStarted();
+      await this.flushArchiveFrames(true);
+      const response = await this.archiveFetch(
+        `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/complete`,
+        { result: { terminal: true }, completedAt: new Date().toISOString() },
+      );
+      this.archiveCompleted = response.ok;
+      if (!response.ok) console.warn(`[worker] archive complete failed match=${this.matchId}`);
+    } catch (error) {
+      this.archiveDisabled = true;
+      console.warn(`[worker] archive complete disabled match=${this.matchId}`, error);
+    }
+  }
+
+  private async archiveFetch(path: string, body: unknown): Promise<Response> {
+    return fetch(`${this.env.API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: this.apiHeaders(),
+      body: JSON.stringify(body),
+    });
   }
 
   private receive(slot: SimulationPlayerIndex, socket: WebSocket, data: string | ArrayBuffer): void {
@@ -194,6 +375,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
         this.frameHistory.push(frame);
         if (this.frameHistory.length > MAX_FRAME_HISTORY) this.frameHistory.shift();
         this.broadcast(frame);
+        this.queueArchiveFrame(frame);
         this.nextTickAt += interval;
         catchUp += 1;
         const hitStop = simulation.consumeHitStopSeconds();
@@ -202,6 +384,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
           this.resultSubmitted = true;
           this.stopTicking();
           this.ctx.waitUntil(this.submitResult());
+          this.ctx.waitUntil(this.completeArchiveFrames());
           break;
         } else if (simulation.isComplete() && this.pendingRunState === null) {
           this.beginStageTransition();
@@ -343,6 +526,8 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     this.sockets.forEach((socket) => socket.close(1000, 'match stopped'));
     this.sockets.clear();
     this.activePlayers.clear();
+    this.spectatorSockets.forEach((socket) => socket.close(1000, 'match stopped'));
+    this.spectatorSockets.clear();
   }
 
   private broadcastReady(syncPlayer: SimulationPlayerIndex | null): void {
@@ -356,6 +541,16 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
 
   private broadcast(packet: unknown): void {
     this.sockets.forEach((socket) => this.send(socket, packet));
+    this.spectatorSockets.forEach((socket) => this.sendObserver(socket, packet));
+  }
+
+  private sendObserver(socket: WebSocket, packet: unknown): void {
+    if (socket.readyState !== WebSocket.OPEN) return;
+    try {
+      socket.send(JSON.stringify(packet));
+    } catch {
+      // The close event owns connection cleanup.
+    }
   }
 
   private send(socket: WebSocket, packet: unknown): void {
@@ -453,6 +648,18 @@ export default {
       headers.set('x-battlecity-player-slot', String(playerSlot));
       return env.MATCHES.getByName(matchId).fetch(new Request('https://match/connect', { headers }));
     }
+    const observer = url.pathname.match(OBSERVER_ROUTE);
+    if (observer !== null && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+      const matchId = observer[1].toLowerCase();
+      const observerId = observer[2].toLowerCase();
+      const ticket = await verifyObserverTicket(url.searchParams.get('ticket') || '', env.WEBSOCKET_TICKET_SECRET);
+      if (ticket === null || ticket.matchId !== matchId || ticket.observerId !== observerId) {
+        return new Response('Invalid or expired ticket', { status: 403 });
+      }
+      const headers = new Headers(request.headers);
+      headers.set('x-battlecity-observer-id', observerId);
+      return env.MATCHES.getByName(matchId).fetch(new Request('https://match/connect', { headers }));
+    }
     const playerConfig = url.pathname.match(PLAYER_CONFIG_ROUTE);
     if (playerConfig !== null && request.method === 'PUT') {
       if (!authorizedServiceRequest(request, env)) return new Response('Forbidden', { status: 403 });
@@ -537,6 +744,47 @@ async function verifyTicket(ticket: string, secret: string): Promise<TicketPaylo
         (parsed.playerSlot === 0 || parsed.playerSlot === 1)
       ? parsed
       : null;
+  } catch {
+    return null;
+  }
+}
+
+async function verifyObserverTicket(ticket: string, secret: string): Promise<ObserverTicketPayload | null> {
+  const [payload, signature, extra] = ticket.split('.');
+  if (!payload || !signature || extra !== undefined || secret.length < 32) return null;
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      decodeBase64Url(signature),
+      new TextEncoder().encode(payload),
+    );
+    if (!valid) return null;
+    const parsed = JSON.parse(new TextDecoder().decode(decodeBase64Url(payload))) as {
+      matchId?: unknown;
+      kind?: unknown;
+      observerId?: unknown;
+      expiresAt?: unknown;
+    };
+    if (
+      parsed.kind !== 'observer' ||
+      typeof parsed.expiresAt !== 'number' ||
+      parsed.expiresAt < Date.now() ||
+      typeof parsed.matchId !== 'string' ||
+      !/^match-[0-9a-z-]+$/i.test(parsed.matchId) ||
+      typeof parsed.observerId !== 'string' ||
+      !/^[a-z0-9]{8}$/.test(parsed.observerId)
+    ) {
+      return null;
+    }
+    return { matchId: parsed.matchId.toLowerCase(), observerId: parsed.observerId };
   } catch {
     return null;
   }
