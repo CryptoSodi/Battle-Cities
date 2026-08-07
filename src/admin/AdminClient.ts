@@ -22,9 +22,15 @@ export class AdminClient {
     return this.request(`/api/admin/matches?${query}`);
   }
 
-  getPlayers(query = ''): Promise<any> {
+  getPlayers(
+    query = '',
+    lastSeenFrom = '',
+    lastSeenTo = '',
+  ): Promise<any> {
     const search = new URLSearchParams({ limit: '100' });
     if (query !== '') search.set('q', query);
+    if (lastSeenFrom !== '') search.set('lastSeenFrom', lastSeenFrom);
+    if (lastSeenTo !== '') search.set('lastSeenTo', lastSeenTo);
     return this.request(`/api/admin/players?${search}`);
   }
 

@@ -44,6 +44,9 @@ function bindEvents(): void {
     event.preventDefault();
     void loadPlayers();
   });
+  document.querySelectorAll<HTMLInputElement>('[data-player-from], [data-player-to]').forEach((input) => {
+    input.addEventListener('change', () => void loadPlayers());
+  });
   requireElement<HTMLButtonElement>('[data-tournament-new]').addEventListener('click', () => openTournamentForm());
   requireElement<HTMLButtonElement>('[data-tournament-cancel]').addEventListener('click', closeTournamentForm);
   requireElement<HTMLFormElement>('[data-tournament-form]').addEventListener('submit', (event) => void saveTournament(event));
@@ -96,17 +99,18 @@ async function loadOverview(): Promise<void> {
         metric(
           String(label),
           Number(value),
-          METRIC_MATCH_FILTERS.get(String(label)) ?? null,
+          METRIC_ROUTES.get(String(label)) ?? null,
         ),
       ),
     );
   });
 }
 
-const METRIC_MATCH_FILTERS = new Map<string, string>([
-  ['All matches', ''],
-  ['Active matches', 'active'],
-  ['Completed matches', 'completed'],
+const METRIC_ROUTES = new Map<string, { tab: string; statusFilter?: string }>([
+  ['Registered players', { tab: 'players' }],
+  ['All matches', { tab: 'matches', statusFilter: '' }],
+  ['Active matches', { tab: 'matches', statusFilter: 'active' }],
+  ['Completed matches', { tab: 'matches', statusFilter: 'completed' }],
 ]);
 
 function applyMatchFilter(statusFilter: string): void {
@@ -136,7 +140,9 @@ async function loadMatches(): Promise<void> {
 async function loadPlayers(): Promise<void> {
   await guarded(async () => {
     const query = requireElement<HTMLInputElement>('[data-player-query]').value.trim();
-    const result = await client.getPlayers(query);
+    const lastSeenFrom = requireElement<HTMLInputElement>('[data-player-from]').value;
+    const lastSeenTo = requireElement<HTMLInputElement>('[data-player-to]').value;
+    const result = await client.getPlayers(query, lastSeenFrom, lastSeenTo);
     const body = requireElement('[data-player-rows]');
     body.replaceChildren(...result.items.map(playerRow));
     if (result.items.length === 0) body.append(emptyRow(6, 'No players found'));
@@ -352,28 +358,33 @@ async function guarded(operation: () => Promise<void>): Promise<void> {
   }
 }
 
-function metric(label: string, value: number, statusFilter: string | null = null): HTMLElement {
+function metric(
+  label: string,
+  value: number,
+  route: { tab: string; statusFilter?: string } | null = null,
+): HTMLElement {
   const item = document.createElement('article');
-  item.className =
-    statusFilter === null ? 'admin-metric' : 'admin-metric admin-metric--link';
+  item.className = route === null ? 'admin-metric' : 'admin-metric admin-metric--link';
   const caption = document.createElement('span');
   caption.textContent = label;
   const number = document.createElement('strong');
   number.textContent = formatNumber(value);
   item.append(caption, number);
-  if (statusFilter !== null) {
+  if (route !== null) {
     item.tabIndex = 0;
     item.setAttribute('role', 'button');
-    item.title = 'Open the matches list with this filter';
-    const openMatches = (): void => {
-      applyMatchFilter(statusFilter);
-      void selectTab('matches');
+    item.title = `Open the ${route.tab} list`;
+    const navigate = (): void => {
+      if (route.statusFilter !== undefined) {
+        applyMatchFilter(route.statusFilter);
+      }
+      void selectTab(route.tab);
     };
-    item.addEventListener('click', openMatches);
+    item.addEventListener('click', navigate);
     item.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        openMatches();
+        navigate();
       }
     });
   }
