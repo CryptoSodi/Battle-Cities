@@ -93,17 +93,26 @@ async function loadOverview(): Promise<void> {
     const root = requireElement('[data-admin-metrics]');
     root.replaceChildren(
       ...metrics.map(([label, value]) =>
-        metric(String(label), Number(value), METRIC_MATCH_LABELS.has(String(label))),
+        metric(
+          String(label),
+          Number(value),
+          METRIC_MATCH_FILTERS.get(String(label)) ?? null,
+        ),
       ),
     );
   });
 }
 
-const METRIC_MATCH_LABELS = new Set<string>([
-  'All matches',
-  'Active matches',
-  'Completed matches',
+const METRIC_MATCH_FILTERS = new Map<string, string>([
+  ['All matches', ''],
+  ['Active matches', 'active'],
+  ['Completed matches', 'completed'],
 ]);
+
+function applyMatchFilter(statusFilter: string): void {
+  requireElement<HTMLSelectElement>('[data-match-status]').value = statusFilter;
+  requireElement<HTMLSelectElement>('[data-match-category]').value = '';
+}
 
 function openMatchObserver(matchId: string): void {
   const url = new URL(`${window.location.origin}/`);
@@ -343,23 +352,28 @@ async function guarded(operation: () => Promise<void>): Promise<void> {
   }
 }
 
-function metric(label: string, value: number, clickable = false): HTMLElement {
+function metric(label: string, value: number, statusFilter: string | null = null): HTMLElement {
   const item = document.createElement('article');
-  item.className = clickable ? 'admin-metric admin-metric--link' : 'admin-metric';
+  item.className =
+    statusFilter === null ? 'admin-metric' : 'admin-metric admin-metric--link';
   const caption = document.createElement('span');
   caption.textContent = label;
   const number = document.createElement('strong');
   number.textContent = formatNumber(value);
   item.append(caption, number);
-  if (clickable) {
+  if (statusFilter !== null) {
     item.tabIndex = 0;
     item.setAttribute('role', 'button');
-    item.title = 'Open the matches list';
-    item.addEventListener('click', () => void selectTab('matches'));
+    item.title = 'Open the matches list with this filter';
+    const openMatches = (): void => {
+      applyMatchFilter(statusFilter);
+      void selectTab('matches');
+    };
+    item.addEventListener('click', openMatches);
     item.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        void selectTab('matches');
+        openMatches();
       }
     });
   }
