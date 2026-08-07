@@ -264,10 +264,25 @@ function replayCell(match: any): HTMLTableCellElement {
   const cell = document.createElement('td');
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'admin-button admin-button--replay';
-  button.textContent = 'Replay';
-  button.title = 'Open the observer to watch or replay this match';
-  button.addEventListener('click', () => openMatchObserver(match.id));
+  if (match.status === 'waiting') {
+    button.className = 'admin-button admin-button--replay admin-button--disabled';
+    button.disabled = true;
+    button.textContent = 'Waiting';
+    button.title = 'Match has not started yet';
+  } else if (['ready', 'live', 'transition'].includes(match.status)) {
+    button.className = 'admin-button admin-button--replay admin-button--watch';
+    button.textContent =
+      match.status === 'live' || match.status === 'transition'
+        ? 'Watch live'
+        : 'Watch';
+    button.title = 'Open the observer to watch this live match';
+    button.addEventListener('click', () => openMatchObserver(match.id));
+  } else {
+    button.className = 'admin-button admin-button--replay';
+    button.textContent = 'Replay';
+    button.title = 'Replay the completed match';
+    button.addEventListener('click', () => openMatchObserver(match.id));
+  }
   cell.append(button);
   return cell;
 }
