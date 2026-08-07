@@ -62,6 +62,7 @@ export class ArchiveMatchLink implements MatchTransportLink {
       if (this.stopped || frames.length === 0) return;
 
       const targetSeq = totalFrames > 0 ? totalFrames : frames[frames.length - 1].seq;
+      this.emit({ type: 'webrtc-ready', ready: true });
       this.emit({
         type: 'webrtc-replay-start',
         fromSeq: frames[0].seq,
