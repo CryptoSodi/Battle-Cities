@@ -67,6 +67,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   private archiveStarted = false;
   private archiveCompleted = false;
   private archiveDisabled = false;
+  private archivedThroughSeq = 0;
   private category = 'live';
   private simulationOptions: Partial<SimulationOptions> = {};
   private pendingRunState: EngineSimulationRunState | null = null;
@@ -275,6 +276,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
             { frames: batch },
           );
           if (!response.ok) throw new Error(`archive frames failed (${response.status})`);
+          this.archivedThroughSeq = batch[batch.length - 1].seq;
         } catch (error) {
           this.pendingArchiveFrames.unshift(...batch);
           this.archiveDisabled = true;
@@ -290,10 +292,15 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   }
 
   private async completeArchiveFrames(): Promise<void> {
-    if (this.archiveCompleted || this.archiveDisabled) return;
+    if (this.archiveCompleted) return;
+    // A transient mid-match archive hiccup must not forfeit the full replay:
+    // the in-memory frameHistory is the authoritative copy, so re-enable and
+    // dump the whole thing before marking the archive complete.
+    this.archiveDisabled = false;
     try {
       await this.ensureArchiveStarted();
       await this.flushArchiveFrames(true);
+      await this.flushFullFrameHistory();
       const response = await this.archiveFetch(
         `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/complete`,
         { result: { terminal: true }, completedAt: new Date().toISOString() },
@@ -303,6 +310,22 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     } catch (error) {
       this.archiveDisabled = true;
       console.warn(`[worker] archive complete disabled match=${this.matchId}`, error);
+    }
+  }
+
+  private async flushFullFrameHistory(): Promise<void> {
+    if (this.frameHistory.length === 0) return;
+    for (let offset = 0; offset < this.frameHistory.length; offset += ARCHIVE_BATCH_FRAMES) {
+      const batch = this.frameHistory
+        .slice(offset, offset + ARCHIVE_BATCH_FRAMES)
+        .filter((frame) => frame.seq > this.archivedThroughSeq);
+      if (batch.length === 0) continue;
+      const response = await this.archiveFetch(
+        `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/frames`,
+        { frames: batch },
+      );
+      if (!response.ok) throw new Error(`archive history flush failed (${response.status})`);
+      this.archivedThroughSeq = batch[batch.length - 1].seq;
     }
   }
 
