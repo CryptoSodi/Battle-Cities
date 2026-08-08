@@ -300,7 +300,7 @@
   border: 1px solid var(--profile-line);
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(120px, 1.4fr) repeat(3, minmax(80px, 0.7fr));
+  grid-template-columns: minmax(120px, 1.4fr) repeat(4, minmax(80px, 0.7fr));
   min-height: 58px;
   padding: 8px 16px;
 }
@@ -330,6 +330,23 @@
 .profile-match__value {
   color: #fff;
   font-size: 16px;
+}
+
+.profile-match__replay {
+  background: #132522;
+  border: 1px solid #ffb000;
+  color: #ffb000;
+  cursor: pointer;
+  font: 800 12px/1 "Battle Cities UI", monospace;
+  letter-spacing: .06em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.profile-match__replay:disabled {
+  border-color: var(--profile-line);
+  color: var(--profile-muted);
+  cursor: not-allowed;
 }
 
 .profile-empty {

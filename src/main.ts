@@ -657,6 +657,7 @@ const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
 const adminReplayId = readAdminReplayId();
+const profileReplay = readProfileReplay();
 if (
   magicBlockMovement.isWatching() ||
   magicBlockMovement.isOnlineMatch() ||
@@ -690,6 +691,15 @@ function readAdminReplayId(): string | null {
     return null;
   }
   return replayId;
+}
+
+function readProfileReplay(): { playerId: string; matchId: string } | null {
+  const playerId = runtimeParams.get('profileReplayPlayer');
+  const matchId = runtimeParams.get('profileReplayMatch');
+  return playerId !== null && matchId !== null &&
+    /^ply-[a-z0-9-]+$/i.test(playerId) && /^mtc-[a-z0-9-]+$/i.test(matchId)
+    ? { playerId, matchId }
+    : null;
 }
 
 async function startAdminReplay(): Promise<boolean> {
@@ -728,6 +738,33 @@ async function startAdminReplay(): Promise<boolean> {
       mapConfig,
       replay: replay as SavedReplay,
     });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function startProfileReplay(): Promise<boolean> {
+  if (
+    profileReplay === null ||
+    magicBlockMovement.isWatching() ||
+    magicBlockMovement.isOnlineMatch() ||
+    webRtcMatch.isEnabled()
+  ) {
+    return false;
+  }
+  try {
+    const response = await apiFetchDirect(
+      `/api/players/${encodeURIComponent(profileReplay.playerId)}/profile/matches/${encodeURIComponent(profileReplay.matchId)}/replay`,
+    );
+    if (!response.ok) return false;
+    const replay = (await response.json())?.item?.replay;
+    if (typeof replay !== 'object' || replay === null || !Number.isInteger(replay.levelNumber)) {
+      return false;
+    }
+    const mapConfig = await loadReplayMap(replay.levelNumber);
+    if (mapConfig === null) return false;
+    sceneRouter.start(GameSceneType.LevelPlay, { mapConfig, replay: replay as SavedReplay });
     return true;
   } catch {
     return false;
@@ -1310,7 +1347,9 @@ async function main(): Promise<void> {
   await waitForLogin();
   if (!isHeadlessBroadcaster && !isWebRtcObserver) {
     await hydrateShopCacheFromServer();
-    await startAdminReplay();
+    if (!(await startAdminReplay())) {
+      await startProfileReplay();
+    }
   }
   enterGameView();
 

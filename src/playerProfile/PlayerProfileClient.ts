@@ -14,6 +14,7 @@ export type PublicMatch = {
   gamePoints: number;
   won: boolean;
   createdAt: string;
+  replayAvailable: boolean;
 };
 
 export type PublicProfile = {
@@ -62,4 +63,5 @@ export class PlayerProfileClient {
     }
     return body.item;
   }
+
 }

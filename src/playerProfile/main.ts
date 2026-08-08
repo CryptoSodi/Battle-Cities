@@ -108,9 +108,37 @@ function renderHistory(matches: PublicMatch[]): void {
       matchCell('Score', formatNumber(match.score)),
       matchCell('Level', String(match.levelNumber)),
       matchCell('Played', formatDate(match.createdAt)),
+      replayCell(match),
     );
     history.append(row);
   });
+}
+
+function replayCell(match: PublicMatch): HTMLElement {
+  const cell = document.createElement('div');
+  const label = document.createElement('span');
+  label.className = 'profile-match__label';
+  label.textContent = 'Replay';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'profile-match__replay';
+  button.textContent = 'Watch';
+  button.disabled = !match.replayAvailable;
+  button.title = match.replayAvailable
+    ? 'Watch this recorded match'
+    : 'No replay was saved for this match';
+  button.addEventListener('click', () => openReplay(match));
+  cell.append(label, button);
+  return cell;
+}
+
+function openReplay(match: PublicMatch): void {
+  const playerId = readPlayerId();
+  if (playerId === null || !match.replayAvailable) return;
+  const url = new URL('/', window.location.origin);
+  url.searchParams.set('profileReplayPlayer', playerId);
+  url.searchParams.set('profileReplayMatch', match.id);
+  window.open(url.toString(), '_blank', 'noopener');
 }
 
 function matchCell(label: string, value: string, className = ''): HTMLElement {
