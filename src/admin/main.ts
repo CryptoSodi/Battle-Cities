@@ -406,7 +406,7 @@ function replayCell(match: any): HTMLTableCellElement {
 function playerRow(player: any): HTMLTableRowElement {
   const row = document.createElement('tr');
   const profile = document.createElement('a');
-  profile.href = `/player-profile/${encodeURIComponent(player.id)}`;
+  profile.href = `/player-profile/index.html?playerId=${encodeURIComponent(player.id)}`;
   profile.textContent = player.displayName;
   const identity = document.createElement('td');
   identity.append(profile, subtext(player.email || player.id));

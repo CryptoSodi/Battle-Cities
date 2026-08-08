@@ -700,9 +700,9 @@ export class MainPlayerProfileScene extends PanelScene {
   }
 
   private async shareProfile(): Promise<void> {
-    const url = `${window.location.origin}/player-profile/${encodeURIComponent(
-      this.profile.id,
-    )}`;
+    const profileUrl = new URL('/player-profile/index.html', window.location.origin);
+    profileUrl.searchParams.set('playerId', this.profile.id);
+    const url = profileUrl.toString();
     try {
       if (typeof navigator.share === 'function') {
         await navigator.share({

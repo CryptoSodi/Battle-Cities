@@ -175,6 +175,13 @@ function showError(title: string, copy: string): void {
 }
 
 function readPlayerId(): string | null {
+  const queryPlayerId = new URLSearchParams(window.location.search).get(
+    'playerId',
+  );
+  if (queryPlayerId !== null && /^ply-[a-z0-9-]+$/i.test(queryPlayerId)) {
+    return queryPlayerId;
+  }
+
   const match = window.location.pathname.match(
     /^\/player-profile\/(ply-[a-z0-9-]+)\/?$/i,
   );
