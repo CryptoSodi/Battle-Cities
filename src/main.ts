@@ -37,7 +37,7 @@ import { GameSceneRouter, GameSceneType } from './scenes';
 import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
 import { getPhantomProvider } from './wallet';
-import { apiFetch, getApiUrl } from './network/api';
+import { apiFetch, apiFetchDirect, getApiUrl } from './network/api';
 import { MagicBlockMovementSync } from './network/magicblock';
 import { WebRtcHostMatchSync } from './network/webrtc';
 import {
@@ -656,7 +656,7 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
-const adminReplay = takeAdminReplay();
+const adminReplayId = readAdminReplayId();
 if (
   magicBlockMovement.isWatching() ||
   magicBlockMovement.isOnlineMatch() ||
@@ -680,30 +680,48 @@ if (
   }
   session.start(levelNumber, mapLoader.getItemsCount());
   sceneRouter.start(GameSceneType.LevelLoad);
-} else if (adminReplay !== null) {
-  session.start(adminReplay.levelNumber, mapLoader.getItemsCount());
-  sceneRouter.start(GameSceneType.LevelLoad, { replay: adminReplay });
 } else {
   sceneRouter.start(GameSceneType.MainMenu);
 }
 
-function takeAdminReplay(): SavedReplay | null {
-  const replayKey = runtimeParams.get('adminReplay');
-  if (replayKey === null || !/^battlecities-admin-replay-[a-z0-9-]+$/i.test(replayKey)) {
+function readAdminReplayId(): string | null {
+  const replayId = runtimeParams.get('adminReplay');
+  if (replayId === null || !/^[a-z0-9-]{1,120}$/i.test(replayId)) {
     return null;
   }
-  const serializedReplay = localStorage.getItem(replayKey);
-  localStorage.removeItem(replayKey);
-  if (serializedReplay === null) {
-    return null;
+  return replayId;
+}
+
+async function startAdminReplay(): Promise<boolean> {
+  if (
+    adminReplayId === null ||
+    magicBlockMovement.isWatching() ||
+    magicBlockMovement.isOnlineMatch() ||
+    webRtcMatch.isEnabled()
+  ) {
+    return false;
   }
   try {
-    const replay = JSON.parse(serializedReplay);
-    return typeof replay === 'object' && replay !== null && Number.isInteger(replay.levelNumber)
-      ? replay as SavedReplay
-      : null;
+    const response = await apiFetchDirect(
+      `/api/admin/replays?id=${encodeURIComponent(adminReplayId)}`,
+    );
+    if (!response.ok) {
+      return false;
+    }
+    const body = await response.json();
+    const replay = body?.item?.replay;
+    if (
+      typeof replay !== 'object' ||
+      replay === null ||
+      !Number.isInteger(replay.levelNumber)
+    ) {
+      return false;
+    }
+    session.start(replay.levelNumber, mapLoader.getItemsCount());
+    sceneRouter.start(GameSceneType.LevelLoad, { replay: replay as SavedReplay });
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 sceneRouter.transitionStarted.addListener(() => {
@@ -1267,6 +1285,7 @@ async function main(): Promise<void> {
   await waitForLogin();
   if (!isHeadlessBroadcaster && !isWebRtcObserver) {
     await hydrateShopCacheFromServer();
+    await startAdminReplay();
   }
   enterGameView();
 

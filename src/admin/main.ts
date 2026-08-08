@@ -367,9 +367,7 @@ async function openSinglePlayerReplay(summary: any, button: HTMLButtonElement): 
     if (result?.item?.replay === undefined || typeof result.item.replay !== 'object') {
       throw new Error('This recording has no playable replay data.');
     }
-    const replayKey = `battlecities-admin-replay-${crypto.randomUUID()}`;
-    localStorage.setItem(replayKey, JSON.stringify(result.item.replay));
-    viewer.location.replace(`/?adminReplay=${encodeURIComponent(replayKey)}`);
+    viewer.location.replace(`/?adminReplay=${encodeURIComponent(summary.id)}`);
   } catch (error) {
     viewer.close();
     throw error;
