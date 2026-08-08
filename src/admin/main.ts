@@ -101,7 +101,7 @@ async function loadReplays(resetPage = true): Promise<void> {
     const result = await client.getReplays(replayOffset);
     const body = requireElement('[data-replay-rows]');
     body.replaceChildren(...result.items.map(replayRow));
-    if (result.items.length === 0) body.append(emptyRow(7, 'No single-player recordings found'));
+    if (result.items.length === 0) body.append(emptyRow(8, 'No single-player recordings found'));
     renderPagination('[data-replay-pagination]', {
       offset: replayOffset,
       limit: Number(result.limit),
@@ -336,8 +336,46 @@ function replayRow(replay: any): HTMLTableRowElement {
     tableCell(String(replay.levelNumber)),
     tableCell(`${formatNumber(replay.durationTicks)} ticks`),
     tableCell(formatDateTime(replay.createdAt)),
+    singlePlayerReplayCell(replay),
   );
   return row;
+}
+
+function singlePlayerReplayCell(replay: any): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'admin-button admin-button--replay';
+  button.textContent = 'Replay';
+  button.title = 'Open this saved single-player recording';
+  button.addEventListener('click', () => void guarded(() => openSinglePlayerReplay(replay, button)));
+  cell.append(button);
+  return cell;
+}
+
+async function openSinglePlayerReplay(summary: any, button: HTMLButtonElement): Promise<void> {
+  // Open synchronously so browser popup protection cannot block the replay.
+  const viewer = window.open('about:blank', '_blank');
+  if (viewer === null) {
+    message('Allow popups to open this replay.', true);
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    const result = await client.getReplay(summary.id);
+    if (result?.item?.replay === undefined || typeof result.item.replay !== 'object') {
+      throw new Error('This recording has no playable replay data.');
+    }
+    const replayKey = `battlecities-admin-replay-${crypto.randomUUID()}`;
+    localStorage.setItem(replayKey, JSON.stringify(result.item.replay));
+    viewer.location.replace(`/?adminReplay=${encodeURIComponent(replayKey)}`);
+  } catch (error) {
+    viewer.close();
+    throw error;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function replayCell(match: any): HTMLTableCellElement {

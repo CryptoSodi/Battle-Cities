@@ -3,18 +3,19 @@ import { GameUpdateArgs, Session } from '../../game';
 import { AlertModal } from '../../gameObjects';
 import { InputHintSettings, InputVariant } from '../../input';
 import { MapConfig, MapLoader } from '../../map';
+import { SavedReplay } from '../../replay';
 
 import { GameScene } from '../GameScene';
 import { GameSceneType } from '../GameSceneType';
 
-import { LevelControlsLocationParams } from './params';
+import { LevelControlsLocationParams, LevelLoadLocationParams } from './params';
 
 enum State {
   Navigation,
   Alert,
 }
 
-export class LevelLoadScene extends GameScene {
+export class LevelLoadScene extends GameScene<LevelLoadLocationParams> {
   private alertModal: AlertModal;
   private mapLoader: MapLoader;
   private session: Session;
@@ -26,6 +27,7 @@ export class LevelLoadScene extends GameScene {
   private isMagicBlockWatcher = false;
   private isMagicBlockMatch = false;
   private magicBlockLocalPlayerIndex = 0;
+  private replay: SavedReplay = null;
 
   protected setup({
     inputHintSettings,
@@ -35,6 +37,7 @@ export class LevelLoadScene extends GameScene {
     spriteLoader,
     webRtcMatch,
   }: GameUpdateArgs): void {
+    this.replay = this.params.replay ?? null;
     this.inputHintSettings = inputHintSettings;
     this.isMagicBlockWatcher = magicBlockMovement.isWatching();
     this.isMagicBlockMatch = magicBlockMovement.isOnlineMatch();
@@ -107,6 +110,7 @@ export class LevelLoadScene extends GameScene {
     if (
       !this.isMagicBlockWatcher &&
       !this.isMagicBlockMatch &&
+      this.replay === null &&
       this.inputHintSettings.shouldShowLevelHint()
     ) {
       const params: LevelControlsLocationParams = {
@@ -123,6 +127,7 @@ export class LevelLoadScene extends GameScene {
       localPlayerIndex: this.isMagicBlockMatch
         ? this.magicBlockLocalPlayerIndex
         : 0,
+      replay: this.replay ?? undefined,
     });
   }
 

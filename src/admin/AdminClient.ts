@@ -26,6 +26,10 @@ export class AdminClient {
     return this.request(`/api/admin/replays?limit=100&offset=${offset}`);
   }
 
+  getReplay(id: string): Promise<any> {
+    return this.request(`/api/admin/replays?id=${encodeURIComponent(id)}`);
+  }
+
   getPlayers(
     query = '',
     lastSeenFrom = '',

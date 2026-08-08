@@ -32,6 +32,7 @@ import {
 } from './input';
 import { ManifestMapListReader, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
+import { SavedReplay } from './replay';
 import { GameSceneRouter, GameSceneType } from './scenes';
 import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
@@ -655,6 +656,7 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
+const adminReplay = takeAdminReplay();
 if (
   magicBlockMovement.isWatching() ||
   magicBlockMovement.isOnlineMatch() ||
@@ -678,8 +680,31 @@ if (
   }
   session.start(levelNumber, mapLoader.getItemsCount());
   sceneRouter.start(GameSceneType.LevelLoad);
+} else if (adminReplay !== null) {
+  session.start(adminReplay.levelNumber, mapLoader.getItemsCount());
+  sceneRouter.start(GameSceneType.LevelLoad, { replay: adminReplay });
 } else {
   sceneRouter.start(GameSceneType.MainMenu);
+}
+
+function takeAdminReplay(): SavedReplay | null {
+  const replayKey = runtimeParams.get('adminReplay');
+  if (replayKey === null || !/^battlecities-admin-replay-[a-z0-9-]+$/i.test(replayKey)) {
+    return null;
+  }
+  const serializedReplay = localStorage.getItem(replayKey);
+  localStorage.removeItem(replayKey);
+  if (serializedReplay === null) {
+    return null;
+  }
+  try {
+    const replay = JSON.parse(serializedReplay);
+    return typeof replay === 'object' && replay !== null && Number.isInteger(replay.levelNumber)
+      ? replay as SavedReplay
+      : null;
+  } catch {
+    return null;
+  }
 }
 sceneRouter.transitionStarted.addListener(() => {
   collisionSystem.reset();
