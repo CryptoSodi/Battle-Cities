@@ -1261,7 +1261,7 @@ gameLoop.render.addListener((event) => {
   gameState.update();
   updateMobileGamepadDebug();
   mobileTouchController.update(
-    document.body.classList.contains('level-playing'),
+    document.body.classList.contains('level-playing') && !inputManager.isReplaying(),
   );
 
   stats.end();

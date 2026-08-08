@@ -5,8 +5,12 @@ import {
   PublicMatch,
   PublicProfile,
 } from '../../playerProfile';
+import { GameUpdateArgs } from '../../game';
+import { MapConfig, MapLoader } from '../../map';
+import { SavedReplay } from '../../replay';
 
 import { PanelScene, UI } from './panelUi';
+import { GameSceneType } from '../GameSceneType';
 
 const MOBILE_WIDTH = 744;
 const DESKTOP_WIDTH = UI.WIDTH;
@@ -24,6 +28,13 @@ export class MainPlayerProfileScene extends PanelScene {
   private loadRequestId = 0;
   private matchScrollRow = 0;
   private visibleMatchRows = FALLBACK_VISIBLE_MATCHES;
+  private mapLoader: MapLoader;
+  private isLoadingReplay = false;
+
+  protected setup(updateArgs: GameUpdateArgs): void {
+    this.mapLoader = updateArgs.mapLoader;
+    super.setup(updateArgs);
+  }
 
   protected getTitle(): string {
     return '';
@@ -710,15 +721,40 @@ export class MainPlayerProfileScene extends PanelScene {
     }
   }
 
-  private openMatchReplay(match: PublicMatch): void {
+  private async openMatchReplay(match: PublicMatch): Promise<void> {
     if (!match.replayAvailable) {
       this.setStatus('REPLAY UNAVAILABLE FOR THIS BATTLE');
       return;
     }
-    const url = new URL('/', window.location.origin);
-    url.searchParams.set('profileReplayPlayer', this.profile.id);
-    url.searchParams.set('profileReplayMatch', match.id);
-    window.location.assign(url.toString());
+    if (this.isLoadingReplay) {
+      return;
+    }
+
+    this.isLoadingReplay = true;
+    this.setStatus('LOADING REPLAY...');
+    try {
+      const replay = await this.profileClient.getReplay(this.profile.id, match.id);
+      this.loadReplayMap(replay);
+    } catch {
+      this.isLoadingReplay = false;
+      this.setStatus('REPLAY UNAVAILABLE FOR THIS BATTLE');
+    }
+  }
+
+  private loadReplayMap(replay: SavedReplay): void {
+    const handleLoaded = (mapConfig: MapConfig): void => {
+      this.mapLoader.error.removeListener(handleError);
+      this.navigator.push(GameSceneType.LevelPlay, { mapConfig, replay });
+    };
+    const handleError = (): void => {
+      this.mapLoader.loaded.removeListener(handleLoaded);
+      this.isLoadingReplay = false;
+      this.setStatus('REPLAY MAP UNAVAILABLE');
+    };
+
+    this.mapLoader.loaded.addListenerOnce(handleLoaded);
+    this.mapLoader.error.addListenerOnce(handleError);
+    this.mapLoader.loadAsync(replay.levelNumber);
   }
 
   private getReplayLabel(match: PublicMatch): string {

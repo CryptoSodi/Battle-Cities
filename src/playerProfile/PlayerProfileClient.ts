@@ -1,4 +1,5 @@
 import { getApiUrl } from '../network/api';
+import { SavedReplay } from '../replay';
 
 export type PublicRank = {
   rank: number | null;
@@ -62,6 +63,37 @@ export class PlayerProfileClient {
       );
     }
     return body.item;
+  }
+
+  public async getReplay(
+    playerId: string,
+    matchId: string,
+  ): Promise<SavedReplay> {
+    const response = await fetch(
+      getApiUrl(
+        `/api/players/${encodeURIComponent(playerId)}/profile/matches/${encodeURIComponent(matchId)}/replay`,
+      ),
+      { credentials: 'include' },
+    );
+    if (!response.ok) {
+      throw new PlayerProfileRequestError(
+        `Replay request failed (${response.status})`,
+        response.status,
+      );
+    }
+
+    const replay = (await response.json())?.item?.replay;
+    if (
+      typeof replay !== 'object' ||
+      replay === null ||
+      !Number.isInteger(replay.levelNumber)
+    ) {
+      throw new PlayerProfileRequestError(
+        'Replay response is incomplete',
+        response.status,
+      );
+    }
+    return replay as SavedReplay;
   }
 
 }
