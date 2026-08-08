@@ -142,9 +142,11 @@ The important combined-runtime values are:
 
 ```env
 BATTLECITY_EMBED_BROADCASTER=1
+BATTLECITY_WEB_BASE_URL=https://play.battlecities.com
 BROADCASTER_BASE_URL=http://127.0.0.1:3001
 BROADCASTER_API_URL=http://127.0.0.1:3001
 BROADCASTER_PUBLIC_URL=https://api.battlecities.com
+BROADCASTER_CLIENT_URL=https://play.battlecities.com
 ```
 
 Keep these OAuth callbacks configured:

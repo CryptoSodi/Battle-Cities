@@ -18,7 +18,7 @@ const SOCIAL_LINKS: SocialLink[] = [
     detail: 'BATTLECITIES.COM',
     action: 'VISIT WEBSITE',
     mark: 'WWW',
-    url: 'http://www.battlecities.com',
+    url: 'https://battlecities.com',
   },
   {
     key: 'x',

@@ -30,7 +30,7 @@ const HOST = process.env.BROADCASTER_HOST || '127.0.0.1';
 const PORT = Number.parseInt(process.env.BROADCASTER_PORT || '7777', 10);
 const API_URL = String(process.env.BROADCASTER_API_URL || 'http://127.0.0.1:3000');
 const PUBLIC_URL = String(process.env.BROADCASTER_PUBLIC_URL || `http://${HOST}:${PORT}`);
-const CLIENT_URL = String(process.env.BROADCASTER_CLIENT_URL || 'https://battlecities.com');
+const CLIENT_URL = String(process.env.BROADCASTER_CLIENT_URL || 'https://play.battlecities.com');
 const SERVICE_TOKEN = String(process.env.BROADCASTER_SERVICE_TOKEN || '');
 const FRAME_REPLAY_PER_TICK = 8;
 const OBSERVER_DISCOVERY_MS = 2000;
@@ -2089,7 +2089,7 @@ function monitorHtml(publicLive = false): string {
     (function () {
       var publicLive = ${publicLive ? 'true' : 'false'};
       var token = sessionStorage.getItem('battlecities-broadcaster-token') || '';
-      var config = { clientUrl: 'https://battlecities.com', refreshMs: 2000 };
+      var config = { clientUrl: 'https://play.battlecities.com', refreshMs: 2000 };
       var activeView = 'live';
       var activeCategory = 'guest';
       var currentMatches = [];

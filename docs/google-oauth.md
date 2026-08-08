@@ -16,7 +16,7 @@ from the client secret if possible.
 Production:
 
 ```text
-https://www.battlecities.com/api/auth/google/callback
+https://api.battlecities.com/api/auth/google/callback
 ```
 
 Localhost, if the game is served through localhost:
@@ -41,7 +41,7 @@ In Google Cloud Console, create or edit an OAuth client:
 3. Add matching authorized JavaScript origins:
 
 ```text
-https://www.battlecities.com
+https://play.battlecities.com
 http://localhost:8080
 https://localhost:8080
 http://localhost:3000

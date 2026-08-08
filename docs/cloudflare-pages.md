@@ -29,7 +29,7 @@ into the public browser bundle and is intentionally not secret.
 2. Verify `/terms`, `/privacy`, `/admin`, and a `/player-profile/<id>` URL.
 3. Verify `service-worker.js` and `web-version.json` return no-cache headers.
 4. Verify API requests target `https://api.battlecities.com`.
-5. Add `battlecities.com` and `www.battlecities.com` as Pages custom domains.
+5. Add `play.battlecities.com` as the Pages custom domain for the game project.
 6. Keep the Vercel project available until the Cloudflare deployment is stable.
 
 The Oracle API allowlist includes `battlecities-web.pages.dev` and its preview

@@ -7,6 +7,22 @@
     <link rel="icon" type="image/png" href="data/graphics/favicon.png" />
     <script>
       (() => {
+        const gameOrigin = 'https://play.battlecities.com';
+        const capacitor = window.Capacitor;
+        const isAndroidNative =
+          capacitor &&
+          typeof capacitor.isNativePlatform === 'function' &&
+          capacitor.isNativePlatform() &&
+          typeof capacitor.getPlatform === 'function' &&
+          capacitor.getPlatform() === 'android';
+        if (isAndroidNative && window.location.origin !== gameOrigin) {
+          const gameUrl = new URL(window.location.href);
+          gameUrl.protocol = 'https:';
+          gameUrl.host = 'play.battlecities.com';
+          window.location.replace(gameUrl.toString());
+          return;
+        }
+
         const initialParams = new URLSearchParams(window.location.search);
         document.documentElement.classList.add('auth-bootstrap');
         if (

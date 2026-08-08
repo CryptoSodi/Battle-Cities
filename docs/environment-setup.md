@@ -32,7 +32,7 @@ BATTLECITY_EMBED_BROADCASTER=1
 BROADCASTER_BASE_URL=http://127.0.0.1:3001
 BROADCASTER_API_URL=http://127.0.0.1:3001
 BROADCASTER_PUBLIC_URL=https://api.battlecities.com
-BROADCASTER_CLIENT_URL=https://www.battlecities.com
+BROADCASTER_CLIENT_URL=https://play.battlecities.com
 ```
 
 The process generates an ephemeral broadcaster token automatically at startup.

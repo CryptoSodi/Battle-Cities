@@ -53,7 +53,7 @@ The Game API currently exposes **67 non-CORS operations**. The broadcaster expos
 Shareable frontend route:
 
 ```text
-https://www.battlecities.com/player-profile/<playerId>
+https://play.battlecities.com/player-profile/<playerId>
 ```
 
 Public API route:
@@ -313,7 +313,7 @@ BATTLECITY_EMBED_BROADCASTER=1
 BROADCASTER_BASE_URL=http://127.0.0.1:3001
 BROADCASTER_API_URL=http://127.0.0.1:3001
 BROADCASTER_PUBLIC_URL=https://api.battlecities.com
-BROADCASTER_CLIENT_URL=https://www.battlecities.com
+BROADCASTER_CLIENT_URL=https://play.battlecities.com
 ```
 
 Build with `npm run server:build` and start the single process with
@@ -324,7 +324,7 @@ The embedded broadcaster credential is generated in memory and is never returned
 
 ## Google-authenticated admin API
 
-The command center is served at `https://www.battlecities.com/admin/`. Every
+The command center is served at `https://play.battlecities.com/admin/`. Every
 admin request requires a valid Google session for the exact normalized email
 `tassaduq009@gmail.com`; hiding the page is not the security boundary.
 

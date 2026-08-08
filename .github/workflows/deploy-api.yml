@@ -6,6 +6,16 @@ on:
       - master
     paths:
       - 'api-server/**'
+      # The API embeds the authoritative WebRTC broadcaster built from these
+      # shared gameplay sources. Keep this list separate from web-only assets.
+      - 'scripts/headless-broadcaster-runtime.ts'
+      - 'scripts/engine-battle-city-simulation.ts'
+      - 'src/**'
+      - 'shared/**'
+      - 'data/maps/original/**'
+      - 'tsconfig.broadcaster.json'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 
