@@ -36,6 +36,20 @@ export function apiFetch(
   });
 }
 
+// For client-owned artifacts such as offline single-player recordings. These
+// requests must always go to the API and must never inherit a `headless=` URL
+// selection intended for multiplayer matchmaking/runtime traffic.
+export function apiFetchDirect(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  return fetch(getApiUrl(path), {
+    credentials: 'include',
+    ...init,
+    headers: new Headers(init.headers),
+  });
+}
+
 function readHeadlessTarget(): 'worker' | 'bom1' | 'usa' | null {
   if (typeof window === 'undefined') {
     return null;

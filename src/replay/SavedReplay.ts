@@ -6,7 +6,7 @@ import {
   SessionRunConsumables,
 } from '../game';
 import { InputDeviceType } from '../input';
-import { apiFetch } from '../network/api';
+import { apiFetch, apiFetchDirect } from '../network/api';
 import { TankTier } from '../tank';
 
 import { EnemyMovementFrame } from './EnemyMovementFrame';
@@ -83,7 +83,9 @@ export async function saveReplay(
   _gameStorage: GameStorage,
   replay: SavedReplay,
 ): Promise<void> {
-  const response = await apiFetch('/api/replays', {
+  // A single-player replay is produced by the browser's local simulation.
+  // Upload it directly to the API; it is never a headless match request.
+  const response = await apiFetchDirect('/api/replays', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
