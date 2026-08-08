@@ -56,6 +56,21 @@ Use `?` for the first parameter and `&` for additional parameters.
 - Ghost and enemy-fire flags are debugging controls, not gameplay permissions. They should never make the browser authoritative.
 - Compatibility aliases exist for legacy links: `debugNoEnemyShooting=1` / `webrtcNoEnemyShooting=1` and `webrtcServerGhost=1` / `ghostMirror=1`.
 
+## MagicBlock integration
+
+MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codebase. It is **not** selected with `headless=worker|bom1|usa` and must not be confused with the headless runtime system.
+
+- Enable the MagicBlock match path with `mode=match`; `match=<matchId>` identifies the on-chain match. `join=1` selects player two and `observer=1` opens its observer flow.
+- A wallet connection through Phantom is required to create, join, delegate, or submit a MagicBlock match update.
+- The client uses three connections: Solana base RPC for match setup/delegation, MagicBlock router RPC to find the delegated endpoint, then the ER endpoint for live state and input updates.
+- The Anchor program is `Magic/programs/tank-movement/src/lib.rs`. It owns the match account and ER-side simulation/task scheduling.
+- `src/network/magicblock/MagicBlockMovementSync.ts` is the gameplay-facing bridge; `MagicBlockMatchSync.ts` owns the match lifecycle, ER synchronization, latency tools, and client correction path.
+- In the ER path, MagicBlock is canonical for match state, enemy simulation, terrain/board mutations, deaths, score, and game-over state. Browser movement/fire can still use predicted visuals, but may not make permanent shared-state decisions.
+- `WebRtcGhostSync` can be used as a fast visual mirror lane alongside MagicBlock. It is never authoritative; authoritative correction comes from ER state.
+- WebRTC offer/answer signaling for the MagicBlock path uses the HTTP/API signal transport (`HttpGhostSignalTransport`) configured by `MagicBlockMatchSync`; it is only connection setup, not the realtime authority channel.
+- The MagicBlock path exposes ER read and input-latency debug controls. Use them when diagnosing ER routing or confirmation delay.
+- `MULTIPLAYER_ARCHITECTURE.md` gives the deeper historical detail. Before changing this path, check the current code because it includes older notes from before the present headless server architecture.
+
 ## Replay recording
 
 - Multiplayer headless recordings and offline single-player recordings are both uploaded through the API and must use the same replay format.
