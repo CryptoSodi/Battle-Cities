@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'api-server/**'
+      - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 
 permissions:
