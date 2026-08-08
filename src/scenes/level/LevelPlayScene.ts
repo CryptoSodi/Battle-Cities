@@ -1067,19 +1067,23 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // Restore input
     this.inputManager.listen();
 
-    this.finishInputCapture('loss');
-
-    if (this.session.isPlaytest()) {
-      this.navigator.replace(GameSceneType.EditorMenu);
-      return;
-    }
-
-    this.navigator.replace(GameSceneType.LevelScore);
+    // A scene replacement can abort an in-flight fetch. Wait for the replay
+    // archive to reach the API before leaving the level so completed
+    // single-player games are not silently dropped.
+    void this.finishInputCapture('loss').finally(
+      this.navigateAfterCompletedLevel,
+    );
   };
 
   private handleLevelWinCompleted = (): void => {
-    this.finishInputCapture('win');
+    // See handleLevelGameOverCompleted: the recording must be persisted before
+    // the navigator disposes this scene.
+    void this.finishInputCapture('win').finally(
+      this.navigateAfterCompletedLevel,
+    );
+  };
 
+  private navigateAfterCompletedLevel = (): void => {
     if (this.session.isPlaytest()) {
       this.navigator.replace(GameSceneType.EditorMenu);
       return;
@@ -1112,24 +1116,26 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // Wraps up whichever input capture mode this level started in: saves a
   // completed recording as the next "last replay" (dev-only REPLAY menu
   // item), or just restores live devices after a replay finished playing.
-  private finishInputCapture(result: SavedReplayResult): void {
+  private async finishInputCapture(result: SavedReplayResult): Promise<void> {
     if (this.inputManager.isRecording()) {
       const deviceFrames = this.inputManager.stopRecording();
       const metadata = this.createReplayMetadata(result);
-      void saveReplay(this.gameStorage, {
-        seed: this.recordedSeed,
-        levelNumber: this.session.getLevelNumber(),
-        metadata,
-        deviceFrames,
-        activeDeviceType: this.recordedActiveDeviceType,
-        playerTankTiers: this.recordedPlayerTankTiers.slice(),
-        runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
-        runBoosts: { ...this.recordedRunBoosts },
-        enemyTraces: this.recordedEnemyTraces,
-        powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
-      }).catch((error) => {
+      try {
+        await saveReplay(this.gameStorage, {
+          seed: this.recordedSeed,
+          levelNumber: this.session.getLevelNumber(),
+          metadata,
+          deviceFrames,
+          activeDeviceType: this.recordedActiveDeviceType,
+          playerTankTiers: this.recordedPlayerTankTiers.slice(),
+          runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
+          runBoosts: { ...this.recordedRunBoosts },
+          enemyTraces: this.recordedEnemyTraces,
+          powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
+        });
+      } catch (error) {
         console.warn('[replay] single-player upload failed', error);
-      });
+      }
       return;
     }
 
