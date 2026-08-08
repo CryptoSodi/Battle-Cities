@@ -48,6 +48,7 @@
         <nav class="admin-tabs" aria-label="Admin sections">
           <button class="admin-tab is-active" data-admin-tab="overview" type="button">Overview</button>
           <button class="admin-tab" data-admin-tab="matches" type="button">Matches</button>
+          <button class="admin-tab" data-admin-tab="replays" type="button">Single player</button>
           <button class="admin-tab" data-admin-tab="players" type="button">Players</button>
           <button class="admin-tab" data-admin-tab="tournaments" type="button">Tournaments</button>
         </nav>
@@ -57,6 +58,12 @@
         <section class="admin-section is-active" data-admin-section="overview">
           <div class="admin-section__title"><div><p class="admin-kicker">Live database</p><h2>Operational status</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="overview" type="button">Refresh</button></div>
           <div class="admin-metrics" data-admin-metrics></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="replays" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Local game recordings</p><h2>Single-player replays</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="replays" type="button">Refresh</button></div>
+          <div class="admin-table-wrap"><table><thead><tr><th>Replay</th><th>Player</th><th>Result</th><th>Score</th><th>Level</th><th>Duration</th><th>Saved</th></tr></thead><tbody data-replay-rows></tbody></table></div>
+          <div class="admin-pagination" data-replay-pagination></div>
         </section>
 
         <section class="admin-section" data-admin-section="matches" hidden>

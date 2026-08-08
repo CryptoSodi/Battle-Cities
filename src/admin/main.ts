@@ -87,9 +87,29 @@ async function selectTab(name: string): Promise<void> {
 
 async function loadSection(name: string): Promise<void> {
   if (name === 'matches') await loadMatches();
+  else if (name === 'replays') await loadReplays();
   else if (name === 'players') await loadPlayers();
   else if (name === 'tournaments') await loadTournaments();
   else await loadOverview();
+}
+
+let replayOffset = 0;
+
+async function loadReplays(resetPage = true): Promise<void> {
+  await guarded(async () => {
+    if (resetPage) replayOffset = 0;
+    const result = await client.getReplays(replayOffset);
+    const body = requireElement('[data-replay-rows]');
+    body.replaceChildren(...result.items.map(replayRow));
+    if (result.items.length === 0) body.append(emptyRow(7, 'No single-player recordings found'));
+    renderPagination('[data-replay-pagination]', {
+      offset: replayOffset,
+      limit: Number(result.limit),
+      total: Number(result.total),
+      onPrev: () => { replayOffset = Math.max(0, replayOffset - Number(result.limit)); void loadReplays(false); },
+      onNext: () => { replayOffset += Number(result.limit); void loadReplays(false); },
+    });
+  });
 }
 
 async function loadOverview(): Promise<void> {
@@ -302,6 +322,20 @@ function matchRow(match: any): HTMLTableRowElement {
     statusCell(match.broadcasterStatus || 'not started'),
     tableCell(formatDateTime(match.createdAt), `Stage ${match.currentStage}`),
     replayCell(match),
+  );
+  return row;
+}
+
+function replayRow(replay: any): HTMLTableRowElement {
+  const row = document.createElement('tr');
+  row.append(
+    tableCell(replay.id),
+    tableCell(replay.guestId),
+    statusCell(replay.gameResult),
+    tableCell(formatNumber(replay.score), `${formatNumber(replay.kills)} kills`),
+    tableCell(String(replay.levelNumber)),
+    tableCell(`${formatNumber(replay.durationTicks)} ticks`),
+    tableCell(formatDateTime(replay.createdAt)),
   );
   return row;
 }

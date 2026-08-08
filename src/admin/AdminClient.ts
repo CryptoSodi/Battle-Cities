@@ -22,6 +22,10 @@ export class AdminClient {
     return this.request(`/api/admin/matches?${query}`);
   }
 
+  getReplays(offset = 0): Promise<any> {
+    return this.request(`/api/admin/replays?limit=100&offset=${offset}`);
+  }
+
   getPlayers(
     query = '',
     lastSeenFrom = '',
