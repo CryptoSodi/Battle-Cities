@@ -97,38 +97,31 @@ function renderHistory(matches: PublicMatch[]): void {
   }
 
   matches.forEach((match) => {
-    const row = document.createElement('article');
-    row.className = `profile-match${match.won ? ' profile-match--won' : ''}`;
+    const row = document.createElement('tr');
+    row.className = match.won ? 'profile-match--won' : '';
     row.append(
-      matchCell(
-        'Result',
-        match.won ? 'Victory' : 'Defeat',
-        'profile-match__result',
-      ),
-      matchCell('Score', formatNumber(match.score)),
-      matchCell('Level', String(match.levelNumber)),
-      matchCell('Played', formatDate(match.createdAt)),
+      matchCell(match.won ? 'Victory' : 'Defeat', 'profile-match__result'),
+      matchCell(formatNumber(match.score)),
+      matchCell(String(match.levelNumber)),
+      matchCell(formatDate(match.createdAt)),
       replayCell(match),
     );
     history.append(row);
   });
 }
 
-function replayCell(match: PublicMatch): HTMLElement {
-  const cell = document.createElement('div');
-  const label = document.createElement('span');
-  label.className = 'profile-match__label';
-  label.textContent = 'Replay';
+function replayCell(match: PublicMatch): HTMLTableCellElement {
+  const cell = document.createElement('td');
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'profile-match__replay';
+  button.className = 'admin-button admin-button--replay';
   button.textContent = 'Watch';
   button.disabled = !match.replayAvailable;
   button.title = match.replayAvailable
     ? 'Watch this recorded match'
     : 'No replay was saved for this match';
   button.addEventListener('click', () => openReplay(match));
-  cell.append(label, button);
+  cell.append(button);
   return cell;
 }
 
@@ -141,17 +134,10 @@ function openReplay(match: PublicMatch): void {
   window.open(url.toString(), '_blank', 'noopener');
 }
 
-function matchCell(label: string, value: string, className = ''): HTMLElement {
-  const cell = document.createElement('div');
-  const labelElement = document.createElement('span');
-  labelElement.className = 'profile-match__label';
-  labelElement.textContent = label;
-  const valueElement = document.createElement('span');
-  valueElement.className = `profile-match__value${
-    className === '' ? '' : ` ${className}`
-  }`;
-  valueElement.textContent = value;
-  cell.append(labelElement, valueElement);
+function matchCell(value: string, className = ''): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  cell.className = className;
+  cell.textContent = value;
   return cell;
 }
 
