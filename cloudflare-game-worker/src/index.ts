@@ -61,6 +61,7 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   private readonly activePlayers = new Set<SimulationPlayerIndex>();
   private readonly spectatorSockets = new Map<string, WebSocket>();
   private readonly frameHistory: SimulationHostFramePacket[] = [];
+  private readonly archiveFrameHistory: SimulationHostFramePacket[] = [];
   private readonly pendingArchiveFrames: SimulationHostFramePacket[] = [];
   private archiveStartPromise: Promise<void> | null = null;
   private archiveFlushPromise: Promise<void> | null = null;
@@ -68,6 +69,8 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   private archiveCompleted = false;
   private archiveDisabled = false;
   private archivedThroughSeq = 0;
+  private archiveFrameSeq = 0;
+  private archiveElapsedSeconds = 0;
   private category = 'live';
   private simulationOptions: Partial<SimulationOptions> = {};
   private pendingRunState: EngineSimulationRunState | null = null;
@@ -120,6 +123,8 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     this.matchId = body.matchId;
     this.level = Math.max(1, Math.floor(body.level || 1));
     this.startedAt = Date.now();
+    this.archiveFrameSeq = 0;
+    this.archiveElapsedSeconds = 0;
     this.category = body.category || 'live';
     this.simulationOptions = {
       extraLives: body.extraLives,
@@ -221,7 +226,12 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
 
   private queueArchiveFrame(frame: SimulationHostFramePacket): void {
     if (this.archiveDisabled || this.archiveCompleted) return;
-    this.pendingArchiveFrames.push(frame);
+    const archiveFrame = this.createArchiveFrame(frame);
+    this.archiveFrameHistory.push(archiveFrame);
+    if (this.archiveFrameHistory.length > MAX_FRAME_HISTORY) {
+      this.archiveFrameHistory.shift();
+    }
+    this.pendingArchiveFrames.push(archiveFrame);
     if (this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES) {
       this.ctx.waitUntil(this.flushArchiveFrames(false));
     }
@@ -314,9 +324,9 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
   }
 
   private async flushFullFrameHistory(): Promise<void> {
-    if (this.frameHistory.length === 0) return;
-    for (let offset = 0; offset < this.frameHistory.length; offset += ARCHIVE_BATCH_FRAMES) {
-      const batch = this.frameHistory
+    if (this.archiveFrameHistory.length === 0) return;
+    for (let offset = 0; offset < this.archiveFrameHistory.length; offset += ARCHIVE_BATCH_FRAMES) {
+      const batch = this.archiveFrameHistory
         .slice(offset, offset + ARCHIVE_BATCH_FRAMES)
         .filter((frame) => frame.seq > this.archivedThroughSeq);
       if (batch.length === 0) continue;
@@ -335,6 +345,43 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
       headers: this.apiHeaders(),
       body: JSON.stringify(body),
     });
+  }
+
+  private createArchiveFrame(
+    frame: SimulationHostFramePacket,
+  ): SimulationHostFramePacket {
+    const deltaTime = Number.isFinite(frame.deltaTime) && frame.deltaTime > 0
+      ? frame.deltaTime
+      : 1 / 60;
+    const archiveFrame: SimulationHostFramePacket = {
+      ...frame,
+      // Engine frame/tick counters restart at each stage. Archives need one
+      // match-wide sequence and clock so the API can store and replay every
+      // stage without sequence conflicts or a burst of zero-delay frames.
+      seq: ++this.archiveFrameSeq,
+      sharedElapsedSeconds: this.archiveElapsedSeconds,
+      lastProcessedInputSeq: [...frame.lastProcessedInputSeq] as [number, number],
+      playerScores: [...frame.playerScores] as [number, number],
+      playerLives: frame.playerLives === undefined
+        ? undefined
+        : [...frame.playerLives] as [number, number],
+      playerKillCounts: frame.playerKillCounts === undefined
+        ? undefined
+        : frame.playerKillCounts.map((counts) => [...counts]) as [
+          [number, number, number, number],
+          [number, number, number, number],
+        ],
+      players: frame.players.map((player) => ({ ...player })),
+      enemies: frame.enemies.map((enemy) => ({ ...enemy })),
+      powerup: frame.powerup === null ? null : { ...frame.powerup },
+      powerupPickup: frame.powerupPickup === null
+        ? null
+        : { ...frame.powerupPickup },
+      activeEnemyIds: [...frame.activeEnemyIds],
+      enemyDeaths: frame.enemyDeaths?.map((death) => ({ ...death })),
+    };
+    this.archiveElapsedSeconds += deltaTime;
+    return archiveFrame;
   }
 
   private receive(slot: SimulationPlayerIndex, socket: WebSocket, data: string | ArrayBuffer): void {

@@ -61,12 +61,16 @@ class VercelMatch {
   private readonly activePlayers = new Set<SimulationPlayerIndex>();
   private readonly spectatorSockets = new Map<string, WebSocket>();
   private readonly frameHistory: SimulationHostFramePacket[] = [];
+  private readonly archiveFrameHistory: SimulationHostFramePacket[] = [];
   private readonly pendingArchiveFrames: SimulationHostFramePacket[] = [];
   private archiveStartPromise: Promise<void> | null = null;
   private archiveFlushPromise: Promise<void> | null = null;
   private archiveStarted = false;
   private archiveCompleted = false;
   private archiveDisabled = false;
+  private archivedThroughSeq = 0;
+  private archiveFrameSeq = 0;
+  private archiveElapsedSeconds = 0;
   private archiveFlushTimer: NodeJS.Timeout | null = null;
   private pendingRunState: EngineSimulationRunState | null = null;
   private readonly stageReadyPlayers = new Set<SimulationPlayerIndex>();
@@ -135,7 +139,12 @@ class VercelMatch {
 
   private queueArchiveFrame(frame: SimulationHostFramePacket): void {
     if (this.archiveDisabled || this.archiveCompleted) return;
-    this.pendingArchiveFrames.push(frame);
+    const archiveFrame = this.createArchiveFrame(frame);
+    this.archiveFrameHistory.push(archiveFrame);
+    if (this.archiveFrameHistory.length > MAX_FRAME_HISTORY) {
+      this.archiveFrameHistory.shift();
+    }
+    this.pendingArchiveFrames.push(archiveFrame);
     if (this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES) {
       void this.flushArchiveFrames(false);
     }
@@ -205,6 +214,7 @@ class VercelMatch {
           if (!response.ok) {
             throw new Error(`archive frames failed (${response.status})`);
           }
+          this.archivedThroughSeq = batch[batch.length - 1].seq;
         } catch (error) {
           this.pendingArchiveFrames.unshift(...batch);
           this.archiveDisabled = true;
@@ -224,6 +234,7 @@ class VercelMatch {
     try {
       await this.ensureArchiveStarted();
       await this.flushArchiveFrames(true);
+      await this.flushFullArchiveHistory();
       const response = await apiRequest(
         `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/complete`,
         {
@@ -237,6 +248,44 @@ class VercelMatch {
       this.archiveDisabled = true;
       console.warn(`[broadcast] archive complete disabled match=${this.matchId}`, error);
     }
+  }
+
+  private async flushFullArchiveHistory(): Promise<void> {
+    for (let offset = 0; offset < this.archiveFrameHistory.length; offset += ARCHIVE_BATCH_FRAMES) {
+      const batch = this.archiveFrameHistory
+        .slice(offset, offset + ARCHIVE_BATCH_FRAMES)
+        .filter((frame) => frame.seq > this.archivedThroughSeq);
+      if (batch.length === 0) continue;
+      const response = await apiRequest(
+        `/api/multiplayer/archives/${encodeURIComponent(this.matchId)}/frames`,
+        { frames: batch },
+      );
+      if (!response.ok) throw new Error(`archive history failed (${response.status})`);
+      this.archivedThroughSeq = batch[batch.length - 1].seq;
+    }
+  }
+
+  private createArchiveFrame(frame: SimulationHostFramePacket): SimulationHostFramePacket {
+    const deltaTime = Number.isFinite(frame.deltaTime) && frame.deltaTime > 0
+      ? frame.deltaTime
+      : 1 / 60;
+    const archiveFrame: SimulationHostFramePacket = {
+      ...frame,
+      seq: ++this.archiveFrameSeq,
+      sharedElapsedSeconds: this.archiveElapsedSeconds,
+      lastProcessedInputSeq: [...frame.lastProcessedInputSeq] as [number, number],
+      playerScores: [...frame.playerScores] as [number, number],
+      playerLives: frame.playerLives === undefined ? undefined : [...frame.playerLives] as [number, number],
+      playerKillCounts: frame.playerKillCounts?.map((counts) => [...counts]) as SimulationHostFramePacket['playerKillCounts'],
+      players: frame.players.map((player) => ({ ...player })),
+      enemies: frame.enemies.map((enemy) => ({ ...enemy })),
+      powerup: frame.powerup === null ? null : { ...frame.powerup },
+      powerupPickup: frame.powerupPickup === null ? null : { ...frame.powerupPickup },
+      activeEnemyIds: [...frame.activeEnemyIds],
+      enemyDeaths: frame.enemyDeaths?.map((death) => ({ ...death })),
+    };
+    this.archiveElapsedSeconds += deltaTime;
+    return archiveFrame;
   }
 
   private receiveObserver(socket: WebSocket, raw: string): void {

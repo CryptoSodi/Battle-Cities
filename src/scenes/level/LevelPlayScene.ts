@@ -204,7 +204,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // Trait boosts alter the sim (player health/speed, powerup duration),
       // so the replay re-enacts the boosts the run was recorded with.
       session.setRunBoosts({ ...replay.runBoosts });
-    } else {
+    } else if (!this.isWebRtcMatch) {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
       inputManager.startRecording();
@@ -1116,7 +1116,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     if (this.inputManager.isRecording()) {
       const deviceFrames = this.inputManager.stopRecording();
       const metadata = this.createReplayMetadata(result);
-      saveReplay(this.gameStorage, {
+      void saveReplay(this.gameStorage, {
         seed: this.recordedSeed,
         levelNumber: this.session.getLevelNumber(),
         metadata,
@@ -1127,7 +1127,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         runBoosts: { ...this.recordedRunBoosts },
         enemyTraces: this.recordedEnemyTraces,
         powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
-      }).catch(() => undefined);
+      }).catch((error) => {
+        console.warn('[replay] single-player upload failed', error);
+      });
       return;
     }
 

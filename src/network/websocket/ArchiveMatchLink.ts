@@ -126,20 +126,22 @@ export class ArchiveMatchLink implements MatchTransportLink {
 
   private scheduleReplayFrames(frames: any[]): void {
     const startWall = performance.now();
-    const firstElapsed = Number(frames[0]?.sharedElapsedSeconds ?? 0);
-    const lastElapsed = Number(frames[frames.length - 1]?.sharedElapsedSeconds ?? 0);
+    let elapsedMs = 0;
 
     frames.forEach((frame) => {
-      const elapsed = Number(frame.sharedElapsedSeconds ?? 0);
-      const delay = (elapsed - firstElapsed) * 1000;
+      const delay = elapsedMs;
       const timer = window.setTimeout(() => {
         if (this.stopped) return;
         this.emit(frame);
       }, Math.max(0, delay - (performance.now() - startWall)));
       this.timers.push(timer);
+      const deltaTime = Number(frame.deltaTime);
+      elapsedMs += Number.isFinite(deltaTime) && deltaTime > 0
+        ? deltaTime * 1000
+        : 1000 / 60;
     });
 
-    const completeIn = Math.max(0, (lastElapsed - firstElapsed) * 1000 + 40);
+    const completeIn = elapsedMs + 40;
     const completeTimer = window.setTimeout(() => {
       if (this.stopped) return;
       this.emit({

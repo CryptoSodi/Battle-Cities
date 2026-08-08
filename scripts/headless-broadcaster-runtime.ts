@@ -268,6 +268,7 @@ class MatchRuntime {
   private readonly activePlayers = new Set<SimulationPlayerIndex>();
   private readonly syncingPlayers = new Set<SimulationPlayerIndex>();
   private readonly frameHistory: SimulationHostFramePacket[] = [];
+  private readonly archiveFrameHistory: SimulationHostFramePacket[] = [];
   private readonly frameBySeq = new Map<number, SimulationHostFramePacket>();
   private readonly replaySessions = new Map<LinkId, ReplaySession>();
   private readonly startedAt = new Date();
@@ -282,6 +283,8 @@ class MatchRuntime {
   private readonly pendingArchiveFrames: SimulationHostFramePacket[] = [];
   private archiveStarted = false;
   private archiveCompleted = false;
+  private archiveFrameSeq = 0;
+  private archiveElapsedSeconds = 0;
   private archiveStartPromise: Promise<void> | null = null;
   private archiveFlushPromise: Promise<void> | null = null;
   private archiveFlushAllRequested = false;
@@ -442,7 +445,9 @@ class MatchRuntime {
     const frame = this.simulation.step();
     this.frameHistory.push(frame);
     this.frameBySeq.set(frame.seq, frame);
-    this.pendingArchiveFrames.push(frame);
+    const archiveFrame = this.createArchiveFrame(frame);
+    this.archiveFrameHistory.push(archiveFrame);
+    this.pendingArchiveFrames.push(archiveFrame);
     if (this.pendingArchiveFrames.length >= ARCHIVE_BATCH_FRAMES) {
       void this.flushArchiveFrames(false).catch((error) => {
         console.error(`[broadcaster] archive flush failed for ${this.id}`, error);
@@ -1027,7 +1032,7 @@ class MatchRuntime {
     const expectedSeq = Number.parseInt(conflict[1], 10);
     const receivedSeq = Number.parseInt(conflict[2], 10);
     if (expectedSeq === receivedSeq) return false;
-    const lastFrameSeq = this.frameHistory[this.frameHistory.length - 1]?.seq ?? 0;
+    const lastFrameSeq = this.archiveFrameHistory[this.archiveFrameHistory.length - 1]?.seq ?? 0;
     if (expectedSeq === lastFrameSeq + 1) {
       this.pendingArchiveFrames.length = 0;
       console.warn(
@@ -1037,7 +1042,7 @@ class MatchRuntime {
       return true;
     }
 
-    const recovered = this.frameHistory.filter((frame) => frame.seq >= expectedSeq);
+    const recovered = this.archiveFrameHistory.filter((frame) => frame.seq >= expectedSeq);
     if (
       recovered.length === 0 ||
       recovered[0].seq !== expectedSeq ||
@@ -1074,6 +1079,29 @@ class MatchRuntime {
       throw new Error(await apiFailure(response, 'archive completion'));
     }
     this.archiveCompleted = true;
+  }
+
+  private createArchiveFrame(frame: SimulationHostFramePacket): SimulationHostFramePacket {
+    const deltaTime = Number.isFinite(frame.deltaTime) && frame.deltaTime > 0
+      ? frame.deltaTime
+      : 1 / 60;
+    const archiveFrame: SimulationHostFramePacket = {
+      ...frame,
+      seq: ++this.archiveFrameSeq,
+      sharedElapsedSeconds: this.archiveElapsedSeconds,
+      lastProcessedInputSeq: [...frame.lastProcessedInputSeq] as [number, number],
+      playerScores: [...frame.playerScores] as [number, number],
+      playerLives: frame.playerLives === undefined ? undefined : [...frame.playerLives] as [number, number],
+      playerKillCounts: frame.playerKillCounts?.map((counts) => [...counts]) as SimulationHostFramePacket['playerKillCounts'],
+      players: frame.players.map((player) => ({ ...player })),
+      enemies: frame.enemies.map((enemy) => ({ ...enemy })),
+      powerup: frame.powerup === null ? null : { ...frame.powerup },
+      powerupPickup: frame.powerupPickup === null ? null : { ...frame.powerupPickup },
+      activeEnemyIds: [...frame.activeEnemyIds],
+      enemyDeaths: frame.enemyDeaths?.map((death) => ({ ...death })),
+    };
+    this.archiveElapsedSeconds += deltaTime;
+    return archiveFrame;
   }
 }
 
