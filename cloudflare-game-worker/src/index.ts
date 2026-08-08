@@ -453,8 +453,11 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
         if (simulation.isTerminal() && !this.resultSubmitted) {
           this.resultSubmitted = true;
           this.stopTicking();
-          this.ctx.waitUntil(this.submitResult());
-          this.ctx.waitUntil(this.completeArchiveFrames());
+          // Keep the replay write ahead of match-result publication. Publishing
+          // the result can immediately tear down this Durable Object through
+          // the API, which previously raced and left an archive at its first
+          // flushed batch (usually 30 frames) with status "recording".
+          this.ctx.waitUntil(this.finalizeTerminalMatch());
           break;
         } else if (simulation.isComplete() && this.pendingRunState === null) {
           this.beginStageTransition();
@@ -593,6 +596,15 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
     this.stopped = true;
     this.matchStarted = false;
     this.stopTicking();
+    if (
+      !this.archiveCompleted &&
+      (this.archiveFrameHistory.length > 0 || this.pendingArchiveFrames.length > 0)
+    ) {
+      // An explicit API stop means this match is over, including a completed
+      // win that does not use the loss-only isTerminal() branch. Preserve the
+      // frames before the Durable Object is torn down.
+      this.ctx.waitUntil(this.completeArchiveFrames());
+    }
     this.sockets.forEach((socket) => socket.close(1000, 'match stopped'));
     this.sockets.clear();
     this.activePlayers.clear();
@@ -669,6 +681,11 @@ export class BattleCityMatch extends DurableObject<WorkerEnv> {
         status: response.status,
       });
     }
+  }
+
+  private async finalizeTerminalMatch(): Promise<void> {
+    await this.completeArchiveFrames();
+    await this.submitResult();
   }
 
   private apiHeaders(): HeadersInit {
