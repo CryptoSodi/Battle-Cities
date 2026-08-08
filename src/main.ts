@@ -30,7 +30,7 @@ import {
   InputManager,
   MobileTouchController,
 } from './input';
-import { ManifestMapListReader, MapLoader } from './map';
+import { ManifestMapListReader, MapConfig, MapLoader } from './map';
 import { PointsHighscoreManager } from './points';
 import { SavedReplay } from './replay';
 import { GameSceneRouter, GameSceneType } from './scenes';
@@ -717,12 +717,37 @@ async function startAdminReplay(): Promise<boolean> {
     ) {
       return false;
     }
-    session.start(replay.levelNumber, mapLoader.getItemsCount());
-    sceneRouter.start(GameSceneType.LevelLoad, { replay: replay as SavedReplay });
+    const mapConfig = await loadReplayMap(replay.levelNumber);
+    if (mapConfig === null) {
+      return false;
+    }
+    // Keep this identical to MainReplayScene: a replay enters LevelPlay
+    // directly, avoiding LevelLoad's live-session setup before its recorded
+    // input, seed, loadout and enemy traces are restored.
+    sceneRouter.start(GameSceneType.LevelPlay, {
+      mapConfig,
+      replay: replay as SavedReplay,
+    });
     return true;
   } catch {
     return false;
   }
+}
+
+function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
+  return new Promise((resolve) => {
+    const handleLoaded = (mapConfig: MapConfig): void => {
+      mapLoader.error.removeListener(handleError);
+      resolve(mapConfig);
+    };
+    const handleError = (): void => {
+      mapLoader.loaded.removeListener(handleLoaded);
+      resolve(null);
+    };
+    mapLoader.loaded.addListenerOnce(handleLoaded);
+    mapLoader.error.addListenerOnce(handleError);
+    mapLoader.loadAsync(levelNumber);
+  });
 }
 sceneRouter.transitionStarted.addListener(() => {
   collisionSystem.reset();
