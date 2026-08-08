@@ -55,7 +55,11 @@ module.exports = {
         '../shared/src/index.ts',
       ),
     },
-    extensions: ['.js', '.ts'],
+    // The game source is TypeScript. Prefer it over any generated JavaScript
+    // that may exist locally (for example from a headless TypeScript build),
+    // otherwise webpack can mix ES5-transpiled subclasses with native ES
+    // superclass constructors in the browser bundle.
+    extensions: ['.ts', '.js'],
     fallback: {
       buffer: require.resolve('buffer/'),
       crypto: require.resolve('crypto-browserify'),
