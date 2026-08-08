@@ -23,7 +23,7 @@ h3 { margin-bottom: 0; font-size: 13px; }
 .admin-kicker { margin-bottom: 9px; color: var(--admin-muted); font: 700 11px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
 .admin-header { padding: 22px; border: 1px solid var(--admin-line); border-top: 4px solid var(--admin-amber); background: var(--admin-panel); }
 .admin-identity { color: var(--admin-muted); font-size: 13px; }
-.admin-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 16px 0; }
+.admin-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 16px 0; }
 .admin-tab, .admin-button { border: 1px solid var(--admin-line); color: var(--admin-text); background: #162023; cursor: pointer; text-decoration: none; text-align: center; }
 .admin-tab { min-height: 52px; padding: 12px 8px; font-size: 11px; }
 .admin-tab:hover, .admin-tab:focus-visible { border-color: var(--admin-amber); }
@@ -92,7 +92,7 @@ td { font-size: 12px; line-height: 1.45; }
 @media (max-width: 900px) {
   .admin-shell { width: min(100% - 18px, 1500px); padding-top: 9px; }
   .admin-header, .admin-section__title, .admin-identity { align-items: stretch; flex-direction: column; }
-  .admin-tabs { grid-template-columns: repeat(2, 1fr); }
+  .admin-tabs { grid-template-columns: repeat(5, minmax(118px, 1fr)); overflow-x: auto; }
   .admin-metrics { grid-template-columns: repeat(2, 1fr); }
   .admin-tournament-layout { grid-template-columns: 1fr; }
   .admin-payout { grid-column: auto; }

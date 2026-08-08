@@ -1,4 +1,4 @@
-import { apiFetch } from '../network/api';
+import { apiFetchDirect } from '../network/api';
 
 export class AdminRequestError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -71,11 +71,11 @@ export class AdminClient {
   }
 
   async logout(): Promise<void> {
-    await apiFetch('/api/session', { method: 'DELETE' });
+    await apiFetchDirect('/api/session', { method: 'DELETE' });
   }
 
   private async request(path: string, init: RequestInit = {}): Promise<any> {
-    const response = await apiFetch(path, {
+    const response = await apiFetchDirect(path, {
       ...init,
       headers: { 'content-type': 'application/json', ...(init.headers || {}) },
     });
