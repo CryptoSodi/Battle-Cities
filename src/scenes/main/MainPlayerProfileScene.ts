@@ -456,7 +456,7 @@ export class MainPlayerProfileScene extends PanelScene {
       this.addText('STAGE', x + 190, textY, UI.MUTED, 18, '800', 100);
       this.addText('SCORE', x + 330, textY, UI.MUTED, 18, '800', 130);
       this.addText(
-        'PLAYED',
+        'PLAYED / REPLAY',
         x + width - 190,
         textY,
         UI.MUTED,
@@ -474,7 +474,7 @@ export class MainPlayerProfileScene extends PanelScene {
     this.addText('SCORE', x + 520, textY, UI.MUTED, 18, '800', 150);
     this.addText('POINTS', x + 720, textY, UI.MUTED, 18, '800', 150);
     this.addText(
-      'PLAYED',
+      'PLAYED / REPLAY',
       x + width - 260,
       textY,
       UI.MUTED,
@@ -531,7 +531,7 @@ export class MainPlayerProfileScene extends PanelScene {
           rowHeight - 4,
           '',
           this.getMatchKey(matchIndex),
-          () => undefined,
+          () => this.openMatchReplay(match),
           false,
           'normal',
           1,
@@ -578,10 +578,10 @@ export class MainPlayerProfileScene extends PanelScene {
         140,
       );
       this.addText(
-        this.formatShortDate(match.createdAt),
+        this.getReplayLabel(match),
         x + width - 190,
         textY,
-        UI.MUTED_LIGHT,
+        match.replayAvailable ? UI.YELLOW : UI.MUTED_LIGHT,
         19,
         '800',
         170,
@@ -627,10 +627,10 @@ export class MainPlayerProfileScene extends PanelScene {
       150,
     );
     this.addText(
-      this.formatShortDate(match.createdAt),
+      this.getReplayLabel(match),
       x + width - 260,
       textY,
-      UI.MUTED_LIGHT,
+      match.replayAvailable ? UI.YELLOW : UI.MUTED_LIGHT,
       20,
       '800',
       230,
@@ -708,6 +708,22 @@ export class MainPlayerProfileScene extends PanelScene {
         this.setStatus('PROFILE SHARE UNAVAILABLE');
       }
     }
+  }
+
+  private openMatchReplay(match: PublicMatch): void {
+    if (!match.replayAvailable) {
+      this.setStatus('REPLAY UNAVAILABLE FOR THIS BATTLE');
+      return;
+    }
+    const url = new URL('/', window.location.origin);
+    url.searchParams.set('profileReplayPlayer', this.profile.id);
+    url.searchParams.set('profileReplayMatch', match.id);
+    window.location.assign(url.toString());
+  }
+
+  private getReplayLabel(match: PublicMatch): string {
+    const date = this.formatShortDate(match.createdAt);
+    return match.replayAvailable ? `WATCH · ${date}` : date;
   }
 
   private getMatchKey(index: number): string {
