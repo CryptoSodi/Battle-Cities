@@ -20,6 +20,8 @@
 .profile-stat--rank strong { color: var(--admin-amber); }
 .profile-stat em { display: block; color: var(--admin-muted); font: 700 8px/1.4 "Press Start 2P", monospace; font-style: normal; text-align: right; text-transform: uppercase; }
 .profile-records { margin-top: 24px; }
+.profile-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.profile-pagination__status { min-width: 112px; color: var(--admin-muted); font: 700 8px/1.5 "Press Start 2P", monospace; text-align: center; text-transform: uppercase; }
 .profile-panel__count { color: var(--admin-muted); font: 700 9px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
 .profile-table { min-width: 720px; }
 .profile-match__result { color: var(--admin-red); font-family: "Press Start 2P", monospace; text-transform: uppercase; }
@@ -37,4 +39,6 @@
   .profile-hero { grid-template-columns: 1fr; }
   .profile-avatar { width: 78px; height: 78px; }
   .profile-stats { grid-template-columns: 1fr; }
+  .profile-pagination { align-items: stretch; flex-direction: column; }
+  .profile-pagination .admin-button { width: 100%; }
 }

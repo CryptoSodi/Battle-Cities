@@ -11,11 +11,27 @@ const loading = requireElement<HTMLElement>('[data-profile-loading]');
 const errorPanel = requireElement<HTMLElement>('[data-profile-error]');
 const content = requireElement<HTMLElement>('[data-profile-content]');
 const profileClient = new PlayerProfileClient();
+const previousPageButton = requireElement<HTMLButtonElement>(
+  '[data-profile-previous]',
+);
+const nextPageButton = requireElement<HTMLButtonElement>('[data-profile-next]');
+
+let playerId: string | null = null;
+let currentPage = 1;
+let totalPages = 1;
+let isLoadingPage = false;
+
+previousPageButton.addEventListener('click', () =>
+  void loadProfilePage(currentPage - 1),
+);
+nextPageButton.addEventListener('click', () =>
+  void loadProfilePage(currentPage + 1),
+);
 
 void loadProfile();
 
 async function loadProfile(): Promise<void> {
-  const playerId = readPlayerId();
+  playerId = readPlayerId();
   if (playerId === null) {
     showError(
       'Invalid player profile',
@@ -24,21 +40,43 @@ async function loadProfile(): Promise<void> {
     return;
   }
 
+  await loadProfilePage(1, true);
+}
+
+async function loadProfilePage(
+  page: number,
+  isInitialLoad = false,
+): Promise<void> {
+  if (playerId === null || isLoadingPage) {
+    return;
+  }
+
+  const requestedPage = Math.max(1, Math.min(totalPages, Math.floor(page)));
+  isLoadingPage = true;
+  setPaginationBusy(true);
+
   try {
-    renderProfile(await profileClient.getProfile(playerId));
+    renderProfile(await profileClient.getProfile(playerId, requestedPage));
   } catch (error) {
     console.error('[player-profile] load failed', error);
-    if (error instanceof PlayerProfileRequestError && error.status === 404) {
+    if (
+      isInitialLoad &&
+      error instanceof PlayerProfileRequestError &&
+      error.status === 404
+    ) {
       showError(
         'Player not found',
         'No Battle Cities player exists for this profile address.',
       );
-      return;
+    } else if (isInitialLoad) {
+      showError(
+        'Combat record unavailable',
+        'The profile service could not be reached. Please try again shortly.',
+      );
     }
-    showError(
-      'Combat record unavailable',
-      'The profile service could not be reached. Please try again shortly.',
-    );
+  } finally {
+    isLoadingPage = false;
+    setPaginationBusy(false);
   }
 }
 
@@ -60,8 +98,8 @@ function renderProfile(profile: PublicProfile): void {
   setText('[data-best-score]', formatNumber(profile.highscores.primary));
   setText(
     '[data-match-count]',
-    `${profile.recentMatches.length} ${
-      profile.recentMatches.length === 1 ? 'record' : 'records'
+    `${profile.recentMatchesPage.total} ${
+      profile.recentMatchesPage.total === 1 ? 'record' : 'records'
     }`,
   );
 
@@ -81,8 +119,9 @@ function renderProfile(profile: PublicProfile): void {
   }
 
   renderHistory(profile.recentMatches);
+  renderPagination(profile.recentMatchesPage);
   const copyButton = requireElement<HTMLButtonElement>('[data-profile-copy]');
-  copyButton.addEventListener('click', () => void copyProfileLink(copyButton));
+  copyButton.onclick = () => void copyProfileLink(copyButton);
 
   loading.hidden = true;
   content.hidden = false;
@@ -91,8 +130,9 @@ function renderProfile(profile: PublicProfile): void {
 function renderHistory(matches: PublicMatch[]): void {
   const history = requireElement<HTMLElement>('[data-profile-history]');
   const empty = requireElement<HTMLElement>('[data-profile-empty]');
+  history.replaceChildren();
+  empty.hidden = matches.length !== 0;
   if (matches.length === 0) {
-    empty.hidden = false;
     return;
   }
 
@@ -108,6 +148,24 @@ function renderHistory(matches: PublicMatch[]): void {
     );
     history.append(row);
   });
+}
+
+function renderPagination(page: PublicProfile['recentMatchesPage']): void {
+  currentPage = page.page;
+  totalPages = Math.max(1, Math.ceil(page.total / page.pageSize));
+
+  const pagination = requireElement<HTMLElement>('[data-profile-pagination]');
+  pagination.hidden = totalPages <= 1;
+  setText(
+    '[data-profile-page-status]',
+    `Page ${currentPage} of ${totalPages}`,
+  );
+  setPaginationBusy(false);
+}
+
+function setPaginationBusy(isBusy: boolean): void {
+  previousPageButton.disabled = isBusy || currentPage <= 1;
+  nextPageButton.disabled = isBusy || currentPage >= totalPages;
 }
 
 function replayCell(match: PublicMatch): HTMLTableCellElement {

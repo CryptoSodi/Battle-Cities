@@ -31,6 +31,11 @@ export type PublicProfile = {
     currentSeason: PublicRank & { id: string; name: string };
   };
   recentMatches: PublicMatch[];
+  recentMatchesPage: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
 };
 
 export class PlayerProfileRequestError extends Error {
@@ -43,9 +48,15 @@ export class PlayerProfileRequestError extends Error {
 }
 
 export class PlayerProfileClient {
-  public async getProfile(playerId: string): Promise<PublicProfile> {
+  public async getProfile(
+    playerId: string,
+    page = 1,
+  ): Promise<PublicProfile> {
+    const safePage = Math.max(1, Math.floor(page) || 1);
     const response = await fetch(
-      getApiUrl(`/api/players/${encodeURIComponent(playerId)}/profile`),
+      getApiUrl(
+        `/api/players/${encodeURIComponent(playerId)}/profile?page=${safePage}`,
+      ),
       { credentials: 'include' },
     );
     if (!response.ok) {
