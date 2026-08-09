@@ -139,6 +139,11 @@ export class MainMenuScene extends GameScene {
   private mobileEventTickerStartX = 0;
   private mobileEventTickerEndX = 0;
   private mobileEventTickerActive = false;
+  private eventTickerBarX = 0;
+  private eventTickerBarY = 0;
+  private eventTickerBarWidth = 0;
+  private eventTickerBarHeight = 0;
+  private eventTickerClickCount = 0;
   private logoutItem: SpriteMenuItem;
   private state: State = State.Ready;
   private session: Session;
@@ -307,6 +312,10 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
     this.ensureMobileGamepadQrElement(inputManager);
     this.updateMobileGamepadQrVisibility(inputManager);
 
+    if (this.handleEventTickerClick(updateArgs.pointerClick)) {
+      updateArgs.pointerClick = null;
+    }
+
     const inputMethod = inputManager.getActiveMethod();
 
     if (this.state === State.Sliding) {
@@ -462,6 +471,11 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
     bar.setZIndex(3);
     this.root.add(bar);
 
+    this.eventTickerBarX = barX;
+    this.eventTickerBarY = barY;
+    this.eventTickerBarWidth = barWidth;
+    this.eventTickerBarHeight = barHeight;
+
     this.mobileEventTickerInnerLeft = barX + horizontalInset;
     this.mobileEventTickerInnerRight = barX + barWidth - horizontalInset;
     this.mobileEventTickerStartX = this.mobileEventTickerInnerRight;
@@ -482,6 +496,29 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
     this.mobileEventTicker.painter = this.mobileEventTickerPainter;
     this.mobileEventTicker.setZIndex(4);
     this.root.add(this.mobileEventTicker);
+  }
+
+  private handleEventTickerClick(pointerClick: GameUpdateArgs['pointerClick']): boolean {
+    if (
+      pointerClick === null ||
+      pointerClick === undefined ||
+      pointerClick.x < this.eventTickerBarX ||
+      pointerClick.x > this.eventTickerBarX + this.eventTickerBarWidth ||
+      pointerClick.y < this.eventTickerBarY ||
+      pointerClick.y > this.eventTickerBarY + this.eventTickerBarHeight
+    ) {
+      return false;
+    }
+
+    this.eventTickerClickCount += 1;
+    if (this.eventTickerClickCount < 10) {
+      return true;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('enable2players', '1');
+    window.location.replace(url.toString());
+    return true;
   }
 
   private updateMobileEventTicker(deltaTime: number): void {
