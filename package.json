@@ -8,7 +8,7 @@
     "build:dev": "webpack --config webpack/dev.config.js",
     "api:build": "npm --prefix api-server run build",
     "api:start": "node api-server/dist/api-server/src/index.js",
-    "server:build": "npm run broadcaster:build && npm run api:build",
+    "server:build": "npm run api:build",
     "server:start": "node api-server/dist/api-server/src/index.js",
     "lint": "eslint 'src/**' --max-warnings=0 --ext .js,.ts",
     "start": "webpack-dev-server --open --config webpack/dev.config.js",

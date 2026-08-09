@@ -73,13 +73,13 @@ if grep -Eq '^api-server/(package\.json|package-lock\.json)$' <<<"$changed_files
   run_as_app /usr/bin/npm --prefix "$APP_DIR/api-server" ci --no-audit --no-fund
 fi
 
-log 'building combined API and broadcaster'
-run_as_app /usr/bin/npm --prefix "$APP_DIR" run server:build
+log 'building API'
+run_as_app /usr/bin/npm --prefix "$APP_DIR/api-server" run build
 
 log 'applying database migrations'
 /usr/bin/systemctl start battlecities-migrate.service
 
-log 'restarting combined service'
+log 'restarting API service'
 /usr/bin/systemctl restart battlecities-api.service
 
 if ! wait_until_ready; then

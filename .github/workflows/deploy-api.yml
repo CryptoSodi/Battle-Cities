@@ -6,34 +6,7 @@ on:
       - master
     paths:
       - 'api-server/**'
-      # The API embeds the authoritative WebRTC broadcaster built from these
-      # gameplay sources. This deliberately excludes the app bootstrap,
-      # scenes and admin UI, so frontend-only changes do not restart Oracle.
-      - 'scripts/headless-broadcaster-runtime.ts'
-      - 'scripts/engine-battle-city-simulation.ts'
-      - 'src/auth/**'
-      - 'src/config.ts'
-      - 'src/core/**'
-      - 'src/debug/**'
-      - 'src/game/**'
-      - 'src/gameObjects/**'
-      - 'src/input/**'
-      - 'src/level/**'
-      - 'src/map/**'
-      - 'src/network/**'
-      - 'src/points/**'
-      - 'src/powerup/**'
-      - 'src/replay/**'
-      - 'src/shop/**'
-      - 'src/tank/**'
-      - 'src/terrain/**'
-      - 'src/types/**'
-      - 'src/wallet/**'
-      - 'shared/**'
-      - 'data/maps/original/**'
-      - 'tsconfig.broadcaster.json'
-      - 'package.json'
-      - 'package-lock.json'
+      - 'deploy/ubuntu/deploy-api.sh'
   workflow_dispatch:
 
 permissions:

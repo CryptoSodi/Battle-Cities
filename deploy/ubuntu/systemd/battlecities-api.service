@@ -1,5 +1,5 @@
 [Unit]
-Description=BattleCities API and authoritative broadcaster
+Description=BattleCities API
 After=network-online.target postgresql.service
 Wants=network-online.target
 Requires=postgresql.service
@@ -18,9 +18,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-# AF_NETLINK is required by Node's os.networkInterfaces(), which Werift uses
-# to resolve browser mDNS ICE candidates during WebRTC negotiation.
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 LockPersonality=true
 
 [Install]

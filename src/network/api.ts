@@ -50,7 +50,7 @@ export function apiFetchDirect(
   });
 }
 
-function readHeadlessTarget(): 'worker' | 'bom1' | 'usa' | null {
+function readHeadlessTarget(): 'worker' | 'bom1' | null {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -58,7 +58,7 @@ function readHeadlessTarget(): 'worker' | 'bom1' | 'usa' | null {
     .get('headless')
     ?.trim()
     .toLowerCase();
-  return target === 'worker' || target === 'bom1' || target === 'usa'
+  return target === 'worker' || target === 'bom1'
     ? target
     : null;
 }
