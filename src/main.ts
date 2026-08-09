@@ -570,9 +570,18 @@ const mobileGamepadDebugMeta = mobileGamepadDebugElement.querySelector(
   '[data-mobile-debug-meta]',
 ) as HTMLElement;
 
+// Replays are a watch-only experience. Set this before LevelPlay performs its
+// first update so controller UI cannot flash on screen while the recorded
+// input devices are being installed.
+let isReplayPlayback = false;
+
 function updateMobileGamepadDebug(): void {
   const gamepad = inputManager.getMobileGamepadHost().getGamepad(0);
-  const visible = gamepad !== null && gamepad.connected === true;
+  const visible =
+    !isReplayPlayback &&
+    !inputManager.isReplaying() &&
+    gamepad !== null &&
+    gamepad.connected === true;
   mobileGamepadDebugElement.classList.toggle('visible', visible);
 
   if (!visible) {
@@ -744,6 +753,9 @@ async function startAdminReplay(): Promise<boolean> {
     // Keep this identical to MainReplayScene: a replay enters LevelPlay
     // directly, avoiding LevelLoad's live-session setup before its recorded
     // input, seed, loadout and enemy traces are restored.
+    isReplayPlayback = true;
+    audioManager.setGlobalMuted(true);
+    audioManager.stopAll();
     sceneRouter.start(GameSceneType.LevelPlay, {
       mapConfig,
       replay: replay as SavedReplay,
@@ -774,6 +786,9 @@ async function startProfileReplay(): Promise<boolean> {
     }
     const mapConfig = await loadReplayMap(replay.levelNumber);
     if (mapConfig === null) return false;
+    isReplayPlayback = true;
+    audioManager.setGlobalMuted(true);
+    audioManager.stopAll();
     sceneRouter.start(GameSceneType.LevelPlay, { mapConfig, replay: replay as SavedReplay });
     return true;
   } catch {
@@ -1271,7 +1286,9 @@ gameLoop.render.addListener((event) => {
   gameState.update();
   updateMobileGamepadDebug();
   mobileTouchController.update(
-    document.body.classList.contains('level-playing') && !inputManager.isReplaying(),
+    document.body.classList.contains('level-playing') &&
+      !isReplayPlayback &&
+      !inputManager.isReplaying(),
   );
 
   stats.end();
