@@ -656,6 +656,16 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
+
+window.addEventListener('battlecities:android-back', (event) => {
+  if (!sceneRouter.canGoBack()) {
+    return;
+  }
+
+  event.preventDefault();
+  sceneRouter.back();
+});
+
 const adminReplayId = readAdminReplayId();
 const profileReplay = readProfileReplay();
 if (

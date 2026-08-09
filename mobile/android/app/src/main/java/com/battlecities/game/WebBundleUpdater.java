@@ -36,7 +36,7 @@ import java.util.Set;
 
 final class WebBundleUpdater {
     private static final String TAG = "BattleCitiesUpdate";
-    private static final String BASE_URL = "https://www.battlecities.com";
+    private static final String BASE_URL = "https://play.battlecities.com";
     private static final String MANIFEST_NAME = "web-version.json";
     private static final String CAP_PREFS = "CapWebViewSettings";
     private static final String CAP_SERVER_PATH = "serverBasePath";

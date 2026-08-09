@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -15,8 +16,34 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        WebView webView = getBridge() == null
+            ? null
+            : (WebView) getBridge().getWebView();
+        if (webView == null) {
+            performDefaultBack();
+            return;
+        }
+
+        webView.evaluateJavascript(
+            "(function(){"
+                + "const event = new Event('battlecities:android-back', { cancelable: true });"
+                + "window.dispatchEvent(event);"
+                + "return event.defaultPrevented;"
+                + "})()",
+            handled -> {
+                if (!Boolean.parseBoolean(handled)) {
+                    performDefaultBack();
+                }
+            }
+        );
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(GoogleAuthPlugin.class);
+        registerPlugin(SolanaMobileWalletPlugin.class);
         super.onCreate(savedInstanceState);
         WebBundleUpdater.enqueue(this);
 
@@ -44,5 +71,10 @@ public class MainActivity extends BridgeActivity {
             return windowInsets;
         });
         ViewCompat.requestApplyInsets(getWindow().getDecorView());
+    }
+
+    @SuppressWarnings("deprecation")
+    private void performDefaultBack() {
+        super.onBackPressed();
     }
 }

@@ -1,7 +1,7 @@
 # Battle Cities Mobile
 
 Capacitor wrapper that ships a local game build and updates its web assets from
-`https://www.battlecities.com` in the background.
+`https://play.battlecities.com` in the background.
 
 ## Android
 
