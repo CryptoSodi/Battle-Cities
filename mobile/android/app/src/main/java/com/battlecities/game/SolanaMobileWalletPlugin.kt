@@ -2,6 +2,7 @@ package com.battlecities.game
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.util.Base64
 import com.funkatronics.encoders.Base58
 import com.getcapacitor.JSObject
@@ -38,6 +39,7 @@ class SolanaMobileWalletPlugin : Plugin() {
     @PluginMethod
     fun connect(call: PluginCall) {
         scope.launch {
+            Log.i(TAG, "Mobile wallet connect requested")
             try {
                 when (val result = walletAdapter.connect(ActivityResultSender(activity))) {
                     is TransactionResult.Success -> {
@@ -161,6 +163,7 @@ class SolanaMobileWalletPlugin : Plugin() {
     }
 
     companion object {
+        private const val TAG = "BattleCitiesWallet"
         private const val PREFERENCES_NAME = "solana_mobile_wallet"
         private const val AUTH_TOKEN_KEY = "auth_token"
     }

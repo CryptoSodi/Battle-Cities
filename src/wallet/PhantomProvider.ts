@@ -18,6 +18,11 @@ type PhantomWindow = Window & {
     getPlatform?: () => string;
     isNativePlatform?: () => boolean;
     registerPlugin?: (name: string) => NativeSolanaMobileWallet;
+    nativePromise?: <T>(
+      pluginName: string,
+      methodName: string,
+      options: Record<string, unknown>,
+    ) => Promise<T>;
     Plugins?: {
       SolanaMobileWallet?: NativeSolanaMobileWallet;
     };
@@ -46,11 +51,8 @@ function getNativeSolanaProvider(): PhantomProvider | null {
     return null;
   }
 
-  // Native plugins require a JavaScript proxy even when Android registers the
-  // implementation directly in MainActivity.
-  const plugin = capacitor?.Plugins?.SolanaMobileWallet
-    || capacitor?.registerPlugin?.('SolanaMobileWallet');
-  if (plugin === undefined) {
+  const nativePromise = capacitor?.nativePromise;
+  if (nativePromise === undefined) {
     return null;
   }
 
@@ -61,15 +63,21 @@ function getNativeSolanaProvider(): PhantomProvider | null {
   nativeProvider = {
     isPhantom: true,
     connect: async () => {
-      const result = await plugin.connect();
+      const result = await nativePromise<{ publicKey: string }>(
+        'SolanaMobileWallet',
+        'connect',
+        {},
+      );
       const publicKey = toPublicKey(result.publicKey);
       nativeProvider.publicKey = publicKey;
       return { publicKey };
     },
     signMessage: async (message: Uint8Array) => {
-      const result = await plugin.signMessage({
-        messageBase64: toBase64(message),
-      });
+      const result = await nativePromise<{ signatureBase64: string }>(
+        'SolanaMobileWallet',
+        'signMessage',
+        { messageBase64: toBase64(message) },
+      );
       return { signature: fromBase64(result.signatureBase64) };
     },
     signTransaction: async (transaction: Transaction) => {
@@ -77,9 +85,11 @@ function getNativeSolanaProvider(): PhantomProvider | null {
         requireAllSignatures: false,
         verifySignatures: false,
       });
-      const result = await plugin.signTransaction({
-        transactionBase64: toBase64(serialized),
-      });
+      const result = await nativePromise<{ transactionBase64: string }>(
+        'SolanaMobileWallet',
+        'signTransaction',
+        { transactionBase64: toBase64(serialized) },
+      );
       return Transaction.from(fromBase64(result.transactionBase64));
     },
   };
