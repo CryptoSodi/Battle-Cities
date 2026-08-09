@@ -7,7 +7,7 @@ This is the durable handoff note for product decisions and operational facts. Ke
 ## Current deployment ownership
 
 - **Game frontend:** Cloudflare Pages serves `play.battlecities.com` and deploys from the connected Git repository. The public website at `battlecities.com` is managed in a separate repository.
-- **Public API:** Oracle hosts `api.battlecities.com`. GitHub Actions deploys it only when API or embedded-authoritative-runtime sources change (`api-server/**`, direct broadcaster/game-simulation dependencies, or its workflow). Frontend-only pages, docs, and static-asset pushes must not restart the API.
+- **Public API:** Oracle hosts `api.battlecities.com`. GitHub Actions deploys it only when API or embedded-authoritative-runtime sources change (`api-server/**` or the broadcaster's compiled gameplay dependencies). Frontend bootstrap (`src/main.ts`), scenes, admin UI, docs, static assets, `version.json`, and workflow-only changes must not restart the API.
 - **Cloudflare headless Worker:** deployed through Cloudflare's Git-connected Worker Build. The old GitHub Action (`deploy-worker.yml`) was intentionally removed to prevent duplicate deployments.
 - **Vercel headless:** remains an available test/runtime target, including the BOM1 project. It is not used for API storage.
 - **Native Android:** the bundled app redirects to `https://play.battlecities.com` before the game initializes when it is running on another origin.
