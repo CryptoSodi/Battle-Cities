@@ -22,10 +22,12 @@ import kotlinx.coroutines.launch
 @CapacitorPlugin(name = "SolanaMobileWallet")
 class SolanaMobileWalletPlugin : Plugin() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private lateinit var activityResultSender: ActivityResultSender
     private lateinit var walletAdapter: MobileWalletAdapter
 
     override fun load() {
         super.load()
+        activityResultSender = ActivityResultSender(activity)
         walletAdapter = MobileWalletAdapter(
             connectionIdentity = ConnectionIdentity(
                 identityUri = Uri.parse("https://play.battlecities.com"),
@@ -41,7 +43,7 @@ class SolanaMobileWalletPlugin : Plugin() {
         scope.launch {
             Log.i(TAG, "Mobile wallet connect requested")
             try {
-                when (val result = walletAdapter.connect(ActivityResultSender(activity))) {
+                when (val result = walletAdapter.connect(activityResultSender)) {
                     is TransactionResult.Success -> {
                         val account = result.authResult.accounts.firstOrNull()
                         if (account == null) {
@@ -59,6 +61,7 @@ class SolanaMobileWalletPlugin : Plugin() {
                         call.reject(result.e.message ?: "Wallet connection failed", result.e)
                 }
             } catch (error: Exception) {
+                Log.e(TAG, "Mobile wallet connection failed", error)
                 call.reject("Wallet connection failed", error)
             }
         }
@@ -75,7 +78,7 @@ class SolanaMobileWalletPlugin : Plugin() {
         scope.launch {
             try {
                 val message = Base64.decode(encodedMessage, Base64.DEFAULT)
-                when (val result = walletAdapter.transact(ActivityResultSender(activity)) { authResult ->
+                when (val result = walletAdapter.transact(activityResultSender) { authResult ->
                     signMessagesDetached(
                         arrayOf(message),
                         arrayOf(authResult.accounts.first().publicKey)
@@ -105,6 +108,7 @@ class SolanaMobileWalletPlugin : Plugin() {
                         call.reject(result.e.message ?: "Message signing failed", result.e)
                 }
             } catch (error: Exception) {
+                Log.e(TAG, "Mobile wallet message signing failed", error)
                 call.reject("Message signing failed", error)
             }
         }
@@ -121,7 +125,7 @@ class SolanaMobileWalletPlugin : Plugin() {
         scope.launch {
             try {
                 val transaction = Base64.decode(encodedTransaction, Base64.DEFAULT)
-                when (val result = walletAdapter.transact(ActivityResultSender(activity)) {
+                when (val result = walletAdapter.transact(activityResultSender) {
                     signTransactions(arrayOf(transaction))
                 }) {
                     is TransactionResult.Success -> {
@@ -146,6 +150,7 @@ class SolanaMobileWalletPlugin : Plugin() {
                         call.reject(result.e.message ?: "Transaction signing failed", result.e)
                 }
             } catch (error: Exception) {
+                Log.e(TAG, "Mobile wallet transaction signing failed", error)
                 call.reject("Transaction signing failed", error)
             }
         }
