@@ -754,8 +754,6 @@ async function startAdminReplay(): Promise<boolean> {
     // directly, avoiding LevelLoad's live-session setup before its recorded
     // input, seed, loadout and enemy traces are restored.
     isReplayPlayback = true;
-    audioManager.setGlobalMuted(true);
-    audioManager.stopAll();
     sceneRouter.start(GameSceneType.LevelPlay, {
       mapConfig,
       replay: replay as SavedReplay,
@@ -787,8 +785,6 @@ async function startProfileReplay(): Promise<boolean> {
     const mapConfig = await loadReplayMap(replay.levelNumber);
     if (mapConfig === null) return false;
     isReplayPlayback = true;
-    audioManager.setGlobalMuted(true);
-    audioManager.stopAll();
     sceneRouter.start(GameSceneType.LevelPlay, { mapConfig, replay: replay as SavedReplay });
     return true;
   } catch {
