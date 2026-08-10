@@ -77,13 +77,7 @@
         </section>
 
         <section class="admin-section" data-admin-section="players" hidden>
-          <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></div>
-          <form class="admin-search" data-player-search><label for="player-query">Search players</label><div><input id="player-query" data-player-query type="search" placeholder="Name, email, or player ID" /><button class="admin-button admin-button--primary" type="submit">Search</button></div></form>
-          <div class="admin-filters">
-            <label>Last seen from<input data-player-from type="date" /></label>
-            <label>Last seen to<input data-player-to type="date" /></label>
-            <button class="admin-button admin-date-clear" data-player-date-clear type="button">Clear</button>
-          </div>
+          <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><form class="admin-player-bar" data-player-search><label>Search<input data-player-query type="search" placeholder="Name, email, or player ID" /></label><label>Last seen from<input data-player-from type="date" /></label><label>Last seen to<input data-player-to type="date" /></label><button class="admin-button admin-button--primary" type="submit">Search</button><button class="admin-button admin-date-clear" data-player-date-clear type="button">Clear</button><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></form></div>
           <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
           <div class="admin-pagination" data-player-pagination></div>
         </section>

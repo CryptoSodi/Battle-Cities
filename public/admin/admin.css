@@ -59,6 +59,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
 .admin-date-clear:hover, .admin-date-clear:focus-visible { color: var(--admin-red); border-color: var(--admin-red); }
 .admin-search { max-width: 650px; margin-bottom: 16px; }
 .admin-search > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.admin-player-bar { display: flex; align-items: flex-end; gap: 10px; }
+.admin-player-bar label { min-width: 0; }
+.admin-player-bar label + label { flex: 1; }
+.admin-player-bar input { min-width: 0; }
+.admin-player-bar .admin-date-clear { align-self: auto; }
 .admin-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--admin-line); }
 .admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .admin-pagination span { color: var(--admin-muted); font: 700 9px/1.4 "Press Start 2P", monospace; text-transform: uppercase; }
@@ -103,4 +108,6 @@ td { font-size: 12px; line-height: 1.45; }
   .admin-metrics, .admin-filters, .admin-form__grid { grid-template-columns: 1fr; }
   .admin-tab { min-height: 48px; font-size: 8px; }
   .admin-search > div { grid-template-columns: 1fr; }
+  .admin-player-bar { flex-wrap: wrap; }
+  .admin-player-bar label { flex: 1 1 100%; }
 }
