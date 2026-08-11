@@ -330,7 +330,7 @@ function replayRow(replay: any): HTMLTableRowElement {
   const row = document.createElement('tr');
   row.append(
     tableCell(replay.id),
-    tableCell(replay.guestId),
+    playerCell(replay),
     statusCell(replay.gameResult),
     tableCell(formatNumber(replay.score), `${formatNumber(replay.kills)} kills`),
     tableCell(String(replay.levelNumber)),
@@ -339,6 +339,22 @@ function replayRow(replay: any): HTMLTableRowElement {
     singlePlayerReplayCell(replay),
   );
   return row;
+}
+
+function playerCell(replay: any): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  if (replay.playerDisplayName) {
+    const link = document.createElement('a');
+    link.href = `/player-profile/index.html?playerId=${encodeURIComponent(replay.playerId)}`;
+    link.className = 'admin-player-link';
+    link.textContent = replay.playerDisplayName;
+    cell.append(link, document.createElement('br'));
+  }
+  const subtext = document.createElement('span');
+  subtext.className = 'admin-subtext';
+  subtext.textContent = replay.guestId;
+  cell.append(subtext);
+  return cell;
 }
 
 function singlePlayerReplayCell(replay: any): HTMLTableCellElement {
