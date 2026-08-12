@@ -79,7 +79,7 @@ export class PlayerProfileClient {
   public async getReplay(
     playerId: string,
     matchId: string,
-  ): Promise<SavedReplay> {
+  ): Promise<SavedReplay[]> {
     const response = await fetch(
       getApiUrl(
         `/api/players/${encodeURIComponent(playerId)}/profile/matches/${encodeURIComponent(matchId)}/replay`,
@@ -93,18 +93,17 @@ export class PlayerProfileClient {
       );
     }
 
-    const replay = (await response.json())?.item?.replay;
-    if (
-      typeof replay !== 'object' ||
-      replay === null ||
-      !Number.isInteger(replay.levelNumber)
-    ) {
+    const replays = (await response.json())?.item?.replays;
+    if (!Array.isArray(replays) || replays.length === 0 || replays.some(
+      (replay) => typeof replay !== 'object' || replay === null ||
+        !Number.isInteger(replay.levelNumber),
+    )) {
       throw new PlayerProfileRequestError(
         'Replay response is incomplete',
         response.status,
       );
     }
-    return replay as SavedReplay;
+    return replays as SavedReplay[];
   }
 
 }

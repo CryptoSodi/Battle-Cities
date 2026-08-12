@@ -733,18 +733,18 @@ export class MainPlayerProfileScene extends PanelScene {
     this.isLoadingReplay = true;
     this.setStatus('LOADING REPLAY...');
     try {
-      const replay = await this.profileClient.getReplay(this.profile.id, match.id);
-      this.loadReplayMap(replay);
+      const replays = await this.profileClient.getReplay(this.profile.id, match.id);
+      this.loadReplayMap(replays[0], replays.slice(1));
     } catch {
       this.isLoadingReplay = false;
       this.setStatus('REPLAY UNAVAILABLE FOR THIS BATTLE');
     }
   }
 
-  private loadReplayMap(replay: SavedReplay): void {
+  private loadReplayMap(replay: SavedReplay, replaySequence: SavedReplay[] = []): void {
     const handleLoaded = (mapConfig: MapConfig): void => {
       this.mapLoader.error.removeListener(handleError);
-      this.navigator.push(GameSceneType.LevelPlay, { mapConfig, replay });
+      this.navigator.push(GameSceneType.LevelPlay, { mapConfig, replay, replaySequence });
     };
     const handleError = (): void => {
       this.mapLoader.loaded.removeListener(handleLoaded);

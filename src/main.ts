@@ -778,14 +778,19 @@ async function startProfileReplay(): Promise<boolean> {
       `/api/players/${encodeURIComponent(profileReplay.playerId)}/profile/matches/${encodeURIComponent(profileReplay.matchId)}/replay`,
     );
     if (!response.ok) return false;
-    const replay = (await response.json())?.item?.replay;
+    const replays = (await response.json())?.item?.replays;
+    const replay = Array.isArray(replays) ? replays[0] : null;
     if (typeof replay !== 'object' || replay === null || !Number.isInteger(replay.levelNumber)) {
       return false;
     }
     const mapConfig = await loadReplayMap(replay.levelNumber);
     if (mapConfig === null) return false;
     isReplayPlayback = true;
-    sceneRouter.start(GameSceneType.LevelPlay, { mapConfig, replay: replay as SavedReplay });
+    sceneRouter.start(GameSceneType.LevelPlay, {
+      mapConfig,
+      replay: replay as SavedReplay,
+      replaySequence: replays.slice(1) as SavedReplay[],
+    });
     return true;
   } catch {
     return false;

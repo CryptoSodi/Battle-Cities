@@ -23,6 +23,7 @@ import { EnemyMovementFrame, saveReplay } from '../../replay';
 import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
 import { TankTier } from '../../tank';
 import { TerrainFactory, TerrainRegionConfig, TerrainType } from '../../terrain';
+import { MapConfig, MapLoader } from '../../map';
 import { GameObject, ParticleSystem, Rect, Size, Timer, Vector } from '../../core';
 import * as config from '../../config';
 
@@ -75,6 +76,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   private session: Session;
   private inputManager: InputManager;
   private gameStorage: GameStorage;
+  private mapLoader: MapLoader;
   // Seed the match actually started with (captured once, before any replay's
   // reseed), so a real (non-replay) run can save it alongside the recording.
   private recordedSeed: number;
@@ -153,8 +155,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
   protected setup(updateArgs: GameUpdateArgs): void {
     document.body.classList.add('level-playing');
-    const { collisionSystem, inputManager, gameStorage, rng, session } = updateArgs;
+    const { collisionSystem, inputManager, gameStorage, mapLoader, rng, session } = updateArgs;
     this.gameStorage = gameStorage;
+    this.mapLoader = mapLoader;
     this.isWebRtcMatch = updateArgs.webRtcMatch.isEnabled();
     this.isWebRtcBroadcaster = updateArgs.webRtcMatch.isBroadcaster();
     this.isWebRtcObserver = updateArgs.webRtcMatch.isObserver();
@@ -189,6 +192,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     // sufficient to prove enemy determinism.
     const { replay } = this.params;
     if (replay !== undefined) {
+      // A sequence replay begins at its original stage and then advances the
+      // same Session instance between saved stages, preserving lives/score.
+      session.start(replay.levelNumber, Number.MAX_SAFE_INTEGER);
       rng.reseed(replay.seed);
       inputManager.startReplay(replay.deviceFrames);
       // Restore single-player's device-routing state to what it was when
@@ -1076,11 +1082,41 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   };
 
   private handleLevelWinCompleted = (): void => {
+    if (
+      this.params.replay !== undefined &&
+      (this.params.replaySequence?.length || 0) > 0
+    ) {
+      void this.finishInputCapture('win').finally(this.advanceReplaySequence);
+      return;
+    }
     // See handleLevelGameOverCompleted: the recording must be persisted before
     // the navigator disposes this scene.
     void this.finishInputCapture('win').finally(
       this.navigateAfterCompletedLevel,
     );
+  };
+
+  private advanceReplaySequence = (): void => {
+    const [nextReplay, ...remainingReplays] = this.params.replaySequence;
+    if (nextReplay === undefined) {
+      return;
+    }
+    this.session.activateNextLevel();
+    const handleLoaded = (mapConfig: MapConfig): void => {
+      this.mapLoader.error.removeListener(handleError);
+      this.navigator.replace(GameSceneType.LevelPlay, {
+        mapConfig,
+        replay: nextReplay,
+        replaySequence: remainingReplays,
+      });
+    };
+    const handleError = (): void => {
+      this.mapLoader.loaded.removeListener(handleLoaded);
+      this.navigator.replace(GameSceneType.MainMenu);
+    };
+    this.mapLoader.loaded.addListenerOnce(handleLoaded);
+    this.mapLoader.error.addListenerOnce(handleError);
+    this.mapLoader.loadAsync(nextReplay.levelNumber);
   };
 
   private navigateAfterCompletedLevel = (): void => {
