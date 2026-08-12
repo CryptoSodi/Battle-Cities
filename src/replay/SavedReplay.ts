@@ -74,14 +74,25 @@ let replaySummaryCacheTime = 0;
 // (see docs/mattle-inspired-infrastructure-plan.md, Milestones 2/7). Best
 // effort: null when no replay was recorded or the upload hasn't finished.
 let lastSavedReplayId: string = null;
+// Set by the API after the first completed stage. It survives scene changes so
+// subsequent stages are stored beneath the same single-player run.
+let activeSinglePlayerSessionId: string = null;
 
 export function getLastSavedReplayId(): string {
   return lastSavedReplayId;
 }
 
+// A new menu-launched run must never attach to a previous run that was left
+// before it reached a terminal stage.
+export function beginSinglePlayerReplaySession(): void {
+  activeSinglePlayerSessionId = null;
+  lastSavedReplayId = null;
+}
+
 export async function saveReplay(
   _gameStorage: GameStorage,
   replay: SavedReplay,
+  completeSession = false,
 ): Promise<void> {
   // A single-player replay is produced by the browser's local simulation.
   // Upload it directly to the API; it is never a headless match request.
@@ -93,6 +104,8 @@ export async function saveReplay(
     body: JSON.stringify({
       replay,
       metadata: replay.metadata,
+      sessionId: activeSinglePlayerSessionId,
+      completeSession,
     }),
   });
 
@@ -104,6 +117,9 @@ export async function saveReplay(
     const body = await response.json();
     if (typeof body?.item?.id === 'string') {
       lastSavedReplayId = body.item.id;
+    }
+    if (typeof body?.session?.id === 'string') {
+      activeSinglePlayerSessionId = completeSession ? null : body.session.id;
     }
   } catch {
     // Response body is informational only; the save itself succeeded.

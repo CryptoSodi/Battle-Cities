@@ -101,7 +101,7 @@ async function loadReplays(resetPage = true): Promise<void> {
     const result = await client.getReplays(replayOffset);
     const body = requireElement('[data-replay-rows]');
     body.replaceChildren(...result.items.map(replayRow));
-    if (result.items.length === 0) body.append(emptyRow(8, 'No single-player recordings found'));
+    if (result.items.length === 0) body.append(emptyRow(8, 'No single-player sessions found'));
     renderPagination('[data-replay-pagination]', {
       offset: replayOffset,
       limit: Number(result.limit),
@@ -329,14 +329,14 @@ function matchRow(match: any): HTMLTableRowElement {
 function replayRow(replay: any): HTMLTableRowElement {
   const row = document.createElement('tr');
   row.append(
-    tableCell(replay.id),
+    tableCell(replay.id, `${formatNumber(replay.stageCount)} stages`),
     playerCell(replay),
     statusCell(replay.gameResult),
-    tableCell(formatNumber(replay.score), `${formatNumber(replay.kills)} kills`),
-    tableCell(String(replay.levelNumber)),
+    tableCell(formatNumber(replay.score), replay.status === 'active' ? 'Run active' : 'Run complete'),
+    tableCell(formatNumber(replay.stageCount), replay.stages.map((stage: any) => `Stage ${stage.levelNumber}`).join(' Â· ')),
     tableCell(`${formatNumber(replay.durationTicks)} ticks`),
-    tableCell(formatDateTime(replay.createdAt)),
-    singlePlayerReplayCell(replay),
+    tableCell(formatDateTime(replay.savedAt)),
+    singlePlayerReplayCell(replay.stages),
   );
   return row;
 }
@@ -357,15 +357,17 @@ function playerCell(replay: any): HTMLTableCellElement {
   return cell;
 }
 
-function singlePlayerReplayCell(replay: any): HTMLTableCellElement {
+function singlePlayerReplayCell(stages: any[]): HTMLTableCellElement {
   const cell = document.createElement('td');
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'admin-button admin-button--replay';
-  button.textContent = 'Replay';
-  button.title = 'Open this saved single-player recording';
-  button.addEventListener('click', () => void guarded(() => openSinglePlayerReplay(replay, button)));
-  cell.append(button);
+  stages.forEach((stage) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'admin-button admin-button--replay';
+    button.textContent = `Stage ${stage.levelNumber}`;
+    button.title = 'Open this saved stage recording';
+    button.addEventListener('click', () => void guarded(() => openSinglePlayerReplay(stage, button)));
+    cell.append(button);
+  });
   return cell;
 }
 

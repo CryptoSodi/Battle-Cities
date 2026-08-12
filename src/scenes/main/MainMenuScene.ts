@@ -6,6 +6,7 @@ import { PointsHighscoreManager } from '../../points';
 import { TradingClient } from '../../trading';
 import { EventClient } from '../../events';
 import { PlayerIdentity } from '../../auth';
+import { beginSinglePlayerReplaySession } from '../../replay';
 import * as config from '../../config';
 import { apiFetch } from '../../network/api';
 import { Painter } from '../../core/Painter';
@@ -595,6 +596,7 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
   }
 
   private handleSinglePlayerSelected = (): void => {
+    beginSinglePlayerReplaySession();
     this.mobileGamepadQrEnabled = false;
     this.removeMobileGamepadQrElement();
     this.navigator.push(GameSceneType.MainTankSelect);

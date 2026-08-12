@@ -1132,7 +1132,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           runBoosts: { ...this.recordedRunBoosts },
           enemyTraces: this.recordedEnemyTraces,
           powerupSpawns: this.powerupScript.getRecordedPowerupSpawns(),
-        });
+        }, result === 'loss' || this.session.isLastLevel());
       } catch (error) {
         console.warn('[replay] single-player upload failed', error);
       }
