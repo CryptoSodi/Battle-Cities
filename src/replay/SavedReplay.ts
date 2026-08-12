@@ -23,6 +23,15 @@ export interface SavedReplayMetadata {
   durationTicks: number;
 }
 
+// Captures actual player tier upgrades (typically STAR pickups) at the tick
+// they occurred. This makes steel-wall damage replay-safe even if powerup
+// collision timing differs by a frame on another device.
+export interface PlayerTankTierFrame {
+  tick: number;
+  playerIndex: number;
+  tier: TankTier;
+}
+
 // Everything needed to reproduce a match: the level it was played on, the
 // Prng seed the simulation started with, every input device's per-tick log
 // (keyed the same way InputManager.startRecording()/startReplay() key their
@@ -41,6 +50,7 @@ export interface SavedReplay {
   deviceFrames: Record<string, DeviceInputFrame[]>;
   activeDeviceType: InputDeviceType;
   playerTankTiers: TankTier[];
+  playerTierFrames: PlayerTankTierFrame[];
   runConsumables: SessionRunConsumables;
   // Trait boosts the run was played with — they alter the sim (player
   // health/speed, powerup duration), so replays must re-enact them.
@@ -241,6 +251,10 @@ function isValidReplay(value): boolean {
     value.playerTankTiers = [TankTier.A, TankTier.A];
   }
 
+  if (value.playerTierFrames === undefined) {
+    value.playerTierFrames = [];
+  }
+
   // Replays recorded before trait boosts existed re-enact with zeros.
   if (value.runBoosts === undefined) {
     value.runBoosts = createEmptyRunBoosts();
@@ -258,9 +272,19 @@ function isValidReplay(value): boolean {
 
   return (
     isValidPlayerTankTiers(value.playerTankTiers) &&
+    isValidPlayerTierFrames(value.playerTierFrames) &&
     isValidRunConsumables(value.runConsumables) &&
     isValidReplayMetadata(value.metadata)
   );
+}
+
+function isValidPlayerTierFrames(value: any): value is PlayerTankTierFrame[] {
+  return Array.isArray(value) && value.every((frame) => {
+    return typeof frame === 'object' && frame !== null &&
+      Number.isInteger(frame.tick) && frame.tick > 0 &&
+      Number.isInteger(frame.playerIndex) && frame.playerIndex >= 0 &&
+      isValidPlayerTankTiers([frame.tier]);
+  });
 }
 
 function isValidPlayerTankTiers(value: any): boolean {

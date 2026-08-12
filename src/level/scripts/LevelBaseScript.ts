@@ -16,13 +16,6 @@ const WALL_REGIONS = [
 export class LevelBaseScript extends LevelScript {
   private base: Base;
   private defenceTimer = new Timer();
-  private readonly isWebRtcMatch: boolean;
-
-  public constructor(isWebRtcMatch = detectWebRtcMatch()) {
-    super();
-    this.isWebRtcMatch = isWebRtcMatch;
-  }
-
   protected setup(): void {
     this.eventBus.powerupPicked.addListener(this.handlePowerupPicked);
     this.defenceTimer.done.addListener(this.restoreBrickWalls);
@@ -36,21 +29,18 @@ export class LevelBaseScript extends LevelScript {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
-    if (this.isWebRtcMatch) {
-      this.defenceTimer.update(updateArgs.deltaTime);
-    }
+    this.defenceTimer.update(updateArgs.deltaTime);
   }
 
   private handlePowerupPicked = (event: LevelPowerupPickedEvent): void => {
     const { type: powerupType } = event;
 
     if (powerupType === PowerupType.BaseDefence) {
-      if (this.isWebRtcMatch) {
-        this.replaceBaseWalls(TerrainType.Steel);
-        this.defenceTimer.reset(config.BASE_DEFENCE_POWERUP_DURATION);
-        return;
-      }
-      this.base.activateDefence(config.BASE_DEFENCE_POWERUP_DURATION);
+      // Fortification is terrain owned by the level field, not the Base
+      // object. Use the same authoritative terrain swap in offline games,
+      // replays, WebRTC and WebSocket matches.
+      this.replaceBaseWalls(TerrainType.Steel);
+      this.defenceTimer.reset(config.BASE_DEFENCE_POWERUP_DURATION);
     }
   };
 
@@ -116,11 +106,4 @@ export class LevelBaseScript extends LevelScript {
     this.world.field.add(...tiles);
     this.world.field.setNeedsPaint();
   }
-}
-
-function detectWebRtcMatch(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('mode') === 'webrtc'
-  );
 }

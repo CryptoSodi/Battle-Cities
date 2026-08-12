@@ -287,6 +287,10 @@ export class LevelPlayerScript extends LevelScript {
     })) as [AuthoritativeRunConsumables, AuthoritativeRunConsumables];
   }
 
+  public getTank(partyIndex: number): PlayerTank | null {
+    return this.tanks[partyIndex] || null;
+  }
+
   private requestSpawn = (partyIndex: number): void => {
     const playerSession = this.session.getPlayer(partyIndex);
     if (!playerSession.isAlive()) {

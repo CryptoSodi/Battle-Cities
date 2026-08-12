@@ -19,7 +19,7 @@ import {
 } from '../../gameObjects';
 import { InputDeviceType, InputManager } from '../../input';
 import { PowerupType } from '../../powerup';
-import { EnemyMovementFrame, saveReplay } from '../../replay';
+import { EnemyMovementFrame, PlayerTankTierFrame, saveReplay } from '../../replay';
 import { SavedReplayMetadata, SavedReplayResult } from '../../replay';
 import { TankTier } from '../../tank';
 import { TerrainFactory, TerrainRegionConfig, TerrainType } from '../../terrain';
@@ -90,6 +90,8 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // same run consumables are loaded before playback starts.
   private recordedRunConsumables: SessionRunConsumables;
   private recordedPlayerTankTiers: TankTier[] = [TankTier.A, TankTier.A];
+  private recordedPlayerTierFrames: PlayerTankTierFrame[] = [];
+  private replayTickCount = 0;
   // Trait boosts as they were at recording start (see SavedReplay.runBoosts).
   private recordedRunBoosts: SessionRunBoosts = createEmptyRunBoosts();
   private recordedTickCount = 0;
@@ -210,6 +212,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       // Trait boosts alter the sim (player health/speed, powerup duration),
       // so the replay re-enacts the boosts the run was recorded with.
       session.setRunBoosts({ ...replay.runBoosts });
+      this.replayTickCount = 0;
     } else if (!this.isWebRtcMatch) {
       this.recordedSeed = (Date.now() >>> 0) || 1;
       rng.reseed(this.recordedSeed);
@@ -219,6 +222,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         session.getRunConsumables(),
       );
       this.recordedPlayerTankTiers = session.getPlayerTankTiers();
+      this.recordedPlayerTierFrames = [];
       this.recordedRunBoosts = { ...session.getRunBoosts() };
       this.recordedTickCount = 0;
       this.isRecordingReplay = true;
@@ -359,7 +363,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
     this.minimapScript = new LevelMinimapScript();
     const isWebRtcClient =
       this.isWebRtcMatch && !this.isWebRtcBroadcaster;
-    this.baseScript = new LevelBaseScript(this.isWebRtcMatch);
+    this.baseScript = new LevelBaseScript();
     this.enemyScript = new LevelEnemyScript(isWebRtcClient);
     this.enemyScript.setReplayEnemyTraces(replay?.enemyTraces ?? null);
     this.explosionScript = new LevelExplosionScript();
@@ -478,6 +482,15 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
 
     this.playerScript.tankCreated.addListener((tank) => {
       updateArgs.webRtcMatch.observeAuthoritativePlayerTank(tank);
+      if (this.isRecordingReplay) {
+        tank.upgraded.addListener(({ tier }) => {
+          this.recordedPlayerTierFrames.push({
+            tick: this.recordedTickCount + 1,
+            playerIndex: tank.partyIndex,
+            tier,
+          });
+        });
+      }
     });
     this.enemyScript.tankCreated.addListener((tank) => {
       updateArgs.webRtcMatch.observeAuthoritativeEnemyTank(tank);
@@ -720,6 +733,9 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         });
       });
       this.firedThisTick.clear();
+    }
+    if (this.params.replay !== undefined) {
+      this.applyRecordedPlayerTierFrames();
     }
   }
 
@@ -1164,6 +1180,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           deviceFrames,
           activeDeviceType: this.recordedActiveDeviceType,
           playerTankTiers: this.recordedPlayerTankTiers.slice(),
+          playerTierFrames: this.recordedPlayerTierFrames.slice(),
           runConsumables: this.cloneRunConsumables(this.recordedRunConsumables),
           runBoosts: { ...this.recordedRunBoosts },
           enemyTraces: this.recordedEnemyTraces,
@@ -1199,6 +1216,23 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
       gameResult: result,
       durationTicks: this.recordedTickCount,
     };
+  }
+
+  private applyRecordedPlayerTierFrames(): void {
+    this.replayTickCount += 1;
+    const frames = this.params.replay?.playerTierFrames || [];
+    frames.forEach((frame) => {
+      if (frame.tick !== this.replayTickCount) {
+        return;
+      }
+      const tank = this.playerScript.getTank(frame.playerIndex);
+      if (tank === null || tank.type.tier === frame.tier) {
+        return;
+      }
+      tank.upgrade(frame.tier, false);
+      this.session.getPlayer(frame.playerIndex).setTankTier(frame.tier);
+      this.session.setPlayerTankTier(frame.playerIndex, frame.tier);
+    });
   }
 
   private getRecordedKillCount(): number {
