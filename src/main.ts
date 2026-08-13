@@ -663,8 +663,30 @@ const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
+const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
 let presenceHeartbeatWarningShown = false;
+
+function getPresenceClientId(): string {
+  const storageKey = 'battlecities.presence.client';
+  try {
+    const existing = window.sessionStorage.getItem(storageKey);
+    if (existing !== null && /^[a-z0-9-]{6,80}$/i.test(existing)) {
+      return existing;
+    }
+    const bytes = new Uint8Array(12);
+    window.crypto.getRandomValues(bytes);
+    const generated = `tab-${Array.from(bytes, (value) =>
+      value.toString(16).padStart(2, '0'),
+    ).join('')}`;
+    window.sessionStorage.setItem(storageKey, generated);
+    return generated;
+  } catch {
+    return `tab-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
+  }
+}
 
 function isPresenceInGame(): boolean {
   if (isReplayPlayback) {
@@ -691,6 +713,7 @@ async function sendPresenceHeartbeat(): Promise<void> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        clientId: presenceClientId,
         inGame,
         gameMode: inGame
           ? session.isMultiplayer()
@@ -725,10 +748,13 @@ function startPresenceTracking(): void {
     }
   });
   window.addEventListener('pagehide', () => {
-    void apiFetchDirect('/api/presence', {
-      method: 'DELETE',
-      keepalive: true,
-    }).catch(() => undefined);
+    void apiFetchDirect(
+      `/api/presence?clientId=${encodeURIComponent(presenceClientId)}`,
+      {
+        method: 'DELETE',
+        keepalive: true,
+      },
+    ).catch(() => undefined);
   });
 }
 
