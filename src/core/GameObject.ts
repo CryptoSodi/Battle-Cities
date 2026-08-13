@@ -31,6 +31,14 @@ export class GameObject extends RenderObject {
     this.collide(collision);
   }
 
+  public invokePrepareCollision(collision: Collision): void {
+    if (this.needsSetup === true) {
+      return;
+    }
+
+    this.prepareCollision(collision);
+  }
+
   protected hasBeenSetup(): boolean {
     return !this.needsSetup;
   }
@@ -47,6 +55,14 @@ export class GameObject extends RenderObject {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected collide(collision: Collision): void {
+    return undefined;
+  }
+
+  // Gives objects a read-only pass over all contacts before any collision can
+  // consume another object. Projectiles use this to choose a deterministic
+  // first target instead of depending on collider registration order.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected prepareCollision(collision: Collision): void {
     return undefined;
   }
 

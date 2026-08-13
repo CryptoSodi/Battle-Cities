@@ -1,7 +1,8 @@
-import { Tank } from '../../gameObjects';
+import { EnemyTank, Tank } from '../../gameObjects';
 import { EnemyMovementFrame } from '../../replay';
 
 import { TankBehavior } from '../TankBehavior';
+import { TankDeathReason } from '../TankDeathReason';
 
 // Replays a recorded enemy's movement verbatim instead of deciding anything:
 // each tick, teleport the tank straight to that tick's recorded position/
@@ -40,6 +41,19 @@ export class RecordedTankBehavior extends TankBehavior {
     tank.rotation = frame.rotation;
     tank.position.set(frame.x, frame.y);
     tank.updateMatrix(true);
+
+    if (frame.died === true) {
+      const reason =
+        frame.deathReason === 'wipeout'
+          ? TankDeathReason.WipeoutPowerup
+          : TankDeathReason.Bullet;
+      tank.die(reason, frame.hitterPartyIndex ?? null);
+      return;
+    }
+
+    if (frame.hit === true && tank instanceof EnemyTank) {
+      tank.applyRecordedHit(1, frame.hitterPartyIndex ?? null);
+    }
 
     if (frame.fired) {
       tank.fire();

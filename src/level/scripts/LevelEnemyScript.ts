@@ -286,6 +286,7 @@ export class LevelEnemyScript extends LevelScript {
         : new AiTankBehavior();
     const tank = TankFactory.createEnemy(event.partyIndex, type, behavior);
     tank.setNetworkControlled(this.isNetworkEnemyMirror);
+    tank.setReplayDamageControlled(this.replayEnemyTraces !== null);
     if (tank.behavior instanceof AiTankBehavior) {
       tank.behavior.setBasePosition(this.mapConfig.getBasePosition());
     }

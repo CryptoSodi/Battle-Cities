@@ -87,6 +87,9 @@ export class CollisionSystem {
 
   public collide(): void {
     this.collisions.forEach((collision) => {
+      collision.collider.object.invokePrepareCollision(collision);
+    });
+    this.collisions.forEach((collision) => {
       collision.collider.object.invokeCollide(collision);
     });
   }

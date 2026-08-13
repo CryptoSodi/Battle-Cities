@@ -10,4 +10,13 @@ export interface EnemyMovementFrame {
   y: number;
   rotation: number;
   fired: boolean;
+  // A non-terminal bullet hit during this tick. Enemy tank damage is always
+  // one point; death is stored separately below with its original cause.
+  hit?: boolean;
+  // Terminal event captured from the original simulation. Replays apply this
+  // explicitly because a bullet-vs-teleported-enemy collision can differ by
+  // one tick even when both visible paths are otherwise identical.
+  died?: boolean;
+  deathReason?: 'bullet' | 'wipeout';
+  hitterPartyIndex?: number | null;
 }

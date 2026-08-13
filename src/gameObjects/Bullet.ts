@@ -34,6 +34,8 @@ export class Bullet extends GameObject {
   private networkControlled = false;
   private networkMovementControlled = false;
   private localDamageDisabled = false;
+  private collisionTargetPrepared = false;
+  private preferredTankTarget: GameObject = null;
 
   constructor(
     ownerPartyIndex: number,
@@ -108,6 +110,8 @@ export class Bullet extends GameObject {
   }
 
   protected update(updateArgs: GameUpdateArgs): void {
+    this.collisionTargetPrepared = false;
+    this.preferredTankTarget = null;
     this.dirtyPaintBox();
 
     if (!this.networkMovementControlled) {
@@ -117,6 +121,58 @@ export class Bullet extends GameObject {
 
     this.collider.update();
     this.setNeedsPaint();
+  }
+
+  protected prepareCollision(collision: Collision): void {
+    if (this.networkControlled) {
+      return;
+    }
+
+    this.collisionTargetPrepared = true;
+    const prevBox = this.collider.getPrevBox();
+    let closestWallDistance: number = null;
+    let closestTankDistance: number = null;
+    let closestTankPartyIndex = Number.POSITIVE_INFINITY;
+
+    collision.contacts.forEach((contact) => {
+      const object = contact.collider.object;
+      const distance = prevBox.distanceCenterToCenter(contact.box);
+
+      if (object.tags.includes(Tag.Wall)) {
+        if (closestWallDistance === null || distance < closestWallDistance) {
+          closestWallDistance = distance;
+        }
+        return;
+      }
+
+      if (!object.tags.includes(Tag.Tank) || !this.canDamageTank(object)) {
+        return;
+      }
+
+      const partyIndex =
+        (object as GameObject & { partyIndex?: number }).partyIndex ??
+        Number.POSITIVE_INFINITY;
+      if (
+        closestTankDistance === null ||
+        distance < closestTankDistance ||
+        (distance === closestTankDistance && partyIndex < closestTankPartyIndex)
+      ) {
+        closestTankDistance = distance;
+        closestTankPartyIndex = partyIndex;
+        this.preferredTankTarget = object;
+      }
+    });
+
+    // A swept bullet may overlap a wall and a tank in the same tick. The wall
+    // wins when it lies earlier on the path, preventing apparent hits through
+    // cover and preserving the existing first-wall behavior.
+    if (
+      closestTankDistance !== null &&
+      closestWallDistance !== null &&
+      closestWallDistance < closestTankDistance
+    ) {
+      this.preferredTankTarget = null;
+    }
   }
 
   protected collide(collision: Collision): void {
@@ -133,6 +189,10 @@ export class Bullet extends GameObject {
   // check this so a single bullet can't damage more than one of them.
   public isSpent(): boolean {
     return this.consumed;
+  }
+
+  public canHitTank(tank: GameObject): boolean {
+    return !this.collisionTargetPrepared || this.preferredTankTarget === tank;
   }
 
   public nullify(): void {
@@ -301,6 +361,20 @@ export class Bullet extends GameObject {
 
       this.explode();
     }
+  }
+
+  private canDamageTank(tank: GameObject): boolean {
+    if (this.tags.includes(Tag.Enemy) && tank.tags.includes(Tag.Enemy)) {
+      return false;
+    }
+
+    if (this.tags.includes(Tag.Player) && tank.tags.includes(Tag.Player)) {
+      const partyIndex = (tank as GameObject & { partyIndex?: number })
+        .partyIndex;
+      return partyIndex !== this.ownerPartyIndex;
+    }
+
+    return true;
   }
 
   private getRotationString(rotation: Rotation): string {

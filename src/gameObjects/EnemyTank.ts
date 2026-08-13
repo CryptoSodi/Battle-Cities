@@ -17,10 +17,20 @@ export class EnemyTank extends Tank {
   private hitSound: Sound;
   private dropBlinkElapsed = 0;
   private networkControlled = false;
+  private replayDamageControlled = false;
 
   public setNetworkControlled(controlled: boolean): this {
     this.networkControlled = controlled;
     return this;
+  }
+
+  public setReplayDamageControlled(controlled: boolean): this {
+    this.replayDamageControlled = controlled;
+    return this;
+  }
+
+  public applyRecordedHit(damage = 1, hitterPartyIndex: number = null): void {
+    this.applyHit(damage, hitterPartyIndex);
   }
 
   public beginNetworkDeathGrace(): void {
@@ -135,9 +145,13 @@ export class EnemyTank extends Tank {
   }
 
   protected receiveHit(damage: number, hitterPartyIndex: number): void {
-    if (this.networkControlled) {
+    if (this.networkControlled || this.replayDamageControlled) {
       return;
     }
+    this.applyHit(damage, hitterPartyIndex);
+  }
+
+  private applyHit(damage: number, hitterPartyIndex: number): void {
     super.receiveHit(damage, hitterPartyIndex);
 
     if (!this.isAlive()) {

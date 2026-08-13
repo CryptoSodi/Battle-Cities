@@ -105,6 +105,7 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
   // Enemies that fired THIS tick, per the LevelEnemyScript.fired listener
   // hooked at spawn time. Read and cleared each tick when recording a frame.
   private firedThisTick = new Set<EnemyTank>();
+  private hitThisTick = new Set<EnemyTank>();
   private debugCollisionMenu: DebugCollisionMenu;
   private debugCameraMenu: DebugCameraMenu;
   // Live gameplay zoom (adjustable via the debug panel); defaults to config.
@@ -510,6 +511,25 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
         tank.fired.addListener(() => {
           this.firedThisTick.add(tank);
         });
+        tank.hit.addListener(() => {
+          this.hitThisTick.add(tank);
+        });
+        tank.died.addListener((event) => {
+          const trace = this.recordedEnemyTraces[tank.partyIndex];
+          if (trace === undefined) {
+            return;
+          }
+          trace.push({
+            x: tank.position.x,
+            y: tank.position.y,
+            rotation: tank.rotation,
+            fired: false,
+            died: true,
+            deathReason: event.reason,
+            hitterPartyIndex: event.hitterPartyIndex,
+          });
+          this.hitThisTick.delete(tank);
+        });
       });
     }
   }
@@ -730,9 +750,11 @@ export class LevelPlayScene extends GameScene<LevelPlayLocationParams> {
           y: tank.position.y,
           rotation: tank.rotation,
           fired: this.firedThisTick.has(tank),
+          hit: this.hitThisTick.has(tank),
         });
       });
       this.firedThisTick.clear();
+      this.hitThisTick.clear();
     }
     if (this.params.replay !== undefined) {
       this.applyRecordedPlayerTierFrames();

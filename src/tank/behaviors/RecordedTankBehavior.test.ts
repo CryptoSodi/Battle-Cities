@@ -70,3 +70,61 @@ test('RecordedTankBehavior re-enacts a recorded trace exactly', (t) => {
   // Running past the end of the trace is a safe no-op, not a crash.
   t.notThrows(() => tank.invokeUpdate(updateArgs));
 });
+
+test('RecordedTankBehavior applies the original terminal enemy death', (t) => {
+  const collisionSystem = new CollisionSystem();
+  const updateArgs = makeUpdateArgs(collisionSystem);
+  const trace: EnemyMovementFrame[] = [
+    { x: 100, y: 100, rotation: Rotation.Right, fired: false },
+    {
+      x: 100,
+      y: 100,
+      rotation: Rotation.Right,
+      fired: false,
+      died: true,
+      hitterPartyIndex: 0,
+    },
+  ];
+  const field = new GameObject(400, 400);
+  field.updateMatrix(true);
+  const tank = TankFactory.createEnemy(
+    4,
+    TankType.EnemyA(),
+    new RecordedTankBehavior(trace),
+  );
+  tank.updateMatrix();
+  field.add(tank);
+
+  let deathEvent = null;
+  tank.died.addListener((event) => {
+    deathEvent = event;
+  });
+  tank.invokeUpdate(updateArgs);
+  tank.invokeUpdate(updateArgs);
+
+  t.deepEqual(deathEvent, {
+    reason: 'bullet',
+    hitterPartyIndex: 0,
+  });
+});
+
+test('RecordedTankBehavior applies recorded non-terminal hits', (t) => {
+  const collisionSystem = new CollisionSystem();
+  const updateArgs = makeUpdateArgs(collisionSystem);
+  const field = new GameObject(400, 400);
+  field.updateMatrix(true);
+  const tank = TankFactory.createEnemy(
+    4,
+    TankType.EnemyD(),
+    new RecordedTankBehavior([
+      { x: 100, y: 100, rotation: Rotation.Right, fired: false, hit: true },
+    ]),
+  );
+  tank.setReplayDamageControlled(true);
+  tank.updateMatrix();
+  field.add(tank);
+
+  tank.invokeUpdate(updateArgs);
+
+  t.is(tank.attributes.health, 3);
+});
