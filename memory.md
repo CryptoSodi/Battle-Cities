@@ -104,3 +104,10 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 
 - API player sessions support Google and wallet authentication only. Guest player/session creation was removed; legacy guest sessions are revoked by migration `014_remove_guest_auth.sql`.
 - Anonymous replay identifiers are intentionally separate from player authentication and remain available for offline single-player replay ownership.
+
+## Live player presence
+
+- Authenticated game clients send `POST /api/presence` every 30 seconds. Presence expires after 90 seconds without a heartbeat, so crashed or disconnected clients disappear automatically.
+- Public `GET /api/presence` returns `online`, `inGame`, `windowSeconds`, and `updatedAt`; the response is not cached.
+- `online` counts unique signed-in players active on the site. `inGame` is the subset currently in a live single-player or multiplayer game scene.
+- Replay playback, observer clients, and headless broadcasters are deliberately excluded from live player counts.

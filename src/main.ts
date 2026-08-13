@@ -662,6 +662,75 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
+const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
+let presenceHeartbeatInFlight = false;
+let presenceHeartbeatWarningShown = false;
+
+function isPresenceInGame(): boolean {
+  if (isReplayPlayback) {
+    return false;
+  }
+
+  const sceneType = sceneRouter.getCurrentType();
+  return (
+    sceneType === GameSceneType.LevelLoad ||
+    sceneType === GameSceneType.LevelPlay ||
+    sceneType === GameSceneType.LevelScore
+  );
+}
+
+async function sendPresenceHeartbeat(): Promise<void> {
+  if (presenceHeartbeatInFlight) {
+    return;
+  }
+
+  presenceHeartbeatInFlight = true;
+  try {
+    const inGame = isPresenceInGame();
+    const response = await apiFetchDirect('/api/presence', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        inGame,
+        gameMode: inGame
+          ? session.isMultiplayer()
+            ? 'multiplayer'
+            : 'single-player'
+          : null,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Presence heartbeat failed (${response.status})`);
+    }
+    presenceHeartbeatWarningShown = false;
+  } catch (error) {
+    if (!presenceHeartbeatWarningShown) {
+      log.warn('Presence heartbeat failed', error);
+      presenceHeartbeatWarningShown = true;
+    }
+  } finally {
+    presenceHeartbeatInFlight = false;
+  }
+}
+
+function startPresenceTracking(): void {
+  void sendPresenceHeartbeat();
+  window.setInterval(
+    () => void sendPresenceHeartbeat(),
+    PRESENCE_HEARTBEAT_INTERVAL_MS,
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void sendPresenceHeartbeat();
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    void apiFetchDirect('/api/presence', {
+      method: 'DELETE',
+      keepalive: true,
+    }).catch(() => undefined);
+  });
+}
 
 window.addEventListener('battlecities:android-back', (event) => {
   if (!sceneRouter.canGoBack()) {
@@ -1351,6 +1420,9 @@ async function main(): Promise<void> {
     await hydrateShopCacheFromServer();
     if (!(await startAdminReplay())) {
       await startProfileReplay();
+    }
+    if (!isReplayPlayback) {
+      startPresenceTracking();
     }
   }
   enterGameView();
