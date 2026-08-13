@@ -845,6 +845,10 @@ particles = new ParticleSystem(config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
 syncMobileCanvasCssSize();
 
 const gameLoop = new GameLoop({ timerDriven: isHeadlessBroadcaster });
+// Replay uses more fixed simulation ticks per rendered frame. Each tick stays
+// at 60 Hz, preserving the recorded input/collision order while making review
+// materially faster. Live and networked games always remain at 1x.
+const REPLAY_PLAYBACK_SPEED = 3;
 
 const updateArgs: GameUpdateArgs = {
   audioManager,
@@ -1182,6 +1186,11 @@ async function hydrateShopCacheFromServer(): Promise<void> {
 // frame advances more than one step.
 gameLoop.update.addListener((event) => {
   inputManager.update();
+  gameLoop.setTimeScale(
+    isReplayPlayback || inputManager.isReplaying()
+      ? REPLAY_PLAYBACK_SPEED
+      : 1,
+  );
 
   updateArgs.deltaTime = event.deltaTime;
   updateArgs.pointerClick = pendingPointerClick;
