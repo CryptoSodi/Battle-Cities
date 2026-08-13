@@ -108,6 +108,7 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 ## Live player presence
 
 - The public website and game clients send `POST /api/presence` every 30 seconds. Presence expires after 90 seconds without a heartbeat, so crashed or disconnected clients disappear automatically.
+- Game scene transitions send an immediate heartbeat whenever the player enters or leaves live gameplay. Game Over ends playing status immediately; Victory remains in-game because it continues into the next stage.
 - Public `GET /api/presence` returns `online`, `inGame`, `windowSeconds`, and `updatedAt`; the response is not cached.
 - `online` counts unique active browser visitors, including anonymous visitors on `battlecities.com`. Multiple open tabs for the same browser count once. `inGame` is the subset currently in a live single-player or multiplayer game scene.
 - The API issues an HTTP-only presence identity cookie. Each tab supplies a session-scoped client ID so a website tab cannot overwrite the active state of a game tab.

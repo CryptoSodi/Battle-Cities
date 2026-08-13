@@ -10,6 +10,7 @@ interface SceneLocation {
 
 export class SceneRouter<S> implements SceneNavigator {
   public transitionStarted = new Subject();
+  public transitionCompleted = new Subject<SceneType>();
   private routes = new Map<
     SceneType,
     { new (navigator: SceneNavigator, params: SceneParams): S }
@@ -98,6 +99,7 @@ export class SceneRouter<S> implements SceneNavigator {
     };
 
     this.location = nextLocation;
+    this.transitionCompleted.notify(type);
 
     return this.location;
   }

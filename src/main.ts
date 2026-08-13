@@ -665,7 +665,10 @@ const sceneRouter = new GameSceneRouter();
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
+let presenceHeartbeatPending = false;
 let presenceHeartbeatWarningShown = false;
+let presenceTrackingStarted = false;
+let lastReportedPresenceInGame: boolean = null;
 
 function getPresenceClientId(): string {
   const storageKey = 'battlecities.presence.client';
@@ -697,12 +700,14 @@ function isPresenceInGame(): boolean {
   return (
     sceneType === GameSceneType.LevelLoad ||
     sceneType === GameSceneType.LevelPlay ||
-    sceneType === GameSceneType.LevelScore
+    sceneType === GameSceneType.LevelScore ||
+    sceneType === GameSceneType.MainVictory
   );
 }
 
 async function sendPresenceHeartbeat(): Promise<void> {
   if (presenceHeartbeatInFlight) {
+    presenceHeartbeatPending = true;
     return;
   }
 
@@ -725,6 +730,7 @@ async function sendPresenceHeartbeat(): Promise<void> {
     if (!response.ok) {
       throw new Error(`Presence heartbeat failed (${response.status})`);
     }
+    lastReportedPresenceInGame = inGame;
     presenceHeartbeatWarningShown = false;
   } catch (error) {
     if (!presenceHeartbeatWarningShown) {
@@ -733,10 +739,15 @@ async function sendPresenceHeartbeat(): Promise<void> {
     }
   } finally {
     presenceHeartbeatInFlight = false;
+    if (presenceHeartbeatPending) {
+      presenceHeartbeatPending = false;
+      void sendPresenceHeartbeat();
+    }
   }
 }
 
 function startPresenceTracking(): void {
+  presenceTrackingStarted = true;
   void sendPresenceHeartbeat();
   window.setInterval(
     () => void sendPresenceHeartbeat(),
@@ -907,6 +918,14 @@ function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
 sceneRouter.transitionStarted.addListener(() => {
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
+});
+sceneRouter.transitionCompleted.addListener(() => {
+  if (
+    presenceTrackingStarted &&
+    isPresenceInGame() !== lastReportedPresenceInGame
+  ) {
+    void sendPresenceHeartbeat();
+  }
 });
 
 const debugInspector = new DebugInspector(gameRenderer.getDomElement());
