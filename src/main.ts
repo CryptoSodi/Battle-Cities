@@ -59,9 +59,6 @@ const loadingVersionElement = document.querySelector('[data-loading-version]');
 const authShellElement = document.querySelector(
   '[data-auth-shell]',
 ) as HTMLElement;
-const guestLoginButton = document.querySelector(
-  '[data-auth-guest]',
-) as HTMLButtonElement;
 const walletLoginButton = document.querySelector(
   '[data-auth-wallet]',
 ) as HTMLButtonElement;
@@ -902,13 +899,6 @@ function waitForLogin(): Promise<void> {
       }
     };
 
-    const setGuestBusy = (busy: boolean): void => {
-      if (guestLoginButton !== null) {
-        guestLoginButton.disabled = busy;
-        guestLoginButton.setAttribute('aria-busy', busy ? 'true' : 'false');
-      }
-    };
-
     const setWalletBusy = (busy: boolean): void => {
       if (walletLoginButton !== null) {
         walletLoginButton.disabled = busy;
@@ -962,27 +952,6 @@ function waitForLogin(): Promise<void> {
         binary += String.fromCharCode(byte);
       });
       return window.btoa(binary);
-    };
-
-    const startGuestSession = async (): Promise<void> => {
-      if (loginStarted) {
-        return;
-      }
-
-      loginStarted = true;
-      setGuestBusy(true);
-      setStatus('Starting guest session...');
-
-      try {
-        await startServerSession({ provider: 'guest' });
-        await refreshPlayerIdentity();
-        setStatus('Guest session ready.');
-        resolve();
-      } catch {
-        loginStarted = false;
-        setGuestBusy(false);
-        setStatus('Could not start guest session. Try again.');
-      }
     };
 
     const startWalletSession = async (): Promise<void> => {
@@ -1102,10 +1071,6 @@ function waitForLogin(): Promise<void> {
       })
       .catch(() => showLogin());
 
-    guestLoginButton?.addEventListener('click', () => {
-      startGuestSession();
-    });
-
     walletLoginButton?.addEventListener('click', () => {
       startWalletSession();
     });
@@ -1149,7 +1114,7 @@ async function hydrateShopCacheFromServer(): Promise<void> {
     const account = body.account;
     gameStorage.setBoolean(
       config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
-      account.provider !== 'guest',
+      true,
     );
     gameStorage.set(
       config.STORAGE_KEY_SHOP_WALLET_ADDRESS,

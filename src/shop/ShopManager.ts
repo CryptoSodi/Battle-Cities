@@ -16,6 +16,15 @@ import {
 type ShopInventory = Partial<Record<ShopInventoryItemId, number>>;
 type ShopLoadout = Partial<Record<ShopLoadoutSlot, ShopInventoryItemId>>;
 
+function createPowerupConsumptionRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `powerup:${Date.now().toString(36)}:${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
 const CATALOG: ShopCatalogItem[] = [
   {
     id: ShopItemId.FuelOne,
@@ -374,34 +383,48 @@ export class ShopManager {
     await this.syncAccountSnapshot();
   }
 
-  public consumeInventoryItem(itemId: ShopInventoryItemId): boolean {
+  public async consumeInventoryItem(
+    itemId: ShopInventoryItemId,
+  ): Promise<boolean> {
     // Guest items never deplete (see getInventory) — report success without
     // persisting a decrement, like consumeFuelForRun does for guest fuel.
     if (!this.isWalletConnected()) {
       return true;
     }
 
-    const inventory = this.getInventory();
-    if ((inventory[itemId] || 0) <= 0) {
+    if (this.getInventoryCount(itemId) <= 0) {
       return false;
     }
 
-    inventory[itemId] -= 1;
-    this.setJson(config.STORAGE_KEY_SHOP_INVENTORY, inventory);
+    const powerupType = getPowerupTypeForInventoryItem(itemId);
+    if (powerupType === null || itemId === ShopInventoryItemId.ExtraLife) {
+      return false;
+    }
 
-    const loadout = this.getLoadout();
-    this.normalizeLoadout(loadout);
-    Object.keys(loadout).forEach((slotKey) => {
-      const slot = slotKey as ShopLoadoutSlot;
-      if (loadout[slot] === itemId && (inventory[itemId] || 0) <= 0) {
-        delete loadout[slot];
+    try {
+      const response = await apiFetch('/api/economy/powerups/consume', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemId,
+          powerupType,
+          requestId: createPowerupConsumptionRequestId(),
+        }),
+      });
+      const body = await response.json();
+      if (body?.account !== undefined) {
+        this.applyAccountSnapshot(body.account);
       }
-    });
-    this.setJson(config.STORAGE_KEY_SHOP_LOADOUT, loadout);
-    this.storage.save();
-    void this.syncAccountSnapshot();
 
-    return true;
+      return (
+        response.ok && body?.ok === true && body?.powerupType === powerupType
+      );
+    } catch {
+      // Fail closed: a live consumable is never activated without API approval.
+      return false;
+    }
   }
 
   public consumeEquippedItems(): ShopRunConsumables {

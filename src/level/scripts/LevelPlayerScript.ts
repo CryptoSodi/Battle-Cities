@@ -109,6 +109,7 @@ export class LevelPlayerScript extends LevelScript {
   private tanks: PlayerTank[] = [];
   private hotbar = new GameObject();
   private shopManager: ShopManager = null;
+  private readonly pendingHotbarConsumptions = new Set<string>();
   private isReplaying = false;
   private isWebRtcClient = false;
   private localPlayerIndex = 0;
@@ -128,21 +129,17 @@ export class LevelPlayerScript extends LevelScript {
   ) {
     super();
     this.headless = options.headless === true;
-    this.playerRunConsumables = options.playerRunConsumables === undefined
-      ? null
-      : options.playerRunConsumables.map((consumables) => ({
-          powerups: [...consumables.powerups],
-          powerupCounts: [...consumables.powerupCounts],
-        })) as [AuthoritativeRunConsumables, AuthoritativeRunConsumables];
+    this.playerRunConsumables =
+      options.playerRunConsumables === undefined
+        ? null
+        : (options.playerRunConsumables.map((consumables) => ({
+            powerups: [...consumables.powerups],
+            powerupCounts: [...consumables.powerupCounts],
+          })) as [AuthoritativeRunConsumables, AuthoritativeRunConsumables]);
   }
 
   protected setup(updateArgs: GameUpdateArgs): void {
-    const {
-      gameStorage,
-      inputManager,
-      session,
-      webRtcMatch,
-    } = updateArgs;
+    const { gameStorage, inputManager, session, webRtcMatch } = updateArgs;
     this.isWebRtcClient =
       webRtcMatch.isEnabled() && !webRtcMatch.isBroadcaster();
     const isWebRtcObserver = !this.headless && webRtcMatch.isObserver();
@@ -251,7 +248,7 @@ export class LevelPlayerScript extends LevelScript {
             if (slot === null) {
               break;
             }
-            this.useHotbarPower(slot, partyIndex, false);
+            void this.useHotbarPower(slot, partyIndex, false);
           }
         });
       }
@@ -264,20 +261,19 @@ export class LevelPlayerScript extends LevelScript {
 
     const inputMethod = inputManager.getActiveMethod();
     if (inputMethod.isDownAny(LevelPlayInputContext.PowerOne)) {
-      this.useHotbarPower(0);
+      void this.useHotbarPower(0);
     } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerTwo)) {
-      this.useHotbarPower(1);
+      void this.useHotbarPower(1);
     } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerThree)) {
-      this.useHotbarPower(2);
+      void this.useHotbarPower(2);
     } else if (inputMethod.isDownAny(LevelPlayInputContext.PowerFour)) {
-      this.useHotbarPower(3);
+      void this.useHotbarPower(3);
     }
   }
 
-  public getAuthoritativeRunConsumables(): [
-    AuthoritativeRunConsumables,
-    AuthoritativeRunConsumables,
-  ] | null {
+  public getAuthoritativeRunConsumables():
+    | [AuthoritativeRunConsumables, AuthoritativeRunConsumables]
+    | null {
     if (this.playerRunConsumables === null) {
       return null;
     }
@@ -383,11 +379,11 @@ export class LevelPlayerScript extends LevelScript {
     this.world.addPlayerTank(partyIndex, tank);
   };
 
-  private useHotbarPower(
+  private async useHotbarPower(
     index: number,
     partyIndex = 0,
     consumeStoredInventory = true,
-  ): void {
+  ): Promise<void> {
     const tank = this.tanks[partyIndex];
     if (tank === null || tank === undefined) {
       return;
@@ -399,9 +395,10 @@ export class LevelPlayerScript extends LevelScript {
       authoritativeConsumables ?? this.session.getRunConsumables();
     const powerupCounts = runConsumables.powerupCounts || [];
     runConsumables.powerupCounts = powerupCounts;
-    const itemId = authoritativeConsumables === null
-      ? this.session.getRunConsumables().powerupItems[index]
-      : null;
+    const itemId =
+      authoritativeConsumables === null
+        ? this.session.getRunConsumables().powerupItems[index]
+        : null;
     const type = runConsumables.powerups[index];
     if (
       type === undefined ||
@@ -410,16 +407,37 @@ export class LevelPlayerScript extends LevelScript {
       return;
     }
 
-    if (
-      consumeStoredInventory &&
-      !this.isReplaying &&
-      !this.shopManager.consumeInventoryItem(itemId)
-    ) {
-      this.session.getRunConsumables().powerupItems.splice(index, 1);
-      runConsumables.powerups.splice(index, 1);
-      powerupCounts.splice(index, 1);
-      this.renderHotbar();
-      return;
+    if (consumeStoredInventory && !this.isReplaying) {
+      const pendingKey = `${partyIndex}:${itemId}`;
+      if (this.pendingHotbarConsumptions.size > 0) {
+        return;
+      }
+
+      this.pendingHotbarConsumptions.add(pendingKey);
+      let approved = false;
+      try {
+        approved = await this.shopManager.consumeInventoryItem(itemId);
+      } finally {
+        this.pendingHotbarConsumptions.delete(pendingKey);
+      }
+
+      const currentRunConsumables = this.session.getRunConsumables();
+      if (
+        currentRunConsumables.powerupItems[index] !== itemId ||
+        runConsumables.powerups[index] !== type
+      ) {
+        return;
+      }
+
+      if (!approved) {
+        if (this.shopManager.getInventoryCount(itemId) <= 0) {
+          currentRunConsumables.powerupItems.splice(index, 1);
+          runConsumables.powerups.splice(index, 1);
+          powerupCounts.splice(index, 1);
+          this.renderHotbar();
+        }
+        return;
+      }
     }
 
     const stackCount = powerupCounts[index] || 1;

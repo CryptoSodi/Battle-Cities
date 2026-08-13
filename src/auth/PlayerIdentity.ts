@@ -2,7 +2,7 @@ import { apiFetch } from '../network/api';
 
 export interface CurrentPlayer {
   id: string;
-  provider: 'guest' | 'wallet' | 'google';
+  provider: 'wallet' | 'google';
   displayName: string;
   walletAddress: string | null;
   googleEmail: string | null;
@@ -62,8 +62,6 @@ export class PlayerIdentity {
         return 'Phantom';
       case 'google':
         return 'Google';
-      case 'guest':
-        return 'Guest';
       default:
         return 'Offline';
     }
@@ -75,9 +73,7 @@ function isCurrentPlayer(value: CurrentPlayer): boolean {
     typeof value === 'object' &&
     value !== null &&
     typeof value.id === 'string' &&
-    (value.provider === 'guest' ||
-      value.provider === 'wallet' ||
-      value.provider === 'google') &&
+    (value.provider === 'wallet' || value.provider === 'google') &&
     typeof value.displayName === 'string'
   );
 }

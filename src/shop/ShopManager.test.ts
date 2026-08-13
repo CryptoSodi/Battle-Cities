@@ -31,10 +31,10 @@ test('a guest account owns a full stack of every item', (t) => {
   });
 });
 
-test('guest items and fuel never deplete when consumed', (t) => {
+test('guest items and fuel never deplete when consumed', async (t) => {
   const manager = makeManager();
 
-  t.true(manager.consumeInventoryItem(ShopInventoryItemId.Shield));
+  t.true(await manager.consumeInventoryItem(ShopInventoryItemId.Shield));
   t.is(
     manager.getInventoryCount(ShopInventoryItemId.Shield),
     config.SHOP_GUEST_INVENTORY_COUNT,
@@ -47,12 +47,12 @@ test('guest items and fuel never deplete when consumed', (t) => {
 
 // Connecting a wallet switches to the real, storage-backed economy: nothing
 // owned until bought, and consumption actually fails on an empty inventory.
-test('a connected wallet uses the real storage-backed inventory', (t) => {
+test('a connected wallet uses the real storage-backed inventory', async (t) => {
   const manager = makeManager();
   manager.connectWallet();
 
   t.is(manager.getInventoryCount(ShopInventoryItemId.Shield), 0);
-  t.false(manager.consumeInventoryItem(ShopInventoryItemId.Shield));
+  t.false(await manager.consumeInventoryItem(ShopInventoryItemId.Shield));
 });
 
 test('a tank deployment consumes its variable fuel cost', (t) => {

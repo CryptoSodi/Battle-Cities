@@ -1,6 +1,6 @@
 # Battle Cities Project Memory
 
-Last updated: 2026-08-09
+Last updated: 2026-08-13
 
 This is the durable handoff note for product decisions and operational facts. Keep it concise; use the source files and Git history for implementation detail. Never store credentials, tokens, private keys, or user data here.
 
@@ -94,3 +94,13 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 - GitHub's API workflow still supports `workflow_dispatch` for deliberate manual deployments.
 - `npm run build` verifies the web build. `npm run build` within `api-server/` compiles the API server.
 - `MULTIPLAYER_ARCHITECTURE.md` contains valuable MagicBlock background but includes historical architecture. Confirm current transport/runtime behavior in the relevant code before following it literally.
+## Power-up inventory authority
+
+- Live HUD consumables for authenticated players are approved by `POST /api/economy/powerups/consume` before their gameplay effect is sent or applied.
+- The Oracle API atomically checks and decrements inventory, removes an exhausted item from the loadout, writes an economy-ledger debit, and uses the client request ID for idempotent retries.
+- The API validates the canonical inventory-item-to-power-up mapping; clients fail closed when approval is unavailable, and replay playback never consumes live inventory.
+
+## Authentication providers
+
+- API player sessions support Google and wallet authentication only. Guest player/session creation was removed; legacy guest sessions are revoked by migration `014_remove_guest_auth.sql`.
+- Anonymous replay identifiers are intentionally separate from player authentication and remain available for offline single-player replay ownership.

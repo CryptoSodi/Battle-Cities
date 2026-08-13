@@ -3,6 +3,8 @@ import type { GameUpdateArgs } from '../../game';
 import { EnemyTank, PlayerTank, TankState } from '../../gameObjects';
 import { LevelPlayInputContext } from '../../input';
 import { PowerupType } from '../../powerup';
+import { ShopManager } from '../../shop/ShopManager';
+import { getPowerupTypeForInventoryItem } from '../../shop/ShopTypes';
 import { TankDeathReason, TankTier } from '../../tank';
 
 import { HttpGhostSignalTransport } from './HttpGhostSignalTransport';
@@ -284,6 +286,10 @@ export class WebRtcHostMatchSync {
   private readonly pendingRemoteFireSeqs = new Map<number, number[]>();
   private readonly lastProcessedRemoteInputSeqs = new Map<number, number>();
   private readonly pendingRemotePowerSlots = new Map<number, number[]>();
+  private readonly verifiedLocalPowerSlots: number[] = [];
+  private readonly pendingLocalPowerSlots = new Map<number, number>();
+  private powerVerificationGeneration = 0;
+  private awaitingLocalPowerAck = false;
   private latestHostFrame: WebRtcHostFramePacket = null;
   private activeReplayFrame: WebRtcHostFramePacket = null;
   private consumedMatchResultSeq = 0;
@@ -654,6 +660,10 @@ this.transportMode = runtime?.mode ??
     this.pendingEnemyDeaths.length = 0;
     this.pendingEnemyDeathSeqs.clear();
     this.pendingPowerupPickups.length = 0;
+    this.powerVerificationGeneration += 1;
+    this.pendingLocalPowerSlots.clear();
+    this.verifiedLocalPowerSlots.length = 0;
+    this.awaitingLocalPowerAck = false;
     this.lastAppliedEnemyDeathSeq = 0;
     this.lastQueuedPowerupPickupSeq = 0;
     this.lastPlayerFireSeqs.clear();
@@ -952,6 +962,12 @@ this.transportMode = runtime?.mode ??
       return;
     }
     this.lastQueuedPowerupPickupSeq = pickup.seq;
+    if (
+      pickup.partyIndex === this.localPlayerIndex &&
+      Number.isInteger(pickup.hotbarSlot)
+    ) {
+      this.awaitingLocalPowerAck = false;
+    }
     this.pendingPowerupPickups.push(pickup);
   }
 
@@ -1011,6 +1027,10 @@ this.transportMode = runtime?.mode ??
     this.pendingRemoteFireSeqs.clear();
     this.lastProcessedRemoteInputSeqs.clear();
     this.pendingRemotePowerSlots.clear();
+    this.verifiedLocalPowerSlots.length = 0;
+    this.pendingLocalPowerSlots.clear();
+    this.powerVerificationGeneration += 1;
+    this.awaitingLocalPowerAck = false;
     this.recoveryFrames.clear();
     this.clientFrameCache.clear();
     this.pendingAppliedFrameSeqs.length = 0;
@@ -1892,6 +1912,12 @@ if (this.transportMode === 'websocket') {
   }
 
   private readPowerSlot(updateArgs: GameUpdateArgs): number | null {
+    const verifiedSlot = this.verifiedLocalPowerSlots.shift();
+    if (verifiedSlot !== undefined) {
+      this.awaitingLocalPowerAck = true;
+      return verifiedSlot;
+    }
+
     const inputMethod = updateArgs.inputManager.getActiveMethod();
     const controls = [
       LevelPlayInputContext.PowerOne,
@@ -1902,7 +1928,49 @@ if (this.transportMode === 'websocket') {
     const slot = controls.findIndex((control) => {
       return inputMethod.isDownAny(control);
     });
-    return slot >= 0 ? slot : null;
+    if (
+      slot >= 0 &&
+      !this.awaitingLocalPowerAck &&
+      this.pendingLocalPowerSlots.size === 0
+    ) {
+      const generation = this.powerVerificationGeneration;
+      this.pendingLocalPowerSlots.set(slot, generation);
+      void this.verifyLocalPowerSlot(updateArgs, slot, generation);
+    }
+    return null;
+  }
+
+  private async verifyLocalPowerSlot(
+    updateArgs: GameUpdateArgs,
+    slot: number,
+    generation: number,
+  ): Promise<void> {
+    try {
+      const runConsumables = updateArgs.session.getRunConsumables();
+      const itemId = runConsumables.powerupItems[slot];
+      const powerupType = runConsumables.powerups[slot];
+      if (
+        itemId === undefined ||
+        powerupType === undefined ||
+        getPowerupTypeForInventoryItem(itemId) !== powerupType
+      ) {
+        return;
+      }
+
+      const shopManager = new ShopManager(updateArgs.gameStorage);
+      if (
+        await shopManager.consumeInventoryItem(itemId) &&
+        generation === this.powerVerificationGeneration &&
+        runConsumables.powerupItems[slot] === itemId &&
+        runConsumables.powerups[slot] === powerupType
+      ) {
+        this.verifiedLocalPowerSlots.push(slot);
+      }
+    } finally {
+      if (this.pendingLocalPowerSlots.get(slot) === generation) {
+        this.pendingLocalPowerSlots.delete(slot);
+      }
+    }
   }
 
   private readDirection(updateArgs: GameUpdateArgs): Rotation | null {
