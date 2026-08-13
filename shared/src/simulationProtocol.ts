@@ -49,6 +49,7 @@ export interface SimulationPlayerFrame {
 
 export interface SimulationEnemyFrame {
   partyIndex: number;
+  health: number;
   x: number;
   y: number;
   rotation: SimulationRotation;

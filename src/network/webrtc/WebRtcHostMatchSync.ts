@@ -48,6 +48,7 @@ interface WebRtcInputPacket {
 
 interface WebRtcEnemyFrame {
   partyIndex: number;
+  health: number;
   x: number;
   y: number;
   rotation: Rotation;
@@ -2077,6 +2078,7 @@ if (this.transportMode === 'websocket') {
     const fire = this.latestEnemyFire.get(tank.partyIndex);
     return {
       partyIndex: tank.partyIndex,
+      health: tank.attributes.health,
       x: tank.position.x,
       y: tank.position.y,
       rotation: tank.rotation,
@@ -2106,6 +2108,9 @@ if (this.transportMode === 'websocket') {
           this.observer ? ticks.length : MAX_ENEMY_TICKS_PER_UPDATE,
         )
         .forEach((frame) => {
+          if (Number.isFinite(frame.health)) {
+            tank.applyNetworkHealth(frame.health);
+          }
           const useAbsolutePosition =
             this.observer || frame.initialSync === true;
           tank.applyNetworkMovement(
@@ -2169,6 +2174,9 @@ if (this.transportMode === 'websocket') {
         return;
       }
       tank.setNetworkControlled(true);
+      if (Number.isFinite(frame.health)) {
+        tank.applyNetworkHealth(frame.health);
+      }
       tank.applyNetworkMovement(
         frame.rotation,
         frame.moving,

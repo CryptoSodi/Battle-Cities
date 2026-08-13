@@ -536,7 +536,17 @@ export class BattleCitySimulation {
   ): BulletImpact | null {
     let closest: BulletImpact | null = this.getBorderImpact(previous, current);
     const consider = (impact: BulletImpact): void => {
-      if (closest === null || impact.time < closest.time) {
+      const sameTimeLowerTankId =
+        closest !== null &&
+        impact.time === closest.time &&
+        impact.kind === 'tank' &&
+        closest.kind === 'tank' &&
+        impact.tank.partyIndex < closest.tank.partyIndex;
+      if (
+        closest === null ||
+        impact.time < closest.time ||
+        sameTimeLowerTankId
+      ) {
         closest = impact;
       }
     };
@@ -932,6 +942,7 @@ export class BattleCitySimulation {
     }));
     const enemies: SimulationEnemyFrame[] = Array.from(this.enemies.values()).map((tank) => ({
       partyIndex: tank.partyIndex,
+      health: tank.health,
       x: tank.x,
       y: tank.y,
       rotation: tank.rotation,

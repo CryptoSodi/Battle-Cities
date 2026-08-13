@@ -44,17 +44,16 @@ export class EnemyTank extends Tank {
   }
 
   public applyNetworkHealth(health: number): void {
-    const wasHit = health < this.attributes.health;
-    this.attributes.health = Math.max(0, health);
+    const nextHealth = Math.max(0, Math.floor(health));
+    if (nextHealth < this.attributes.health && nextHealth > 0) {
+      this.applyHit(this.attributes.health - nextHealth, null);
+      return;
+    }
+
+    this.attributes.health = nextHealth;
     const animation = this.healthSkinAnimations.get(this.attributes.health);
     if (animation !== undefined) {
       this.skinAnimation = animation;
-    }
-    if (wasHit) {
-      this.hit.notify(null);
-      if (this.type.hasDrop) {
-        this.discardDrop();
-      }
     }
   }
 

@@ -916,6 +916,7 @@ export class EngineBattleCitySimulation {
     const fire = this.enemyFire.get(tank.partyIndex);
     return {
       partyIndex: tank.partyIndex,
+      health: tank.attributes.health,
       x: tank.position.x,
       y: tank.position.y,
       rotation: tank.rotation as SimulationRotation,
