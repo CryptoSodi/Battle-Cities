@@ -18,7 +18,6 @@ import {
   Vector,
 } from './core';
 import { DebugGameLoopMenu, DebugInspector } from './debug';
-import { CherryChatController } from './chat';
 import {
   AudioManager,
   GameUpdateArgs,
@@ -663,7 +662,6 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
-const cherryChat = new CherryChatController(playerIdentity);
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -922,9 +920,6 @@ sceneRouter.transitionStarted.addListener(() => {
   document.body.classList.remove('level-playing');
 });
 sceneRouter.transitionCompleted.addListener((sceneType) => {
-  if (!isHeadlessBroadcaster && !isWebRtcObserver) {
-    cherryChat.setMainMenuVisible(sceneType === GameSceneType.MainMenu);
-  }
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
@@ -1474,9 +1469,6 @@ async function main(): Promise<void> {
     if (!isReplayPlayback) {
       startPresenceTracking();
     }
-    cherryChat.setMainMenuVisible(
-      sceneRouter.getCurrentType() === GameSceneType.MainMenu,
-    );
   }
   enterGameView();
 
