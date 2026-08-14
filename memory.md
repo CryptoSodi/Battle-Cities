@@ -114,3 +114,10 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 - The API issues an HTTP-only presence identity cookie. Each tab supplies a session-scoped client ID so a website tab cannot overwrite the active state of a game tab.
 - Anonymous clients can report online presence but cannot mark themselves as in-game; that state requires an authenticated game session.
 - Replay playback, observer clients, and headless broadcasters are deliberately excluded from live player counts.
+
+## Cherry chat embed
+
+- Cherry chat uses `@cherrydotfun/chat-embed-sdk@0.1.6` and mounts only on `GameSceneType.MainMenu`; leaving the Main Menu destroys its floating iframe.
+- Embed configuration is fixed to app `148185d2-9181-4e2f-9e4d-47e5b5c12f2a`, room `ffd51288-710c-4558-83dc-d5fe9b04451d`, single-room mode, `https://embed.cherry.fun`, and the supplied dark `#FFB30F` theme.
+- `POST /api/cherry-embed-token` requires an authenticated wallet player and rejects wallet addresses that do not exactly match the server session.
+- The API reads `CHERRY_APP_ID` and `CHERRY_APP_SECRET` from `/etc/battlecities/api.env`. The secret must never be added to frontend or public environment variables.
