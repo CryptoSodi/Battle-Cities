@@ -58,6 +58,14 @@
         <section class="admin-section is-active" data-admin-section="overview">
           <div class="admin-section__title"><div><p class="admin-kicker">Live database</p><h2>Operational status</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="overview" type="button">Refresh</button></div>
           <div class="admin-metrics" data-admin-metrics></div>
+          <div class="admin-card admin-runtime-control">
+            <div>
+              <p class="admin-kicker">Main-site presence</p>
+              <h3>Live users counter</h3>
+              <p data-live-users-status>Loading…</p>
+            </div>
+            <button class="admin-button admin-button--secondary" data-live-users-toggle type="button">Loading…</button>
+          </div>
         </section>
 
         <section class="admin-section" data-admin-section="replays" hidden>
@@ -78,7 +86,7 @@
 
         <section class="admin-section" data-admin-section="players" hidden>
           <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><form class="admin-player-bar" data-player-search><label>Search<input data-player-query type="search" placeholder="Name, email, or player ID" /></label><label>Last seen from<input data-player-from type="date" /></label><label>Last seen to<input data-player-to type="date" /></label><button class="admin-button admin-button--primary" type="submit">Search</button><button class="admin-button admin-date-clear" data-player-date-clear type="button">Clear</button><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></form></div>
-          <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
+          <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>X connection</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
           <div class="admin-pagination" data-player-pagination></div>
         </section>
 

@@ -15,6 +15,17 @@ export class AdminClient {
     return this.request('/api/admin/overview');
   }
 
+  getLiveUsersSetting(): Promise<any> {
+    return this.request('/api/admin/site-settings/live-users');
+  }
+
+  setLiveUsersEnabled(enabled: boolean): Promise<any> {
+    return this.request('/api/admin/site-settings/live-users', {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    });
+  }
+
   getMatches(status = '', category = '', offset = 0): Promise<any> {
     const query = new URLSearchParams({ limit: '100', offset: String(offset) });
     if (status !== '') query.set('status', status);
@@ -41,6 +52,13 @@ export class AdminClient {
     if (lastSeenFrom !== '') search.set('lastSeenFrom', lastSeenFrom);
     if (lastSeenTo !== '') search.set('lastSeenTo', lastSeenTo);
     return this.request(`/api/admin/players?${search}`);
+  }
+
+  disconnectX(playerId: string): Promise<any> {
+    return this.request(
+      `/api/admin/players/${encodeURIComponent(playerId)}/x-connection`,
+      { method: 'DELETE' },
+    );
   }
 
   getTournaments(): Promise<any> {

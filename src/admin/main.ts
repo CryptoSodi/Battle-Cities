@@ -62,6 +62,7 @@ function bindEvents(): void {
   requireElement<HTMLFormElement>('[data-tournament-form]').addEventListener('submit', (event) => void saveTournament(event));
   requireElement<HTMLInputElement>('[data-tournament-name]').addEventListener('input', fillSlugForNewTournament);
   requireElement<HTMLButtonElement>('[data-payout-submit]').addEventListener('click', () => void distributePrizes());
+  requireElement<HTMLButtonElement>('[data-live-users-toggle]').addEventListener('click', () => void toggleLiveUsers());
   document.querySelectorAll<HTMLButtonElement>('[data-admin-logout], [data-admin-forbidden-logout]').forEach((button) => {
     button.addEventListener('click', () => void logout());
   });
@@ -114,7 +115,10 @@ async function loadReplays(resetPage = true): Promise<void> {
 
 async function loadOverview(): Promise<void> {
   await guarded(async () => {
-    const { overview } = await client.getOverview();
+    const [{ overview }, setting] = await Promise.all([
+      client.getOverview(),
+      client.getLiveUsersSetting(),
+    ]);
     const metrics = [
       ['Registered players', overview.players],
       ['All matches', overview.matches],
@@ -133,7 +137,38 @@ async function loadOverview(): Promise<void> {
         ),
       ),
     );
+    renderLiveUsersSetting(setting.enabled === true);
   });
+}
+
+function renderLiveUsersSetting(enabled: boolean): void {
+  setText(
+    '[data-live-users-status]',
+    enabled
+      ? 'Visible on the main site. Counts refresh every 30 seconds.'
+      : 'Hidden on the main site. Presence collection remains active.',
+  );
+  const button = requireElement<HTMLButtonElement>('[data-live-users-toggle]');
+  button.textContent = enabled ? 'Turn off' : 'Turn on';
+  button.className = enabled
+    ? 'admin-button admin-button--danger'
+    : 'admin-button admin-button--primary';
+  button.dataset.enabled = String(enabled);
+}
+
+async function toggleLiveUsers(): Promise<void> {
+  const button = requireElement<HTMLButtonElement>('[data-live-users-toggle]');
+  const enabled = button.dataset.enabled !== 'true';
+  button.disabled = true;
+  try {
+    const result = await client.setLiveUsersEnabled(enabled);
+    renderLiveUsersSetting(result.enabled === true);
+    message(result.enabled ? 'Live users counter enabled.' : 'Live users counter hidden.');
+  } catch (error) {
+    message(error instanceof Error ? error.message : 'Could not update live users.', true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 const METRIC_ROUTES = new Map<string, { tab: string; statusFilter?: string }>([
@@ -242,7 +277,7 @@ async function loadPlayers(resetPage = true): Promise<void> {
     const body = requireElement('[data-player-rows]');
     body.replaceChildren(...result.items.map(playerRow));
     if (result.items.length === 0 && playerOffset === 0) {
-      body.append(emptyRow(6, 'No players found'));
+      body.append(emptyRow(7, 'No players found'));
     } else if (result.items.length === 0 && playerOffset > 0) {
       playerOffset = Math.max(0, playerOffset - Number(result.limit));
       return void loadPlayers(false);
@@ -434,9 +469,46 @@ function playerRow(player: any): HTMLTableRowElement {
     tableCell(`${formatNumber(player.tokenBalance)} BACT`, `${formatNumber(player.fuelBalance)} fuel · ${Number(player.solBalance).toLocaleString()} SOL`),
     tableCell(formatNumber(player.matchesPlayed), `${formatNumber(player.matchesCompleted)} completed`),
     tableCell(formatNumber(player.bestMultiplayerScore)),
+    xConnectionCell(player),
     tableCell(formatDateTime(player.lastSeenAt)),
   );
   return row;
+}
+
+function xConnectionCell(player: any): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  if (!player.xUsername) {
+    cell.append(subtext('Not connected'));
+    return cell;
+  }
+
+  cell.append(
+    document.createTextNode(`@${player.xUsername}`),
+    subtext(player.xFollowsBattleCities ? 'Following Battle Cities' : 'Not following'),
+  );
+  const disconnect = document.createElement('button');
+  disconnect.type = 'button';
+  disconnect.className = 'admin-button admin-button--danger admin-button--replay';
+  disconnect.textContent = 'Disconnect X';
+  disconnect.title = 'Remove this player’s X connection without changing rewards';
+  disconnect.addEventListener('click', () => void disconnectPlayerX(player, disconnect));
+  cell.append(disconnect);
+  return cell;
+}
+
+async function disconnectPlayerX(player: any, button: HTMLButtonElement): Promise<void> {
+  if (!window.confirm(`Disconnect @${player.xUsername} from ${player.displayName}? The 5 Fuel follow reward remains claimed.`)) {
+    return;
+  }
+  button.disabled = true;
+  try {
+    const result = await client.disconnectX(player.id);
+    message(result.disconnected ? 'X connection removed.' : 'No X connection was found.');
+    await loadPlayers(false);
+  } catch (error) {
+    message(error instanceof Error ? error.message : 'Could not disconnect X.', true);
+    button.disabled = false;
+  }
 }
 
 function tournamentButton(tournament: any): HTMLButtonElement {
