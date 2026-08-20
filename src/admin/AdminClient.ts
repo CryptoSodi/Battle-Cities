@@ -54,11 +54,31 @@ export class AdminClient {
     return this.request(`/api/admin/players?${search}`);
   }
 
+  getXConnections(offset = 0): Promise<any> {
+    const search = new URLSearchParams({
+      limit: '100',
+      offset: String(offset),
+      xConnected: 'true',
+    });
+    return this.request(`/api/admin/players?${search}`);
+  }
+
   disconnectX(playerId: string): Promise<any> {
     return this.request(
       `/api/admin/players/${encodeURIComponent(playerId)}/x-connection`,
       { method: 'DELETE' },
     );
+  }
+
+  getXRepostTasks(): Promise<any> {
+    return this.request('/api/admin/x/repost-tasks');
+  }
+
+  createXRepostTask(post: string): Promise<any> {
+    return this.request('/api/admin/x/repost-tasks', {
+      method: 'POST',
+      body: JSON.stringify({ post }),
+    });
   }
 
   getTournaments(): Promise<any> {

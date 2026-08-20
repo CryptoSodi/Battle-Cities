@@ -50,6 +50,7 @@
           <button class="admin-tab" data-admin-tab="matches" type="button">Matches</button>
           <button class="admin-tab" data-admin-tab="replays" type="button">Single player</button>
           <button class="admin-tab" data-admin-tab="players" type="button">Players</button>
+          <button class="admin-tab" data-admin-tab="x" type="button">X</button>
           <button class="admin-tab" data-admin-tab="tournaments" type="button">Tournaments</button>
         </nav>
 
@@ -88,6 +89,17 @@
           <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><form class="admin-player-bar" data-player-search><label>Search<input data-player-query type="search" placeholder="Name, email, or player ID" /></label><label>Last seen from<input data-player-from type="date" /></label><label>Last seen to<input data-player-to type="date" /></label><button class="admin-button admin-button--primary" type="submit">Search</button><button class="admin-button admin-date-clear" data-player-date-clear type="button">Clear</button><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></form></div>
           <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>X connection</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
           <div class="admin-pagination" data-player-pagination></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="x" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Social connections</p><h2>X accounts</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="x" type="button">Refresh</button></div>
+          <form class="admin-player-bar" data-x-repost-task-form>
+            <label>Active repost task<input data-x-repost-post required placeholder="X post URL or post ID" /></label>
+            <button class="admin-button admin-button--primary" type="submit">Activate · 5 Fuel</button>
+            <span class="admin-muted" data-x-repost-task-status>No active repost task.</span>
+          </form>
+          <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>X account</th><th>Follow status</th><th>Last seen</th><th>Action</th></tr></thead><tbody data-x-rows></tbody></table></div>
+          <div class="admin-pagination" data-x-pagination></div>
         </section>
 
         <section class="admin-section" data-admin-section="tournaments" hidden>

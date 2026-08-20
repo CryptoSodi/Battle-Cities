@@ -8,6 +8,7 @@ let tournaments: any[] = [];
 let payoutTournament: any = null;
 let matchOffset = 0;
 let playerOffset = 0;
+let xOffset = 0;
 
 void initialize();
 
@@ -45,6 +46,10 @@ function bindEvents(): void {
   requireElement<HTMLFormElement>('[data-player-search]').addEventListener('submit', (event) => {
     event.preventDefault();
     void loadPlayers();
+  });
+  requireElement<HTMLFormElement>('[data-x-repost-task-form]').addEventListener('submit', (event) => {
+    event.preventDefault();
+    void saveXRepostTask();
   });
   document.querySelectorAll<HTMLInputElement>('[data-player-from], [data-player-to]').forEach((input) => {
     input.addEventListener('change', () => void loadPlayers());
@@ -90,8 +95,57 @@ async function loadSection(name: string): Promise<void> {
   if (name === 'matches') await loadMatches();
   else if (name === 'replays') await loadReplays();
   else if (name === 'players') await loadPlayers();
+  else if (name === 'x') await loadX();
   else if (name === 'tournaments') await loadTournaments();
   else await loadOverview();
+}
+
+async function loadX(): Promise<void> {
+  await Promise.all([loadXConnections(), loadXRepostTasks()]);
+}
+
+async function loadXConnections(resetPage = true): Promise<void> {
+  await guarded(async () => {
+    if (resetPage) xOffset = 0;
+    const result = await client.getXConnections(xOffset);
+    const body = requireElement('[data-x-rows]');
+    body.replaceChildren(...result.items.map(xConnectionRow));
+    if (result.items.length === 0) body.append(emptyRow(5, 'No X accounts connected.'));
+    renderPagination('[data-x-pagination]', {
+      offset: xOffset,
+      limit: Number(result.limit),
+      total: Number(result.total),
+      onPrev: () => { xOffset = Math.max(0, xOffset - Number(result.limit)); void loadXConnections(false); },
+      onNext: () => { xOffset += Number(result.limit); void loadXConnections(false); },
+    });
+  });
+}
+
+async function loadXRepostTasks(): Promise<void> {
+  const status = requireElement<HTMLElement>('[data-x-repost-task-status]');
+  const result = await client.getXRepostTasks();
+  const active = (result.items || []).find((task: any) => task.active);
+  status.textContent = active
+    ? `Active: ${active.postUrl} · ${active.rewardFuel} Fuel · ${formatDateTime(active.createdAt)}`
+    : 'No active repost task.';
+}
+
+async function saveXRepostTask(): Promise<void> {
+  const input = requireElement<HTMLInputElement>('[data-x-repost-post]');
+  const button = requireElement<HTMLButtonElement>('[data-x-repost-task-form] button[type="submit"]');
+  const post = input.value.trim();
+  if (post === '') return;
+  button.disabled = true;
+  try {
+    const result = await client.createXRepostTask(post);
+    input.value = '';
+    message(`Repost task activated for ${result.task.postUrl}.`);
+    await loadXRepostTasks();
+  } catch (error) {
+    message(error instanceof Error ? error.message : 'Could not activate repost task.', true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 let replayOffset = 0;
@@ -496,6 +550,26 @@ function xConnectionCell(player: any): HTMLTableCellElement {
   return cell;
 }
 
+function xConnectionRow(player: any): HTMLTableRowElement {
+  const row = document.createElement('tr');
+  const action = document.createElement('td');
+  const disconnect = document.createElement('button');
+  disconnect.type = 'button';
+  disconnect.className = 'admin-button admin-button--danger admin-button--replay';
+  disconnect.textContent = 'Disconnect X';
+  disconnect.title = 'Remove this player’s X connection without changing earned rewards';
+  disconnect.addEventListener('click', () => void disconnectPlayerX(player, disconnect));
+  action.append(disconnect);
+  row.append(
+    tableCell(player.displayName, player.id),
+    tableCell(`@${player.xUsername}`),
+    tableCell(player.xFollowsBattleCities ? 'Following Battle Cities' : 'Not following'),
+    tableCell(formatDateTime(player.lastSeenAt)),
+    action,
+  );
+  return row;
+}
+
 async function disconnectPlayerX(player: any, button: HTMLButtonElement): Promise<void> {
   if (!window.confirm(`Disconnect @${player.xUsername} from ${player.displayName}? The 5 Fuel follow reward remains claimed.`)) {
     return;
@@ -504,7 +578,7 @@ async function disconnectPlayerX(player: any, button: HTMLButtonElement): Promis
   try {
     const result = await client.disconnectX(player.id);
     message(result.disconnected ? 'X connection removed.' : 'No X connection was found.');
-    await loadPlayers(false);
+    await Promise.all([loadPlayers(false), loadXConnections(false)]);
   } catch (error) {
     message(error instanceof Error ? error.message : 'Could not disconnect X.', true);
     button.disabled = false;
