@@ -80,6 +80,8 @@ export class AdminClient {
       body: JSON.stringify({ post }),
     });
   }
+  getXCommentTasks(): Promise<any> { return this.request('/api/admin/x/comment-tasks'); }
+  createXCommentTask(post: string): Promise<any> { return this.request('/api/admin/x/comment-tasks', { method: 'POST', body: JSON.stringify({ post }) }); }
 
   getTournaments(): Promise<any> {
     return this.request('/api/admin/tournaments');

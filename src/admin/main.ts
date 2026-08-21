@@ -51,6 +51,7 @@ function bindEvents(): void {
     event.preventDefault();
     void saveXRepostTask();
   });
+  requireElement<HTMLFormElement>('[data-x-comment-task-form]').addEventListener('submit', (event) => { event.preventDefault(); void saveXCommentTask(); });
   document.querySelectorAll<HTMLInputElement>('[data-player-from], [data-player-to]').forEach((input) => {
     input.addEventListener('change', () => void loadPlayers());
   });
@@ -101,7 +102,7 @@ async function loadSection(name: string): Promise<void> {
 }
 
 async function loadX(): Promise<void> {
-  await Promise.all([loadXConnections(), loadXRepostTasks()]);
+  await Promise.all([loadXConnections(), loadXRepostTasks(), loadXCommentTasks()]);
 }
 
 async function loadXConnections(resetPage = true): Promise<void> {
@@ -129,6 +130,8 @@ async function loadXRepostTasks(): Promise<void> {
     ? `Active: ${active.postUrl} · ${active.rewardFuel} Fuel · ${formatDateTime(active.createdAt)}`
     : 'No active repost task.';
 }
+async function loadXCommentTasks(): Promise<void> { const status=requireElement<HTMLElement>('[data-x-comment-task-status]'); const result=await client.getXCommentTasks(); const active=(result.items||[]).find((task:any)=>task.active); status.textContent=active?`Active: ${active.postUrl} · ${active.rewardFuel} Fuel · ${formatDateTime(active.createdAt)}`:'No active comment task.'; }
+async function saveXCommentTask(): Promise<void> { const input=requireElement<HTMLInputElement>('[data-x-comment-post]'); const button=requireElement<HTMLButtonElement>('[data-x-comment-task-form] button[type="submit"]'); if(!input.value.trim())return; button.disabled=true; try{const result=await client.createXCommentTask(input.value.trim()); input.value=''; message(`Comment task activated for ${result.task.postUrl}.`); await loadXCommentTasks();}catch(error){message(error instanceof Error?error.message:'Could not activate comment task.',true);}finally{button.disabled=false;} }
 
 async function saveXRepostTask(): Promise<void> {
   const input = requireElement<HTMLInputElement>('[data-x-repost-post]');
