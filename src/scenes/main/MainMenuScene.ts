@@ -1,7 +1,11 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
 import { Menu, SpriteMenuItem } from '../../gameObjects';
-import { InputManager, MenuInputContext } from '../../input';
+import {
+  InputManager,
+  isPlaySolanaPsg1,
+  MenuInputContext,
+} from '../../input';
 import { PointsHighscoreManager } from '../../points';
 import { TradingClient } from '../../trading';
 import { EventClient } from '../../events';
@@ -301,7 +305,7 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
 
     this.root.add(this.group);
 
-    this.mobileGamepadQrEnabled = true;
+    this.mobileGamepadQrEnabled = this.shouldShowMobileGamepadQr(inputManager);
     this.ensureMobileGamepadQrElement(inputManager);
   }
 
@@ -309,7 +313,10 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
     const { deltaTime, inputManager } = updateArgs;
 
     this.updateMobileEventTicker(deltaTime);
-    this.mobileGamepadQrEnabled = true;
+    this.mobileGamepadQrEnabled = this.shouldShowMobileGamepadQr(inputManager);
+    if (!this.mobileGamepadQrEnabled) {
+      this.removeMobileGamepadQrElement();
+    }
     this.ensureMobileGamepadQrElement(inputManager);
     this.updateMobileGamepadQrVisibility(inputManager);
 
@@ -730,6 +737,12 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
         this.mobileGamepadQrRequested = false;
         console.error(error);
       });
+  }
+
+  private shouldShowMobileGamepadQr(inputManager: InputManager): boolean {
+    return !isPlaySolanaPsg1(
+      inputManager.getNativeAndroidGamepad().getDeviceProfile(),
+    );
   }
 
   private removeMobileGamepadQrElement(): void {

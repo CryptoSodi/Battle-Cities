@@ -2,6 +2,8 @@ package com.battlecities.game;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -15,6 +17,32 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private NativeGamepadBridge nativeGamepadBridge;
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (nativeGamepadBridge != null && nativeGamepadBridge.handleKeyEvent(event)) {
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent event) {
+        if (nativeGamepadBridge != null && nativeGamepadBridge.handleMotionEvent(event)) {
+            return true;
+        }
+        return super.onGenericMotionEvent(event);
+    }
+
+    @Override
+    public void onPause() {
+        if (nativeGamepadBridge != null) {
+            nativeGamepadBridge.reset();
+        }
+        super.onPause();
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
@@ -42,9 +70,11 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(AndroidDevicePlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
         registerPlugin(SolanaMobileWalletPlugin.class);
         super.onCreate(savedInstanceState);
+        nativeGamepadBridge = new NativeGamepadBridge(getBridge().getWebView());
         WebBundleUpdater.enqueue(this);
 
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);

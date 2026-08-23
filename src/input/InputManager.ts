@@ -28,7 +28,7 @@ import { InputButtonCodePresenter } from './InputButtonCodePresenter';
 import { InputControl } from './InputControl';
 import { InputDeviceType } from './InputDeviceType';
 import { InputVariant } from './InputVariant';
-import { MobileGamepadHost } from './mobile';
+import { MobileGamepadHost, NativeAndroidGamepad } from './mobile';
 
 export class InputManager {
   private deviceMap = new Map<InputDeviceType, InputDevice[]>();
@@ -36,6 +36,7 @@ export class InputManager {
   private presenters = new Map<InputDeviceType, InputButtonCodePresenter>();
   private storage: GameStorage;
   private mobileGamepadHost = new MobileGamepadHost();
+  private nativeAndroidGamepad: NativeAndroidGamepad;
   // Active device is always the one last interacted with. Use it only for
   // single-player interactions. It might be helpful when user for example
   // was playing on keyboard and then started pressing buttons on gamepad -
@@ -122,6 +123,10 @@ export class InputManager {
     this.presenters.set(
       InputDeviceType.MobileGamepad,
       new GamepadButtonCodePresenter(),
+    );
+
+    this.nativeAndroidGamepad = new NativeAndroidGamepad(
+      (control, pressed) => this.setTouchControl(control, pressed),
     );
   }
 
@@ -277,6 +282,10 @@ export class InputManager {
     return this.mobileGamepadHost;
   }
 
+  public getNativeAndroidGamepad(): NativeAndroidGamepad {
+    return this.nativeAndroidGamepad;
+  }
+
   public setTouchControl(control: InputControl, pressed: boolean): void {
     const device = this.liveDeviceMap.get(InputDeviceType.Keyboard)?.[0];
     const binding = this.getBinding(InputBindingType.PrimaryKeyboard);
@@ -378,6 +387,7 @@ export class InputManager {
         device.listen();
       }
     });
+    this.nativeAndroidGamepad.listen();
   }
 
   public unlisten(): void {
@@ -386,6 +396,7 @@ export class InputManager {
         device.unlisten();
       }
     });
+    this.nativeAndroidGamepad.unlisten();
   }
 
   public update(): void {

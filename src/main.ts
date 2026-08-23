@@ -28,6 +28,8 @@ import {
 import {
   InputHintSettings,
   InputManager,
+  isPlaySolanaPsg1,
+  isSolanaSeeker,
   MobileTouchController,
 } from './input';
 import { ManifestMapListReader, MapConfig, MapLoader } from './map';
@@ -1002,9 +1004,24 @@ function waitForLogin(): Promise<void> {
 
   return new Promise((resolve) => {
     let loginStarted = false;
+    const androidDeviceProfile = inputManager
+      .getNativeAndroidGamepad()
+      .waitForDeviceProfile();
 
     const showLogin = (): void => {
-      document.documentElement.classList.remove('auth-bootstrap');
+      void androidDeviceProfile.then((profile) => {
+        if (profile !== null) {
+          const usesNativeWallet =
+            isSolanaSeeker(profile) || isPlaySolanaPsg1(profile);
+          if (walletLoginButton !== null) {
+            walletLoginButton.hidden = !usesNativeWallet;
+          }
+          if (googleLoginButton !== null) {
+            googleLoginButton.hidden = usesNativeWallet;
+          }
+        }
+        document.documentElement.classList.remove('auth-bootstrap');
+      });
     };
 
     const setStatus = (message: string): void => {

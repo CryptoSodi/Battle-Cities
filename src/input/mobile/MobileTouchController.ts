@@ -2,6 +2,7 @@ import { Session } from '../../game';
 import { ShopInventoryItemId } from '../../shop';
 import { InputControl } from '../InputControl';
 import { InputManager } from '../InputManager';
+import { isPlaySolanaPsg1 } from './NativeAndroidGamepad';
 
 const MOBILE_LAYOUT_QUERY = '(pointer: coarse) and (max-width: 900px)';
 
@@ -55,6 +56,7 @@ export class MobileTouchController {
   private readonly powerButtons: HTMLButtonElement[];
   private lastPowerState = '__initial__';
   private wasGameplay = false;
+  private wasDeviceControlsOnly = false;
 
   constructor(inputManager: InputManager, session: Session) {
     this.inputManager = inputManager;
@@ -73,6 +75,20 @@ export class MobileTouchController {
     if (!isMobileTouchLayout()) {
       return;
     }
+
+    const deviceControlsOnly = isPlaySolanaPsg1(
+      this.inputManager.getNativeAndroidGamepad().getDeviceProfile(),
+    );
+    this.element.hidden = deviceControlsOnly;
+    if (deviceControlsOnly) {
+      if (!this.wasDeviceControlsOnly) {
+        this.releaseAll();
+      }
+      this.wasDeviceControlsOnly = true;
+      this.wasGameplay = false;
+      return;
+    }
+    this.wasDeviceControlsOnly = false;
 
     this.element.classList.toggle('is-gameplay', isGameplay);
 
