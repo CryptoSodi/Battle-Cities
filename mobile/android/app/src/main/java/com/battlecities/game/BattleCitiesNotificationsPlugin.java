@@ -27,6 +27,7 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
     public static final String CHANNEL_ID = "battle-cities-notifications";
     public static final String PREFERENCES_NAME = "battle_cities_notifications";
     public static final String TOKEN_KEY = "fcm_token";
+    public static final String PENDING_NOTIFICATION_KEY = "pending_notification";
     private static final String REQUESTED_PERMISSION_KEY = "requested_permission";
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4102;
 
@@ -70,6 +71,15 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
             NOTIFICATION_PERMISSION_REQUEST_CODE
         );
         call.resolve(registration(readToken(), "prompted"));
+    }
+
+    @PluginMethod
+    public void consumePendingNotification(PluginCall call) {
+        String payload = preferences().getString(PENDING_NOTIFICATION_KEY, "");
+        preferences().edit().remove(PENDING_NOTIFICATION_KEY).apply();
+        JSObject result = new JSObject();
+        result.put("payload", payload);
+        call.resolve(result);
     }
 
     public static void ensureNotificationChannel(Context context) {

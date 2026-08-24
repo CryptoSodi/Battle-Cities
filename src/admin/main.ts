@@ -53,6 +53,7 @@ function bindEvents(): void {
   });
   requireElement<HTMLSelectElement>('[data-notification-audience]').addEventListener('change', renderNotificationAudience);
   requireElement<HTMLSelectElement>('[data-notification-player-id]').addEventListener('change', renderNotificationAudience);
+  requireElement<HTMLSelectElement>('[data-notification-route]').addEventListener('change', renderNotificationDestination);
   requireElement<HTMLFormElement>('[data-x-repost-task-form]').addEventListener('submit', (event) => {
     event.preventDefault();
     void saveXRepostTask();
@@ -120,7 +121,17 @@ async function loadNotifications(): Promise<void> {
     requireElement('[data-notification-config]').classList.toggle('admin-status--ready', configured);
     populateNotificationPlayers(players.items || []);
     renderNotificationAudience();
+    renderNotificationDestination();
   });
+}
+
+function renderNotificationDestination(): void {
+  const route = requireElement<HTMLSelectElement>('[data-notification-route]').value;
+  const externalWrap = requireElement<HTMLElement>('[data-notification-external-wrap]');
+  const externalUrl = requireElement<HTMLInputElement>('[data-notification-external-url]');
+  const isExternal = route === 'external';
+  externalWrap.hidden = !isExternal;
+  externalUrl.required = isExternal;
 }
 
 function populateNotificationPlayers(players: any[]): void {
@@ -163,6 +174,11 @@ async function sendNotification(): Promise<void> {
   const playerId = playerSelect.value.trim();
   const title = requireElement<HTMLInputElement>('[data-notification-title]').value.trim();
   const notificationMessage = requireElement<HTMLTextAreaElement>('[data-notification-message]').value.trim();
+  const type = requireElement<HTMLSelectElement>('[data-notification-type]').value;
+  const route = requireElement<HTMLSelectElement>('[data-notification-route]').value;
+  const externalUrl = requireElement<HTMLInputElement>('[data-notification-external-url]').value.trim();
+  const imageUrl = requireElement<HTMLInputElement>('[data-notification-image-url]').value.trim();
+  const actionLabel = requireElement<HTMLInputElement>('[data-notification-action-label]').value.trim();
   const deviceCount = requireElement('[data-notification-device-count]').textContent || '0';
   if (audience === 'player' && playerId === '') {
     message('Enter a player ID before sending.', true);
@@ -173,7 +189,10 @@ async function sendNotification(): Promise<void> {
     : `${deviceCount} enabled Android device(s)`;
   if (!window.confirm(`Send this notification to ${target}?`)) return;
   await guarded(async () => {
-    const result = await client.sendNotification({ audience, playerId, title, message: notificationMessage });
+    const result = await client.sendNotification({
+      audience, playerId, title, message: notificationMessage, type, route,
+      externalUrl, imageUrl, actionLabel,
+    });
     message(`Notification sent to ${result.sent} of ${result.devices} device(s).${result.failed > 0 ? ` ${result.failed} failed.` : ''}`);
   });
 }

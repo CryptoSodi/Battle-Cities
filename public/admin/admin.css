@@ -100,6 +100,7 @@ td { font-size: 12px; line-height: 1.45; }
 .admin-tournament strong { display: block; margin-bottom: 7px; color: var(--admin-amber); }
 .admin-tournament span { color: var(--admin-muted); font-size: 11px; }
 .admin-form { display: grid; gap: 13px; }
+.admin-form__optional { color: var(--admin-muted); font-size: .8em; font-weight: 400; text-transform: none; }
 .admin-payout { grid-column: 1 / -1; }
 .admin-payout__footer { margin-top: 13px; }
 .admin-prize-input { width: 130px; }

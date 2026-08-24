@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="/data/graphics/favicon.png" />
     <link rel="stylesheet" href="/main.css" />
     <link rel="stylesheet" href="/admin/admin.css" />
-    <script defer src="/admin.js?v=notification-targets-v2"></script>
+    <script defer src="/admin.js?v=notification-composer-v1"></script>
   </head>
   <body class="admin-body">
     <main class="admin-shell">
@@ -102,6 +102,11 @@
               <label data-notification-player-wrap hidden>Player<select data-notification-player-id><option value="">Select a player</option></select></label>
               <label>Title<input data-notification-title required maxlength="80" placeholder="Battle Cities update" /></label>
               <label>Message<textarea data-notification-message required maxlength="240" rows="5" placeholder="Write the notification message"></textarea></label>
+              <label>Notification type<select data-notification-type><option value="announcement">Announcement</option><option value="reward">Reward</option><option value="event">Event</option><option value="social">Social task</option><option value="share">Share Battle Cities</option></select></label>
+              <label>When tapped<select data-notification-route><option value="home">Open main menu</option><option value="play">Open play</option><option value="shop">Open shop</option><option value="rewards">Open rewards</option><option value="social">Open social tasks</option><option value="share">Open share sheet</option><option value="external">Open external link</option></select></label>
+              <label data-notification-external-wrap hidden>External link<input data-notification-external-url type="url" inputmode="url" placeholder="https://example.com" /></label>
+              <label>Image URL <span class="admin-form__optional">optional</span><input data-notification-image-url type="url" inputmode="url" placeholder="https://.../event-art.png" /></label>
+              <label>Action label <span class="admin-form__optional">optional</span><input data-notification-action-label maxlength="32" placeholder="Play now" /></label>
               <button class="admin-button admin-button--danger" type="submit">Send notification</button>
             </form>
             <aside class="admin-card admin-notification-summary">

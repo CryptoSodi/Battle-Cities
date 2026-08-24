@@ -9,9 +9,24 @@ interface NativeNotificationRegistration {
 interface NativeNotificationPlugin {
   getRegistration(): Promise<NativeNotificationRegistration>;
   requestPermission(): Promise<NativeNotificationRegistration>;
+  consumePendingNotification(): Promise<{ payload?: string }>;
 }
 
 export class NativeNotificationClient {
+  public async consumePendingNotification(): Promise<void> {
+    const plugin = this.getPlugin();
+    if (plugin === null) return;
+    const result = await plugin.consumePendingNotification();
+    if (typeof result?.payload !== 'string' || result.payload === '') return;
+    try {
+      const detail = JSON.parse(result.payload);
+      if (typeof detail?.route === 'string') {
+        window.dispatchEvent(new CustomEvent('battlecities:notification', { detail }));
+      }
+    } catch {
+      // Ignore an invalid native payload rather than interrupting app startup.
+    }
+  }
   public async sync(): Promise<void> {
     const plugin = this.getPlugin();
     if (plugin === null) {

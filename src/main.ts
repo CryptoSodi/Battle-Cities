@@ -782,6 +782,24 @@ window.addEventListener('battlecities:android-back', (event) => {
   sceneRouter.back();
 });
 
+window.addEventListener('battlecities:notification', (event) => {
+  const detail = (event as CustomEvent<{ route?: string }>).detail;
+  switch (detail?.route) {
+    case 'play':
+      sceneRouter.start(GameSceneType.MainTankSelect);
+      break;
+    case 'shop':
+      sceneRouter.start(GameSceneType.MainShop);
+      break;
+    case 'rewards':
+      sceneRouter.start(GameSceneType.MainEvents);
+      break;
+    case 'social':
+      sceneRouter.start(GameSceneType.MainSocials);
+      break;
+  }
+});
+
 const adminReplayId = readAdminReplayId();
 const profileReplay = readProfileReplay();
 if (
@@ -1006,6 +1024,7 @@ function waitForLogin(): Promise<void> {
 
   // Register Android installs immediately; this does not require a player session.
   void nativeNotificationClient.sync().catch(() => undefined);
+  void nativeNotificationClient.consumePendingNotification().catch(() => undefined);
 
   return new Promise((resolve) => {
     let loginStarted = false;

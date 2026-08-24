@@ -65,7 +65,10 @@ export class AdminClient {
     return this.request('/api/admin/notifications');
   }
 
-  sendNotification(payload: { audience: 'all' | 'player'; playerId?: string; title: string; message: string }): Promise<any> {
+  sendNotification(payload: {
+    audience: 'all' | 'player'; playerId?: string; title: string; message: string;
+    type: string; route: string; imageUrl?: string; externalUrl?: string; actionLabel?: string;
+  }): Promise<any> {
     return this.request('/api/admin/notifications', {
       method: 'POST',
       body: JSON.stringify(payload),
