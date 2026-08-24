@@ -1004,6 +1004,9 @@ function waitForLogin(): Promise<void> {
     return Promise.resolve();
   }
 
+  // Register Android installs immediately; this does not require a player session.
+  void nativeNotificationClient.sync().catch(() => undefined);
+
   return new Promise((resolve) => {
     let loginStarted = false;
     const androidDeviceProfile = inputManager
@@ -1190,7 +1193,6 @@ function waitForLogin(): Promise<void> {
         }
 
         showLogin();
-
         apiFetch('/api/session')
           .then((response) => (response.ok ? response.json() : null))
           .then((session) => {
