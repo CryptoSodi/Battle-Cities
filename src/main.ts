@@ -40,6 +40,7 @@ import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
 import { getPhantomProvider } from './wallet';
 import { apiFetch, apiFetchDirect, getApiUrl } from './network/api';
+import { NativeNotificationClient } from './notifications/NativeNotificationClient';
 import { MagicBlockMovementSync } from './network/magicblock';
 import { WebRtcHostMatchSync } from './network/webrtc';
 import {
@@ -652,6 +653,7 @@ if (isHeadlessBroadcaster) {
 const session = new Session();
 const mobileTouchController = new MobileTouchController(inputManager, session);
 const playerIdentity = new PlayerIdentity();
+const nativeNotificationClient = new NativeNotificationClient();
 const magicBlockMovement = new MagicBlockMovementSync(playerIdentity);
 clearPlayerRuntimeOnReload();
 const multiplayerRuntime = readMultiplayerRuntime();
@@ -1043,6 +1045,7 @@ function waitForLogin(): Promise<void> {
         throw new Error('Player profile failed.');
       }
       await pointsHighscoreManager.syncWithServer();
+      void nativeNotificationClient.sync().catch(() => undefined);
     };
 
     const startServerSession = async (body: object): Promise<void> => {
@@ -1178,6 +1181,7 @@ function waitForLogin(): Promise<void> {
       .then((hasPlayer) => {
         if (hasPlayer) {
           loginStarted = true;
+          void nativeNotificationClient.sync().catch(() => undefined);
           setStatus(
             `${playerIdentity.getProviderLabel()} session is already active.`,
           );

@@ -54,6 +54,13 @@ export class AdminClient {
     return this.request(`/api/admin/players?${search}`);
   }
 
+  sendTestNotification(playerId: string): Promise<any> {
+    return this.request('/api/admin/notifications/test', {
+      method: 'POST',
+      body: JSON.stringify({ playerId }),
+    });
+  }
+
   getXConnections(offset = 0): Promise<any> {
     const search = new URLSearchParams({
       limit: '100',

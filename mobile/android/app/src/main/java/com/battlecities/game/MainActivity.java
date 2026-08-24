@@ -71,9 +71,11 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(AndroidDevicePlugin.class);
+        registerPlugin(BattleCitiesNotificationsPlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
         registerPlugin(SolanaMobileWalletPlugin.class);
         super.onCreate(savedInstanceState);
+        BattleCitiesNotificationsPlugin.ensureNotificationChannel(this);
         nativeGamepadBridge = new NativeGamepadBridge(getBridge().getWebView());
         WebBundleUpdater.enqueue(this);
 

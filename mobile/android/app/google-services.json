@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "295482350041",
+    "project_id": "battle-cities-84acd",
+    "storage_bucket": "battle-cities-84acd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:295482350041:android:5bbfcd1d539a6786fce1c8",
+        "android_client_info": {
+          "package_name": "com.battlecities.game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlBbeVBtovXOoAbQWzUTzss-lUjJ2w7XQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

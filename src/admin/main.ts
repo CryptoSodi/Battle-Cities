@@ -334,7 +334,7 @@ async function loadPlayers(resetPage = true): Promise<void> {
     const body = requireElement('[data-player-rows]');
     body.replaceChildren(...result.items.map(playerRow));
     if (result.items.length === 0 && playerOffset === 0) {
-      body.append(emptyRow(7, 'No players found'));
+      body.append(emptyRow(8, 'No players found'));
     } else if (result.items.length === 0 && playerOffset > 0) {
       playerOffset = Math.max(0, playerOffset - Number(result.limit));
       return void loadPlayers(false);
@@ -527,9 +527,35 @@ function playerRow(player: any): HTMLTableRowElement {
     tableCell(formatNumber(player.matchesPlayed), `${formatNumber(player.matchesCompleted)} completed`),
     tableCell(formatNumber(player.bestMultiplayerScore)),
     xConnectionCell(player),
+    notificationCell(player),
     tableCell(formatDateTime(player.lastSeenAt)),
   );
   return row;
+}
+
+function notificationCell(player: any): HTMLTableCellElement {
+  const cell = document.createElement('td');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'admin-button admin-button--secondary admin-button--replay';
+  button.textContent = 'Send test push';
+  button.title = 'Send a test push notification to this player’s registered Android devices';
+  button.addEventListener('click', () => void sendTestNotification(player, button));
+  cell.append(button);
+  return cell;
+}
+
+async function sendTestNotification(player: any, button: HTMLButtonElement): Promise<void> {
+  if (!window.confirm(`Send a test notification to ${player.displayName}?`)) return;
+  button.disabled = true;
+  try {
+    const result = await client.sendTestNotification(player.id);
+    message(`Test push sent to ${result.sent} of ${result.devices} registered device(s).`);
+  } catch (error) {
+    message(error instanceof Error ? error.message : 'Unable to send the test push.', true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function xConnectionCell(player: any): HTMLTableCellElement {
