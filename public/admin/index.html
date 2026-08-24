@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="/data/graphics/favicon.png" />
     <link rel="stylesheet" href="/main.css" />
     <link rel="stylesheet" href="/admin/admin.css" />
-    <script defer src="/admin.js"></script>
+    <script defer src="/admin.js?v=notification-targets-v2"></script>
   </head>
   <body class="admin-body">
     <main class="admin-shell">
@@ -99,7 +99,7 @@
               <div class="admin-card__title"><div><p class="admin-kicker">Delivery status</p><h3>Android push</h3></div><span class="admin-status" data-notification-config>Loading</span></div>
               <p class="admin-notification-count"><strong data-notification-device-count>0</strong> enabled Android devices</p>
               <label>Audience<select data-notification-audience><option value="all">All enabled Android devices</option><option value="player">One player</option></select></label>
-              <label data-notification-player-wrap hidden>Player ID<input data-notification-player-id autocomplete="off" placeholder="Player ID" /></label>
+              <label data-notification-player-wrap hidden>Player<select data-notification-player-id><option value="">Select a player</option></select></label>
               <label>Title<input data-notification-title required maxlength="80" placeholder="Battle Cities update" /></label>
               <label>Message<textarea data-notification-message required maxlength="240" rows="5" placeholder="Write the notification message"></textarea></label>
               <button class="admin-button admin-button--danger" type="submit">Send notification</button>

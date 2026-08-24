@@ -52,6 +52,7 @@ function bindEvents(): void {
     void sendNotification();
   });
   requireElement<HTMLSelectElement>('[data-notification-audience]').addEventListener('change', renderNotificationAudience);
+  requireElement<HTMLSelectElement>('[data-notification-player-id]').addEventListener('change', renderNotificationAudience);
   requireElement<HTMLFormElement>('[data-x-repost-task-form]').addEventListener('submit', (event) => {
     event.preventDefault();
     void saveXRepostTask();
@@ -109,18 +110,39 @@ async function loadSection(name: string): Promise<void> {
 
 async function loadNotifications(): Promise<void> {
   await guarded(async () => {
-    const result = await client.getNotificationStatus();
+    const [result, players] = await Promise.all([
+      client.getNotificationStatus(),
+      client.getPlayers('', '', '', 0),
+    ]);
     const configured = result.configured === true;
     setText('[data-notification-device-count]', formatNumber(Number(result.enabledDevices || 0)));
     setText('[data-notification-config]', configured ? 'Ready' : 'Not configured');
     requireElement('[data-notification-config]').classList.toggle('admin-status--ready', configured);
+    populateNotificationPlayers(players.items || []);
     renderNotificationAudience();
   });
+}
+
+function populateNotificationPlayers(players: any[]): void {
+  const select = requireElement<HTMLSelectElement>('[data-notification-player-id]');
+  const selectedPlayerId = select.value;
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select a player';
+  const options = players.map((player) => {
+    const option = document.createElement('option');
+    option.value = player.id;
+    option.textContent = `${player.displayName} (${player.provider})`;
+    return option;
+  });
+  select.replaceChildren(placeholder, ...options);
+  select.value = selectedPlayerId;
 }
 
 function renderNotificationAudience(): void {
   const audience = requireElement<HTMLSelectElement>('[data-notification-audience]').value;
   const playerWrap = requireElement<HTMLElement>('[data-notification-player-wrap]');
+  const playerSelect = requireElement<HTMLSelectElement>('[data-notification-player-id]');
   const count = requireElement('[data-notification-device-count]').textContent || '0';
   const isPlayer = audience === 'player';
   playerWrap.hidden = !isPlayer;
@@ -128,14 +150,17 @@ function renderNotificationAudience(): void {
   setText(
     '[data-notification-summary-copy]',
     isPlayer
-      ? 'The send confirmation will target only the supplied player ID.'
+      ? (playerSelect.selectedOptions[0]?.textContent === 'Select a player'
+        ? 'Select a player before sending.'
+        : `The send confirmation will target ${playerSelect.selectedOptions[0]?.textContent || 'the selected player'}.`)
       : `${count} enabled Android device(s) will receive this message.`,
   );
 }
 
 async function sendNotification(): Promise<void> {
   const audience = requireElement<HTMLSelectElement>('[data-notification-audience]').value as 'all' | 'player';
-  const playerId = requireElement<HTMLInputElement>('[data-notification-player-id]').value.trim();
+  const playerSelect = requireElement<HTMLSelectElement>('[data-notification-player-id]');
+  const playerId = playerSelect.value.trim();
   const title = requireElement<HTMLInputElement>('[data-notification-title]').value.trim();
   const notificationMessage = requireElement<HTMLTextAreaElement>('[data-notification-message]').value.trim();
   const deviceCount = requireElement('[data-notification-device-count]').textContent || '0';
@@ -143,7 +168,9 @@ async function sendNotification(): Promise<void> {
     message('Enter a player ID before sending.', true);
     return;
   }
-  const target = audience === 'player' ? 'this player' : `${deviceCount} enabled Android device(s)`;
+  const target = audience === 'player'
+    ? (playerSelect.selectedOptions[0]?.textContent || 'the selected player')
+    : `${deviceCount} enabled Android device(s)`;
   if (!window.confirm(`Send this notification to ${target}?`)) return;
   await guarded(async () => {
     const result = await client.sendNotification({ audience, playerId, title, message: notificationMessage });
