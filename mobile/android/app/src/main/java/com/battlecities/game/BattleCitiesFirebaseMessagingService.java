@@ -68,7 +68,7 @@ public class BattleCitiesFirebaseMessagingService extends FirebaseMessagingServi
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(body));
         } else {
             builder.setLargeIcon(image);
-            builder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(image).bigLargeIcon(null));
+            builder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(image));
         }
 
         String actionLabel = value(data, "actionLabel", "");
