@@ -1,6 +1,6 @@
 # Battle Cities Project Memory
 
-Last updated: 2026-08-13
+Last updated: 2026-08-24
 
 This is the durable handoff note for product decisions and operational facts. Keep it concise; use the source files and Git history for implementation detail. Never store credentials, tokens, private keys, or user data here.
 
@@ -120,3 +120,14 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 - Cherry chat is hosted only by the separate main website at `battlecities.com`; the game at `play.battlecities.com` does not mount or bundle the Cherry SDK.
 - `POST /api/cherry-embed-token` remains available for authenticated wallet integrations and rejects wallet addresses that do not exactly match the server session.
 - The API reads `CHERRY_APP_ID` and `CHERRY_APP_SECRET` from `/etc/battlecities/api.env`. The secret must never be added to frontend or public environment variables.
+
+## Android push notifications
+
+- Firebase Cloud Messaging device registration is supported by the native Android wrapper. The app registers an FCM token at launch, before login is shown.
+- A token is linked to the active player when a valid session exists. Unauthenticated device tokens may receive global broadcasts, but cannot be used for targeted player notifications until the player later signs in.
+- Push-device records live in `battlecity_push_devices`. Migration `027_allow_unlinked_push_devices.sql` intentionally permits a nullable `player_id` for pre-login registration.
+- The Admin Notifications tab supports global or single-player delivery plus a structured payload: type (`announcement`, `reward`, `event`, `social`, `share`), destination (`home`, `play`, `shop`, `rewards`, `social`, `external`, `share`), optional HTTPS image URL, optional HTTPS external URL, and optional action label.
+- Android version `1.1.7` / version code `9` is the first version with rich image handling, in-app destinations, external HTTPS link handling, and the native share sheet. Older APKs still receive the text body.
+- In-app routes are delivered through the Capacitor notification bridge and currently map to tank selection, Shop, Events/reward centre, and Socials.
+- Notification reward claims must remain server-authoritative. A push may open the reward centre, but it must never directly credit fuel, points, BACT, or other assets on the client.
+- The next notification milestone is persistent server-side campaigns and claim records: create a campaign, validate player eligibility, allow exactly one idempotent claim, write the award to the economy ledger, then show claim/delivery metrics in Admin.
