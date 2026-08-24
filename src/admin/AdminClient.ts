@@ -61,6 +61,17 @@ export class AdminClient {
     });
   }
 
+  getNotificationStatus(): Promise<any> {
+    return this.request('/api/admin/notifications');
+  }
+
+  sendNotification(payload: { audience: 'all' | 'player'; playerId?: string; title: string; message: string }): Promise<any> {
+    return this.request('/api/admin/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   getXConnections(offset = 0): Promise<any> {
     const search = new URLSearchParams({
       limit: '100',

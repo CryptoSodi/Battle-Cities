@@ -50,6 +50,7 @@
           <button class="admin-tab" data-admin-tab="matches" type="button">Matches</button>
           <button class="admin-tab" data-admin-tab="replays" type="button">Single player</button>
           <button class="admin-tab" data-admin-tab="players" type="button">Players</button>
+          <button class="admin-tab" data-admin-tab="notifications" type="button">Notifications</button>
           <button class="admin-tab" data-admin-tab="x" type="button">X</button>
           <button class="admin-tab" data-admin-tab="tournaments" type="button">Tournaments</button>
         </nav>
@@ -89,6 +90,26 @@
           <div class="admin-section__title"><div><p class="admin-kicker">Player registry</p><h2>Players</h2></div><form class="admin-player-bar" data-player-search><label>Search<input data-player-query type="search" placeholder="Name, email, or player ID" /></label><label>Last seen from<input data-player-from type="date" /></label><label>Last seen to<input data-player-to type="date" /></label><button class="admin-button admin-button--primary" type="submit">Search</button><button class="admin-button admin-date-clear" data-player-date-clear type="button">Clear</button><button class="admin-button admin-button--secondary" data-admin-refresh="players" type="button">Refresh</button></form></div>
           <div class="admin-table-wrap"><table><thead><tr><th>Player</th><th>Provider</th><th>Balances</th><th>Matches</th><th>Best score</th><th>X connection</th><th>Notifications</th><th>Last seen</th></tr></thead><tbody data-player-rows></tbody></table></div>
           <div class="admin-pagination" data-player-pagination></div>
+        </section>
+
+        <section class="admin-section" data-admin-section="notifications" hidden>
+          <div class="admin-section__title"><div><p class="admin-kicker">Player messaging</p><h2>Notifications</h2></div><button class="admin-button admin-button--secondary" data-admin-refresh="notifications" type="button">Refresh</button></div>
+          <div class="admin-notification-layout">
+            <form class="admin-card admin-form" data-notification-form>
+              <div class="admin-card__title"><div><p class="admin-kicker">Delivery status</p><h3>Android push</h3></div><span class="admin-status" data-notification-config>Loading</span></div>
+              <p class="admin-notification-count"><strong data-notification-device-count>0</strong> enabled Android devices</p>
+              <label>Audience<select data-notification-audience><option value="all">All enabled Android devices</option><option value="player">One player</option></select></label>
+              <label data-notification-player-wrap hidden>Player ID<input data-notification-player-id autocomplete="off" placeholder="Player ID" /></label>
+              <label>Title<input data-notification-title required maxlength="80" placeholder="Battle Cities update" /></label>
+              <label>Message<textarea data-notification-message required maxlength="240" rows="5" placeholder="Write the notification message"></textarea></label>
+              <button class="admin-button admin-button--danger" type="submit">Send notification</button>
+            </form>
+            <aside class="admin-card admin-notification-summary">
+              <p class="admin-kicker">Send review</p>
+              <h3 data-notification-summary-title>All enabled devices</h3>
+              <p data-notification-summary-copy>Load the notification status before sending.</p>
+            </aside>
+          </div>
         </section>
 
         <section class="admin-section" data-admin-section="x" hidden>

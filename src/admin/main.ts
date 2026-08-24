@@ -47,6 +47,11 @@ function bindEvents(): void {
     event.preventDefault();
     void loadPlayers();
   });
+  requireElement<HTMLFormElement>('[data-notification-form]').addEventListener('submit', (event) => {
+    event.preventDefault();
+    void sendNotification();
+  });
+  requireElement<HTMLSelectElement>('[data-notification-audience]').addEventListener('change', renderNotificationAudience);
   requireElement<HTMLFormElement>('[data-x-repost-task-form]').addEventListener('submit', (event) => {
     event.preventDefault();
     void saveXRepostTask();
@@ -96,9 +101,54 @@ async function loadSection(name: string): Promise<void> {
   if (name === 'matches') await loadMatches();
   else if (name === 'replays') await loadReplays();
   else if (name === 'players') await loadPlayers();
+  else if (name === 'notifications') await loadNotifications();
   else if (name === 'x') await loadX();
   else if (name === 'tournaments') await loadTournaments();
   else await loadOverview();
+}
+
+async function loadNotifications(): Promise<void> {
+  await guarded(async () => {
+    const result = await client.getNotificationStatus();
+    const configured = result.configured === true;
+    setText('[data-notification-device-count]', formatNumber(Number(result.enabledDevices || 0)));
+    setText('[data-notification-config]', configured ? 'Ready' : 'Not configured');
+    requireElement('[data-notification-config]').classList.toggle('admin-status--ready', configured);
+    renderNotificationAudience();
+  });
+}
+
+function renderNotificationAudience(): void {
+  const audience = requireElement<HTMLSelectElement>('[data-notification-audience]').value;
+  const playerWrap = requireElement<HTMLElement>('[data-notification-player-wrap]');
+  const count = requireElement('[data-notification-device-count]').textContent || '0';
+  const isPlayer = audience === 'player';
+  playerWrap.hidden = !isPlayer;
+  setText('[data-notification-summary-title]', isPlayer ? 'One player' : 'All enabled devices');
+  setText(
+    '[data-notification-summary-copy]',
+    isPlayer
+      ? 'The send confirmation will target only the supplied player ID.'
+      : `${count} enabled Android device(s) will receive this message.`,
+  );
+}
+
+async function sendNotification(): Promise<void> {
+  const audience = requireElement<HTMLSelectElement>('[data-notification-audience]').value as 'all' | 'player';
+  const playerId = requireElement<HTMLInputElement>('[data-notification-player-id]').value.trim();
+  const title = requireElement<HTMLInputElement>('[data-notification-title]').value.trim();
+  const notificationMessage = requireElement<HTMLTextAreaElement>('[data-notification-message]').value.trim();
+  const deviceCount = requireElement('[data-notification-device-count]').textContent || '0';
+  if (audience === 'player' && playerId === '') {
+    message('Enter a player ID before sending.', true);
+    return;
+  }
+  const target = audience === 'player' ? 'this player' : `${deviceCount} enabled Android device(s)`;
+  if (!window.confirm(`Send this notification to ${target}?`)) return;
+  await guarded(async () => {
+    const result = await client.sendNotification({ audience, playerId, title, message: notificationMessage });
+    message(`Notification sent to ${result.sent} of ${result.devices} device(s).${result.failed > 0 ? ` ${result.failed} failed.` : ''}`);
+  });
 }
 
 async function loadX(): Promise<void> {
