@@ -28,6 +28,7 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
     public static final String PREFERENCES_NAME = "battle_cities_notifications";
     public static final String TOKEN_KEY = "fcm_token";
     public static final String PENDING_NOTIFICATION_KEY = "pending_notification";
+    public static final String ENABLED_KEY = "notifications_enabled";
     private static final String REQUESTED_PERMISSION_KEY = "requested_permission";
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 4102;
 
@@ -74,6 +75,18 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getSettings(PluginCall call) {
+        call.resolve(settings());
+    }
+
+    @PluginMethod
+    public void setEnabled(PluginCall call) {
+        boolean enabled = call.getBoolean("enabled", true);
+        preferences().edit().putBoolean(ENABLED_KEY, enabled).apply();
+        call.resolve(settings());
+    }
+
+    @PluginMethod
     public void consumePendingNotification(PluginCall call) {
         String payload = preferences().getString(PENDING_NOTIFICATION_KEY, "");
         preferences().edit().remove(PENDING_NOTIFICATION_KEY).apply();
@@ -101,6 +114,11 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
         manager.createNotificationChannel(channel);
     }
 
+    public static boolean areNotificationsEnabled(Context context) {
+        return context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .getBoolean(ENABLED_KEY, true);
+    }
+
     private boolean hasGooglePlayServices() {
         return GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(getContext())
             == ConnectionResult.SUCCESS;
@@ -118,6 +136,9 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
         if (!hasGooglePlayServices()) {
             return "unavailable";
         }
+        if (!areNotificationsEnabled(getContext())) {
+            return "denied";
+        }
         if (isPermissionGranted()) {
             return "granted";
         }
@@ -131,6 +152,14 @@ public class BattleCitiesNotificationsPlugin extends Plugin {
         result.put("supported", hasGooglePlayServices());
         result.put("token", token);
         result.put("permission", permission);
+        return result;
+    }
+
+    private JSObject settings() {
+        JSObject result = new JSObject();
+        result.put("supported", hasGooglePlayServices());
+        result.put("enabled", areNotificationsEnabled(getContext()));
+        result.put("permission", permissionState());
         return result;
     }
 

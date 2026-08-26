@@ -6,13 +6,43 @@ interface NativeNotificationRegistration {
   permission: 'granted' | 'denied' | 'prompt' | 'prompted' | 'unavailable';
 }
 
+export interface NativeNotificationSettings {
+  supported: boolean;
+  enabled: boolean;
+  permission: NativeNotificationRegistration['permission'];
+}
+
 interface NativeNotificationPlugin {
   getRegistration(): Promise<NativeNotificationRegistration>;
   requestPermission(): Promise<NativeNotificationRegistration>;
   consumePendingNotification(): Promise<{ payload?: string }>;
+  getSettings(): Promise<NativeNotificationSettings>;
+  setEnabled(options: { enabled: boolean }): Promise<NativeNotificationSettings>;
 }
 
 export class NativeNotificationClient {
+  public isAvailable(): boolean {
+    return this.getPlugin() !== null;
+  }
+
+  public async getSettings(): Promise<NativeNotificationSettings | null> {
+    const plugin = this.getPlugin();
+    return plugin === null ? null : plugin.getSettings();
+  }
+
+  public async setEnabled(enabled: boolean): Promise<NativeNotificationSettings | null> {
+    const plugin = this.getPlugin();
+    if (plugin === null) return null;
+
+    let settings = await plugin.setEnabled({ enabled });
+    if (enabled && settings.permission === 'prompt') {
+      await plugin.requestPermission();
+      settings = await plugin.getSettings();
+    }
+    await this.sync();
+    return settings;
+  }
+
   public async consumePendingNotification(): Promise<void> {
     const plugin = this.getPlugin();
     if (plugin === null) return;

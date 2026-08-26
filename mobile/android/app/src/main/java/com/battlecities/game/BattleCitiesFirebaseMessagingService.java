@@ -32,6 +32,9 @@ public class BattleCitiesFirebaseMessagingService extends FirebaseMessagingServi
     @Override
     public void onMessageReceived(RemoteMessage message) {
         super.onMessageReceived(message);
+        if (!BattleCitiesNotificationsPlugin.areNotificationsEnabled(this)) {
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {

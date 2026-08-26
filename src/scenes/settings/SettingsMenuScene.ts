@@ -1,5 +1,6 @@
 import { AudioManager, GameStorage, GameUpdateArgs } from '../../game';
 import * as config from '../../config';
+import { NativeNotificationClient, NativeNotificationSettings } from '../../notifications/NativeNotificationClient';
 
 import { PanelScene, UI } from '../main/panelUi';
 
@@ -8,10 +9,13 @@ const MOBILE_WIDTH = 744;
 export class SettingsMenuScene extends PanelScene {
   private audioManager: AudioManager;
   private gameStorage: GameStorage;
+  private notificationClient: NativeNotificationClient;
+  private notificationSettings: NativeNotificationSettings = null;
 
   protected setup(updateArgs: GameUpdateArgs): void {
     this.audioManager = updateArgs.audioManager;
     this.gameStorage = updateArgs.gameStorage;
+    this.notificationClient = new NativeNotificationClient();
     super.setup(updateArgs);
   }
 
@@ -49,6 +53,9 @@ export class SettingsMenuScene extends PanelScene {
 
   protected load(): void {
     this.statusText = '';
+    if (this.notificationClient.isAvailable() && this.notificationSettings === null) {
+      void this.loadNotificationSettings();
+    }
   }
 
   protected renderContent(): void {
@@ -159,6 +166,19 @@ export class SettingsMenuScene extends PanelScene {
       () => this.toggleMute(),
       mobile,
     );
+    if (this.notificationClient.isAvailable()) {
+      this.renderSettingRow(
+        x + inset,
+        firstRowY + (rowHeight + rowGap) * 2,
+        rowWidth,
+        rowHeight,
+        'NOTIFICATIONS',
+        this.notificationsAreEnabled(),
+        'notifications',
+        () => this.toggleNotifications(),
+        mobile,
+      );
+    }
     this.renderSettingRow(
       x + inset,
       firstRowY + rowHeight + rowGap,
@@ -222,6 +242,38 @@ export class SettingsMenuScene extends PanelScene {
     this.gameStorage.save();
     document.body.classList.toggle('scanlines-disabled', !nextEnabled);
     this.refresh('scanline');
+  }
+
+  private async loadNotificationSettings(): Promise<void> {
+    try {
+      this.notificationSettings = await this.notificationClient.getSettings();
+      this.refresh('notification-state');
+    } catch {
+      this.statusText = 'ANDROID NOTIFICATIONS UNAVAILABLE';
+    }
+  }
+
+  private toggleNotifications(): void {
+    const nextEnabled = !this.notificationsAreEnabled();
+    this.statusText = 'UPDATING ANDROID NOTIFICATIONS';
+    this.refresh('notifications');
+    void this.notificationClient.setEnabled(nextEnabled)
+      .then((settings) => {
+        this.notificationSettings = settings;
+        this.statusText = settings?.enabled
+          ? 'ANDROID NOTIFICATIONS ON'
+          : 'ANDROID NOTIFICATIONS OFF';
+        this.refresh('notifications');
+      })
+      .catch(() => {
+        this.statusText = 'ANDROID NOTIFICATIONS UNAVAILABLE';
+        this.refresh('notifications');
+      });
+  }
+
+  private notificationsAreEnabled(): boolean {
+    return this.notificationSettings?.supported === true &&
+      this.notificationSettings.enabled;
   }
 
   private isScanlinesEnabled(): boolean {
