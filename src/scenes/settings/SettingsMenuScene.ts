@@ -273,7 +273,8 @@ export class SettingsMenuScene extends PanelScene {
 
   private notificationsAreEnabled(): boolean {
     return this.notificationSettings?.supported === true &&
-      this.notificationSettings.enabled;
+      this.notificationSettings.enabled &&
+      this.notificationSettings.permission === 'granted';
   }
 
   private isScanlinesEnabled(): boolean {
