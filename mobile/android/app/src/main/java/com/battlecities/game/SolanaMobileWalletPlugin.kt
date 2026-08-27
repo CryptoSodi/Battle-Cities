@@ -1,7 +1,10 @@
 package com.battlecities.game
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.util.Base64
 import com.funkatronics.encoders.Base58
@@ -36,6 +39,30 @@ class SolanaMobileWalletPlugin : Plugin() {
             )
         )
         walletAdapter.authToken = preferences().getString(AUTH_TOKEN_KEY, null)
+    }
+
+    @PluginMethod
+    fun isAvailable(call: PluginCall) {
+        val associationIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("solana-wallet:/v1/associate/local")
+        ).addCategory(Intent.CATEGORY_BROWSABLE)
+        val wallets = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.queryIntentActivities(
+                associationIntent,
+                PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.queryIntentActivities(
+                associationIntent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            )
+        }
+
+        val response = JSObject()
+        response.put("available", wallets.isNotEmpty())
+        call.resolve(response)
     }
 
     @PluginMethod

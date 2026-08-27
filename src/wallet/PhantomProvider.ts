@@ -18,6 +18,7 @@ type PhantomWindow = Window & {
 };
 
 interface NativeSolanaMobileWallet {
+  isAvailable: () => Promise<{ available: boolean }>;
   connect: () => Promise<{ publicKey: string }>;
   signMessage: (options: {
     messageBase64: string;
@@ -25,6 +26,21 @@ interface NativeSolanaMobileWallet {
   signTransaction: (options: {
     transactionBase64: string;
   }) => Promise<{ transactionBase64: string }>;
+}
+
+export async function hasNativeMobileWalletAdapter(): Promise<boolean> {
+  const isAndroidNative =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  if (!isAndroidNative) {
+    return false;
+  }
+
+  try {
+    const result = await nativeWallet.isAvailable();
+    return result.available === true;
+  } catch {
+    return false;
+  }
 }
 
 const nativeWallet = registerPlugin<NativeSolanaMobileWallet>(

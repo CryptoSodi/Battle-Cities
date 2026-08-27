@@ -38,7 +38,10 @@ import { SavedReplay } from './replay';
 import { GameSceneRouter, GameSceneType } from './scenes';
 import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
-import { getPhantomProvider } from './wallet';
+import {
+  getPhantomProvider,
+  hasNativeMobileWalletAdapter,
+} from './wallet';
 import { apiFetch, apiFetchDirect, getApiUrl } from './network/api';
 import { NativeNotificationClient } from './notifications/NativeNotificationClient';
 import { MagicBlockMovementSync } from './network/magicblock';
@@ -1033,10 +1036,13 @@ function waitForLogin(): Promise<void> {
       .waitForDeviceProfile();
 
     const showLogin = (): void => {
-      void androidDeviceProfile.then((profile) => {
+      void androidDeviceProfile.then(async (profile) => {
         if (profile !== null) {
+          const hasMwaWallet = await hasNativeMobileWalletAdapter();
           const usesNativeWallet =
-            isSolanaSeeker(profile) || isPlaySolanaPsg1(profile);
+            isSolanaSeeker(profile) ||
+            isPlaySolanaPsg1(profile) ||
+            hasMwaWallet;
           if (walletLoginButton !== null) {
             walletLoginButton.hidden = !usesNativeWallet;
           }
