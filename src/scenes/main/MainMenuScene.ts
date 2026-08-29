@@ -1,6 +1,6 @@
 import { GameObject, SpriteAlignment, SpritePainter } from '../../core';
 import { GameUpdateArgs, Session } from '../../game';
-import { Menu, SpriteMenuItem } from '../../gameObjects';
+import { ConfirmModal, Menu, SpriteMenuItem } from '../../gameObjects';
 import {
   InputManager,
   isPlaySolanaPsg1,
@@ -13,6 +13,7 @@ import { PlayerIdentity } from '../../auth';
 import { beginSinglePlayerReplaySession } from '../../replay';
 import * as config from '../../config';
 import { apiFetch } from '../../network/api';
+import { NativeNotificationClient } from '../../notifications/NativeNotificationClient';
 import { Painter } from '../../core/Painter';
 import { RenderContext } from '../../core/render';
 import { RenderObject } from '../../core/RenderObject';
@@ -24,6 +25,7 @@ import { GameSceneType } from '../GameSceneType';
 const SLIDE_SPEED = 240;
 const MOBILE_EVENT_TICKER_SPEED = 52;
 const HUD_FONT = UI_FONT_FAMILY;
+let notificationPromptDismissedThisSession = false;
 
 class HudTextPainter extends Painter {
   constructor(
@@ -157,6 +159,10 @@ export class MainMenuScene extends GameScene {
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mobileGamepadQrEnabled = false;
+  private notificationClient = new NativeNotificationClient();
+  private notificationPrompt: ConfirmModal = null;
+  private notificationPromptReady = false;
+  private notificationPromptVisible = false;
 
   protected setup({
     inputManager,
@@ -305,6 +311,8 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
 
     this.root.add(this.group);
 
+    this.setupNotificationPrompt(isMobileLayout);
+
     this.mobileGamepadQrEnabled = this.shouldShowMobileGamepadQr(inputManager);
     this.ensureMobileGamepadQrElement(inputManager);
   }
@@ -358,7 +366,64 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
       return;
     }
 
+    this.showNotificationPromptWhenReady();
+    if (this.notificationPromptVisible) {
+      this.notificationPrompt.traverse((node) => node.invokeUpdate(updateArgs));
+      return;
+    }
+
     super.update(updateArgs);
+  }
+
+  private setupNotificationPrompt(isMobileLayout: boolean): void {
+    if (!this.notificationClient.isAvailable()) return;
+
+    this.notificationPrompt = new ConfirmModal({
+      containerWidth: isMobileLayout ? 640 : 560,
+      containerHeight: isMobileLayout ? 300 : 256,
+      message: 'GET MATCH, REWARD, AND\nBATTLE CITIES UPDATES.',
+      acceptText: 'ENABLE',
+      declineText: 'NOT NOW',
+    });
+    this.notificationPrompt.size.copyFrom(this.root.size);
+    this.notificationPrompt.updateMatrix();
+    this.notificationPrompt.setVisible(false);
+    this.notificationPrompt.accepted.addListener(this.handleNotificationPromptAccepted);
+    this.notificationPrompt.declined.addListener(this.handleNotificationPromptDeclined);
+    this.root.add(this.notificationPrompt);
+
+    void this.prepareNotificationPrompt();
+  }
+
+  private async prepareNotificationPrompt(): Promise<void> {
+    if (notificationPromptDismissedThisSession) return;
+
+    try {
+      const settings = await this.notificationClient.getSettings();
+      this.notificationPromptReady = settings?.supported === true &&
+        settings.enabled &&
+        settings.permission !== 'granted';
+    } catch {
+      this.notificationPromptReady = false;
+    }
+  }
+
+  private showNotificationPromptWhenReady(): void {
+    if (!this.notificationPromptReady || this.notificationPromptVisible) return;
+
+    this.notificationPromptReady = false;
+    this.notificationPromptVisible = true;
+    this.notificationPrompt.resetSelection();
+    this.notificationPrompt.setVisible(true);
+    this.root.setNeedsPaint();
+  }
+
+  private hideNotificationPrompt(): void {
+    if (!this.notificationPromptVisible) return;
+
+    this.notificationPromptVisible = false;
+    this.notificationPrompt.setVisible(false);
+    this.root.setNeedsPaint();
   }
 
   private setupHud(
@@ -601,6 +666,17 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
     const playerName = safeName || 'PLAYER';
     return playerName.length > 18 ? `${playerName.slice(0, 17)}-` : playerName;
   }
+
+  private handleNotificationPromptAccepted = (): void => {
+    notificationPromptDismissedThisSession = true;
+    this.hideNotificationPrompt();
+    void this.notificationClient.requestPermission().catch(() => undefined);
+  };
+
+  private handleNotificationPromptDeclined = (): void => {
+    notificationPromptDismissedThisSession = true;
+    this.hideNotificationPrompt();
+  };
 
   private handleSinglePlayerSelected = (): void => {
     beginSinglePlayerReplaySession();

@@ -35,10 +35,20 @@ export class NativeNotificationClient {
     if (plugin === null) return null;
 
     let settings = await plugin.setEnabled({ enabled });
-    if (enabled && settings.permission === 'prompt') {
+    if (enabled && settings.permission !== 'granted') {
       await plugin.requestPermission();
       settings = await plugin.getSettings();
     }
+    await this.sync();
+    return settings;
+  }
+
+  public async requestPermission(): Promise<NativeNotificationSettings | null> {
+    const plugin = this.getPlugin();
+    if (plugin === null) return null;
+
+    await plugin.requestPermission();
+    const settings = await plugin.getSettings();
     await this.sync();
     return settings;
   }
@@ -63,11 +73,7 @@ export class NativeNotificationClient {
       return;
     }
 
-    let registration = await plugin.getRegistration();
-    if (registration.permission === 'prompt') {
-      await plugin.requestPermission();
-      registration = await plugin.getRegistration();
-    }
+    const registration = await plugin.getRegistration();
 
     if (!registration.supported || registration.token === null) {
       return;
