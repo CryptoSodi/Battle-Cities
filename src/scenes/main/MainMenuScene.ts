@@ -402,7 +402,7 @@ this.multiPlayerItem = createMenuItem('menu.item.2players');
       const settings = await this.notificationClient.getSettings();
       this.notificationPromptReady = settings?.supported === true &&
         settings.enabled &&
-        settings.permission !== 'granted';
+        settings.permission === 'denied';
     } catch {
       this.notificationPromptReady = false;
     }

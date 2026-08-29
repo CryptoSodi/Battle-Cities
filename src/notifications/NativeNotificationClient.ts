@@ -73,7 +73,11 @@ export class NativeNotificationClient {
       return;
     }
 
-    const registration = await plugin.getRegistration();
+    let registration = await plugin.getRegistration();
+    if (registration.permission === 'prompt') {
+      await plugin.requestPermission();
+      registration = await plugin.getRegistration();
+    }
 
     if (!registration.supported || registration.token === null) {
       return;
