@@ -1,0 +1,416 @@
+:root {
+  --bc-bg: #06090b;
+  --bc-panel: #0d1216;
+  --bc-panel-raised: #162027;
+  --bc-line: #3a4952;
+  --bc-text: #f5f2e8;
+  --bc-muted: #a3adb0;
+  --bc-command: #ffb30f;
+  --bc-command-dim: #a96a05;
+  --bc-command-glow: rgb(255 179 15 / 45%);
+  --bc-blue: #1677ff;
+  --bc-ready: #47de17;
+  --bc-ready-dark: #105b0c;
+  --bc-danger: #f04432;
+  --bc-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.web-ui {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+body.game-running.web-ui-active {
+  align-items: stretch;
+  background: var(--bc-bg);
+  display: block;
+  overflow: auto;
+}
+
+body.game-running.web-ui-active .game-stage {
+  display: none !important;
+}
+
+body.game-running.web-ui-active .web-ui {
+  display: block;
+}
+
+.main-menu-web {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  position: relative;
+}
+
+.main-menu-web::before {
+  background: linear-gradient(90deg, rgb(6 9 11 / 88%), rgb(6 9 11 / 48%)),
+    url('/assets/main-menu-battlefield.png') center / cover no-repeat;
+  content: '';
+  inset: 0;
+  position: absolute;
+  z-index: -2;
+}
+
+.main-menu-web::after {
+  background: linear-gradient(180deg, rgb(6 9 11 / 15%), rgb(6 9 11 / 82%));
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.main-menu-web__hud {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 0.8fr)
+    minmax(180px, 1fr);
+  margin: 0 auto;
+  max-width: 860px;
+  width: 100%;
+}
+
+.main-menu-web__stat {
+  align-items: center;
+  background: rgb(13 18 22 / 92%);
+  border: 1px solid var(--bc-line);
+  box-sizing: border-box;
+  display: grid;
+  gap: 4px;
+  min-height: 88px;
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.main-menu-web__stat--score {
+  border-color: var(--bc-command-dim);
+}
+
+.main-menu-web__stat-label {
+  color: var(--bc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.main-menu-web__stat-value {
+  color: var(--bc-text);
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-menu-web__stat--score .main-menu-web__stat-value {
+  color: var(--bc-command);
+}
+
+.main-menu-web__events {
+  align-items: center;
+  background: rgb(13 18 22 / 94%);
+  border: 1px solid var(--bc-command-dim);
+  color: var(--bc-text);
+  cursor: default;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin: 12px auto 0;
+  min-height: 52px;
+  overflow: hidden;
+  padding: 0 20px;
+  text-align: left;
+  width: min(100%, 760px);
+}
+
+.main-menu-web__events:focus-visible,
+.main-menu-web__action:focus-visible,
+.main-menu-web__dialog-button:focus-visible {
+  outline: 3px solid var(--bc-command);
+  outline-offset: 3px;
+}
+
+.main-menu-web__events-label {
+  color: var(--bc-command);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  white-space: nowrap;
+}
+
+.main-menu-web__events-viewport {
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  overflow: hidden;
+}
+
+.main-menu-web__events-track {
+  color: var(--bc-text);
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-menu-web__content {
+  align-items: center;
+  display: grid;
+  gap: clamp(28px, 6vw, 88px);
+  grid-template-columns: minmax(220px, 0.9fr) minmax(300px, 420px);
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 32px 0 24px;
+  width: 100%;
+}
+
+.main-menu-web__brand {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.main-menu-web__logo {
+  display: block;
+  filter: drop-shadow(0 12px 30px rgb(0 0 0 / 55%));
+  height: auto;
+  max-height: 430px;
+  max-width: min(100%, 430px);
+  object-fit: contain;
+  width: 100%;
+}
+
+.main-menu-web__commands {
+  background: rgb(6 9 11 / 82%);
+  border: 1px solid var(--bc-line);
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.main-menu-web__command-label {
+  color: var(--bc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.main-menu-web__action {
+  align-items: center;
+  background: var(--bc-panel-raised);
+  border: 1px solid var(--bc-line);
+  box-sizing: border-box;
+  color: var(--bc-text);
+  cursor: pointer;
+  display: grid;
+  font: 700 18px/1 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', Arial,
+    sans-serif;
+  grid-template-columns: 34px 1fr auto;
+  letter-spacing: 1.3px;
+  min-height: 52px;
+  padding: 0 16px;
+  text-align: left;
+  text-transform: uppercase;
+  transition: background-color 160ms var(--bc-ease),
+    border-color 160ms var(--bc-ease), transform 160ms var(--bc-ease);
+  width: 100%;
+}
+
+.main-menu-web__action::before {
+  color: var(--bc-command);
+  content: attr(data-index);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.main-menu-web__action::after {
+  color: var(--bc-muted);
+  content: '›';
+  font-size: 28px;
+  line-height: 1;
+}
+
+.main-menu-web__action:hover,
+.main-menu-web__action.is-focused {
+  background: #201d08;
+  border-color: var(--bc-command);
+  transform: translateX(4px);
+}
+
+.main-menu-web__action--primary {
+  background: var(--bc-ready-dark);
+  border-color: var(--bc-ready);
+}
+
+.main-menu-web__action--primary::before,
+.main-menu-web__action--primary::after {
+  color: var(--bc-ready);
+}
+
+.main-menu-web__action--danger:hover,
+.main-menu-web__action--danger.is-focused {
+  background: #32100c;
+  border-color: var(--bc-danger);
+}
+
+.main-menu-web__action--danger::before,
+.main-menu-web__action--danger::after {
+  color: var(--bc-danger);
+}
+
+.main-menu-web__footer {
+  color: var(--bc-muted);
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  margin: 0 auto;
+  max-width: 1100px;
+  text-align: center;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.main-menu-web__dialog {
+  background: var(--bc-panel);
+  border: 1px solid var(--bc-command-dim);
+  color: var(--bc-text);
+  max-width: 480px;
+  padding: 28px;
+  width: calc(100% - 48px);
+}
+
+.main-menu-web__dialog::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+.main-menu-web__dialog h2 {
+  color: var(--bc-command);
+  font-size: 22px;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.main-menu-web__dialog p {
+  color: var(--bc-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.main-menu-web__dialog-actions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 24px;
+}
+
+.main-menu-web__dialog-button {
+  background: var(--bc-panel-raised);
+  border: 1px solid var(--bc-line);
+  color: var(--bc-text);
+  cursor: pointer;
+  font: 700 16px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  min-height: 46px;
+  text-transform: uppercase;
+}
+
+.main-menu-web__dialog-button--accept {
+  background: var(--bc-ready-dark);
+  border-color: var(--bc-ready);
+}
+
+@media (max-width: 760px) {
+  .main-menu-web {
+    overflow: visible;
+  }
+
+  .main-menu-web::before {
+    background-image: linear-gradient(
+        180deg,
+        rgb(6 9 11 / 28%),
+        rgb(6 9 11 / 88%) 48%
+      ),
+      url('/assets/main-menu-battlefield-mobile.png');
+  }
+
+  .main-menu-web__hud {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .main-menu-web__stat {
+    min-height: 72px;
+    padding: 12px;
+  }
+
+  .main-menu-web__stat:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .main-menu-web__events {
+    gap: 8px;
+    grid-template-columns: 1fr;
+    min-height: 64px;
+    padding: 10px 14px;
+  }
+
+  .main-menu-web__content {
+    gap: 16px;
+    grid-template-columns: 1fr;
+    padding-top: 20px;
+  }
+
+  .main-menu-web__brand {
+    max-height: 180px;
+  }
+
+  .main-menu-web__logo {
+    max-height: 220px;
+    max-width: 220px;
+  }
+
+  .main-menu-web__commands {
+    padding: 12px;
+  }
+
+  .main-menu-web__action {
+    min-height: 56px;
+  }
+}
+
+@media (max-width: 420px) {
+  .main-menu-web__stat-value {
+    font-size: 19px;
+  }
+
+  .main-menu-web__action {
+    font-size: 16px;
+    grid-template-columns: 28px 1fr auto;
+    padding: 0 12px;
+  }
+
+  .main-menu-web__dialog-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu-web__action {
+    transition: none;
+  }
+}

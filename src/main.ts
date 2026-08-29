@@ -50,6 +50,7 @@ import {
   clearPlayerRuntimeOnReload,
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
+import { MainMenuWebUi } from './webUi/MainMenuWebUi';
 
 import * as config from './config';
 
@@ -219,6 +220,12 @@ syncMobileCanvasCssSize();
 
 let resizeTimeoutId: number = null;
 window.addEventListener('resize', () => {
+  // HTML screens reflow through CSS and must not inherit the canvas scene
+  // rebuild behavior used by fixed-coordinate gameplay/panel scenes.
+  if (document.body.classList.contains('web-ui-active')) {
+    return;
+  }
+
   // Mobile browser chrome, fullscreen, and orientation changes all emit
   // resize events. CSS owns the half-screen mobile layout, so rebuilding the
   // scene here would only destroy the active match and its recording.
@@ -669,6 +676,15 @@ const pointsHighscoreManager = new PointsHighscoreManager(gameStorage);
 const collisionSystem = new CollisionSystem();
 
 const sceneRouter = new GameSceneRouter();
+const mainMenuWebUi = new MainMenuWebUi({
+  inputManager,
+  isDev: config.IS_DEV,
+  navigator: sceneRouter,
+  notificationClient: nativeNotificationClient,
+  playerIdentity,
+  pointsHighscoreManager,
+  session,
+});
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -941,10 +957,14 @@ function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
   });
 }
 sceneRouter.transitionStarted.addListener(() => {
+  mainMenuWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
 sceneRouter.transitionCompleted.addListener((sceneType) => {
+  if (sceneType === GameSceneType.MainMenu) {
+    mainMenuWebUi.mount();
+  }
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
@@ -1335,6 +1355,9 @@ gameLoop.update.addListener((event) => {
     });
   }
   scene.invokeUpdate(updateArgs);
+  if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
+    mainMenuWebUi.update();
+  }
 
   const replayDeadline = performance.now() + 8;
   let replaySteps = 0;
@@ -1363,6 +1386,7 @@ gameLoop.render.addListener((event) => {
 
   stats.begin();
   const currentSceneType = sceneRouter.getCurrentType();
+  const isWebUiActive = currentSceneType === GameSceneType.MainMenu;
   document.body.classList.toggle(
     'main-menu-active',
     currentSceneType === GameSceneType.MainMenu,
@@ -1397,28 +1421,34 @@ gameLoop.render.addListener((event) => {
       currentSceneType === GameSceneType.MainTreasury ||
       currentSceneType === GameSceneType.MainWiki,
   );
-  syncMobileCanvasCssSize();
+  if (!isWebUiActive) {
+    syncMobileCanvasCssSize();
+  }
 
   const scene = sceneRouter.getCurrentScene();
   const root = scene.getRoot();
   // The scene root is built on the scene's first update. Skip rendering until
   // it exists — e.g. a frame between scene transitions where no sim step has
   // run for the newly-current scene yet.
-  if (root != null) {
+  if (!isWebUiActive && root != null) {
     gameRenderer.render(root, event.alpha);
   }
 
   // Cosmetic particle overlay: advance + draw once per animation frame using
   // real elapsed time, independent of the fixed sim step. Clamped so a
   // backgrounded tab doesn't fast-forward the effects on return.
-  const now = performance.now();
-  const particleDt =
-    lastParticleTime === null
-      ? 0
-      : Math.min(0.05, (now - lastParticleTime) / 1000);
-  lastParticleTime = now;
-  particles.update(particleDt);
-  particles.render();
+  if (isWebUiActive) {
+    lastParticleTime = null;
+  } else {
+    const now = performance.now();
+    const particleDt =
+      lastParticleTime === null
+        ? 0
+        : Math.min(0.05, (now - lastParticleTime) / 1000);
+    lastParticleTime = now;
+    particles.update(particleDt);
+    particles.render();
+  }
 
   gameState.update();
   updateMobileGamepadDebug();
@@ -1445,40 +1475,6 @@ async function preloadUiFont(): Promise<void> {
     fontSet.load('600 24px "Battle Cities UI"'),
     fontSet.load('700 24px "Battle Cities UI"'),
   ]);
-}
-
-function getInitialMenuSpriteIds(): string[] {
-  const ids = [
-    'menu.item.start',
-    'menu.item.shop',
-    'menu.item.ranking',
-    'menu.item.headquarters',
-    'menu.item.settings',
-    'menu.item.logout',
-  ];
-
-  if (config.IS_DEV) {
-    ids.push(
-      'menu.item.2players',
-      'menu.item.modes',
-      'menu.item.construction',
-      'menu.item.replay',
-    );
-  }
-
-  if (config.isMobileTouchViewport()) {
-    ids.push(
-      'menu.background.mobile',
-      'menu.hud.player',
-      'menu.hud.score',
-      'menu.hud.highScore',
-      'menu.hud.eventBar',
-    );
-  } else {
-    ids.push('menu.background');
-  }
-
-  return ids;
 }
 
 function startBackgroundSpritePreload(): void {
@@ -1551,10 +1547,6 @@ async function main(): Promise<void> {
   );
   log.timeEnd('Color sprite font generation');
 
-  log.time('Menu sprites preload');
-  await spriteLoader.preloadAsync(getInitialMenuSpriteIds());
-  log.timeEnd('Menu sprites preload');
-
   log.time('Input bindings load');
   inputManager.loadAllBindings();
   log.timeEnd('Input bindings load');
@@ -1572,6 +1564,9 @@ async function main(): Promise<void> {
     const particleCanvas = particles.getDomElement();
     gameStage.appendChild(particleCanvas);
     logCanvasSize('Particle', particleCanvas);
+    if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
+      mainMenuWebUi.mount();
+    }
   } else {
     document.body.classList.add('headless-broadcaster');
     log.info('Headless WebRTC broadcaster simulation started');
