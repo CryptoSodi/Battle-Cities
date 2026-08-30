@@ -139,8 +139,8 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__stat--player .main-menu-web__stat-value {
   font-size: clamp(11px, 2.98cqw, 18px);
   height: 28%;
-  left: 38%;
-  top: 31%;
+  left: 34%;
+  top: 24%;
   width: 56%;
 }
 
@@ -210,13 +210,21 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__events-track {
-  animation: main-menu-web-event-ticker 12s linear infinite;
+  align-items: center;
+  animation: main-menu-web-event-ticker 14s linear infinite;
   color: var(--bc-text);
-  display: block;
-  left: 100%;
+  display: flex;
+  height: 100%;
+  left: 0;
   position: absolute;
+  top: 0;
   width: max-content;
   will-change: transform;
+}
+
+.main-menu-web__events-track > span {
+  flex: none;
+  padding-right: clamp(32px, 6vw, 72px);
 }
 
 @keyframes main-menu-web-event-ticker {
@@ -225,7 +233,7 @@ body.game-running.web-ui-active .web-ui {
   }
 
   to {
-    transform: translateX(-300%);
+    transform: translateX(-50%);
   }
 }
 
@@ -464,5 +472,9 @@ body.game-running.web-ui-active .web-ui {
     animation: none;
     left: 0;
     position: relative;
+  }
+
+  .main-menu-web__events-track > [aria-hidden='true'] {
+    display: none;
   }
 }

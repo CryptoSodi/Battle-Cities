@@ -48,6 +48,7 @@ Build toward:
 ## Work Rules
 
 - Preserve the original game logic where possible.
+- After a future implementation task is complete, bump the appropriate application version and push the completed work to the configured remote unless the user says otherwise.
 - Make small, safe changes.
 - Avoid large rewrites unless needed for multiplayer architecture.
 - Separate networking logic from core gameplay logic.

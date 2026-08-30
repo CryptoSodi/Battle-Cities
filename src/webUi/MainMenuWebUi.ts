@@ -211,7 +211,10 @@ export class MainMenuWebUi {
         <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
           <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
           <span class="main-menu-web__events-viewport">
-            <span class="main-menu-web__events-track" data-menu-events role="status" aria-live="polite">Loading live operations...</span>
+            <span class="main-menu-web__events-track" role="status" aria-live="polite">
+              <span data-menu-events-primary>Loading live operations...</span>
+              <span data-menu-events-repeat aria-hidden="true">Loading live operations...</span>
+            </span>
           </span>
         </button>
 
@@ -425,8 +428,7 @@ export class MainMenuWebUi {
     if (!this.active || mountId !== this.mountId) return;
 
     const liveEvents = events.filter((event) => event.status === 'live');
-    this.setText(
-      '[data-menu-events]',
+    this.setEventTickerText(
       liveEvents.length === 0
         ? 'No live events right now'
         : liveEvents.map((event) => event.name.toUpperCase()).join('  ·  '),
@@ -544,5 +546,10 @@ export class MainMenuWebUi {
     if (element !== null && element !== undefined) {
       element.textContent = value;
     }
+  }
+
+  private setEventTickerText(value: string): void {
+    this.setText('[data-menu-events-primary]', value);
+    this.setText('[data-menu-events-repeat]', value);
   }
 }
