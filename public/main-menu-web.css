@@ -55,7 +55,14 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web::before {
-  background: url('/assets/main-menu-battlefield.png') center / cover no-repeat;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(6 9 11 / 8%),
+      rgb(6 9 11 / 16%) 48%,
+      rgb(6 9 11 / 48%)
+    ),
+    url('/assets/main-menu-battlefield.png') center / cover no-repeat;
   content: '';
   inset: 0;
   position: absolute;
@@ -63,14 +70,18 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web::after {
-  background: linear-gradient(
-    180deg,
-    rgb(6 9 11 / 8%),
-    rgb(6 9 11 / 16%) 48%,
-    rgb(6 9 11 / 48%)
-  );
+  background-image:
+    linear-gradient(var(--bc-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bc-line) 1px, transparent 1px);
+  background-size: 42px 42px;
   content: '';
   inset: 0;
+  mask-image: radial-gradient(
+    ellipse 80% 60% at 50% 20%,
+    #000 20%,
+    transparent 75%
+  );
+  opacity: 0.5;
   pointer-events: none;
   position: absolute;
   z-index: -1;
@@ -419,7 +430,14 @@ body.game-running.web-ui-active .web-ui {
 
 @media (max-width: 760px) {
   .main-menu-web::before {
-    background-image: url('/assets/main-menu-battlefield-mobile.png');
+    background-image:
+      linear-gradient(
+        180deg,
+        rgb(6 9 11 / 8%),
+        rgb(6 9 11 / 16%) 48%,
+        rgb(6 9 11 / 48%)
+      ),
+      url('/assets/main-menu-battlefield-mobile.png');
   }
 
   .main-menu-web::after {
