@@ -285,12 +285,13 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__action[data-menu-action='ranking'],
 .main-menu-web__action[data-menu-action='headquarters'],
 .main-menu-web__action[data-menu-action='socials'],
+.main-menu-web__action[data-menu-action='settings'],
 .main-menu-web__action[data-menu-action='logout'] {
   background-color: transparent;
   background-image: var(--bc-menu-button-image);
   background-position: center;
   background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background-size: contain;
   border-color: transparent;
   padding-left: 29%;
   padding-right: 14%;
@@ -322,6 +323,11 @@ body.game-running.web-ui-active .web-ui {
   --bc-menu-button-active-image: url('/assets/menu-web/socials-active.png');
 }
 
+.main-menu-web__action[data-menu-action='settings'] {
+  --bc-menu-button-image: url('/assets/menu-web/settings.png');
+  --bc-menu-button-active-image: url('/assets/menu-web/settings-active.png');
+}
+
 .main-menu-web__action[data-menu-action='logout'] {
   --bc-menu-button-image: url('/assets/menu-web/logout.png');
   --bc-menu-button-active-image: url('/assets/menu-web/logout-active.png');
@@ -337,6 +343,8 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__action[data-menu-action='headquarters'].is-focused,
 .main-menu-web__action[data-menu-action='socials']:hover,
 .main-menu-web__action[data-menu-action='socials'].is-focused,
+.main-menu-web__action[data-menu-action='settings']:hover,
+.main-menu-web__action[data-menu-action='settings'].is-focused,
 .main-menu-web__action[data-menu-action='logout']:hover,
 .main-menu-web__action[data-menu-action='logout'].is-focused {
   background-color: transparent;
