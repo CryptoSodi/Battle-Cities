@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ## Project Overview
+
 This project is based on:
 
 https://github.com/dogballs/cattle-bity
@@ -8,9 +9,11 @@ https://github.com/dogballs/cattle-bity
 The goal is to use this codebase as the foundation for a multiplayer Battle City-style game and build new features on top of it.
 
 ## Main Goal
+
 Port and extend the project into a multiplayer game while keeping token usage low and avoiding unnecessary code exploration.
 
 ## Token Saving Rules
+
 - Do not scan the full repository unless required.
 - Start with only files related to the current task.
 - Prefer targeted search by class, function, scene, asset, or folder name.
@@ -22,6 +25,7 @@ Port and extend the project into a multiplayer game while keeping token usage lo
 - Do not inspect assets unless the task involves visuals, maps, sprites, or UI.
 
 ## Source Project
+
 The original source is:
 
 `dogballs/cattle-bity`
@@ -29,7 +33,9 @@ The original source is:
 Treat this as the current base project.
 
 ## Project Direction
+
 Build toward:
+
 - Multiplayer gameplay.
 - Online rooms/lobbies.
 - Player synchronization.
@@ -40,6 +46,7 @@ Build toward:
 - Future extensible game modes.
 
 ## Work Rules
+
 - Preserve the original game logic where possible.
 - Make small, safe changes.
 - Avoid large rewrites unless needed for multiplayer architecture.
@@ -50,11 +57,15 @@ Build toward:
 - Keep the code easy to extend.
 
 ## UI Work
+
 - For every UI implementation or adjustment, read and follow `.agents/skills/battlecity-ui/SKILL.md`.
 - Reuse established UI components and tokens before introducing screen-specific styling.
+- Do not use browser-default `:focus-visible` outlines. Each control must provide its own deliberate selected state (for example, an active sprite); add an outline only when explicitly requested.
 
 ## Multiplayer Architecture Rules
+
 - Server should control:
+
   - Match state.
   - Enemy spawning.
   - Bullet hit validation.
@@ -70,7 +81,9 @@ Build toward:
   - Prediction only where safe.
 
 ## Search Strategy
+
 Use this order:
+
 1. Find game loop / main update loop.
 2. Find player tank logic.
 3. Find enemy tank logic.
@@ -80,6 +93,7 @@ Use this order:
 7. Modify only the needed files.
 
 ## Response Style
+
 - Be concise.
 - Mention exact file paths.
 - Explain only necessary decisions.

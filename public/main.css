@@ -22,6 +22,15 @@
   src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype');
 }
 
+/*
+ * Focus presentation is supplied by each Battle Cities control's intentional
+ * selected state (for example, the amber menu sprite). Never fall back to the
+ * browser's default outline unless a screen explicitly asks for one.
+ */
+*:focus-visible {
+  outline: none;
+}
+
 html {
   display: flex;
   height: 100%;
@@ -92,8 +101,7 @@ body.scanlines-disabled::after {
 .webrtc-network-stats {
   background: rgba(5, 10, 12, 0.88);
   border: 1px solid rgba(83, 231, 84, 0.72);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.72),
-    0 6px 18px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.72), 0 6px 18px rgba(0, 0, 0, 0.42);
   box-sizing: border-box;
   color: #d8e3dc;
   font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
