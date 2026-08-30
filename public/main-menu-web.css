@@ -183,7 +183,6 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__events:focus-visible,
-.main-menu-web__action:focus-visible,
 .main-menu-web__dialog-button:focus-visible {
   outline: 3px solid var(--bc-command);
   outline-offset: 3px;
@@ -243,7 +242,7 @@ body.game-running.web-ui-active .web-ui {
   display: grid;
   gap: clamp(4px, 0.8dvh, 10px);
   margin: 0 auto;
-  width: min(280px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 32px));
 }
 
 .main-menu-web__action {
@@ -258,7 +257,7 @@ body.game-running.web-ui-active .web-ui {
     'Segoe UI', Arial, sans-serif;
   justify-content: center;
   letter-spacing: 0.08em;
-  min-height: clamp(44px, 5.8dvh, 56px);
+  min-height: clamp(52px, 6.4dvh, 64px);
   padding: 0 16px;
   text-align: center;
   text-transform: uppercase;
@@ -416,7 +415,7 @@ body.game-running.web-ui-active .web-ui {
   }
 
   .main-menu-web__commands {
-    width: min(250px, calc(100vw - 32px));
+    width: min(280px, calc(100vw - 32px));
   }
 }
 

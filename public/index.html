@@ -18,17 +18,44 @@
       })();
     </script>
     <style>
-      .auth-bootstrap [data-auth-shell] { display: none !important; }
-      .auth-bootstrap [data-loading] { display: flex !important; }
+      .auth-bootstrap [data-auth-shell] {
+        display: none !important;
+      }
+      .auth-bootstrap [data-loading] {
+        display: flex !important;
+      }
     </style>
     <link rel="stylesheet" href="main.css" />
     <link rel="stylesheet" href="main-menu-web.css" />
+    <link rel="preload" as="image" href="assets/menu-web/start.png" />
+    <link rel="preload" as="image" href="assets/menu-web/start-active.png" />
+    <link rel="preload" as="image" href="assets/menu-web/shop.png" />
+    <link rel="preload" as="image" href="assets/menu-web/shop-active.png" />
+    <link rel="preload" as="image" href="assets/menu-web/ranking.png" />
+    <link rel="preload" as="image" href="assets/menu-web/ranking-active.png" />
+    <link rel="preload" as="image" href="assets/menu-web/headquarters.png" />
+    <link
+      rel="preload"
+      as="image"
+      href="assets/menu-web/headquarters-active.png"
+    />
+    <link rel="preload" as="image" href="assets/menu-web/socials.png" />
+    <link rel="preload" as="image" href="assets/menu-web/socials-active.png" />
+    <link rel="preload" as="image" href="assets/menu-web/settings.png" />
+    <link rel="preload" as="image" href="assets/menu-web/settings-active.png" />
+    <link rel="preload" as="image" href="assets/menu-web/logout.png" />
+    <link rel="preload" as="image" href="assets/menu-web/logout-active.png" />
     <script defer src="cache-bootstrap.js"></script>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3E0Z840YQ1"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-3E0Z840YQ1"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+      function gtag() {
+        dataLayer.push(arguments);
+      }
       gtag('js', new Date());
 
       gtag('config', 'G-3E0Z840YQ1');
@@ -40,12 +67,16 @@
         <div class="auth-kicker">Battle Cities</div>
         <h1 id="auth-title">Enter the battlefield</h1>
         <p class="auth-copy">
-          Sign in to record matches, protect replays, and prepare your scores for
-          verified leaderboards.
+          Sign in to record matches, protect replays, and prepare your scores
+          for verified leaderboards.
         </p>
 
         <div class="auth-actions" aria-label="Login options">
-<button class="auth-button auth-button--primary" type="button" data-auth-wallet>
+          <button
+            class="auth-button auth-button--primary"
+            type="button"
+            data-auth-wallet
+          >
             <span class="auth-button__mark" aria-hidden="true">W</span>
             Connect Phantom
           </button>
@@ -70,7 +101,10 @@
           />
         </a>
 
-        <div class="auth-technology" aria-label="Battle Cities technology partners">
+        <div
+          class="auth-technology"
+          aria-label="Battle Cities technology partners"
+        >
           <span class="auth-technology__brand">
             <span>Built On</span>
             <img
@@ -89,7 +123,12 @@
           </span>
         </div>
 
-        <p class="auth-status" data-auth-status role="status" aria-live="polite">
+        <p
+          class="auth-status"
+          data-auth-status
+          role="status"
+          aria-live="polite"
+        >
           Choose how you want to enter Battle Cities.
         </p>
 
@@ -106,12 +145,20 @@
           src="assets/battle-cities-menu-logo.png"
           alt="Battle Cities"
         />
-        <p class="splash__status" data-loading-status role="status" aria-live="polite">
+        <p
+          class="splash__status"
+          data-loading-status
+          role="status"
+          aria-live="polite"
+        >
           Booting battle station...
         </p>
         <div class="splash__progress" aria-hidden="true"><span></span></div>
         <p class="splash__version" data-loading-version>VER: 0.1.dev</p>
-        <div class="splash__technology" aria-label="Battle Cities technology partners">
+        <div
+          class="splash__technology"
+          aria-label="Battle Cities technology partners"
+        >
           <span class="splash__technology-brand">
             <span>Built On</span>
             <img src="assets/solana-wordmark-white.png" alt="Solana" />
