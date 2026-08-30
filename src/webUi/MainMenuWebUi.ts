@@ -186,15 +186,11 @@ export class MainMenuWebUi {
     const renderActions = (group: MenuAction['group']): string =>
       actions
         .filter((item) => item.group === group)
-        .map((item, index) => {
+        .map((item) => {
           const variantClass = item.variant
             ? ` main-menu-web__action--${item.variant}`
             : '';
-          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${
-            item.action
-          }" data-index="${String(index + 1).padStart(2, '0')}" type="button">${
-            item.label
-          }</button>`;
+          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${item.label}</button>`;
         })
         .join('');
 
@@ -202,45 +198,34 @@ export class MainMenuWebUi {
       <main class="main-menu-web" aria-labelledby="main-menu-title">
         <h1 id="main-menu-title" hidden>Battle Cities main menu</h1>
         <header class="main-menu-web__hud" aria-label="Player status">
-          <section class="main-menu-web__stat">
-            <span class="main-menu-web__stat-label">Player</span>
+          <section class="main-menu-web__stat main-menu-web__stat--player" aria-label="Player">
             <strong class="main-menu-web__stat-value" data-menu-player>PLAYER</strong>
           </section>
-          <section class="main-menu-web__stat main-menu-web__stat--score">
-            <span class="main-menu-web__stat-label">Last Score</span>
+          <section class="main-menu-web__stat main-menu-web__stat--score" aria-label="Last score">
             <strong class="main-menu-web__stat-value" data-menu-score>000000</strong>
           </section>
-          <section class="main-menu-web__stat">
-            <span class="main-menu-web__stat-label">High Score</span>
+          <section class="main-menu-web__stat main-menu-web__stat--highscore" aria-label="High score">
             <strong class="main-menu-web__stat-value" data-menu-highscore>000000</strong>
           </section>
         </header>
 
         <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
-          <span class="main-menu-web__events-label">Live Event</span>
+          <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
           <span class="main-menu-web__events-viewport">
             <span class="main-menu-web__events-track" data-menu-events role="status" aria-live="polite">Loading live operations...</span>
           </span>
         </button>
 
         <section class="main-menu-web__content">
-          <div class="main-menu-web__brand">
-            <img class="main-menu-web__logo" src="/assets/battle-cities-menu-logo.png" width="1254" height="1254" alt="Battle Cities">
-          </div>
-          <nav class="main-menu-web__commands" aria-label="Battle Cities commands">
-            <p class="main-menu-web__command-label">Command console</p>
+          <nav class="main-menu-web__commands${
+            developerActions.length > 0
+              ? ' main-menu-web__commands--developer'
+              : ''
+          }" aria-label="Battle Cities commands">
             ${renderActions('main')}
-            ${
-              developerActions.length > 0
-                ? `<p class="main-menu-web__command-label">Developer tools</p>${renderActions(
-                    'developer',
-                  )}`
-                : ''
-            }
+            ${developerActions.length > 0 ? renderActions('developer') : ''}
           </nav>
         </section>
-
-        <footer class="main-menu-web__footer">Arrow keys or controller to navigate · Enter or fire to select</footer>
 
         <dialog class="main-menu-web__dialog" data-menu-notification-dialog aria-labelledby="notification-title">
           <h2 id="notification-title">Battle updates</h2>
