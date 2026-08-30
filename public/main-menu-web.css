@@ -80,9 +80,9 @@ body.game-running.web-ui-active .web-ui {
   aspect-ratio: 740 / 150;
   container-type: inline-size;
   margin: 0 auto;
-  max-height: 150px;
+  max-height: 114px;
   position: relative;
-  width: min(740px, calc(100vw - 24px));
+  width: min(560px, calc(100vw - 24px));
 }
 
 .main-menu-web__stat {
@@ -137,11 +137,11 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__stat--player .main-menu-web__stat-value {
-  font-size: clamp(11px, 2.98cqw, 22px);
+  font-size: clamp(11px, 2.98cqw, 18px);
   height: 28%;
-  left: 31.43%;
+  left: 38%;
   top: 31%;
-  width: 62.14%;
+  width: 56%;
 }
 
 .main-menu-web__stat--score .main-menu-web__stat-value {
@@ -174,12 +174,12 @@ body.game-running.web-ui-active .web-ui {
   gap: clamp(5px, 1vw, 10px);
   grid-template-columns: auto minmax(0, 1fr);
   margin: clamp(2px, 0.7dvh, 8px) auto 0;
-  max-height: 66px;
+  max-height: 52px;
   min-height: 40px;
   overflow: hidden;
   padding: 0 13.4%;
   text-align: left;
-  width: min(660px, calc(100vw - 32px));
+  width: min(520px, calc(100vw - 32px));
 }
 
 .main-menu-web__events:focus-visible,
@@ -207,13 +207,27 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__events-viewport {
   mask-image: linear-gradient(90deg, #000 92%, transparent);
   overflow: hidden;
+  position: relative;
 }
 
 .main-menu-web__events-track {
+  animation: main-menu-web-event-ticker 12s linear infinite;
   color: var(--bc-text);
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  left: 100%;
+  position: absolute;
+  width: max-content;
+  will-change: transform;
+}
+
+@keyframes main-menu-web-event-ticker {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-300%);
+  }
 }
 
 .main-menu-web__content {
@@ -258,11 +272,6 @@ body.game-running.web-ui-active .web-ui {
   background: var(--bc-command-surface);
   border-color: var(--bc-command);
   transform: translateY(-1px);
-}
-
-.main-menu-web__action--primary {
-  background: var(--bc-ready-dark);
-  border-color: var(--bc-ready);
 }
 
 .main-menu-web__action--danger:hover,
@@ -340,11 +349,11 @@ body.game-running.web-ui-active .web-ui {
 
 @media (max-height: 720px) {
   .main-menu-web__hud {
-    width: min(600px, calc(100vw - 24px));
+    width: min(520px, calc(100vw - 24px));
   }
 
   .main-menu-web__events {
-    width: min(540px, calc(100vw - 32px));
+    width: min(480px, calc(100vw - 32px));
   }
 
   .main-menu-web__commands--developer {
@@ -377,5 +386,11 @@ body.game-running.web-ui-active .web-ui {
 @media (prefers-reduced-motion: reduce) {
   .main-menu-web__action {
     transition: none;
+  }
+
+  .main-menu-web__events-track {
+    animation: none;
+    left: 0;
+    position: relative;
   }
 }

@@ -24,7 +24,7 @@ interface MenuAction {
   action: string;
   group: 'main' | 'developer';
   label: string;
-  variant?: 'primary' | 'danger';
+  variant?: 'danger';
 }
 
 let notificationPromptDismissedThisSession = false;
@@ -152,7 +152,7 @@ export class MainMenuWebUi {
 
   private render(): string {
     const mainActions: MenuAction[] = [
-      { action: 'start', group: 'main', label: 'Start', variant: 'primary' },
+      { action: 'start', group: 'main', label: 'Start' },
     ];
 
     if (
@@ -162,7 +162,6 @@ export class MainMenuWebUi {
         action: 'multiplayer',
         group: 'main',
         label: '2 Players',
-        variant: 'primary',
       });
     }
 
