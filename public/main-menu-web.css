@@ -170,14 +170,14 @@ body.game-running.web-ui-active .web-ui {
   box-sizing: border-box;
   color: var(--bc-text);
   cursor: default;
-  display: grid;
-  gap: clamp(5px, 1vw, 10px);
-  grid-template-columns: auto minmax(0, 1fr);
+  display: block;
   margin: clamp(2px, 0.7dvh, 8px) auto 0;
   max-height: 52px;
   min-height: 40px;
   overflow: hidden;
-  padding: 0 13.4%;
+  /* Keep text clear of the stars without percentage padding consuming the
+     grid columns relative to the page width. */
+  padding: 0 clamp(54px, 6vw, 70px);
   text-align: left;
   width: min(520px, calc(100vw - 32px));
 }
@@ -204,12 +204,13 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__events-viewport {
-  align-self: center;
+  display: block;
   height: 1em;
   mask-image: linear-gradient(90deg, #000 92%, transparent);
   min-width: 0;
   overflow: hidden;
   position: relative;
+  width: 100%;
 }
 
 .main-menu-web__events-track {
@@ -218,15 +219,18 @@ body.game-running.web-ui-active .web-ui {
   color: var(--bc-text);
   display: flex;
   height: 100%;
-  left: 100%;
+  left: 0;
   position: absolute;
   top: 0;
   width: max-content;
   will-change: transform;
 }
 
-.main-menu-web__events-track > span {
+.main-menu-web__events-run {
+  align-items: center;
+  display: inline-flex;
   flex: none;
+  gap: clamp(5px, 1vw, 10px);
   padding-right: clamp(32px, 6vw, 72px);
 }
 
@@ -236,7 +240,7 @@ body.game-running.web-ui-active .web-ui {
   }
 
   to {
-    transform: translateX(calc(-100% - 100vw));
+    transform: translateX(-50%);
   }
 }
 

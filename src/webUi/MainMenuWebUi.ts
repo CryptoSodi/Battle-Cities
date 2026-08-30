@@ -209,11 +209,16 @@ export class MainMenuWebUi {
         </header>
 
         <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
-          <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
           <span class="main-menu-web__events-viewport">
             <span class="main-menu-web__events-track" role="status" aria-live="polite">
-              <span data-menu-events-primary>Loading live operations...</span>
-              <span data-menu-events-repeat aria-hidden="true">Loading live operations...</span>
+              <span class="main-menu-web__events-run">
+                <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
+                <span data-menu-events-primary>Loading live operations...</span>
+              </span>
+              <span class="main-menu-web__events-run" aria-hidden="true">
+                <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
+                <span data-menu-events-repeat>Loading live operations...</span>
+              </span>
             </span>
           </span>
         </button>
