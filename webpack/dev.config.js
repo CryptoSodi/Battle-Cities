@@ -678,6 +678,13 @@ module.exports = merge(baseConfig, {
 
   devtool: 'source-map',
 
+  // The local HTML entry intentionally references main.js. Keep that stable in
+  // development so webpack-dev-server always serves the active game bundle;
+  // production retains its content-hashed bundle for cache-safe deployments.
+  output: {
+    filename: '[name].js',
+  },
+
   devServer: {
     client: {
       overlay: false,
@@ -686,7 +693,7 @@ module.exports = merge(baseConfig, {
       directory: path.resolve(__dirname, '../dist'),
     },
     host: '0.0.0.0',
-    server: 'https',
+    server: 'http',
     allowedHosts: 'all',
     proxy: [
       ...(useStandaloneApi

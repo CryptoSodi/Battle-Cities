@@ -204,7 +204,10 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__events-viewport {
+  align-self: center;
+  height: 1em;
   mask-image: linear-gradient(90deg, #000 92%, transparent);
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -215,7 +218,7 @@ body.game-running.web-ui-active .web-ui {
   color: var(--bc-text);
   display: flex;
   height: 100%;
-  left: 0;
+  left: 100%;
   position: absolute;
   top: 0;
   width: max-content;
@@ -233,7 +236,7 @@ body.game-running.web-ui-active .web-ui {
   }
 
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(-100% - 100vw));
   }
 }
 
@@ -275,14 +278,16 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__action:hover,
-.main-menu-web__action.is-focused {
+.main-menu-web__action.is-focused,
+.main-menu-web__action.is-selected {
   background: var(--bc-command-surface);
   border-color: var(--bc-command);
   transform: translateY(-1px);
 }
 
 .main-menu-web__action--danger:hover,
-.main-menu-web__action--danger.is-focused {
+.main-menu-web__action--danger.is-focused,
+.main-menu-web__action--danger.is-selected {
   background: var(--bc-danger-surface);
   border-color: var(--bc-danger);
 }
@@ -342,18 +347,25 @@ body.game-running.web-ui-active .web-ui {
 
 .main-menu-web__action[data-menu-action='start']:hover,
 .main-menu-web__action[data-menu-action='start'].is-focused,
+.main-menu-web__action[data-menu-action='start'].is-selected,
 .main-menu-web__action[data-menu-action='shop']:hover,
 .main-menu-web__action[data-menu-action='shop'].is-focused,
+.main-menu-web__action[data-menu-action='shop'].is-selected,
 .main-menu-web__action[data-menu-action='ranking']:hover,
 .main-menu-web__action[data-menu-action='ranking'].is-focused,
+.main-menu-web__action[data-menu-action='ranking'].is-selected,
 .main-menu-web__action[data-menu-action='headquarters']:hover,
 .main-menu-web__action[data-menu-action='headquarters'].is-focused,
+.main-menu-web__action[data-menu-action='headquarters'].is-selected,
 .main-menu-web__action[data-menu-action='socials']:hover,
 .main-menu-web__action[data-menu-action='socials'].is-focused,
+.main-menu-web__action[data-menu-action='socials'].is-selected,
 .main-menu-web__action[data-menu-action='settings']:hover,
 .main-menu-web__action[data-menu-action='settings'].is-focused,
+.main-menu-web__action[data-menu-action='settings'].is-selected,
 .main-menu-web__action[data-menu-action='logout']:hover,
-.main-menu-web__action[data-menu-action='logout'].is-focused {
+.main-menu-web__action[data-menu-action='logout'].is-focused,
+.main-menu-web__action[data-menu-action='logout'].is-selected {
   background-color: transparent;
   background-image: var(--bc-menu-button-active-image);
   border-color: transparent;
@@ -466,15 +478,5 @@ body.game-running.web-ui-active .web-ui {
 @media (prefers-reduced-motion: reduce) {
   .main-menu-web__action {
     transition: none;
-  }
-
-  .main-menu-web__events-track {
-    animation: none;
-    left: 0;
-    position: relative;
-  }
-
-  .main-menu-web__events-track > [aria-hidden='true'] {
-    display: none;
   }
 }

@@ -259,6 +259,7 @@ export class MainMenuWebUi {
     this.actionButtons = Array.from(
       this.host.querySelectorAll<HTMLButtonElement>('[data-menu-action]'),
     );
+    this.actionButtons[0]?.classList.add('is-selected');
     const signal = this.abortController.signal;
 
     this.actionButtons.forEach((button) => {
@@ -269,7 +270,12 @@ export class MainMenuWebUi {
       );
       button.addEventListener(
         'focus',
-        () => button.classList.add('is-focused'),
+        () => {
+          this.actionButtons.forEach((candidate) =>
+            candidate.classList.toggle('is-selected', candidate === button),
+          );
+          button.classList.add('is-focused');
+        },
         { signal },
       );
       button.addEventListener(
