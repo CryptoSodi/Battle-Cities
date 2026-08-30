@@ -304,49 +304,31 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__action[data-menu-action='settings'],
 .main-menu-web__action[data-menu-action='logout'] {
   background-color: transparent;
-  background-image: var(--bc-menu-button-image);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
   border-color: transparent;
+  overflow: hidden;
   padding-left: 29%;
   padding-right: 14%;
+  position: relative;
   text-shadow: 0 2px 3px rgb(0 0 0 / 72%);
 }
 
-.main-menu-web__action[data-menu-action='start'] {
-  --bc-menu-button-image: url('/assets/menu-web/start.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/start-active.png');
+.main-menu-web__action-image {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 120ms var(--bc-ease);
+  width: 100%;
 }
 
-.main-menu-web__action[data-menu-action='shop'] {
-  --bc-menu-button-image: url('/assets/menu-web/shop.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/shop-active.png');
+.main-menu-web__action-image--active {
+  opacity: 0;
 }
 
-.main-menu-web__action[data-menu-action='ranking'] {
-  --bc-menu-button-image: url('/assets/menu-web/ranking.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/ranking-active.png');
-}
-
-.main-menu-web__action[data-menu-action='headquarters'] {
-  --bc-menu-button-image: url('/assets/menu-web/headquarters.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/headquarters-active.png');
-}
-
-.main-menu-web__action[data-menu-action='socials'] {
-  --bc-menu-button-image: url('/assets/menu-web/socials.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/socials-active.png');
-}
-
-.main-menu-web__action[data-menu-action='settings'] {
-  --bc-menu-button-image: url('/assets/menu-web/settings.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/settings-active.png');
-}
-
-.main-menu-web__action[data-menu-action='logout'] {
-  --bc-menu-button-image: url('/assets/menu-web/logout.png');
-  --bc-menu-button-active-image: url('/assets/menu-web/logout-active.png');
+.main-menu-web__action-label {
+  position: relative;
+  z-index: 1;
 }
 
 .main-menu-web__action[data-menu-action='start']:hover,
@@ -371,9 +353,20 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web__action[data-menu-action='logout'].is-focused,
 .main-menu-web__action[data-menu-action='logout'].is-selected {
   background-color: transparent;
-  background-image: var(--bc-menu-button-active-image);
   border-color: transparent;
   transform: none;
+}
+
+.main-menu-web__action:hover .main-menu-web__action-image--inactive,
+.main-menu-web__action.is-focused .main-menu-web__action-image--inactive,
+.main-menu-web__action.is-selected .main-menu-web__action-image--inactive {
+  opacity: 0;
+}
+
+.main-menu-web__action:hover .main-menu-web__action-image--active,
+.main-menu-web__action.is-focused .main-menu-web__action-image--active,
+.main-menu-web__action.is-selected .main-menu-web__action-image--active {
+  opacity: 1;
 }
 
 .main-menu-web__dialog {

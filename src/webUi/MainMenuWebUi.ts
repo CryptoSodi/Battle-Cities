@@ -189,7 +189,12 @@ export class MainMenuWebUi {
           const variantClass = item.variant
             ? ` main-menu-web__action--${item.variant}`
             : '';
-          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${item.label}</button>`;
+          const imageLayers =
+            item.group === 'main'
+              ? `<img class="main-menu-web__action-image main-menu-web__action-image--inactive" src="/assets/menu-web/${item.action}.png" alt="" aria-hidden="true" draggable="false">
+                 <img class="main-menu-web__action-image main-menu-web__action-image--active" src="/assets/menu-web/${item.action}-active.png" alt="" aria-hidden="true" draggable="false">`
+              : '';
+          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}<span class="main-menu-web__action-label">${item.label}</span></button>`;
         })
         .join('');
 
