@@ -239,6 +239,19 @@ export class MainMenuWebUi {
           </nav>
         </section>
 
+        <footer class="main-menu-web__hazard" aria-label="Battlefield system status">
+          <div class="main-menu-web__hazard-track">
+            <span><i aria-hidden="true">✦</i>Battlefield loading // Sector 01</span>
+            <span><i aria-hidden="true">✦</i>Armor systems online // Tanks ready</span>
+            <span><i aria-hidden="true">✦</i>Targeting grid locked // Stand by</span>
+            <span><i aria-hidden="true">✦</i>Reloading cannon // Prepare for battle</span>
+            <span aria-hidden="true"><i>✦</i>Battlefield loading // Sector 01</span>
+            <span aria-hidden="true"><i>✦</i>Armor systems online // Tanks ready</span>
+            <span aria-hidden="true"><i>✦</i>Targeting grid locked // Stand by</span>
+            <span aria-hidden="true"><i>✦</i>Reloading cannon // Prepare for battle</span>
+          </div>
+        </footer>
+
         <dialog class="main-menu-web__dialog" data-menu-notification-dialog aria-labelledby="notification-title">
           <h2 id="notification-title">Battle updates</h2>
           <p>Get match, reward, and Battle Cities updates on this device.</p>

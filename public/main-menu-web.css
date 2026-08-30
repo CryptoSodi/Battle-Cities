@@ -8,6 +8,9 @@
   --bc-command: #ffb30f;
   --bc-command-dim: #a96a05;
   --bc-command-surface: #201d08;
+  --bc-blue: #1677ff;
+  --bc-blue-glow: rgb(112 183 255 / 38%);
+  --bc-ember: #ff6a1a;
   --bc-ready: #47de17;
   --bc-ready-dark: #105b0c;
   --bc-danger: #f04432;
@@ -45,17 +48,32 @@ body.game-running.web-ui-active .web-ui {
 .main-menu-web {
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   height: 100dvh;
   overflow: hidden;
   padding: max(8px, env(safe-area-inset-top))
-    max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
-    max(12px, env(safe-area-inset-left));
+    max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
   position: relative;
 }
 
 .main-menu-web::before {
-  background: var(--bc-bg);
+  background:
+    radial-gradient(
+      ellipse 68% 52% at 8% 14%,
+      var(--bc-blue-glow),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 62% 48% at 92% 88%,
+      rgb(255 106 26 / 22%),
+      transparent 74%
+    ),
+    radial-gradient(
+      ellipse 50% 35% at 54% 8%,
+      rgb(255 179 15 / 12%),
+      transparent 72%
+    ),
+    var(--bc-bg);
   content: '';
   inset: 0;
   position: absolute;
@@ -255,6 +273,67 @@ body.game-running.web-ui-active .web-ui {
   min-height: 0;
   overflow: hidden;
   padding: clamp(8px, 1.8dvh, 20px) 0;
+}
+
+.main-menu-web__hazard {
+  align-self: end;
+  background: repeating-linear-gradient(
+    135deg,
+    #000 0 18px,
+    var(--bc-command) 18px 36px
+  );
+  border-bottom: 2px solid #000;
+  border-top: 2px solid #000;
+  box-sizing: border-box;
+  height: clamp(30px, 4dvh, 38px);
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+  position: relative;
+  width: 100vw;
+  z-index: 1;
+}
+
+.main-menu-web__hazard-track {
+  align-items: center;
+  animation: main-menu-web-hazard-marquee 42s linear infinite;
+  background: var(--bc-bg);
+  display: flex;
+  height: calc(100% - 8px);
+  margin: 4px 0;
+  padding: 0 8px;
+  white-space: nowrap;
+  width: max-content;
+  will-change: transform;
+}
+
+.main-menu-web__hazard-track span {
+  align-items: center;
+  color: var(--bc-text);
+  display: inline-flex;
+  flex: none;
+  font: 700 clamp(8px, 1.1dvh, 11px) / 1 'Battle Cities UI',
+    'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  gap: 8px;
+  letter-spacing: 0.08em;
+  padding: 0 clamp(14px, 2vw, 26px);
+  text-transform: uppercase;
+}
+
+.main-menu-web__hazard-track i {
+  color: var(--bc-danger);
+  font-size: 1.15em;
+  font-style: normal;
+}
+
+@keyframes main-menu-web-hazard-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .main-menu-web__commands {
