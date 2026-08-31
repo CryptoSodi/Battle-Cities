@@ -48,6 +48,7 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
+import { RankingWebUi } from './webUi/RankingWebUi';
 import { ShopWebUi } from './webUi/ShopWebUi';
 
 import * as config from './config';
@@ -697,6 +698,7 @@ const shopWebUi = new ShopWebUi({
       startBattleFromWebUi: () => Promise<void>;
     }).startBattleFromWebUi(),
 });
+const rankingWebUi = new RankingWebUi(sceneRouter);
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -979,6 +981,7 @@ function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
 sceneRouter.transitionStarted.addListener(() => {
   mainMenuWebUi.unmount();
   shopWebUi.unmount();
+  rankingWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
@@ -988,6 +991,9 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   }
   if (sceneType === GameSceneType.MainShop) {
     shopWebUi.mount();
+  }
+  if (sceneType === GameSceneType.MainRanking) {
+    rankingWebUi.mount();
   }
   if (
     presenceTrackingStarted &&
@@ -1375,7 +1381,7 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive()) {
+  if (!shopWebUi.isActive() && !rankingWebUi.isActive()) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1383,6 +1389,9 @@ gameLoop.update.addListener((event) => {
   }
   if (shopWebUi.isActive()) {
     shopWebUi.update();
+  }
+  if (rankingWebUi.isActive()) {
+    rankingWebUi.update();
   }
 
   const replayDeadline = performance.now() + 8;
@@ -1394,7 +1403,7 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive()) {
+      if (!shopWebUi.isActive() && !rankingWebUi.isActive()) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1597,6 +1606,9 @@ async function main(): Promise<void> {
     }
     if (sceneRouter.getCurrentType() === GameSceneType.MainShop) {
       shopWebUi.mount();
+    }
+    if (sceneRouter.getCurrentType() === GameSceneType.MainRanking) {
+      rankingWebUi.mount();
     }
   } else {
     document.body.classList.add('headless-broadcaster');
