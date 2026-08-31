@@ -12,6 +12,8 @@ export class RankingWebUi {
   private loading = false;
   private scope: RankingScope = 'gaming';
   private seasonId: string | null = null;
+  private seasonMenuOpen = false;
+  private pendingFocusSelector: string | null = null;
 
   private buttons: HTMLButtonElement[] = [];
   public constructor(
@@ -46,7 +48,15 @@ export class RankingWebUi {
   public update(): void {
     if (!this.active) return;
     const input = this.inputManager.getActiveMethod();
-    if (input.isDownAny(MenuInputContext.HorizontalPrev)) this.moveFocus(-1, 0);
+    if (
+      this.seasonMenuOpen &&
+      input.isDownAny(MenuInputContext.VerticalPrev)
+    ) this.moveSeasonFocus(-1);
+    else if (
+      this.seasonMenuOpen &&
+      input.isDownAny(MenuInputContext.VerticalNext)
+    ) this.moveSeasonFocus(1);
+    else if (input.isDownAny(MenuInputContext.HorizontalPrev)) this.moveFocus(-1, 0);
     else if (input.isDownAny(MenuInputContext.HorizontalNext))
       this.moveFocus(1, 0);
     else if (input.isDownAny(MenuInputContext.VerticalPrev))
@@ -93,16 +103,7 @@ export class RankingWebUi {
         : '--'
     }</strong></div><div><span>TRADING RANK (ALL)</span><strong>${
       me?.guest ? 'LOG IN TO COMPETE' : '--'
-    }</strong></div></section><select class="ranking-web__season" data-rank-season aria-label="Season">${seasons
-      .map(
-        (season) =>
-          `<option value="${season.id ?? 'all'}" ${
-            season.id === this.seasonId ? 'selected' : ''
-          }>SEASON: ${season.label}</option>`,
-      )
-      .join(
-        '',
-      )}</select><div class="ranking-web__header"><span>RANK</span><span>PLAYER</span><span>PERKS</span><span>POINTS</span></div><section class="ranking-web__rows">${
+    }</strong></div></section>${this.seasonPicker(seasons)}<div class="ranking-web__header"><span>RANK</span><span>PLAYER</span><span>PERKS</span><span>POINTS</span></div><section class="ranking-web__rows">${
       this.loading
         ? '<p class="ranking-web__empty">LOADING RANKINGS...</p>'
         : this.data === null
@@ -128,6 +129,37 @@ export class RankingWebUi {
             .join('')
     }</section></section></main>`;
     this.bind();
+    if (this.pendingFocusSelector !== null) {
+      this.host
+        .querySelector<HTMLButtonElement>(this.pendingFocusSelector)
+        ?.focus({ preventScroll: true });
+      this.pendingFocusSelector = null;
+    }
+  }
+  private seasonPicker(
+    seasons: Array<{ id: string | null; label: string }>,
+  ): string {
+    const selected = seasons.find((season) => season.id === this.seasonId) || seasons[0];
+    return `<div class="ranking-web__season-picker ${
+      this.seasonMenuOpen ? 'is-open' : ''
+    }"><button class="ranking-web__season" data-rank-season-toggle aria-expanded="${
+      this.seasonMenuOpen
+    }" type="button"><span>SEASON: ${selected.label}</span><i aria-hidden="true">⌄</i></button>${
+      this.seasonMenuOpen
+        ? `<div class="ranking-web__season-options" role="listbox">${seasons
+            .map(
+              (season) =>
+                `<button data-rank-season-option="${
+                  season.id ?? 'all'
+                }" class="${
+                  season.id === this.seasonId ? 'is-active' : ''
+                }" role="option" aria-selected="${
+                  season.id === this.seasonId
+                }" type="button">${season.label}</button>`,
+            )
+            .join('')}</div>`
+        : ''
+    }</div>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
@@ -154,21 +186,39 @@ export class RankingWebUi {
           () => {
             this.scope = button.dataset.rankScope as RankingScope;
             this.seasonId = null;
+            this.seasonMenuOpen = false;
             void this.load();
           },
           { signal },
         ),
       );
     this.host
-      .querySelector<HTMLSelectElement>('[data-rank-season]')
+      .querySelector<HTMLButtonElement>('[data-rank-season-toggle]')
       ?.addEventListener(
-        'change',
-        (event) => {
-          const value = (event.target as HTMLSelectElement).value;
-          this.seasonId = value === 'all' ? null : value;
-          void this.load();
+        'click',
+        () => {
+          this.seasonMenuOpen = !this.seasonMenuOpen;
+          this.pendingFocusSelector = this.seasonMenuOpen
+            ? '[data-rank-season-option].is-active'
+            : '[data-rank-season-toggle]';
+          this.render();
         },
         { signal },
+      );
+    this.host
+      .querySelectorAll<HTMLButtonElement>('[data-rank-season-option]')
+      .forEach((button) =>
+        button.addEventListener(
+          'click',
+          () => {
+            const value = button.dataset.rankSeasonOption || 'all';
+            this.seasonId = value === 'all' ? null : value;
+            this.seasonMenuOpen = false;
+            this.pendingFocusSelector = '[data-rank-season-toggle]';
+            void this.load();
+          },
+          { signal },
+        ),
       );
     this.host
       .querySelectorAll<HTMLButtonElement>('[data-rank-player]')
@@ -188,6 +238,28 @@ export class RankingWebUi {
       this.buttons.includes(document.activeElement)
       ? document.activeElement
       : null;
+  }
+  private moveSeasonFocus(direction: -1 | 1): void {
+    const options = this.buttons.filter(
+      (button) => button.dataset.rankSeasonOption !== undefined,
+    );
+    const current = this.focused();
+    const index = current === null ? -1 : options.indexOf(current);
+    if (index < 0) {
+      options.find((button) => button.classList.contains('is-active'))?.focus({
+        preventScroll: true,
+      });
+      return;
+    }
+    if (direction < 0 && index === 0) {
+      this.host
+        .querySelector<HTMLButtonElement>('[data-rank-season-toggle]')
+        ?.focus({ preventScroll: true });
+      return;
+    }
+    options[Math.max(0, Math.min(options.length - 1, index + direction))]?.focus({
+      preventScroll: true,
+    });
   }
   private moveFocus(horizontal: -1 | 0 | 1, vertical: -1 | 0 | 1): void {
     const current = this.focused() || this.buttons[0];
