@@ -51,6 +51,7 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
+import { ShopWebUi } from './webUi/ShopWebUi';
 
 import * as config from './config';
 
@@ -685,6 +686,7 @@ const mainMenuWebUi = new MainMenuWebUi({
   pointsHighscoreManager,
   session,
 });
+const shopWebUi = new ShopWebUi({ gameStorage, navigator: sceneRouter });
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -958,12 +960,19 @@ function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
 }
 sceneRouter.transitionStarted.addListener(() => {
   mainMenuWebUi.unmount();
+  shopWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
 sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainMenu) {
     mainMenuWebUi.mount();
+  }
+  if (
+    sceneType === GameSceneType.MainShop &&
+    sceneRouter.getCurrentParams().battleSetup !== true
+  ) {
+    shopWebUi.mount();
   }
   if (
     presenceTrackingStarted &&
@@ -1354,9 +1363,14 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  scene.invokeUpdate(updateArgs);
+  if (!shopWebUi.isActive()) {
+    scene.invokeUpdate(updateArgs);
+  }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
     mainMenuWebUi.update();
+  }
+  if (shopWebUi.isActive()) {
+    shopWebUi.update();
   }
 
   const replayDeadline = performance.now() + 8;
@@ -1368,7 +1382,9 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      scene.invokeUpdate(updateArgs);
+      if (!shopWebUi.isActive()) {
+        scene.invokeUpdate(updateArgs);
+      }
     } finally {
       webRtcMatch.endCatchUpStep();
     }
@@ -1566,6 +1582,12 @@ async function main(): Promise<void> {
     logCanvasSize('Particle', particleCanvas);
     if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
       mainMenuWebUi.mount();
+    }
+    if (
+      sceneRouter.getCurrentType() === GameSceneType.MainShop &&
+      sceneRouter.getCurrentParams().battleSetup !== true
+    ) {
+      shopWebUi.mount();
     }
   } else {
     document.body.classList.add('headless-broadcaster');

@@ -40,6 +40,10 @@ export class SceneRouter<S> implements SceneNavigator {
     return this.location?.type ?? null;
   }
 
+  public getCurrentParams(): SceneParams {
+    return this.location?.params ?? {};
+  }
+
   public canGoBack(): boolean {
     return this.stack.length > 1;
   }
