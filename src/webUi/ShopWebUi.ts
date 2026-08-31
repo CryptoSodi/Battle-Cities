@@ -156,7 +156,12 @@ export class ShopWebUi {
     }" data-shop-tab="${tab}" type="button">${label}</button>`;
   }
   private resource(label: string, value: string): string {
-    return `<div class="shop-web__resource"><span>${label}</span><strong>${value}</strong></div>`;
+    const icon = {
+      BACT: '/data/graphics/shop/icons/token-bact.png',
+      SOL: '/data/graphics/shop/icons/solana.png',
+      FUEL: '/data/graphics/shop/icons/fuel.png',
+    }[label];
+    return `<div class="shop-web__resource"><img src="${icon}" alt=""><div><span>${label}</span><strong>${value}</strong></div></div>`;
   }
   private cards(currency: ShopCurrency): string {
     return this.shop
@@ -172,7 +177,9 @@ export class ShopWebUi {
             ? `${item.solPrice} SOL`
             : `${item.price} BACT`;
         return `<article class="shop-web__card"><div>${
-          icon ? `<img src="${icon}" alt="">` : '<b>FUEL</b>'
+          icon
+            ? `<img src="${icon}" alt="">`
+            : '<img src="/data/graphics/shop/icons/fuel.png" alt="">'
         }</div><h2>${item.name}</h2><p>${
           item.id === ShopItemId.StarterPack
             ? '5 FUEL + 2 POWERS'
