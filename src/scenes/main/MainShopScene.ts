@@ -588,6 +588,10 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   private transitionExpired = false;
   private webRtcMatch: GameUpdateArgs['webRtcMatch'];
 
+  public startBattleFromWebUi(): Promise<void> {
+    return this.startBattle();
+  }
+
   protected setup({
     gameStorage,
     mapLoader,

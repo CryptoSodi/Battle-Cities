@@ -7,7 +7,7 @@ description: Battle Cities UI standards for canvas screens, responsive desktop a
 
 ## Preserve The System
 
-- Match the established shop UI language: dark framed surfaces, restrained amber accents, green default actions, yellow active states, and red active Back actions.
+- Match the established shop UI language: dark framed surfaces, restrained amber accents, green default actions, yellow active states, and red active Back actions (align with `.agents/rules/battlecities-web-design.md`).
 - Reuse shared layout, typography, button, card, and navigation helpers. Avoid per-screen magic values when an equivalent control already exists.
 - Treat desktop and Android layouts independently when their composition differs. Do not change one while fixing the other unless both need the change.
 

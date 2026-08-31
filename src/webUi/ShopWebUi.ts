@@ -11,9 +11,12 @@ import {
 } from '../shop';
 
 interface ShopWebUiOptions {
+  getBattleFuelCost: () => number;
+  isBattleSetup: () => boolean;
   gameStorage: GameStorage;
   inputManager: InputManager;
   navigator: SceneNavigator;
+  startBattle: () => Promise<void>;
 }
 type ShopTab = 'bact' | 'sol' | 'loadout';
 type ShopFilter = 'all' | 'fuel' | 'powerups' | 'packs';
@@ -55,6 +58,7 @@ export class ShopWebUi {
     if (!(host instanceof HTMLElement))
       throw new Error('Shop web UI host is missing.');
     this.active = true;
+    if (this.options.isBattleSetup()) this.tab = 'loadout';
     this.abortController = new AbortController();
     this.host = host;
     document.body.classList.add('web-ui-active', 'shop-web-active');
@@ -95,6 +99,9 @@ export class ShopWebUi {
     this.bind();
   }
   private render(status: string): string {
+    if (window.matchMedia('(min-width: 900px)').matches) {
+      return this.renderDesktop(status);
+    }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
     return `<main class="shop-web" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
@@ -149,6 +156,63 @@ export class ShopWebUi {
       (this.tab === 'loadout'
         ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
         : 'ALL ITEMS LOADED')}</p></section></main>`;
+  }
+  private renderDesktop(status: string): string {
+    const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
+    const content =
+      this.tab === 'loadout'
+        ? this.loadout()
+        : `<nav class="shop-web__filters" aria-label="Item categories">${([
+            ['all', 'ALL'],
+            ['fuel', 'FUEL'],
+            ['powerups', 'POWER'],
+            ['packs', 'PACKS'],
+          ] as Array<[ShopFilter, string]>)
+            .map(
+              ([key, label]) =>
+                `<button class="${
+                  this.filter === key ? 'is-active' : ''
+                }" data-shop-filter="${key}" type="button">${label}</button>`,
+            )
+            .join(
+              '',
+            )}</nav><h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
+            currency,
+          )}</div>`;
+    return `<main class="shop-web shop-web--desktop" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1><nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
+      'bact',
+      'TOKEN SHOP',
+    )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
+      'loadout',
+      'LOADOUT',
+    )}<span></span><button class="shop-web__back" data-shop-back type="button">← BACK</button></nav><section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
+      this.shop.isWalletConnected() ? ' is-connected' : ''
+    }" data-shop-wallet type="button">${
+      this.shop.isWalletConnected() ? 'CONNECTED' : 'CONNECT'
+    }</button>${this.resource(
+      'BATC',
+      this.shop.getTokenBalance().toString(),
+    )}${this.resource(
+      'SOL',
+      this.shop.getSolBalance().toFixed(3),
+    )}${this.resource(
+      'FUEL',
+      this.shop.getFuelBalance().toString(),
+    )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${Object.values(
+      ShopInventoryItemId,
+    )
+      .map(
+        (id) =>
+          `<div class="shop-web__owned-tile"><img src="${
+            icons[id]
+          }" alt=""><strong>${this.count(id)}</strong></div>`,
+      )
+      .join(
+        '',
+      )}</div></aside><section class="shop-web__desktop-content">${content}<p class="shop-web__status" aria-live="polite">${status ||
+      (this.tab === 'loadout'
+        ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
+        : 'ALL ITEMS LOADED')}</p></section></section></main>`;
   }
   private tabButton(tab: ShopTab, label: string): string {
     const icon = {
@@ -212,7 +276,11 @@ export class ShopWebUi {
           item ? `<img src="${icons[item]}" alt="">${this.name(item)}` : 'EMPTY'
         }</strong><em>CHANGE</em></button>`;
       })
-      .join('')}</div></section>`;
+      .join('')}</div>${
+      this.options.isBattleSetup()
+        ? '<button class="shop-web__start-battle" data-shop-start type="button">START BATTLE</button>'
+        : ''
+    }</section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
@@ -294,6 +362,19 @@ export class ShopWebUi {
           { signal },
         ),
       );
+    this.host.querySelector('[data-shop-start]')?.addEventListener(
+      'click',
+      () => {
+        const fuelCost = this.options.getBattleFuelCost();
+        if (!this.shop.canStartRun(fuelCost)) {
+          this.refresh(`NEED ${fuelCost} FUEL - VISIT THE SHOP`);
+          return;
+        }
+        this.refresh('DEPLOYING');
+        void this.options.startBattle();
+      },
+      { signal },
+    );
   }
   private moveFocus(x: -1 | 0 | 1, y: -1 | 0 | 1): void {
     const current = this.focused() || this.buttons[0];

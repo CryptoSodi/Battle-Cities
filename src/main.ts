@@ -38,10 +38,7 @@ import { SavedReplay } from './replay';
 import { GameSceneRouter, GameSceneType } from './scenes';
 import { TankTier } from './tank';
 import { PlayerIdentity } from './auth';
-import {
-  getPhantomProvider,
-  hasNativeMobileWalletAdapter,
-} from './wallet';
+import { getPhantomProvider, hasNativeMobileWalletAdapter } from './wallet';
 import { apiFetch, apiFetchDirect, getApiUrl } from './network/api';
 import { NativeNotificationClient } from './notifications/NativeNotificationClient';
 import { MagicBlockMovementSync } from './network/magicblock';
@@ -122,12 +119,11 @@ const gameRenderer = new GameRenderer({
   // debug: true,
   height: config.CANVAS_HEIGHT,
   width: config.CANVAS_WIDTH,
-  renderer:
-    isHeadlessBroadcaster
-      ? 'canvas'
-      : rendererOverride === 'canvas' || rendererOverride === 'webgl'
-      ? rendererOverride
-      : 'auto',
+  renderer: isHeadlessBroadcaster
+    ? 'canvas'
+    : rendererOverride === 'canvas' || rendererOverride === 'webgl'
+    ? rendererOverride
+    : 'auto',
   renderScale: config.RENDER_SCALE,
 });
 let particles: ParticleSystem = null;
@@ -687,9 +683,19 @@ const mainMenuWebUi = new MainMenuWebUi({
   session,
 });
 const shopWebUi = new ShopWebUi({
+  getBattleFuelCost: () =>
+    Math.max(
+      0,
+      Math.floor(Number(sceneRouter.getCurrentParams().fuelCost) || 1),
+    ),
   gameStorage,
   inputManager,
+  isBattleSetup: () => sceneRouter.getCurrentParams().battleSetup === true,
   navigator: sceneRouter,
+  startBattle: () =>
+    ((sceneRouter.getCurrentScene() as unknown) as {
+      startBattleFromWebUi: () => Promise<void>;
+    }).startBattleFromWebUi(),
 });
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
@@ -832,9 +838,9 @@ if (
   magicBlockMovement.isOnlineMatch() ||
   webRtcMatch.isEnabled()
 ) {
-  const requestedLevel = multiplayerRuntime?.level ?? Number(
-    new URLSearchParams(window.location.search).get('level'),
-  );
+  const requestedLevel =
+    multiplayerRuntime?.level ??
+    Number(new URLSearchParams(window.location.search).get('level'));
   const levelNumber = Number.isInteger(requestedLevel)
     ? multiplayerRuntime !== null
       ? Math.max(requestedLevel, 1)
@@ -865,8 +871,10 @@ function readAdminReplayId(): string | null {
 function readProfileReplay(): { playerId: string; matchId: string } | null {
   const playerId = runtimeParams.get('profileReplayPlayer');
   const matchId = runtimeParams.get('profileReplayMatch');
-  return playerId !== null && matchId !== null &&
-    /^ply-[a-z0-9-]+$/i.test(playerId) && /^mtc-[a-z0-9-]+$/i.test(matchId)
+  return playerId !== null &&
+    matchId !== null &&
+    /^ply-[a-z0-9-]+$/i.test(playerId) &&
+    /^mtc-[a-z0-9-]+$/i.test(matchId)
     ? { playerId, matchId }
     : null;
 }
@@ -925,12 +933,18 @@ async function startProfileReplay(): Promise<boolean> {
   }
   try {
     const response = await apiFetchDirect(
-      `/api/players/${encodeURIComponent(profileReplay.playerId)}/profile/matches/${encodeURIComponent(profileReplay.matchId)}/replay`,
+      `/api/players/${encodeURIComponent(
+        profileReplay.playerId,
+      )}/profile/matches/${encodeURIComponent(profileReplay.matchId)}/replay`,
     );
     if (!response.ok) return false;
     const replays = (await response.json())?.item?.replays;
     const replay = Array.isArray(replays) ? replays[0] : null;
-    if (typeof replay !== 'object' || replay === null || !Number.isInteger(replay.levelNumber)) {
+    if (
+      typeof replay !== 'object' ||
+      replay === null ||
+      !Number.isInteger(replay.levelNumber)
+    ) {
       return false;
     }
     const mapConfig = await loadReplayMap(replay.levelNumber);
@@ -972,10 +986,7 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainMenu) {
     mainMenuWebUi.mount();
   }
-  if (
-    sceneType === GameSceneType.MainShop &&
-    sceneRouter.getCurrentParams().battleSetup !== true
-  ) {
+  if (sceneType === GameSceneType.MainShop) {
     shopWebUi.mount();
   }
   if (
@@ -1060,7 +1071,9 @@ function waitForLogin(): Promise<void> {
 
   // Register Android installs immediately; this does not require a player session.
   void nativeNotificationClient.sync().catch(() => undefined);
-  void nativeNotificationClient.consumePendingNotification().catch(() => undefined);
+  void nativeNotificationClient
+    .consumePendingNotification()
+    .catch(() => undefined);
 
   return new Promise((resolve) => {
     let loginStarted = false;
@@ -1307,10 +1320,7 @@ async function hydrateShopCacheFromServer(): Promise<void> {
     }
 
     const account = body.account;
-    gameStorage.setBoolean(
-      config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
-      true,
-    );
+    gameStorage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
     gameStorage.set(
       config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
       account.walletAddress || '',
@@ -1347,9 +1357,7 @@ async function hydrateShopCacheFromServer(): Promise<void> {
 gameLoop.update.addListener((event) => {
   inputManager.update();
   gameLoop.setTimeScale(
-    isReplayPlayback || inputManager.isReplaying()
-      ? REPLAY_PLAYBACK_SPEED
-      : 1,
+    isReplayPlayback || inputManager.isReplaying() ? REPLAY_PLAYBACK_SPEED : 1,
   );
 
   updateArgs.deltaTime = event.deltaTime;
@@ -1587,10 +1595,7 @@ async function main(): Promise<void> {
     if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
       mainMenuWebUi.mount();
     }
-    if (
-      sceneRouter.getCurrentType() === GameSceneType.MainShop &&
-      sceneRouter.getCurrentParams().battleSetup !== true
-    ) {
+    if (sceneRouter.getCurrentType() === GameSceneType.MainShop) {
       shopWebUi.mount();
     }
   } else {
