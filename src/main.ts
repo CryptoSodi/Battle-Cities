@@ -698,7 +698,7 @@ const shopWebUi = new ShopWebUi({
       startBattleFromWebUi: () => Promise<void>;
     }).startBattleFromWebUi(),
 });
-const rankingWebUi = new RankingWebUi(sceneRouter);
+const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;

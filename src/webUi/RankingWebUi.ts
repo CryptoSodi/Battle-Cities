@@ -1,4 +1,5 @@
 import { SceneNavigator } from '../core';
+import { InputManager, MenuInputContext } from '../input';
 import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
 
@@ -12,7 +13,11 @@ export class RankingWebUi {
   private scope: RankingScope = 'gaming';
   private seasonId: string | null = null;
 
-  public constructor(private readonly navigator: SceneNavigator) {}
+  private buttons: HTMLButtonElement[] = [];
+  public constructor(
+    private readonly navigator: SceneNavigator,
+    private readonly inputManager: InputManager,
+  ) {}
   public isActive(): boolean {
     return this.active;
   }
@@ -38,7 +43,18 @@ export class RankingWebUi {
     this.host = null;
     document.body.classList.remove('web-ui-active', 'ranking-web-active');
   }
-  public update(): void {}
+  public update(): void {
+    if (!this.active) return;
+    const input = this.inputManager.getActiveMethod();
+    if (input.isDownAny(MenuInputContext.HorizontalPrev)) this.moveFocus(-1, 0);
+    else if (input.isDownAny(MenuInputContext.HorizontalNext))
+      this.moveFocus(1, 0);
+    else if (input.isDownAny(MenuInputContext.VerticalPrev))
+      this.moveFocus(0, -1);
+    else if (input.isDownAny(MenuInputContext.VerticalNext))
+      this.moveFocus(0, 1);
+    else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+  }
   private async load(): Promise<void> {
     this.loading = true;
     this.render();
@@ -105,7 +121,9 @@ export class RankingWebUi {
                   row.rank
                 }</strong><span>${row.displayName.toUpperCase()}</span><em class="ranking-web__perks${
                   row.perks.length > 0 ? ' is-boosted' : ''
-                }">${row.perks.length > 0 ? '' : '—'}</em><b>${row.totalPoints}</b></button>`,
+                }">${row.perks.length > 0 ? '' : '—'}</em><b>${
+                  row.totalPoints
+                }</b></button>`,
             )
             .join('')
     }</section></section></main>`;
@@ -113,6 +131,18 @@ export class RankingWebUi {
   }
   private bind(): void {
     const signal = this.abortController.signal;
+    this.buttons = Array.from(this.host.querySelectorAll('button'));
+    this.buttons.forEach((button) =>
+      button.addEventListener(
+        'focus',
+        () => {
+          this.buttons.forEach((candidate) =>
+            candidate.classList.toggle('is-selected', candidate === button),
+          );
+        },
+        { signal },
+      ),
+    );
     this.host
       .querySelector('[data-rank-back]')
       ?.addEventListener('click', () => this.navigator.back(), { signal });
@@ -152,5 +182,37 @@ export class RankingWebUi {
           { signal },
         ),
       );
+  }
+  private focused(): HTMLButtonElement | null {
+    return document.activeElement instanceof HTMLButtonElement &&
+      this.buttons.includes(document.activeElement)
+      ? document.activeElement
+      : null;
+  }
+  private moveFocus(horizontal: -1 | 0 | 1, vertical: -1 | 0 | 1): void {
+    const current = this.focused() || this.buttons[0];
+    if (current === undefined) return;
+    const currentRect = current.getBoundingClientRect();
+    const next = this.buttons
+      .filter((button) => button !== current)
+      .map((button) => ({ button, rect: button.getBoundingClientRect() }))
+      .filter(({ rect }) =>
+        horizontal < 0
+          ? rect.right <= currentRect.left + 2
+          : horizontal > 0
+          ? rect.left >= currentRect.right - 2
+          : vertical < 0
+          ? rect.bottom <= currentRect.top + 2
+          : rect.top >= currentRect.bottom - 2,
+      )
+      .sort((a, b) => {
+        const axis = (rect: DOMRect): number =>
+          horizontal !== 0
+            ? Math.abs(rect.left - currentRect.left)
+            : Math.abs(rect.top - currentRect.top);
+        return axis(a.rect) - axis(b.rect);
+      })[0]?.button;
+    next?.focus({ preventScroll: true });
+    next?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 }
