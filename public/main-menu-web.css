@@ -280,10 +280,12 @@ body.game-running.web-ui-active .web-ui {
   background: #050708;
   border: 0;
   box-sizing: border-box;
-  height: clamp(28px, 3.6dvh, 36px);
+  height: 32px;
+  max-height: 32px;
+  min-height: 32px;
   margin-left: calc(50% - 50vw);
   overflow: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: 0;
   position: relative;
   width: 100vw;
   z-index: 1;
@@ -316,7 +318,8 @@ body.game-running.web-ui-active .web-ui {
   animation: main-menu-web-hazard-marquee 42s linear infinite;
   background: var(--bc-bg);
   display: flex;
-  height: calc(100% - 6px - env(safe-area-inset-bottom));
+  height: 26px;
+  min-height: 26px;
   margin: 3px 0;
   padding: 0 8px;
   white-space: nowrap;
