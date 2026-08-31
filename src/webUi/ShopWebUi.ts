@@ -27,6 +27,16 @@ const icons: Partial<Record<ShopInventoryItemId, string>> = {
   [ShopInventoryItemId.Wipeout]: '/data/graphics/shop/owned/grenade.png',
   [ShopInventoryItemId.ExtraLife]: '/data/graphics/shop/owned/life.png',
 };
+const ownedIcons: Partial<Record<ShopInventoryItemId, string>> = {
+  [ShopInventoryItemId.Shield]: '/data/graphics/powerup-helmet.png',
+  [ShopInventoryItemId.BaseDefence]: '/data/graphics/powerup-shovel.png',
+  [ShopInventoryItemId.Freeze]: '/data/graphics/powerup-clock.png',
+  [ShopInventoryItemId.Speed]: '/data/graphics/powerup-speed.png',
+  [ShopInventoryItemId.Upgrade]: '/data/graphics/powerup-star.png',
+  [ShopInventoryItemId.ZoomOut]: '/data/graphics/powerup-zoomout.png',
+  [ShopInventoryItemId.Wipeout]: '/data/graphics/powerup-grenade.png',
+  [ShopInventoryItemId.ExtraLife]: '/data/graphics/TANKS/powerup-life.png',
+};
 const slots = [
   ShopLoadoutSlot.ActiveOne,
   ShopLoadoutSlot.ActiveTwo,
@@ -59,7 +69,7 @@ export class ShopWebUi {
     this.host = host;
     document.body.classList.add('web-ui-active', 'shop-web-active');
     host.hidden = false;
-    Object.values(icons).forEach((src) => {
+    [...Object.values(icons), ...Object.values(ownedIcons)].forEach((src) => {
       const image = new Image();
       image.src = src;
     });
@@ -121,7 +131,7 @@ export class ShopWebUi {
         .map(
           (id) =>
             `<div class="shop-web__owned-tile"><img src="${
-              icons[id]
+              ownedIcons[id]
             }" alt=""><strong>${this.count(id)}</strong></div>`,
         )
         .join('')}</div></section>
@@ -196,7 +206,7 @@ export class ShopWebUi {
             ? '5 FUEL + 2 POWERS'
             : item.reward.fuel
             ? `+${item.reward.fuel} FUEL`
-            : 'SINGLE-USE POWER'
+            : `+${Object.values(item.reward.inventory || {})[0] || 1}`
         }</p><button data-shop-buy="${
           item.id
         }" type="button"><img src="${currencyIcon}" alt=""><span>${price}</span></button></article>`;
