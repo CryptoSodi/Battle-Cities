@@ -227,6 +227,17 @@ export class ShopWebUi {
   private bind(): void {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button'));
+    this.buttons.forEach((button) => {
+      button.addEventListener(
+        'focus',
+        () => {
+          this.buttons.forEach((candidate) =>
+            candidate.classList.toggle('is-selected', candidate === button),
+          );
+        },
+        { signal },
+      );
+    });
     this.host
       .querySelector('[data-shop-back]')
       ?.addEventListener('click', () => this.options.navigator.back(), {
