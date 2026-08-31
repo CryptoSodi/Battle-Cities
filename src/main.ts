@@ -686,7 +686,11 @@ const mainMenuWebUi = new MainMenuWebUi({
   pointsHighscoreManager,
   session,
 });
-const shopWebUi = new ShopWebUi({ gameStorage, navigator: sceneRouter });
+const shopWebUi = new ShopWebUi({
+  gameStorage,
+  inputManager,
+  navigator: sceneRouter,
+});
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
