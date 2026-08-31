@@ -48,8 +48,11 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
+import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
 import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
+import { SettingsWebUi } from './webUi/SettingsWebUi';
+import { SocialsWebUi } from './webUi/SocialsWebUi';
 import { TankSelectWebUi } from './webUi/TankSelectWebUi';
 import { ShopWebUi } from './webUi/ShopWebUi';
 
@@ -710,6 +713,14 @@ const playerProfileWebUi = new PlayerProfileWebUi(
     return typeof playerId === 'string' ? playerId : null;
   },
 );
+const headquartersWebUi = new HeadquartersWebUi(sceneRouter, inputManager);
+const socialsWebUi = new SocialsWebUi(sceneRouter, inputManager);
+const settingsWebUi = new SettingsWebUi(
+  sceneRouter,
+  inputManager,
+  audioManager,
+  gameStorage,
+);
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -995,6 +1006,9 @@ sceneRouter.transitionStarted.addListener(() => {
   rankingWebUi.unmount();
   tankSelectWebUi.unmount();
   playerProfileWebUi.unmount();
+  headquartersWebUi.unmount();
+  socialsWebUi.unmount();
+  settingsWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
@@ -1010,6 +1024,9 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   }
   if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
   if (sceneType === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
+  if (sceneType === GameSceneType.MainMore) headquartersWebUi.mount();
+  if (sceneType === GameSceneType.MainSocials) socialsWebUi.mount();
+  if (sceneType === GameSceneType.SettingsMenu) settingsWebUi.mount();
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
@@ -1396,7 +1413,7 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive()) {
+  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1410,6 +1427,9 @@ gameLoop.update.addListener((event) => {
   }
   if (tankSelectWebUi.isActive()) tankSelectWebUi.update();
   if (playerProfileWebUi.isActive()) playerProfileWebUi.update();
+  if (headquartersWebUi.isActive()) headquartersWebUi.update();
+  if (socialsWebUi.isActive()) socialsWebUi.update();
+  if (settingsWebUi.isActive()) settingsWebUi.update();
 
   const replayDeadline = performance.now() + 8;
   let replaySteps = 0;
@@ -1420,7 +1440,7 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive()) {
+      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1440,7 +1460,15 @@ gameLoop.render.addListener((event) => {
 
   stats.begin();
   const currentSceneType = sceneRouter.getCurrentType();
-  const isWebUiActive = currentSceneType === GameSceneType.MainMenu;
+  const isWebUiActive =
+    currentSceneType === GameSceneType.MainMenu ||
+    currentSceneType === GameSceneType.MainShop ||
+    currentSceneType === GameSceneType.MainRanking ||
+    currentSceneType === GameSceneType.MainTankSelect ||
+    currentSceneType === GameSceneType.MainPlayerProfile ||
+    currentSceneType === GameSceneType.MainMore ||
+    currentSceneType === GameSceneType.MainSocials ||
+    currentSceneType === GameSceneType.SettingsMenu;
   document.body.classList.toggle(
     'main-menu-active',
     currentSceneType === GameSceneType.MainMenu,
@@ -1629,6 +1657,9 @@ async function main(): Promise<void> {
     }
     if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainMore) headquartersWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainSocials) socialsWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.SettingsMenu) settingsWebUi.mount();
   } else {
     document.body.classList.add('headless-broadcaster');
     log.info('Headless WebRTC broadcaster simulation started');
