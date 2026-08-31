@@ -48,6 +48,7 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
+import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
 import { TankSelectWebUi } from './webUi/TankSelectWebUi';
 import { ShopWebUi } from './webUi/ShopWebUi';
@@ -701,6 +702,14 @@ const shopWebUi = new ShopWebUi({
 });
 const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
 const tankSelectWebUi = new TankSelectWebUi(gameStorage, sceneRouter, inputManager, () => sceneRouter.getCurrentParams());
+const playerProfileWebUi = new PlayerProfileWebUi(
+  sceneRouter,
+  inputManager,
+  () => {
+    const playerId = sceneRouter.getCurrentParams().playerId;
+    return typeof playerId === 'string' ? playerId : null;
+  },
+);
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -985,6 +994,7 @@ sceneRouter.transitionStarted.addListener(() => {
   shopWebUi.unmount();
   rankingWebUi.unmount();
   tankSelectWebUi.unmount();
+  playerProfileWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
@@ -999,6 +1009,7 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
     rankingWebUi.mount();
   }
   if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
+  if (sceneType === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
@@ -1385,7 +1396,7 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive()) {
+  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive()) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1398,6 +1409,7 @@ gameLoop.update.addListener((event) => {
     rankingWebUi.update();
   }
   if (tankSelectWebUi.isActive()) tankSelectWebUi.update();
+  if (playerProfileWebUi.isActive()) playerProfileWebUi.update();
 
   const replayDeadline = performance.now() + 8;
   let replaySteps = 0;
@@ -1408,7 +1420,7 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive()) {
+      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive()) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1616,6 +1628,7 @@ async function main(): Promise<void> {
       rankingWebUi.mount();
     }
     if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
   } else {
     document.body.classList.add('headless-broadcaster');
     log.info('Headless WebRTC broadcaster simulation started');

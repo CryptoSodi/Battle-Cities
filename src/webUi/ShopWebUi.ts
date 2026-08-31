@@ -9,6 +9,7 @@ import {
   ShopLoadoutSlot,
   ShopManager,
 } from '../shop';
+import { GameSceneType } from '../scenes';
 
 interface ShopWebUiOptions {
   getBattleFuelCost: () => number;
@@ -276,11 +277,7 @@ export class ShopWebUi {
           item ? `<img src="${icons[item]}" alt="">${this.name(item)}` : 'EMPTY'
         }</strong><em>CHANGE</em></button>`;
       })
-      .join('')}</div>${
-      this.options.isBattleSetup()
-        ? '<button class="shop-web__start-battle" data-shop-start type="button">START BATTLE</button>'
-        : ''
-    }</section>`;
+      .join('')}</div><button class="shop-web__start-battle" data-shop-start type="button">START BATTLE</button></section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
@@ -365,6 +362,10 @@ export class ShopWebUi {
     this.host.querySelector('[data-shop-start]')?.addEventListener(
       'click',
       () => {
+        if (!this.options.isBattleSetup()) {
+          this.options.navigator.push(GameSceneType.MainTankSelect);
+          return;
+        }
         const fuelCost = this.options.getBattleFuelCost();
         if (!this.shop.canStartRun(fuelCost)) {
           this.refresh(`NEED ${fuelCost} FUEL - VISIT THE SHOP`);
