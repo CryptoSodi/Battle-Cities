@@ -49,6 +49,7 @@ import {
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
+import { TankSelectWebUi } from './webUi/TankSelectWebUi';
 import { ShopWebUi } from './webUi/ShopWebUi';
 
 import * as config from './config';
@@ -699,6 +700,7 @@ const shopWebUi = new ShopWebUi({
     }).startBattleFromWebUi(),
 });
 const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
+const tankSelectWebUi = new TankSelectWebUi(gameStorage, sceneRouter, inputManager, () => sceneRouter.getCurrentParams());
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();
 let presenceHeartbeatInFlight = false;
@@ -982,6 +984,7 @@ sceneRouter.transitionStarted.addListener(() => {
   mainMenuWebUi.unmount();
   shopWebUi.unmount();
   rankingWebUi.unmount();
+  tankSelectWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
@@ -995,6 +998,7 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainRanking) {
     rankingWebUi.mount();
   }
+  if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
@@ -1381,7 +1385,7 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive() && !rankingWebUi.isActive()) {
+  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive()) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1393,6 +1397,7 @@ gameLoop.update.addListener((event) => {
   if (rankingWebUi.isActive()) {
     rankingWebUi.update();
   }
+  if (tankSelectWebUi.isActive()) tankSelectWebUi.update();
 
   const replayDeadline = performance.now() + 8;
   let replaySteps = 0;
@@ -1403,7 +1408,7 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive() && !rankingWebUi.isActive()) {
+      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive()) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1610,6 +1615,7 @@ async function main(): Promise<void> {
     if (sceneRouter.getCurrentType() === GameSceneType.MainRanking) {
       rankingWebUi.mount();
     }
+    if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
   } else {
     document.body.classList.add('headless-broadcaster');
     log.info('Headless WebRTC broadcaster simulation started');
