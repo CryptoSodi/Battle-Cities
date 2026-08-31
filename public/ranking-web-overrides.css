@@ -8,3 +8,8 @@
 /* Custom season menu: native selects do not participate in gamepad focus. */
 .ranking-web__season-picker{align-self:center;justify-self:end;position:relative;width:min(350px,100%);z-index:3}.ranking-web__season{align-items:center;cursor:pointer;display:flex;justify-content:space-between;width:100%}.ranking-web__season i{font-size:22px;font-style:normal;line-height:.5;transition:transform .14s ease}.ranking-web__season-picker.is-open .ranking-web__season i{transform:rotate(180deg)}.ranking-web__season.is-selected{background:var(--bc-command);border-color:var(--bc-command);color:var(--bc-text)}.ranking-web__season-options{background:var(--bc-panel);border:1px solid var(--bc-command);box-shadow:0 12px 28px rgb(0 0 0 / 48%);display:grid;left:0;max-height:240px;overflow-y:auto;position:absolute;right:0;top:calc(100% + 4px)}.ranking-web__season-options button{background:var(--bc-panel);border:0;border-bottom:1px solid var(--bc-line);color:var(--bc-command);cursor:pointer;min-height:42px;padding:0 14px;text-align:left}.ranking-web__season-options button.is-active{color:var(--bc-ready)}.ranking-web__season-options button.is-selected{background:var(--bc-command);color:var(--bc-text)}
 @media(max-width:700px){.ranking-web__season-picker{width:100%}.ranking-web__season-options{max-height:196px}.ranking-web__season-options button{font-size:12px;min-height:36px}}
+/* Shared active-state contrast: yellow action plates use dark ink. */
+.ranking-web__tabs button.is-active,
+.ranking-web__tabs button.is-selected,
+.ranking-web__season.is-selected,
+.ranking-web__season-options button.is-selected { color: #1b1404; }

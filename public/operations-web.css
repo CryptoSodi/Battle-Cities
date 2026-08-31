@@ -25,3 +25,7 @@
 .settings-web__toggle.is-selected span{color:var(--bc-text)}
 .settings-web__toggle.is-selected.is-active span{color:var(--bc-command)}
 @media(max-width:700px){.settings-web__toggle{grid-template-columns:1fr 34px;height:64px;padding:8px 10px 8px 13px}.settings-web__toggle span{font-size:24px}.settings-web__toggle i{height:34px;width:34px}}
+/* Shared active-state contrast: yellow action plates use dark ink. */
+.operations-web__card.is-selected strong,
+.operations-web__card.is-complete strong,
+.socials-web__refresh.is-selected { color: #1b1404; }
