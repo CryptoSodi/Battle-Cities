@@ -181,7 +181,11 @@ export class ShopWebUi {
           currency === ShopCurrency.Sol
             ? `${item.solPrice} SOL`
             : `${item.price} BACT`;
-        return `<article class="shop-web__card"><div>${
+        const currencyIcon =
+          currency === ShopCurrency.Sol
+            ? '/data/graphics/shop/icons/solana.png'
+            : '/data/graphics/shop/icons/token-bact.png';
+        return `<article class="shop-web__card"><div class="shop-web__card-icon">${
           icon
             ? `<img src="${icon}" alt="">`
             : '<img src="/data/graphics/shop/icons/fuel.png" alt="">'
@@ -193,7 +197,7 @@ export class ShopWebUi {
             : 'SINGLE-USE POWER'
         }</p><button data-shop-buy="${
           item.id
-        }" type="button">${price}</button></article>`;
+        }" type="button"><img src="${currencyIcon}" alt=""><span>${price}</span></button></article>`;
       })
       .join('');
   }
@@ -335,7 +339,7 @@ export class ShopWebUi {
   }
   private count(item: ShopInventoryItemId): string {
     const count = this.shop.getInventoryCount(item);
-    return count >= 999 ? '∞' : count.toString();
+    return count >= 999 ? '∞' : count.toString().padStart(2, '0');
   }
   private name(item: ShopInventoryItemId): string {
     return item.replace(/-/g, ' ').toUpperCase();
