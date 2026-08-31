@@ -27,16 +27,6 @@ const icons: Partial<Record<ShopInventoryItemId, string>> = {
   [ShopInventoryItemId.Wipeout]: '/data/graphics/shop/owned/grenade.png',
   [ShopInventoryItemId.ExtraLife]: '/data/graphics/shop/owned/life.png',
 };
-const ownedIcons: Partial<Record<ShopInventoryItemId, string>> = {
-  [ShopInventoryItemId.Shield]: '/data/graphics/powerup-helmet.png',
-  [ShopInventoryItemId.BaseDefence]: '/data/graphics/powerup-shovel.png',
-  [ShopInventoryItemId.Freeze]: '/data/graphics/powerup-clock.png',
-  [ShopInventoryItemId.Speed]: '/data/graphics/powerup-speed.png',
-  [ShopInventoryItemId.Upgrade]: '/data/graphics/powerup-star.png',
-  [ShopInventoryItemId.ZoomOut]: '/data/graphics/powerup-zoomout.png',
-  [ShopInventoryItemId.Wipeout]: '/data/graphics/powerup-grenade.png',
-  [ShopInventoryItemId.ExtraLife]: '/data/graphics/TANKS/powerup-life.png',
-};
 const slots = [
   ShopLoadoutSlot.ActiveOne,
   ShopLoadoutSlot.ActiveTwo,
@@ -69,7 +59,7 @@ export class ShopWebUi {
     this.host = host;
     document.body.classList.add('web-ui-active', 'shop-web-active');
     host.hidden = false;
-    [...Object.values(icons), ...Object.values(ownedIcons)].forEach((src) => {
+    Object.values(icons).forEach((src) => {
       const image = new Image();
       image.src = src;
     });
@@ -119,7 +109,7 @@ export class ShopWebUi {
       }" data-shop-wallet type="button">${
       this.shop.isWalletConnected() ? 'CONNECTED' : 'CONNECT'
     }</button>${this.resource(
-      'BACT',
+      'BATC',
       this.shop.getTokenBalance().toString(),
     )}${this.resource(
       'SOL',
@@ -131,7 +121,7 @@ export class ShopWebUi {
         .map(
           (id) =>
             `<div class="shop-web__owned-tile"><img src="${
-              ownedIcons[id]
+              icons[id]
             }" alt=""><strong>${this.count(id)}</strong></div>`,
         )
         .join('')}</div></section>
@@ -172,7 +162,7 @@ export class ShopWebUi {
   }
   private resource(label: string, value: string): string {
     const icon = {
-      BACT: '/data/graphics/shop/icons/token-bact.png',
+      BATC: '/data/graphics/shop/icons/token-bact.png',
       SOL: '/data/graphics/shop/icons/solana.png',
       FUEL: '/data/graphics/shop/icons/fuel.png',
     }[label];
@@ -194,7 +184,7 @@ export class ShopWebUi {
         const price =
           currency === ShopCurrency.Sol
             ? `${item.solPrice} SOL`
-            : `${item.price} BACT`;
+            : `${item.price} BATC`;
         const currencyIcon =
           currency === ShopCurrency.Sol
             ? '/data/graphics/shop/icons/solana.png'
