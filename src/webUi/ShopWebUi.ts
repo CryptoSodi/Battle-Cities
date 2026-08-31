@@ -151,9 +151,14 @@ export class ShopWebUi {
         : 'ALL ITEMS LOADED')}</p></section></main>`;
   }
   private tabButton(tab: ShopTab, label: string): string {
+    const icon = {
+      bact: '/data/graphics/shop/icons/token-bact.png',
+      sol: '/data/graphics/shop/icons/solana.png',
+      loadout: '/data/graphics/shop/icons/loadout.png',
+    }[tab];
     return `<button class="shop-web__tab${
       this.tab === tab ? ' is-active' : ''
-    }" data-shop-tab="${tab}" type="button">${label}</button>`;
+    }" data-shop-tab="${tab}" type="button"><img src="${icon}" alt=""><span>${label}</span></button>`;
   }
   private resource(label: string, value: string): string {
     const icon = {
