@@ -103,11 +103,9 @@ export class RankingWebUi {
                   4,
                 )}"><strong>${
                   row.rank
-                }</strong><span>${row.displayName.toUpperCase()}</span><em class="ranking-web__perks">${
-                  row.perks.length > 0
-                    ? row.perks.map(() => '↑').join(' ')
-                    : '—'
-                }</em><b>${row.totalPoints}</b></button>`,
+                }</strong><span>${row.displayName.toUpperCase()}</span><em class="ranking-web__perks${
+                  row.perks.length > 0 ? ' is-boosted' : ''
+                }">${row.perks.length > 0 ? '' : '—'}</em><b>${row.totalPoints}</b></button>`,
             )
             .join('')
     }</section></section></main>`;

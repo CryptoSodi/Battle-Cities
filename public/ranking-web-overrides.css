@@ -2,3 +2,4 @@
 .ranking-web__perks{color:var(--bc-ready)!important;font-size:18px!important;font-weight:900;letter-spacing:.08em}
 .ranking-web__shell{grid-template-rows:78px 52px 48px minmax(0,1fr)}.ranking-web__summary div{padding:12px 18px}.ranking-web__summary strong{font-size:21px;margin-top:7px}@media (max-width:700px){.ranking-web__shell{grid-template-rows:72px 48px 44px minmax(0,1fr)}.ranking-web__summary div{padding:10px 12px}.ranking-web__summary strong{font-size:16px;margin-top:6px}}
 .ranking-web__rows,.ranking-web__row{box-sizing:border-box;width:100%}
+.ranking-web__perks.is-boosted{height:20px;position:relative;width:22px}.ranking-web__perks.is-boosted::before,.ranking-web__perks.is-boosted::after{border-left:3px solid var(--bc-ready);border-top:3px solid var(--bc-ready);content:'';height:8px;left:6px;position:absolute;transform:rotate(45deg);width:8px}.ranking-web__perks.is-boosted::before{top:7px}.ranking-web__perks.is-boosted::after{top:1px}
