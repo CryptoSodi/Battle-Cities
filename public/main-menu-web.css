@@ -277,15 +277,10 @@ body.game-running.web-ui-active .web-ui {
 
 .main-menu-web__hazard {
   align-self: end;
-  background: repeating-linear-gradient(
-    135deg,
-    #000 0 18px,
-    var(--bc-command) 18px 36px
-  );
-  border-bottom: 2px solid #000;
-  border-top: 2px solid #000;
+  background: #050708;
+  border: 0;
   box-sizing: border-box;
-  height: clamp(30px, 4dvh, 38px);
+  height: clamp(28px, 3.6dvh, 36px);
   margin-left: calc(50% - 50vw);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
@@ -294,13 +289,35 @@ body.game-running.web-ui-active .web-ui {
   z-index: 1;
 }
 
+.main-menu-web__hazard::before,
+.main-menu-web__hazard::after {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--bc-command) 0 5px,
+    #050708 5px 10px
+  );
+  content: '';
+  height: 3px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.main-menu-web__hazard::before {
+  top: 0;
+}
+
+.main-menu-web__hazard::after {
+  bottom: 0;
+}
+
 .main-menu-web__hazard-track {
   align-items: center;
   animation: main-menu-web-hazard-marquee 42s linear infinite;
   background: var(--bc-bg);
   display: flex;
-  height: calc(100% - 8px);
-  margin: 4px 0;
+  height: calc(100% - 6px - env(safe-area-inset-bottom));
+  margin: 3px 0;
   padding: 0 8px;
   white-space: nowrap;
   width: max-content;
