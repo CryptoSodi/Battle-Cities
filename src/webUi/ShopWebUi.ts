@@ -18,14 +18,14 @@ interface ShopWebUiOptions {
 type ShopTab = 'bact' | 'sol' | 'loadout';
 type ShopFilter = 'all' | 'fuel' | 'powerups' | 'packs';
 const icons: Partial<Record<ShopInventoryItemId, string>> = {
-  [ShopInventoryItemId.Shield]: '/data/graphics/powerup-helmet.png',
-  [ShopInventoryItemId.BaseDefence]: '/data/graphics/powerup-shovel.png',
-  [ShopInventoryItemId.Freeze]: '/data/graphics/powerup-clock.png',
-  [ShopInventoryItemId.Speed]: '/data/graphics/powerup-speed.png',
-  [ShopInventoryItemId.Upgrade]: '/data/graphics/powerup-star.png',
-  [ShopInventoryItemId.ZoomOut]: '/data/graphics/powerup-zoomout.png',
-  [ShopInventoryItemId.Wipeout]: '/data/graphics/powerup-grenade.png',
-  [ShopInventoryItemId.ExtraLife]: '/data/graphics/TANKS/powerup-life.png',
+  [ShopInventoryItemId.Shield]: '/data/graphics/shop/owned/helmet.png',
+  [ShopInventoryItemId.BaseDefence]: '/data/graphics/shop/owned/shovel.png',
+  [ShopInventoryItemId.Freeze]: '/data/graphics/shop/owned/clock.png',
+  [ShopInventoryItemId.Speed]: '/data/graphics/shop/owned/speed.png',
+  [ShopInventoryItemId.Upgrade]: '/data/graphics/shop/owned/star.png',
+  [ShopInventoryItemId.ZoomOut]: '/data/graphics/shop/owned/zoomout.png',
+  [ShopInventoryItemId.Wipeout]: '/data/graphics/shop/owned/grenade.png',
+  [ShopInventoryItemId.ExtraLife]: '/data/graphics/shop/owned/life.png',
 };
 const slots = [
   ShopLoadoutSlot.ActiveOne,
@@ -177,6 +177,10 @@ export class ShopWebUi {
           icons[
             Object.keys(item.reward.inventory || {})[0] as ShopInventoryItemId
           ];
+        const itemIcon =
+          item.id === ShopItemId.StarterPack
+            ? '/data/graphics/shop/icons/kit.png'
+            : icon || '/data/graphics/shop/icons/fuel.png';
         const price =
           currency === ShopCurrency.Sol
             ? `${item.solPrice} SOL`
@@ -185,11 +189,9 @@ export class ShopWebUi {
           currency === ShopCurrency.Sol
             ? '/data/graphics/shop/icons/solana.png'
             : '/data/graphics/shop/icons/token-bact.png';
-        return `<article class="shop-web__card"><div class="shop-web__card-icon">${
-          icon
-            ? `<img src="${icon}" alt="">`
-            : '<img src="/data/graphics/shop/icons/fuel.png" alt="">'
-        }</div><h2>${item.name}</h2><p>${
+        return `<article class="shop-web__card"><div class="shop-web__card-icon"><img src="${itemIcon}" alt=""></div><h2>${
+          item.name
+        }</h2><p>${
           item.id === ShopItemId.StarterPack
             ? '5 FUEL + 2 POWERS'
             : item.reward.fuel
