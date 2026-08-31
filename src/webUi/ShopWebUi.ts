@@ -195,7 +195,7 @@ export class ShopWebUi {
           item.id === ShopItemId.StarterPack
             ? '5 FUEL + 2 POWERS'
             : item.reward.fuel
-            ? `+${item.reward.fuel} FUEL`
+            ? `+${item.reward.fuel}`
             : `+${Object.values(item.reward.inventory || {})[0] || 1}`
         }</p><button data-shop-buy="${
           item.id
