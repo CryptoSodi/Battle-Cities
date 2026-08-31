@@ -274,10 +274,12 @@ export class ShopWebUi {
         const item = this.shop.getEquipped(slot);
         return `<button data-shop-slot="${slot}" type="button"><span>SLOT ${index +
           1}</span><strong>${
-          item ? `<img src="${icons[item]}" alt="">${this.name(item)}` : 'EMPTY'
+          item
+            ? `<img src="${icons[item]}" alt="">${this.name(item)}`
+            : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt="Empty slot">'
         }</strong><em>CHANGE</em></button>`;
       })
-      .join('')}</div><button class="shop-web__start-battle" data-shop-start type="button">START BATTLE</button></section>`;
+      .join('')}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO DEPLOY</span><strong>START BATTLE</strong><i aria-hidden="true">▶</i></button></section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
