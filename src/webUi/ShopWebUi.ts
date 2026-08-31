@@ -111,7 +111,7 @@ export class ShopWebUi {
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'loadout',
       'LOADOUT',
-    )}<button class="shop-web__back" data-shop-back type="button">← BACK</button></nav>
+    )}<button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button">${
@@ -186,7 +186,7 @@ export class ShopWebUi {
     )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'loadout',
       'LOADOUT',
-    )}<span></span><button class="shop-web__back" data-shop-back type="button">← BACK</button></nav><section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
+    )}<span></span><button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav><section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
       this.shop.isWalletConnected() ? ' is-connected' : ''
     }" data-shop-wallet type="button">${
       this.shop.isWalletConnected() ? 'CONNECTED' : 'CONNECT'

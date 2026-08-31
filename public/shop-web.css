@@ -21,3 +21,9 @@
 /* Original selected shop prices use dark ink on the yellow purchase plate. */
 .shop-web__card:has(button.is-selected) button,
 .shop-web__card:has(button.is-selected) button span { color: #1b1404; }
+
+/* The original yellow selected tabs use the same dark-ink contrast as price plates. */
+.shop-web__tab.is-active,
+.shop-web__tab.is-selected,
+.shop-web__filters button.is-active,
+.shop-web__filters button.is-selected { color: #1b1404; }
