@@ -5,9 +5,10 @@
   --bc-line: #3a4952;
   --bc-text: #f5f2e8;
   --bc-muted: #a3adb0;
-  --bc-command: #ffb30f;
-  --bc-command-dim: #a96a05;
-  --bc-command-surface: #201d08;
+--bc-command: #ffb30f;
+--bc-command-dim: #a96a05;
+--bc-command-surface: #201d08;
+--bc-active-ink: #1b1404;
   --bc-blue: #1677ff;
   --bc-blue-glow: rgb(112 183 255 / 38%);
   --bc-ember: #ff6a1a;

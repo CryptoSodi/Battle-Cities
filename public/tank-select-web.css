@@ -10,4 +10,4 @@
 .tank-select-web__tank-sprite { background-position: left top; background-size: 376px auto; }
 @media (max-width: 700px) { .tank-select-web__tank-sprite { background-size: 304px auto; } }
 /* Shared active-state contrast: yellow action plates use dark ink. */
-.tank-select-web__continue.is-selected { color: #1b1404; }
+.tank-select-web__continue.is-selected { color: var(--bc-active-ink); }

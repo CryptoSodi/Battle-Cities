@@ -28,4 +28,24 @@
 /* Shared active-state contrast: yellow action plates use dark ink. */
 .operations-web__card.is-selected strong,
 .operations-web__card.is-complete strong,
-.socials-web__refresh.is-selected { color: #1b1404; }
+.socials-web__refresh.is-selected { color: var(--bc-active-ink); }
+
+/* Header actions share the Shop tab and Back-button dimensions/states. */
+.operations-web__header button,
+.settings-web>header button { background: var(--bc-panel); border-color: var(--bc-line); color: var(--bc-command); font-size: clamp(14px, 1.9vw, 19px); height: 42px; min-height: 42px; }
+.socials-web__refresh.is-selected { background: var(--bc-command); border-color: var(--bc-command); color: var(--bc-active-ink); }
+.operations-web__back.is-selected,
+.settings-web>header button.is-selected { background: var(--bc-danger-surface); border-color: var(--bc-danger); color: var(--bc-text); }
+@media(max-width:700px){.operations-web__header button,.settings-web>header button{font-size:12px;height:36px;min-height:36px}}
+
+/* Match the Shop Back track at every viewport; Social Refresh mirrors a Shop tab. */
+.operations-web__back,
+.settings-web>header button { min-width: clamp(83px, 21.5vw, 160px); width: clamp(83px, 21.5vw, 160px); }
+.socials-web__refresh { min-width: clamp(95px, 28vw, 210px); width: clamp(95px, 28vw, 210px); }
+@media(min-width:900px){
+  .operations-web__header button,
+  .settings-web>header button { height:58px;min-height:58px; }
+  .operations-web__back,
+  .settings-web>header button { min-width:152px;width:152px; }
+  .socials-web__refresh { min-width:210px;width:210px; }
+}

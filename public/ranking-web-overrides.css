@@ -12,4 +12,21 @@
 .ranking-web__tabs button.is-active,
 .ranking-web__tabs button.is-selected,
 .ranking-web__season.is-selected,
-.ranking-web__season-options button.is-selected { color: #1b1404; }
+.ranking-web__season-options button.is-selected { color: var(--bc-active-ink); }
+
+/* Ranking tabs use the exact Shop tab geometry and state palette. */
+.ranking-web__tabs { gap: 5px; }
+.ranking-web__tabs button { color: var(--bc-command); font-size: clamp(14px, 1.9vw, 19px); min-height: 42px; }
+.ranking-web__tabs button.is-active,
+.ranking-web__tabs button.is-selected { background: var(--bc-command); border-color: var(--bc-command); color: var(--bc-active-ink); }
+.ranking-web__tabs .ranking-web__back { background: var(--bc-panel); border-color: var(--bc-line); color: var(--bc-command); }
+.ranking-web__tabs .ranking-web__back.is-selected { background: var(--bc-danger-surface); border-color: var(--bc-danger); color: var(--bc-text); }
+@media(max-width:700px){.ranking-web__tabs{gap:5px}.ranking-web__tabs button{font-size:12px;min-height:36px}}
+
+/* Exact Shop tab tracks: compact/mobile proportions, fixed desktop widths. */
+.ranking-web__tabs { grid-template-columns: 190fr 170fr 180fr 152fr; }
+@media(min-width:900px){
+  .ranking-web__tabs { grid-template-columns: 210px 210px 1fr 152px; }
+  .ranking-web__tabs button { min-height: 58px; }
+}
+@media(max-width:520px){.ranking-web__tabs button{min-height:36px}}

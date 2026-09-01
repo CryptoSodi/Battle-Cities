@@ -94,7 +94,7 @@ export class RankingWebUi {
       this.scope === 'gaming' ? 'is-active' : ''
     }">GAMING</button><button data-rank-scope="trading" class="${
       this.scope === 'trading' ? 'is-active' : ''
-    }">TRADING</button><span></span><button data-rank-back class="ranking-web__back">← BACK</button></nav><section class="ranking-web__shell"><section class="ranking-web__summary"><div><span>GAMING RANK (S${this
+    }">TRADING</button><span></span><button data-rank-back class="ranking-web__back">◀ BACK</button></nav><section class="ranking-web__shell"><section class="ranking-web__summary"><div><span>GAMING RANK (S${this
       .data?.currentSeason.number ?? '-'})</span><strong>${
       me?.guest
         ? 'GUEST'

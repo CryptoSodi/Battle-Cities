@@ -9,4 +9,4 @@
 /* Shared active-state contrast: yellow action plates use dark ink. */
 .player-profile-web__error button.is-selected,
 .player-profile-web__hero button.is-selected,
-.player-profile-web__pages button.is-selected { color: #1b1404; }
+.player-profile-web__pages button.is-selected { color: var(--bc-active-ink); }

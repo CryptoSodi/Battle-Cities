@@ -54,7 +54,7 @@ export class SettingsWebUi {
       ['scanline', 'SCANLINE', this.storage.getBoolean(config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES, false)],
       ...(this.notificationClient.isAvailable() ? [['notifications', 'NOTIFICATIONS', this.notificationsEnabled()]] : []),
     ] as Array<[string, string, boolean]>;
-    this.host.innerHTML = `<main class="settings-web"><header><h1>SETTINGS</h1><button data-settings-back>← BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows.map(([key, label, enabled]) => `<article><h2>${label}</h2><button class="settings-web__toggle ${enabled ? 'is-active' : ''}" data-setting="${key}" role="switch" aria-checked="${enabled}"><span>${enabled ? 'ON' : 'OFF'}</span><i></i></button></article>`).join('')}</section><p class="settings-web__status">${this.status}</p><small>VERSION ${process.env.BATTLECITY_VERSION}</small></section></main>`;
+    this.host.innerHTML = `<main class="settings-web"><header><h1>SETTINGS</h1><button data-settings-back>◀ BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows.map(([key, label, enabled]) => `<article><h2>${label}</h2><button class="settings-web__toggle ${enabled ? 'is-active' : ''}" data-setting="${key}" role="switch" aria-checked="${enabled}"><span>${enabled ? 'ON' : 'OFF'}</span><i></i></button></article>`).join('')}</section><p class="settings-web__status">${this.status}</p><small>VERSION ${process.env.BATTLECITY_VERSION}</small></section></main>`;
     this.bind();
   }
   private bind(): void {
