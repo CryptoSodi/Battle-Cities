@@ -29,6 +29,19 @@ interface MenuAction {
 
 let notificationPromptDismissedThisSession = false;
 
+const MAIN_MENU_BUTTON_SPRITES: Record<
+  string,
+  { inactive: string; active: string }
+> = {
+  start: { inactive: 'sprite_1.png', active: 'sprite_2.png' },
+  shop: { inactive: 'sprite_3.png', active: 'sprite_4.png' },
+  ranking: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
+  headquarters: { inactive: 'sprite_7.png', active: 'sprite_8.png' },
+  socials: { inactive: 'sprite_9.png', active: 'sprite_10.png' },
+  settings: { inactive: 'sprite_11.png', active: 'sprite_12.png' },
+  logout: { inactive: 'sprite_13.png', active: 'sprite_14.png' },
+};
+
 export class MainMenuWebUi {
   private readonly eventClient = new EventClient();
   private readonly tradingClient = new TradingClient();
@@ -189,10 +202,11 @@ export class MainMenuWebUi {
           const variantClass = item.variant
             ? ` main-menu-web__action--${item.variant}`
             : '';
+          const sprites = MAIN_MENU_BUTTON_SPRITES[item.action];
           const imageLayers =
-            item.group === 'main'
-              ? `<img class="main-menu-web__action-image main-menu-web__action-image--inactive" src="/assets/menu-web/${item.action}.png" alt="" aria-hidden="true" draggable="false">
-                 <img class="main-menu-web__action-image main-menu-web__action-image--active" src="/assets/menu-web/${item.action}-active.png" alt="" aria-hidden="true" draggable="false">`
+            item.group === 'main' && sprites
+              ? `<img class="main-menu-web__action-image main-menu-web__action-image--inactive" src="/assets/menu-web/${sprites.inactive}" alt="" aria-hidden="true" draggable="false">
+                 <img class="main-menu-web__action-image main-menu-web__action-image--active" src="/assets/menu-web/${sprites.active}" alt="" aria-hidden="true" draggable="false">`
               : '';
           return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}<span class="main-menu-web__action-label">${item.label}</span></button>`;
         })
