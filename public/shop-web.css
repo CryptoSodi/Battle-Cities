@@ -158,14 +158,21 @@ body.shop-web-active::after {
   z-index: 3;
 }
 
-.shop-web__tab.is-active,
-.shop-web__tab.is-selected {
+.shop-web__tab.is-active {
   background: linear-gradient(180deg, #ffc22f, #e89a06), var(--shop-gold);
   border-color: var(--shop-gold-bright);
   box-shadow: inset 0 0 0 2px #a46200, inset 0 4px 0 rgb(255 255 255 / 24%),
     0 0 15px rgb(255 179 15 / 35%);
   color: #171006;
   text-shadow: 0 1px 0 rgb(255 238 164 / 55%);
+}
+
+.shop-web__tab.is-selected:not(.is-active) {
+  background: linear-gradient(180deg, #171a19, #0a0e10);
+  border-color: var(--shop-gold-bright);
+  box-shadow: inset 0 0 0 2px var(--shop-gold-dark),
+    0 0 14px rgb(255 179 15 / 42%);
+  color: var(--shop-gold);
 }
 
 .shop-web__back.is-selected {
@@ -390,14 +397,21 @@ body.shop-web-active::after {
   height: clamp(45px, 8vw, 76px);
 }
 
-.shop-web__filters button.is-active,
-.shop-web__filters button.is-selected {
+.shop-web__filters button.is-active {
   background: linear-gradient(180deg, #ffc22f, #e89a06);
   border-color: var(--shop-gold-bright);
   box-shadow: inset 0 0 0 2px #9a5c00, inset 0 4px 0 rgb(255 255 255 / 24%),
     0 0 13px rgb(255 179 15 / 28%);
   color: #171006;
   text-shadow: 0 1px 0 rgb(255 238 164 / 55%);
+}
+
+.shop-web__filters button.is-selected:not(.is-active) {
+  background: linear-gradient(180deg, #171a19, #0a0e10);
+  border-color: var(--shop-gold-bright);
+  box-shadow: inset 0 0 0 2px var(--shop-gold-dark),
+    0 0 14px rgb(255 179 15 / 42%);
+  color: var(--shop-gold);
 }
 
 .shop-web__label {
@@ -425,7 +439,7 @@ body.shop-web-active::after {
   box-shadow: inset 0 0 0 2px #030506, inset 0 0 18px rgb(0 0 0 / 70%),
     0 3px 0 #020303;
   clip-path: var(--shop-frame);
-  height: clamp(218px, 29.2vw, 286px);
+  height: clamp(170px, 26vw, 260px);
   min-width: 0;
   overflow: hidden;
   padding: clamp(10px, 1.4vw, 17px);
@@ -449,20 +463,20 @@ body.shop-web-active::after {
 
 .shop-web__card-icon {
   align-items: center;
-  bottom: clamp(64px, 8vw, 86px);
+  bottom: clamp(54px, 7vw, 76px);
   display: flex;
   justify-content: center;
   left: 5%;
   position: absolute;
-  top: clamp(35px, 5vw, 57px);
+  top: clamp(30px, 4vw, 46px);
   width: 58%;
 }
 
 .shop-web__card-icon img {
   height: 100%;
   image-rendering: pixelated;
-  max-height: 112px;
-  max-width: 140px;
+  max-height: 100px;
+  max-width: 126px;
   object-fit: contain;
   width: 100%;
 }
@@ -491,7 +505,7 @@ body.shop-web-active::after {
   display: flex;
   font-size: clamp(12px, 1.8vw, 20px);
   gap: clamp(5px, 0.8vw, 10px);
-  height: clamp(39px, 5.5vw, 55px);
+  height: clamp(34px, 4.6vw, 46px);
   justify-content: center;
   left: clamp(9px, 1.2vw, 14px);
   padding: 0 8px;
@@ -520,12 +534,11 @@ body.shop-web-active::after {
 }
 
 .shop-web__card:has(button.is-selected) > button {
-  background: linear-gradient(180deg, #ffc22f, #e89a06);
-  border-color: var(--shop-gold-bright);
-  box-shadow: inset 0 0 0 2px #9a5c00, inset 0 3px 0 rgb(255 255 255 / 24%),
-    0 0 13px rgb(255 179 15 / 35%);
-  color: #171006;
-  text-shadow: none;
+  background: linear-gradient(180deg, #1d8d12, #0a5007);
+  border-color: #a0ff38;
+  box-shadow: inset 0 0 0 2px #063504, inset 0 3px 0 rgb(210 255 163 / 25%),
+    0 0 13px rgb(71 222 23 / 35%);
+  color: var(--shop-white);
 }
 
 .shop-web__status {
@@ -669,10 +682,10 @@ body.shop-web-active::after {
 }
 
 @media (hover: hover) {
-  .shop-web__tab:not(.is-active):hover,
-  .shop-web__filters button:not(.is-active):hover,
-  .shop-web__connect:hover,
-  .shop-web__loadout > div > button:hover {
+  .shop-web__tab:not(.is-active):not(.is-selected):hover,
+  .shop-web__filters button:not(.is-active):not(.is-selected):hover,
+  .shop-web__connect:not(.is-selected):hover,
+  .shop-web__loadout > div > button:not(.is-selected):hover {
     border-color: var(--shop-gold);
     box-shadow: inset 0 0 0 2px #040607, 0 0 12px rgb(255 179 15 / 28%);
     color: var(--shop-gold);
@@ -683,12 +696,12 @@ body.shop-web-active::after {
     border-color: var(--shop-danger);
   }
 
-  .shop-web__card:hover {
+  .shop-web__card:not(:has(button.is-selected)):hover {
     border-color: var(--shop-gold);
     box-shadow: inset 0 0 0 2px #030506, 0 0 12px rgb(255 179 15 / 24%);
   }
 
-  .shop-web__card > button:hover {
+  .shop-web__card > button:not(.is-selected):hover {
     background: linear-gradient(180deg, #18810f, #084c06);
     border-color: #a0ff38;
   }
@@ -806,40 +819,50 @@ body.shop-web-active::after {
   }
 
   .shop-web__cards {
-    gap: 7px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding-top: 9px;
   }
 
   .shop-web__card {
-    height: clamp(190px, 58vw, 236px);
-    padding: 8px;
+    height: clamp(145px, 39vw, 170px);
+    padding: 6px;
   }
 
   .shop-web__card h2 {
-    font-size: clamp(13px, 4vw, 17px);
+    font-size: clamp(10px, 3.1vw, 14px);
   }
 
   .shop-web__card-icon {
-    bottom: 55px;
-    top: 31px;
+    bottom: 43px;
+    left: 3%;
+    top: 27px;
+    width: 58%;
+  }
+
+  .shop-web__card-icon img {
+    max-height: 62px;
+    max-width: 72px;
   }
 
   .shop-web__card p {
-    font-size: clamp(22px, 8vw, 31px);
+    font-size: clamp(16px, 5.2vw, 22px);
+    right: 6%;
   }
 
   .shop-web__card > button {
-    bottom: 7px;
-    font-size: clamp(10px, 3.3vw, 13px);
-    height: 37px;
-    left: 7px;
-    right: 7px;
+    bottom: 5px;
+    font-size: clamp(8px, 2.4vw, 11px);
+    gap: 3px;
+    height: 30px;
+    left: 5px;
+    padding: 0 3px;
+    right: 5px;
   }
 
   .shop-web__card > button img {
-    height: 17px;
-    width: 17px;
+    height: 13px;
+    width: 13px;
   }
 
   .shop-web__loadout > div {

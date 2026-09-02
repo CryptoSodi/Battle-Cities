@@ -95,10 +95,16 @@ export class ShopWebUi {
       this.moveFocus(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
   }
-  private refresh(status = ''): void {
+  private refresh(status = '', restoreSelector = this.focusSelector()): void {
     if (!this.active || !this.host) return;
     this.host.innerHTML = this.render(status);
     this.bind();
+    if (!restoreSelector) return;
+    const selected = this.host.querySelector(restoreSelector);
+    if (selected instanceof HTMLButtonElement) {
+      selected.focus({ preventScroll: true });
+      selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
   private render(status: string): string {
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
@@ -235,6 +241,11 @@ export class ShopWebUi {
     this.buttons = Array.from(this.host.querySelectorAll('button'));
     this.buttons.forEach((button) => {
       button.addEventListener(
+        'pointerdown',
+        () => button.focus({ preventScroll: true }),
+        { signal },
+      );
+      button.addEventListener(
         'focus',
         () => {
           this.buttons.forEach((candidate) =>
@@ -257,7 +268,7 @@ export class ShopWebUi {
       'click',
       () => {
         if (!this.shop.isWalletConnected()) this.shop.connectWallet();
-        this.refresh('WALLET CONNECTED');
+        this.refresh('WALLET CONNECTED', '[data-shop-wallet]');
       },
       { signal },
     );
@@ -268,7 +279,7 @@ export class ShopWebUi {
           'click',
           () => {
             this.tab = b.dataset.shopTab as ShopTab;
-            this.refresh();
+            this.refresh('', `[data-shop-tab="${b.dataset.shopTab}"]`);
           },
           { signal },
         ),
@@ -280,7 +291,7 @@ export class ShopWebUi {
           'click',
           () => {
             this.filter = b.dataset.shopFilter as ShopFilter;
-            this.refresh();
+            this.refresh('', `[data-shop-filter="${b.dataset.shopFilter}"]`);
           },
           { signal },
         ),
@@ -290,13 +301,16 @@ export class ShopWebUi {
       .forEach((b) =>
         b.addEventListener(
           'click',
-          () =>
+          () => {
+            const itemId = b.dataset.shopBuy as ShopItemId;
             this.refresh(
               this.shop.purchaseItem(
-                b.dataset.shopBuy as ShopItemId,
+                itemId,
                 this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token,
               ).statusText,
-            ),
+              `[data-shop-buy="${itemId}"]`,
+            );
+          },
           { signal },
         ),
       );
@@ -309,7 +323,10 @@ export class ShopWebUi {
             const item = this.shop.equipNext(
               b.dataset.shopSlot as ShopLoadoutSlot,
             );
-            this.refresh(item ? `${this.name(item)} EQUIPPED` : 'SLOT CLEARED');
+            this.refresh(
+              item ? `${this.name(item)} EQUIPPED` : 'SLOT CLEARED',
+              `[data-shop-slot="${b.dataset.shopSlot}"]`,
+            );
           },
           { signal },
         ),
@@ -323,10 +340,13 @@ export class ShopWebUi {
         }
         const fuelCost = this.options.getBattleFuelCost();
         if (!this.shop.canStartRun(fuelCost)) {
-          this.refresh(`NEED ${fuelCost} FUEL - VISIT THE SHOP`);
+          this.refresh(
+            `NEED ${fuelCost} FUEL - VISIT THE SHOP`,
+            '[data-shop-start]',
+          );
           return;
         }
-        this.refresh('DEPLOYING');
+        this.refresh('DEPLOYING', '[data-shop-start]');
         void this.options.startBattle();
       },
       { signal },
@@ -365,6 +385,28 @@ export class ShopWebUi {
       this.buttons.includes(document.activeElement)
       ? document.activeElement
       : null;
+  }
+  private focusSelector(): string {
+    const button = this.focused();
+    if (!button) return '';
+    const valuedAttributes = [
+      'data-shop-tab',
+      'data-shop-filter',
+      'data-shop-buy',
+      'data-shop-slot',
+    ];
+    for (const attribute of valuedAttributes) {
+      const value = button.getAttribute(attribute);
+      if (value !== null) return `[${attribute}="${value}"]`;
+    }
+    for (const attribute of [
+      'data-shop-wallet',
+      'data-shop-start',
+      'data-shop-back',
+    ]) {
+      if (button.hasAttribute(attribute)) return `[${attribute}]`;
+    }
+    return '';
   }
   private matches(item: ShopCatalogItem): boolean {
     return (

@@ -52,21 +52,26 @@ HTML interfaces.
 - Use clipped square geometry with subtle bevels. Do not use rounded cards,
   pill-shaped buttons, soft dashboard styling, or decorative gradients that do
   not communicate surface depth or interaction state.
-- Default controls use dark gunmetal. Hover uses a restrained gold edge. The
-  current tab/filter and keyboard-focused action use a filled amber plate with
-  dark ink. Connected/available/purchase actions use supply green. A focused
-  Back action uses alert red.
+- Every control exposes three stable visual states. Inactive controls use dark
+  gunmetal. Active tabs and filters use a filled amber plate with dark ink.
+  Keyboard-selected controls use a bright amber edge and glow without hiding
+  the active state. Hover mirrors the selected edge at lower intensity.
+  Connected/available/purchase actions use supply green. A selected Back action
+  uses alert red.
 - A state change may alter fill, edge, glow, or text color, but must never move
   a label, resize a control, or change typography metrics.
 - Use equal tracks for repeated controls: inventory slots share one size,
   category tabs share one height, and shop cards share one height per
   breakpoint. Use Grid for repeated cards. Use Flexbox for top navigation,
   category filters, status rows, and horizontal inventory strips.
-- Preserve the directional navigation order in DOM order. Focused items use an
-  intentional `.is-selected` state; never restore browser-default focus rings.
+- Preserve the directional navigation order in DOM order. Keyboard focus and
+  pointer presses must both use the same intentional `.is-selected` state;
+  never restore browser-default focus rings. When an action rerenders a screen,
+  restore selection by a stable control key instead of resetting to the first
+  tab.
 - Keep icon boxes explicit and use `object-fit: contain` plus
   `image-rendering: pixelated` for pixel art. Missing art must use a labeled
   placeholder, never an emoji.
-- At narrow widths, retain the four-button top track and eight-slot inventory
-  strip, reduce icon/text metrics together, and reflow the catalog from three
-  columns to two. Verify keyboard, touch, and scrolling independently.
+- At narrow widths, retain the four-button top track, eight-slot inventory
+  strip, and three-column catalog. Reduce the card, icon, price-bar, and text
+  metrics together. Verify keyboard, touch, and scrolling independently.
