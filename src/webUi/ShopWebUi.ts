@@ -268,16 +268,16 @@ export class ShopWebUi {
     return `<section class="shop-web__loadout"><h2>EQUIPPED SLOTS</h2><p>SELECT A SLOT TO CYCLE OWNED ITEMS</p><div>${slots
       .map((slot, index) => {
         const item = this.shop.getEquipped(slot);
-        return `<button data-shop-slot="${slot}" type="button"><span>SLOT ${index +
-          1}</span><strong>${
+        return `<button class="shop-web__loadout-slot" data-shop-slot="${slot}" type="button"><span class="shop-web__slot-index">SLOT 0${index +
+          1}</span><strong class="shop-web__slot-item">${
           item
             ? `<img src="${icons[item]}" alt="">${this.name(item)}`
-            : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt="Empty slot">'
-        }</strong><em>CHANGE</em></button>`;
+            : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt=""><b>EMPTY</b>'
+        }</strong><em class="shop-web__slot-action">CHANGE</em></button>`;
       })
       .join(
         '',
-      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO DEPLOY</span><strong>START BATTLE</strong><i aria-hidden="true">▶</i></button></section>`;
+      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO REPLAY</span><strong>START BATTLE</strong></button></section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;

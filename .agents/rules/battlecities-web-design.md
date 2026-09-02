@@ -81,3 +81,7 @@ HTML interfaces.
   strip, and three-column catalog. Shop cards remain square at every Android
   width; reduce the icon, price-bar, and text metrics together. Verify keyboard,
   touch, and scrolling independently.
+- Loadout equipment controls use compact equal-slot cards: four tracks on web
+  desktop and two tracks on Android/tablet. Keep the primary battle CTA centered
+  and deliberately narrow, with a two-line status/command label and no text-arrow
+  glyph; it must never stretch across the loadout panel.
