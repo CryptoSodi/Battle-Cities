@@ -48,7 +48,7 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
-import { applyReturnScreenTransition } from './webUi/navigationAnimation';
+import { applyScreenTransition } from './webUi/navigationAnimation';
 import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
 import { HeadquartersPagesWebUi } from './webUi/HeadquartersPagesWebUi';
 import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
@@ -1041,7 +1041,7 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainSocials) socialsWebUi.mount();
   if (sceneType === GameSceneType.SettingsMenu) settingsWebUi.mount();
   const webUiHost = document.querySelector('[data-web-ui]');
-  if (webUiHost instanceof HTMLElement) applyReturnScreenTransition(webUiHost);
+  if (webUiHost instanceof HTMLElement) applyScreenTransition(webUiHost);
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame

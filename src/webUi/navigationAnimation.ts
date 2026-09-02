@@ -35,18 +35,26 @@ export function animateBackNavigation(host: HTMLElement, navigator: SceneNavigat
   window.setTimeout(complete, BACK_TRANSITION_MS);
 }
 
-export function applyReturnScreenTransition(host: HTMLElement): void {
-  if (!document.documentElement.hasAttribute(RETURN_TRANSITION_ATTRIBUTE)) return;
-
-  document.documentElement.removeAttribute(RETURN_TRANSITION_ATTRIBUTE);
+export function applyScreenTransition(host: HTMLElement): void {
+  const isReturning = document.documentElement.hasAttribute(
+    RETURN_TRANSITION_ATTRIBUTE,
+  );
+  if (isReturning) {
+    document.documentElement.removeAttribute(RETURN_TRANSITION_ATTRIBUTE);
+  }
   host.dataset.backNavigationPending = '';
   const screen = host.firstElementChild;
   if (!(screen instanceof HTMLElement)) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  screen.classList.add('web-ui-screen--returning');
-  screen.addEventListener(
-    'animationend',
-    () => screen.classList.remove('web-ui-screen--returning'),
-    { once: true },
-  );
+  const transitionClass = isReturning
+    ? 'web-ui-screen--returning'
+    : 'web-ui-screen--entering';
+  screen.classList.add(transitionClass);
+  const handleAnimationEnd = (event: AnimationEvent): void => {
+    if (event.target !== screen) return;
+    screen.classList.remove(transitionClass);
+    screen.removeEventListener('animationend', handleAnimationEnd);
+  };
+  screen.addEventListener('animationend', handleAnimationEnd);
 }

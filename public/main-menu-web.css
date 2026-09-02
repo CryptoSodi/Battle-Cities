@@ -478,17 +478,9 @@ body.game-running.web-ui-active .web-ui {
   pointer-events: none;
 }
 
-/* Destination screens enter with the same brief, restrained reveal used by
-   the Android menu flow. */
-.web-ui > :is(
-  .shop-web,
-  .ranking-web,
-  .tank-select-web,
-  .player-profile-web,
-  .operations-web,
-  .settings-web,
-  .hq-page-web
-) {
+/* Scene navigation adds this class once. Re-rendering content inside a screen
+   does not replay the page transition. */
+.web-ui > .web-ui-screen--entering {
   animation: battle-cities-screen-enter 180ms var(--bc-ease) both;
 }
 
@@ -627,18 +619,7 @@ body.game-running.web-ui-active .web-ui {
     transition: none;
   }
 
-  .web-ui > :is(
-    .shop-web,
-    .ranking-web,
-    .tank-select-web,
-    .player-profile-web,
-    .operations-web,
-    .settings-web,
-    .hq-page-web
-  ) {
-    animation: none;
-  }
-
+  .web-ui-screen--entering,
   .web-ui-screen--leaving,
   .web-ui-screen--returning {
     animation: none;
