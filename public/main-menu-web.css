@@ -486,7 +486,8 @@ body.game-running.web-ui-active .web-ui {
   .tank-select-web,
   .player-profile-web,
   .operations-web,
-  .settings-web
+  .settings-web,
+  .hq-page-web
 ) {
   animation: battle-cities-screen-enter 180ms var(--bc-ease) both;
 }
@@ -632,7 +633,8 @@ body.game-running.web-ui-active .web-ui {
     .tank-select-web,
     .player-profile-web,
     .operations-web,
-    .settings-web
+    .settings-web,
+    .hq-page-web
   ) {
     animation: none;
   }

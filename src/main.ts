@@ -50,6 +50,7 @@ import {
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
 import { applyReturnScreenTransition } from './webUi/navigationAnimation';
 import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
+import { HeadquartersPagesWebUi } from './webUi/HeadquartersPagesWebUi';
 import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
 import { SettingsWebUi } from './webUi/SettingsWebUi';
@@ -715,6 +716,7 @@ const playerProfileWebUi = new PlayerProfileWebUi(
   },
 );
 const headquartersWebUi = new HeadquartersWebUi(sceneRouter, inputManager);
+const headquartersPagesWebUi = new HeadquartersPagesWebUi(sceneRouter, inputManager);
 const socialsWebUi = new SocialsWebUi(sceneRouter, inputManager);
 const settingsWebUi = new SettingsWebUi(
   sceneRouter,
@@ -1008,6 +1010,7 @@ sceneRouter.transitionStarted.addListener(() => {
   tankSelectWebUi.unmount();
   playerProfileWebUi.unmount();
   headquartersWebUi.unmount();
+  headquartersPagesWebUi.unmount();
   socialsWebUi.unmount();
   settingsWebUi.unmount();
   collisionSystem.reset();
@@ -1026,6 +1029,15 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
   if (sceneType === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
   if (sceneType === GameSceneType.MainMore) headquartersWebUi.mount();
+  if (
+    sceneType === GameSceneType.MainTreasury ||
+    sceneType === GameSceneType.MainEvents ||
+    sceneType === GameSceneType.MainStaking ||
+    sceneType === GameSceneType.MainTrading ||
+    sceneType === GameSceneType.MainBoost ||
+    sceneType === GameSceneType.MainAirdrop ||
+    sceneType === GameSceneType.MainWiki
+  ) headquartersPagesWebUi.mount(sceneType);
   if (sceneType === GameSceneType.MainSocials) socialsWebUi.mount();
   if (sceneType === GameSceneType.SettingsMenu) settingsWebUi.mount();
   const webUiHost = document.querySelector('[data-web-ui]');
@@ -1416,7 +1428,7 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
+  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !headquartersPagesWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1431,6 +1443,7 @@ gameLoop.update.addListener((event) => {
   if (tankSelectWebUi.isActive()) tankSelectWebUi.update();
   if (playerProfileWebUi.isActive()) playerProfileWebUi.update();
   if (headquartersWebUi.isActive()) headquartersWebUi.update();
+  if (headquartersPagesWebUi.isActive()) headquartersPagesWebUi.update();
   if (socialsWebUi.isActive()) socialsWebUi.update();
   if (settingsWebUi.isActive()) settingsWebUi.update();
 
@@ -1443,7 +1456,7 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
+      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !headquartersPagesWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1471,7 +1484,8 @@ gameLoop.render.addListener((event) => {
     currentSceneType === GameSceneType.MainPlayerProfile ||
     currentSceneType === GameSceneType.MainMore ||
     currentSceneType === GameSceneType.MainSocials ||
-    currentSceneType === GameSceneType.SettingsMenu;
+    currentSceneType === GameSceneType.SettingsMenu ||
+    headquartersPagesWebUi.isActive();
   document.body.classList.toggle(
     'main-menu-active',
     currentSceneType === GameSceneType.MainMenu,
@@ -1661,6 +1675,15 @@ async function main(): Promise<void> {
     if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.MainMore) headquartersWebUi.mount();
+    if (
+      sceneRouter.getCurrentType() === GameSceneType.MainTreasury ||
+      sceneRouter.getCurrentType() === GameSceneType.MainEvents ||
+      sceneRouter.getCurrentType() === GameSceneType.MainStaking ||
+      sceneRouter.getCurrentType() === GameSceneType.MainTrading ||
+      sceneRouter.getCurrentType() === GameSceneType.MainBoost ||
+      sceneRouter.getCurrentType() === GameSceneType.MainAirdrop ||
+      sceneRouter.getCurrentType() === GameSceneType.MainWiki
+    ) headquartersPagesWebUi.mount(sceneRouter.getCurrentType() as GameSceneType);
     if (sceneRouter.getCurrentType() === GameSceneType.MainSocials) socialsWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.SettingsMenu) settingsWebUi.mount();
   } else {
