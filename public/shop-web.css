@@ -714,6 +714,13 @@ body.shop-web-active::after {
   filter: brightness(0.82);
 }
 
+@media (max-width: 899px) {
+  .shop-web__card {
+    aspect-ratio: 1 / 1;
+    height: auto;
+  }
+}
+
 @media (min-width: 900px) {
   .shop-web--desktop {
     max-width: 1280px;
@@ -1058,7 +1065,7 @@ body.shop-web-active::after {
   }
 
   .shop-web__card {
-    height: clamp(145px, 39vw, 170px);
+    height: auto;
     padding: 6px;
   }
 

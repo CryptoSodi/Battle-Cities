@@ -78,5 +78,6 @@ HTML interfaces.
   `image-rendering: pixelated` for pixel art. Missing art must use a labeled
   placeholder, never an emoji.
 - At narrow widths, retain the four-button top track, eight-slot inventory
-  strip, and three-column catalog. Reduce the card, icon, price-bar, and text
-  metrics together. Verify keyboard, touch, and scrolling independently.
+  strip, and three-column catalog. Shop cards remain square at every Android
+  width; reduce the icon, price-bar, and text metrics together. Verify keyboard,
+  touch, and scrolling independently.
