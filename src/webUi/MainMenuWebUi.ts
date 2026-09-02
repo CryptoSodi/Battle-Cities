@@ -33,13 +33,13 @@ const MAIN_MENU_BUTTON_SPRITES: Record<
   string,
   { inactive: string; active: string }
 > = {
-  start: { inactive: 'start.png', active: 'start-active.png' },
-  shop: { inactive: 'shop.png', active: 'shop-active.png' },
-  ranking: { inactive: 'ranking.png', active: 'ranking-active.png' },
-  headquarters: { inactive: 'headquarters.png', active: 'headquarters-active.png' },
-  socials: { inactive: 'socials.png', active: 'socials-active.png' },
-  settings: { inactive: 'settings.png', active: 'settings-active.png' },
-  logout: { inactive: 'logout.png', active: 'logout-active.png' },
+  start: { inactive: 'sprite_1.png', active: 'sprite_2.png' },
+  shop: { inactive: 'sprite_3.png', active: 'sprite_4.png' },
+  ranking: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
+  headquarters: { inactive: 'sprite_7.png', active: 'sprite_8.png' },
+  socials: { inactive: 'sprite_9.png', active: 'sprite_10.png' },
+  settings: { inactive: 'sprite_11.png', active: 'sprite_12.png' },
+  logout: { inactive: 'sprite_13.png', active: 'sprite_14.png' },
 };
 
 export class MainMenuWebUi {
