@@ -46,6 +46,11 @@ HTML interfaces.
 - Keep each screen inside a single responsive container with a fixed maximum
   width, `100dvh` height, and an independently scrollable content region. The
   navigation and status/footer regions stay visible.
+- Treat web and Android as separate compositions. Shop-class desktop screens
+  use the established `1280px` shell with a `298px` inventory rail and a
+  separate scrollable content panel; Android/tablet keeps the horizontal status
+  and inventory composition. Do not scale the Android composition up as the
+  desktop layout.
 - Define screen geometry and colors as CSS custom properties. Reuse one frame
   cut, steel edge, gold focus, green supply, and red Back treatment throughout
   the screen instead of introducing one-off colors.

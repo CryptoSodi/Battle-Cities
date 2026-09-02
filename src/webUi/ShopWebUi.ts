@@ -65,6 +65,11 @@ export class ShopWebUi {
     this.host = host;
     document.body.classList.add('web-ui-active', 'shop-web-active');
     host.hidden = false;
+    window
+      .matchMedia('(min-width: 900px)')
+      .addEventListener('change', () => this.refresh(), {
+        signal: this.abortController.signal,
+      });
     Object.values(icons).forEach((src) => {
       const image = new Image();
       image.src = src;
@@ -107,13 +112,11 @@ export class ShopWebUi {
     }
   }
   private render(status: string): string {
+    if (window.matchMedia('(min-width: 900px)').matches) {
+      return this.renderDesktop(status);
+    }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
-    const content =
-      this.tab === 'loadout'
-        ? this.loadout()
-        : `${this.filters()}<h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
-            currency,
-          )}</div>`;
+    const content = this.shopContent(currency);
     return `<main class="shop-container shop-web" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
         'bact',
@@ -140,6 +143,46 @@ export class ShopWebUi {
       (this.tab === 'loadout'
         ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
         : 'ALL ITEMS LOADED')}</p></section></main>`;
+  }
+  private renderDesktop(status: string): string {
+    const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
+    return `<main class="shop-container shop-web shop-web--desktop" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
+      <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
+        'bact',
+        'TOKEN SHOP',
+      )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
+      'loadout',
+      'LOADOUT',
+    )}<span class="shop-web__tab-spacer" aria-hidden="true"></span><button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav>
+      <section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
+        this.shop.isWalletConnected() ? ' is-connected' : ''
+      }" data-shop-wallet type="button">${
+      this.shop.isWalletConnected()
+        ? '<i aria-hidden="true"></i>CONNECTED'
+        : 'CONNECT'
+    }</button>${this.resource(
+      'BATC',
+      this.shop.getTokenBalance().toString(),
+    )}${this.resource(
+      'SOL',
+      this.shop.getSolBalance().toFixed(3),
+    )}${this.resource(
+      'FUEL',
+      this.shop.getFuelBalance().toString(),
+    )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div></aside>
+      <section class="shop-web__desktop-content"><div class="shop-web__content">${this.shopContent(
+        currency,
+      )}</div><p class="shop-web__status" aria-live="polite">${status ||
+      (this.tab === 'loadout'
+        ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
+        : 'ALL ITEMS LOADED')}</p></section></section></main>`;
+  }
+  private shopContent(currency: ShopCurrency): string {
+    return this.tab === 'loadout'
+      ? this.loadout()
+      : `${this.filters()}<h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
+          currency,
+        )}</div>`;
   }
   private filters(): string {
     return `<nav class="shop-web__filters" aria-label="Item categories">${([
