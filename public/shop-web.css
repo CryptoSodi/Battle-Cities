@@ -662,23 +662,17 @@ body.shop-web-active::after {
   background: linear-gradient(90deg, #0b330f, #12680c 48%, #0b330f);
   border-color: var(--shop-green-edge);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  height: 58px;
+  height: 48px;
+  justify-content: center;
   margin: 18px auto 0;
-  max-width: 330px;
-  padding: 0 14px;
-  width: min(100%, 330px);
-}
-
-.shop-web__start-battle span {
-  color: #9bc6a4;
-  font-size: 9px;
+  max-width: 260px;
+  padding: 0 12px;
+  width: min(100%, 260px);
 }
 
 .shop-web__start-battle strong {
   color: var(--shop-white);
-  font-size: clamp(17px, 2.1vw, 22px);
+  font-size: clamp(15px, 1.7vw, 19px);
   letter-spacing: 0.08em;
 }
 
@@ -688,7 +682,6 @@ body.shop-web-active::after {
   color: #171006;
 }
 
-.shop-web__start-battle.is-selected span,
 .shop-web__start-battle.is-selected strong {
   color: #171006;
 }
@@ -1147,9 +1140,9 @@ body.shop-web-active::after {
   }
 
   .shop-web__loadout .shop-web__start-battle {
-    height: 52px;
-    max-width: 280px;
-    width: min(100%, 280px);
+    height: 44px;
+    max-width: 230px;
+    width: min(100%, 230px);
   }
 
   .shop-web__status {

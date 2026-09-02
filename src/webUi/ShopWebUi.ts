@@ -277,7 +277,7 @@ export class ShopWebUi {
       })
       .join(
         '',
-      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO REPLAY</span><strong>START BATTLE</strong></button></section>`;
+      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><strong>START BATTLE</strong></button></section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;

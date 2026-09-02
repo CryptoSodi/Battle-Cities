@@ -83,5 +83,5 @@ HTML interfaces.
   touch, and scrolling independently.
 - Loadout equipment controls use compact equal-slot cards: four tracks on web
   desktop and two tracks on Android/tablet. Keep the primary battle CTA centered
-  and deliberately narrow, with a two-line status/command label and no text-arrow
-  glyph; it must never stretch across the loadout panel.
+  and deliberately narrow, with a single command label and no text-arrow glyph;
+  it must never stretch across the loadout panel.
