@@ -101,11 +101,14 @@ export class ShopWebUi {
     this.bind();
   }
   private render(status: string): string {
-    if (window.matchMedia('(min-width: 900px)').matches) {
-      return this.renderDesktop(status);
-    }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
-    return `<main class="shop-web" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
+    const content =
+      this.tab === 'loadout'
+        ? this.loadout()
+        : `${this.filters()}<h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
+            currency,
+          )}</div>`;
+    return `<main class="shop-container shop-web" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
         'bact',
         'TOKEN SHOP',
@@ -116,7 +119,9 @@ export class ShopWebUi {
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button">${
-      this.shop.isWalletConnected() ? 'CONNECTED' : 'CONNECT'
+      this.shop.isWalletConnected()
+        ? '<i aria-hidden="true"></i>CONNECTED'
+        : 'CONNECT'
     }</button>${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),
@@ -124,97 +129,38 @@ export class ShopWebUi {
       'SOL',
       this.shop.getSolBalance().toFixed(3),
     )}${this.resource('FUEL', this.shop.getFuelBalance().toString())}</section>
-      <section class="shop-web__owned"><h2>OWNED ITEMS</h2><div>${Object.values(
-        ShopInventoryItemId,
-      )
-        .map(
-          (id) =>
-            `<div class="shop-web__owned-tile"><img src="${
-              icons[id]
-            }" alt=""><strong>${this.count(id)}</strong></div>`,
-        )
-        .join('')}</div></section>
-      <section class="shop-web__content">${
-        this.tab === 'loadout'
-          ? this.loadout()
-          : `<nav class="shop-web__filters" aria-label="Item categories">${([
-              ['all', 'ALL'],
-              ['fuel', 'FUEL'],
-              ['powerups', 'POWER'],
-              ['packs', 'PACKS'],
-            ] as Array<[ShopFilter, string]>)
-              .map(
-                ([key, label]) =>
-                  `<button class="${
-                    this.filter === key ? 'is-active' : ''
-                  }" data-shop-filter="${key}" type="button">${label}</button>`,
-              )
-              .join(
-                '',
-              )}</nav><h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
-              currency,
-            )}</div>`
-      }</section><p class="shop-web__status" aria-live="polite">${status ||
+      <section class="shop-web__owned"><h2>OWNED ITEMS</h2><div>${this.inventoryTiles()}</div></section>
+      <section class="shop-web__content">${content}</section><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
         ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
         : 'ALL ITEMS LOADED')}</p></section></main>`;
   }
-  private renderDesktop(status: string): string {
-    const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
-    const content =
-      this.tab === 'loadout'
-        ? this.loadout()
-        : `<nav class="shop-web__filters" aria-label="Item categories">${([
-            ['all', 'ALL'],
-            ['fuel', 'FUEL'],
-            ['powerups', 'POWER'],
-            ['packs', 'PACKS'],
-          ] as Array<[ShopFilter, string]>)
-            .map(
-              ([key, label]) =>
-                `<button class="${
-                  this.filter === key ? 'is-active' : ''
-                }" data-shop-filter="${key}" type="button">${label}</button>`,
-            )
-            .join(
-              '',
-            )}</nav><h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
-            currency,
-          )}</div>`;
-    return `<main class="shop-web shop-web--desktop" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1><nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
-      'bact',
-      'TOKEN SHOP',
-    )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
-      'loadout',
-      'LOADOUT',
-    )}<span></span><button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav><section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
-      this.shop.isWalletConnected() ? ' is-connected' : ''
-    }" data-shop-wallet type="button">${
-      this.shop.isWalletConnected() ? 'CONNECTED' : 'CONNECT'
-    }</button>${this.resource(
-      'BATC',
-      this.shop.getTokenBalance().toString(),
-    )}${this.resource(
-      'SOL',
-      this.shop.getSolBalance().toFixed(3),
-    )}${this.resource(
-      'FUEL',
-      this.shop.getFuelBalance().toString(),
-    )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${Object.values(
-      ShopInventoryItemId,
-    )
+  private filters(): string {
+    return `<nav class="shop-web__filters" aria-label="Item categories">${([
+      ['all', 'ALL'],
+      ['fuel', 'FUEL'],
+      ['powerups', 'POWER'],
+      ['packs', 'PACKS'],
+    ] as Array<[ShopFilter, string]>)
+      .map(
+        ([key, label]) =>
+          `<button class="${
+            this.filter === key ? 'is-active' : ''
+          }" data-shop-filter="${key}" type="button">${label}</button>`,
+      )
+      .join('')}</nav>`;
+  }
+  private inventoryTiles(): string {
+    return Object.values(ShopInventoryItemId)
       .map(
         (id) =>
-          `<div class="shop-web__owned-tile"><img src="${
-            icons[id]
-          }" alt=""><strong>${this.count(id)}</strong></div>`,
+          `<div class="shop-web__owned-tile" title="${this.name(
+            id,
+          )}"><img src="${icons[id]}" alt=""><strong aria-label="${this.name(
+            id,
+          )} quantity">${this.count(id)}</strong></div>`,
       )
-      .join(
-        '',
-      )}</div></aside><section class="shop-web__desktop-content">${content}<p class="shop-web__status" aria-live="polite">${status ||
-      (this.tab === 'loadout'
-        ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
-        : 'ALL ITEMS LOADED')}</p></section></section></main>`;
+      .join('');
   }
   private tabButton(tab: ShopTab, label: string): string {
     const icon = {
@@ -280,7 +226,9 @@ export class ShopWebUi {
             : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt="Empty slot">'
         }</strong><em>CHANGE</em></button>`;
       })
-      .join('')}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO DEPLOY</span><strong>START BATTLE</strong><i aria-hidden="true">▶</i></button></section>`;
+      .join(
+        '',
+      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><span>READY TO DEPLOY</span><strong>START BATTLE</strong><i aria-hidden="true">▶</i></button></section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
@@ -298,9 +246,13 @@ export class ShopWebUi {
     });
     this.host
       .querySelector('[data-shop-back]')
-      ?.addEventListener('click', () => animateBackNavigation(this.host, this.options.navigator), {
-        signal,
-      });
+      ?.addEventListener(
+        'click',
+        () => animateBackNavigation(this.host, this.options.navigator),
+        {
+          signal,
+        },
+      );
     this.host.querySelector('[data-shop-wallet]')?.addEventListener(
       'click',
       () => {

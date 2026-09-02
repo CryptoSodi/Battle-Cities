@@ -34,3 +34,39 @@
 - Respect `@media (prefers-reduced-motion: reduce)`:
   - Neutralize infinite animations, glitches, and heavy motion transitions when reduced-motion is requested.
 - Maintain readable contrast between text tokens (`--white` / `--gray`) and panel surfaces (`--bg`, `--bg-panel`).
+
+## Industrial HTML UI Standard
+
+Use the Shop as the reference implementation when converting other full-screen
+HTML interfaces.
+
+- Build frames, panels, tabs, cards, corner cuts, bevels, rivets, shadows, and
+  state glows with HTML/CSS. Never use a screenshot or rasterized panel as a UI
+  background. Raster assets are reserved for game art and semantic icons.
+- Keep each screen inside a single responsive container with a fixed maximum
+  width, `100dvh` height, and an independently scrollable content region. The
+  navigation and status/footer regions stay visible.
+- Define screen geometry and colors as CSS custom properties. Reuse one frame
+  cut, steel edge, gold focus, green supply, and red Back treatment throughout
+  the screen instead of introducing one-off colors.
+- Use clipped square geometry with subtle bevels. Do not use rounded cards,
+  pill-shaped buttons, soft dashboard styling, or decorative gradients that do
+  not communicate surface depth or interaction state.
+- Default controls use dark gunmetal. Hover uses a restrained gold edge. The
+  current tab/filter and keyboard-focused action use a filled amber plate with
+  dark ink. Connected/available/purchase actions use supply green. A focused
+  Back action uses alert red.
+- A state change may alter fill, edge, glow, or text color, but must never move
+  a label, resize a control, or change typography metrics.
+- Use equal tracks for repeated controls: inventory slots share one size,
+  category tabs share one height, and shop cards share one height per
+  breakpoint. Use Grid for repeated cards. Use Flexbox for top navigation,
+  category filters, status rows, and horizontal inventory strips.
+- Preserve the directional navigation order in DOM order. Focused items use an
+  intentional `.is-selected` state; never restore browser-default focus rings.
+- Keep icon boxes explicit and use `object-fit: contain` plus
+  `image-rendering: pixelated` for pixel art. Missing art must use a labeled
+  placeholder, never an emoji.
+- At narrow widths, retain the four-button top track and eight-slot inventory
+  strip, reduce icon/text metrics together, and reflow the catalog from three
+  columns to two. Verify keyboard, touch, and scrolling independently.
