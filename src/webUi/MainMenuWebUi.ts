@@ -33,13 +33,13 @@ const MAIN_MENU_BUTTON_SPRITES: Record<
   string,
   { inactive: string; active: string }
 > = {
-  start: { inactive: 'sprite_1.png', active: 'sprite_2.png' },
-  shop: { inactive: 'sprite_3.png', active: 'sprite_4.png' },
-  ranking: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
-  headquarters: { inactive: 'sprite_7.png', active: 'sprite_8.png' },
-  socials: { inactive: 'sprite_9.png', active: 'sprite_10.png' },
-  settings: { inactive: 'sprite_11.png', active: 'sprite_12.png' },
-  logout: { inactive: 'sprite_13.png', active: 'sprite_14.png' },
+  start: { inactive: 'start.png', active: 'start-active.png' },
+  shop: { inactive: 'shop.png', active: 'shop-active.png' },
+  ranking: { inactive: 'ranking.png', active: 'ranking-active.png' },
+  headquarters: { inactive: 'headquarters.png', active: 'headquarters-active.png' },
+  socials: { inactive: 'socials.png', active: 'socials-active.png' },
+  settings: { inactive: 'settings.png', active: 'settings-active.png' },
+  logout: { inactive: 'logout.png', active: 'logout-active.png' },
 };
 
 export class MainMenuWebUi {
@@ -54,6 +54,7 @@ export class MainMenuWebUi {
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mountId = 0;
+  private touchActionTimer: number | null = null;
 
   public constructor(options: MainMenuWebUiOptions) {
     this.options = options;
@@ -97,6 +98,10 @@ export class MainMenuWebUi {
     this.mountId += 1;
     this.abortController?.abort();
     this.abortController = null;
+    if (this.touchActionTimer !== null) {
+      window.clearTimeout(this.touchActionTimer);
+      this.touchActionTimer = null;
+    }
     this.actionButtons = [];
     this.removeMobileGamepadQrElement();
 
@@ -302,7 +307,34 @@ export class MainMenuWebUi {
     this.actionButtons.forEach((button) => {
       button.addEventListener(
         'click',
-        () => this.activateAction(button.dataset.menuAction || ''),
+        () => {
+          if (this.touchActionTimer === null) {
+            this.activateAction(button.dataset.menuAction || '');
+          }
+        },
+        { signal },
+      );
+      button.addEventListener(
+        'pointerup',
+        (event) => {
+          if (event.pointerType !== 'touch' || this.touchActionTimer !== null) {
+            return;
+          }
+
+          this.actionButtons.forEach((candidate) => {
+            const selected = candidate === button;
+            candidate.classList.toggle('is-selected', selected);
+            candidate.disabled = true;
+            candidate.toggleAttribute('aria-busy', selected);
+          });
+          button.classList.add('is-activating');
+          this.touchActionTimer = window.setTimeout(() => {
+            this.touchActionTimer = null;
+            if (this.active) {
+              this.activateAction(button.dataset.menuAction || '');
+            }
+          }, 180);
+        },
         { signal },
       );
       button.addEventListener(

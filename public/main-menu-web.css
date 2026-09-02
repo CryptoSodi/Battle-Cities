@@ -473,6 +473,36 @@ body.game-running.web-ui-active .web-ui {
   opacity: 1;
 }
 
+.main-menu-web__action.is-activating {
+  cursor: wait;
+  pointer-events: none;
+}
+
+/* Destination screens enter with the same brief, restrained reveal used by
+   the Android menu flow. */
+.web-ui > :is(
+  .shop-web,
+  .ranking-web,
+  .tank-select-web,
+  .player-profile-web,
+  .operations-web,
+  .settings-web
+) {
+  animation: battle-cities-screen-enter 180ms var(--bc-ease) both;
+}
+
+@keyframes battle-cities-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.988);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .main-menu-web__dialog {
   background: var(--bc-panel);
   border: 1px solid var(--bc-command-dim);
@@ -566,5 +596,16 @@ body.game-running.web-ui-active .web-ui {
 @media (prefers-reduced-motion: reduce) {
   .main-menu-web__action {
     transition: none;
+  }
+
+  .web-ui > :is(
+    .shop-web,
+    .ranking-web,
+    .tank-select-web,
+    .player-profile-web,
+    .operations-web,
+    .settings-web
+  ) {
+    animation: none;
   }
 }
