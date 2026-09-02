@@ -5,6 +5,7 @@ import {
   PlayerProfileRequestError,
   PublicProfile,
 } from '../playerProfile';
+import { animateBackNavigation } from './navigationAnimation';
 
 export class PlayerProfileWebUi {
   private readonly client = new PlayerProfileClient();
@@ -107,7 +108,7 @@ export class PlayerProfileWebUi {
     this.buttons.forEach((button) => button.addEventListener('focus', () => {
       this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button));
     }, { signal }));
-    this.host.querySelector('[data-profile-back]')?.addEventListener('click', () => this.navigator.back(), { signal });
+    this.host.querySelector('[data-profile-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host.querySelector('[data-profile-retry]')?.addEventListener('click', () => void this.load(this.page), { signal });
     this.host.querySelector('[data-profile-share]')?.addEventListener('click', () => void this.share(), { signal });
     this.host.querySelectorAll<HTMLButtonElement>('[data-profile-page]').forEach((button) => button.addEventListener('click', () => void this.load(Number(button.dataset.profilePage)), { signal }));

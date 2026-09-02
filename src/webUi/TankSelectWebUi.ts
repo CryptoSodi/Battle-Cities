@@ -4,6 +4,7 @@ import { InputManager, MenuInputContext } from '../input';
 import { ShopManager } from '../shop';
 import { GameSceneType } from '../scenes';
 import { TankTier } from '../tank';
+import { animateBackNavigation } from './navigationAnimation';
 
 const tanks = [
   { tier: TankTier.A, name: 'VANGUARD', role: 'BALANCED CHASSIS', fuel: 1, image: '/data/graphics/TANKS/player-tank-primary-star1.png', stats: ['SINGLE', 'STANDARD', 'STANDARD'] },
@@ -85,7 +86,7 @@ export class TankSelectWebUi {
       this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button));
       if (button.dataset.tank !== undefined) this.lastTankFocus = Number(button.dataset.tank);
     }, { signal }));
-    this.host.querySelector('[data-tank-back]')?.addEventListener('click', () => this.navigator.back(), { signal });
+    this.host.querySelector('[data-tank-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host.querySelectorAll<HTMLButtonElement>('[data-tank]').forEach((button) => button.addEventListener('click', () => {
       const index = Number(button.dataset.tank);
       if (tanks[index]?.locked) {

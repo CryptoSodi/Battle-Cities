@@ -10,6 +10,7 @@ import {
   ShopManager,
 } from '../shop';
 import { GameSceneType } from '../scenes';
+import { animateBackNavigation } from './navigationAnimation';
 
 interface ShopWebUiOptions {
   getBattleFuelCost: () => number;
@@ -297,7 +298,7 @@ export class ShopWebUi {
     });
     this.host
       .querySelector('[data-shop-back]')
-      ?.addEventListener('click', () => this.options.navigator.back(), {
+      ?.addEventListener('click', () => animateBackNavigation(this.host, this.options.navigator), {
         signal,
       });
     this.host.querySelector('[data-shop-wallet]')?.addEventListener(

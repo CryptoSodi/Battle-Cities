@@ -2,6 +2,7 @@ import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { apiFetch, getApiUrl } from '../network/api';
 import { moveFocus } from './HeadquartersWebUi';
+import { animateBackNavigation } from './navigationAnimation';
 
 interface SocialTask { id: string; postId: string; rewardFuel: number; claimed: boolean; }
 interface XStatus { connected?: boolean; follows?: boolean; repostTask?: SocialTask | null; commentTask?: SocialTask | null; }
@@ -121,7 +122,7 @@ export class SocialsWebUi {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button:not(:disabled)'));
     this.buttons.forEach((button) => button.addEventListener('focus', () => { this.lastFocusKey = button.dataset.socialKey || this.lastFocusKey; this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button)); }, { signal }));
-    this.host.querySelector('[data-social-back]')?.addEventListener('click', () => this.navigator.back(), { signal });
+    this.host.querySelector('[data-social-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host.querySelector('[data-social-refresh]')?.addEventListener('click', () => void this.refresh(true), { signal });
     this.host.querySelectorAll<HTMLButtonElement>('[data-social-action]').forEach((button) => button.addEventListener('click', () => void this.act(button.dataset.socialAction || ''), { signal }));
   }

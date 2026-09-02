@@ -4,6 +4,7 @@ import { AudioManager, GameStorage } from '../game';
 import { InputManager, MenuInputContext } from '../input';
 import { NativeNotificationClient, NativeNotificationSettings } from '../notifications/NativeNotificationClient';
 import { moveFocus } from './HeadquartersWebUi';
+import { animateBackNavigation } from './navigationAnimation';
 
 export class SettingsWebUi {
   private readonly notificationClient = new NativeNotificationClient();
@@ -61,7 +62,7 @@ export class SettingsWebUi {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button'));
     this.buttons.forEach((button) => button.addEventListener('focus', () => this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button)), { signal }));
-    this.host.querySelector('[data-settings-back]')?.addEventListener('click', () => this.navigator.back(), { signal });
+    this.host.querySelector('[data-settings-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host.querySelectorAll<HTMLButtonElement>('[data-setting]').forEach((button) => button.addEventListener('click', () => this.toggle(button.dataset.setting || ''), { signal }));
   }
   private toggle(key: string): void {

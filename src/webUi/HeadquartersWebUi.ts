@@ -1,6 +1,7 @@
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { GameSceneType } from '../scenes';
+import { animateBackNavigation } from './navigationAnimation';
 
 const entries = [
   ['TREASURY', 'BALANCES, ITEMS AND HISTORY', 4, GameSceneType.MainTreasury],
@@ -59,7 +60,7 @@ export class HeadquartersWebUi {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button'));
     this.buttons.forEach((button) => button.addEventListener('focus', () => this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button)), { signal }));
-    this.host.querySelector('[data-hq-back]')?.addEventListener('click', () => this.navigator.back(), { signal });
+    this.host.querySelector('[data-hq-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host.querySelectorAll<HTMLButtonElement>('[data-hq-entry]').forEach((button) => button.addEventListener('click', () => this.navigator.push(entries[Number(button.dataset.hqEntry)][3]), { signal }));
   }
   private focused(): HTMLButtonElement | null { return document.activeElement instanceof HTMLButtonElement && this.buttons.includes(document.activeElement) ? document.activeElement : null; }

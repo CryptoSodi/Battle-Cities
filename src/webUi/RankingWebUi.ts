@@ -2,6 +2,7 @@ import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
+import { animateBackNavigation } from './navigationAnimation';
 
 export class RankingWebUi {
   private readonly client = new RankingClient();
@@ -177,7 +178,7 @@ export class RankingWebUi {
     );
     this.host
       .querySelector('[data-rank-back]')
-      ?.addEventListener('click', () => this.navigator.back(), { signal });
+      ?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
     this.host
       .querySelectorAll<HTMLButtonElement>('[data-rank-scope]')
       .forEach((button) =>
