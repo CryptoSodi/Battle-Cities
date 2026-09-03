@@ -98,3 +98,10 @@ HTML interfaces.
   Only data-heavy lists/grids scroll; headers, summaries, actions, status text,
   and version information remain stable. Async rerenders restore focus by a
   stable control key.
+- Headquarters uses a four-track desktop operations grid and a three-track
+  Android grid. Its command header and section title stay fixed while only the
+  operations grid scrolls. Treasury, Campaigns, Staking, Trading, Boosts,
+  Airdrop, and Field Manual reuse the same 1280px frame and 900px responsive
+  contract; their top view tabs and status rail remain fixed while the page
+  content is the only scroll region. Async actions preserve the originating
+  control key until the resulting view deliberately selects a new anchor.
