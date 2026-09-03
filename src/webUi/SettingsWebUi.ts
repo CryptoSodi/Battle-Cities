@@ -116,6 +116,11 @@ export class SettingsWebUi {
           this.buttons.forEach((candidate) =>
             candidate.classList.toggle('is-selected', candidate === button),
           );
+          this.host
+            .querySelectorAll('.settings-web__rows article')
+            .forEach((row) =>
+              row.classList.toggle('is-selected', row.contains(button)),
+            );
         },
         { signal },
       );

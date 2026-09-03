@@ -102,6 +102,10 @@ HTML interfaces.
   Only data-heavy lists/grids scroll; headers, summaries, actions, status text,
   and version information remain stable. Async rerenders restore focus by a
   stable control key.
+- Settings toggles keep enabled and selected as independent states. Enabled
+  controls use readable gold state text and a filled square status lamp;
+  selection adds the same amber edge and glow to the containing row used by
+  selectable cards, without replacing or obscuring the enabled state.
 - Headquarters uses a four-track desktop operations grid and a three-track
   Android grid. Its command header and section title stay fixed while only the
   operations grid scrolls. Treasury, Campaigns, Staking, Trading, Boosts,
