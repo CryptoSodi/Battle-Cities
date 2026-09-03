@@ -112,9 +112,11 @@
   border: 2px solid var(--bc-line);
   box-shadow: inset 0 0 0 1px #080a0b, inset 0 0 28px rgb(0 0 0 / 72%),
     0 5px 18px rgb(0 0 0 / 60%);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   margin-top: 10px;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 44px 20px 20px;
   position: relative;
 }
@@ -213,7 +215,12 @@
 .tank-select-web__grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 4px 2px;
+  scrollbar-color: var(--bc-command-dim) var(--bc-panel);
 }
 .tank-select-web__card {
   display: grid;
@@ -345,11 +352,16 @@
   border-color: var(--bc-line);
   color: var(--bc-muted);
 }
+.tank-select-web__card:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.45) brightness(0.72);
+  pointer-events: none;
+}
 .tank-select-web__actions {
   align-items: center;
   display: flex;
   flex-direction: column;
-  margin-top: 16px;
+  padding-top: 16px;
 }
 .tank-select-web__continue {
   background: linear-gradient(90deg, #0b330f, #12680c 48%, #0b330f) !important;
@@ -372,7 +384,7 @@
 }
 @media (hover: hover) {
   .tank-select-web__back:not(.is-selected):hover,
-  .tank-select-web__card:not(.is-selected):hover {
+  .tank-select-web__card:not(.is-selected):not(:disabled):hover {
     border-color: var(--bc-command);
     box-shadow: inset 0 0 0 2px #040607, 0 0 12px rgb(255 179 15 / 28%);
     color: var(--bc-command);
@@ -472,6 +484,7 @@
   .tank-select-web__grid {
     gap: 7px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-right: 4px;
   }
   .tank-select-web__card {
     grid-template-rows: auto auto auto 70px 1fr 32px;
@@ -514,7 +527,7 @@
     width: 14px;
   }
   .tank-select-web__actions {
-    margin-top: 12px;
+    padding-top: 12px;
   }
   .tank-select-web__continue {
     height: 44px;

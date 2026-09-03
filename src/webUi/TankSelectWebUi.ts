@@ -155,7 +155,9 @@ export class TankSelectWebUi {
     } CHASSIS</strong></p><span>SELECT A CHASSIS TO PREPARE DEPLOYMENT</span></div><section class="tank-select-web__grid">${tanks
       .map(
         (item, index) =>
-          `<button data-tank="${index}" class="tank-select-web__card ${
+          `<button data-tank="${index}" ${
+            item.locked ? 'disabled aria-disabled="true"' : ''
+          } class="tank-select-web__card ${
             index === this.selected ? 'is-active' : ''
           } ${
             item.locked ? 'is-locked' : ''
@@ -281,7 +283,7 @@ export class TankSelectWebUi {
     }
     const currentRect = current.getBoundingClientRect();
     const candidates = this.buttons
-      .filter((button) => button !== current)
+      .filter((button) => button !== current && !button.disabled)
       .map((button) => ({ button, rect: button.getBoundingClientRect() }))
       .filter(({ rect }) =>
         horizontal > 0
