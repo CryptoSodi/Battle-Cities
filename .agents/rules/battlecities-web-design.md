@@ -85,3 +85,8 @@ HTML interfaces.
   desktop and two tracks on Android/tablet. Keep the primary battle CTA centered
   and deliberately narrow, with a single command label and no text-arrow glyph;
   it must never stretch across the loadout panel.
+- Selection rosters such as Tank Select use a framed command header, a compact
+  resource briefing, and equal chassis cards: four tracks on desktop and two on
+  Android. The selected chassis keeps an amber edge/glow while the active
+  chassis retains its distinct raised fill; locked entries remain readable but
+  visually subdued.
