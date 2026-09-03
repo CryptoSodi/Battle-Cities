@@ -88,7 +88,9 @@ HTML interfaces.
 - Loadout equipment controls use compact equal-slot cards: four tracks on web
   desktop and two tracks on Android/tablet. Keep the primary battle CTA centered
   and deliberately narrow, with a single command label and no text-arrow glyph;
-  it must never stretch across the loadout panel.
+  it must never stretch across the loadout panel. Show that battle CTA only when
+  Loadout was entered through Start and Tank Select; Shop navigation exposes
+  equipment management without a battle-start action.
 - Selection rosters such as Tank Select use a framed command header, a compact
   resource briefing, and equal chassis cards: four tracks on desktop and three
   on Android. The selected chassis keeps an amber edge/glow while the active

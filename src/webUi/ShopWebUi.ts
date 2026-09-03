@@ -266,6 +266,9 @@ export class ShopWebUi {
       .join('');
   }
   private loadout(): string {
+    const battleAction = this.options.isBattleSetup()
+      ? '<button class="shop-web__start-battle" data-shop-start type="button"><strong>START BATTLE</strong></button>'
+      : '';
     return `<section class="shop-web__loadout"><h2>EQUIPPED SLOTS</h2><p>SELECT A SLOT TO CYCLE OWNED ITEMS</p><div>${slots
       .map((slot, index) => {
         const item = this.shop.getEquipped(slot);
@@ -276,9 +279,7 @@ export class ShopWebUi {
             : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt=""><b>EMPTY</b>'
         }</strong><em class="shop-web__slot-action">CHANGE</em></button>`;
       })
-      .join(
-        '',
-      )}</div><button class="shop-web__start-battle" data-shop-start type="button"><strong>START BATTLE</strong></button></section>`;
+      .join('')}</div>${battleAction}</section>`;
   }
   private bind(): void {
     const signal = this.abortController.signal;
