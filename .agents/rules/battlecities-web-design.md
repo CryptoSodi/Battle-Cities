@@ -86,8 +86,8 @@ HTML interfaces.
   and deliberately narrow, with a single command label and no text-arrow glyph;
   it must never stretch across the loadout panel.
 - Selection rosters such as Tank Select use a framed command header, a compact
-  resource briefing, and equal chassis cards: three tracks on desktop and
-  Android. The selected chassis keeps an amber edge/glow while the active
+  resource briefing, and equal chassis cards: four tracks on desktop and three
+  on Android. The selected chassis keeps an amber edge/glow while the active
   chassis retains its distinct raised fill; locked entries remain readable but
   visually subdued and are removed from pointer and directional navigation.
   Only the roster grid scrolls; its heading, resource briefing, action, and

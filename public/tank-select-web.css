@@ -216,6 +216,11 @@
   padding: 2px 6px 4px 2px;
   scrollbar-color: var(--bc-command-dim) var(--bc-panel);
 }
+@media (min-width: 900px) {
+  .tank-select-web__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
 .tank-select-web__card {
   display: grid;
   grid-template-rows: auto auto auto 92px 1fr 40px;
