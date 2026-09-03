@@ -92,3 +92,9 @@ HTML interfaces.
   visually subdued and are removed from pointer and directional navigation.
   Only the roster grid scrolls; its heading, resource briefing, action, and
   status regions remain fixed.
+- Ranking, Socials, and Settings share the same 1280px industrial frame, clipped
+  controls, rivets, amber selection edge, and red selected Back state. Their
+  desktop and Android geometry is defined separately at the 900px breakpoint.
+  Only data-heavy lists/grids scroll; headers, summaries, actions, status text,
+  and version information remain stable. Async rerenders restore focus by a
+  stable control key.

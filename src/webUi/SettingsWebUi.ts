@@ -2,7 +2,10 @@ import * as config from '../config';
 import { SceneNavigator } from '../core';
 import { AudioManager, GameStorage } from '../game';
 import { InputManager, MenuInputContext } from '../input';
-import { NativeNotificationClient, NativeNotificationSettings } from '../notifications/NativeNotificationClient';
+import {
+  NativeNotificationClient,
+  NativeNotificationSettings,
+} from '../notifications/NativeNotificationClient';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
 
@@ -12,22 +15,33 @@ export class SettingsWebUi {
   private abortController: AbortController = null;
   private buttons: HTMLButtonElement[] = [];
   private host: HTMLElement = null;
+  private lastFocusKey = 'mute';
   private notificationSettings: NativeNotificationSettings = null;
   private status = '';
 
-  public constructor(private readonly navigator: SceneNavigator, private readonly input: InputManager, private readonly audio: AudioManager, private readonly storage: GameStorage) {}
-  public isActive(): boolean { return this.active; }
+  public constructor(
+    private readonly navigator: SceneNavigator,
+    private readonly input: InputManager,
+    private readonly audio: AudioManager,
+    private readonly storage: GameStorage,
+  ) {}
+  public isActive(): boolean {
+    return this.active;
+  }
   public mount(): void {
     if (this.active) return;
     const host = document.querySelector('[data-web-ui]');
-    if (!(host instanceof HTMLElement)) throw new Error('Settings web UI host is missing.');
+    if (!(host instanceof HTMLElement))
+      throw new Error('Settings web UI host is missing.');
     this.active = true;
     this.host = host;
     this.abortController = new AbortController();
     document.body.classList.add('web-ui-active', 'settings-web-active');
     host.hidden = false;
     this.render();
-    this.buttons.find((button) => button.dataset.setting === 'mute')?.focus({ preventScroll: true });
+    this.buttons
+      .find((button) => button.dataset.setting === 'mute')
+      ?.focus({ preventScroll: true });
     if (this.notificationClient.isAvailable()) void this.loadNotifications();
   }
   public unmount(): void {
@@ -52,28 +66,139 @@ export class SettingsWebUi {
   private render(): void {
     const rows = [
       ['mute', 'MUTE', this.audio.isGlobalMuted()],
-      ['scanline', 'SCANLINE', this.storage.getBoolean(config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES, false)],
-      ...(this.notificationClient.isAvailable() ? [['notifications', 'NOTIFICATIONS', this.notificationsEnabled()]] : []),
+      [
+        'scanline',
+        'SCANLINE',
+        this.storage.getBoolean(
+          config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
+          false,
+        ),
+      ],
+      ...(this.notificationClient.isAvailable()
+        ? [['notifications', 'NOTIFICATIONS', this.notificationsEnabled()]]
+        : []),
     ] as Array<[string, string, boolean]>;
-    this.host.innerHTML = `<main class="settings-web"><header><h1>SETTINGS</h1><button data-settings-back>◀ BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows.map(([key, label, enabled]) => `<article><h2>${label}</h2><button class="settings-web__toggle ${enabled ? 'is-active' : ''}" data-setting="${key}" role="switch" aria-checked="${enabled}"><span>${enabled ? 'ON' : 'OFF'}</span><i></i></button></article>`).join('')}</section><p class="settings-web__status">${this.status}</p><small>VERSION ${process.env.BATTLECITY_VERSION}</small></section></main>`;
+    this.host.innerHTML = `<main class="settings-web"><header><h1>SETTINGS</h1><button data-settings-back>◀ BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows
+      .map(
+        ([key, label, enabled]) =>
+          `<article><h2>${label}</h2><button class="settings-web__toggle ${
+            enabled ? 'is-active' : ''
+          }" data-setting="${key}" role="switch" aria-checked="${enabled}"><span>${
+            enabled ? 'ON' : 'OFF'
+          }</span><i></i></button></article>`,
+      )
+      .join('')}</section><p class="settings-web__status">${
+      this.status
+    }</p><small>VERSION ${
+      process.env.BATTLECITY_VERSION
+    }</small></section></main>`;
     this.bind();
+    (
+      this.host.querySelector<HTMLButtonElement>(
+        `[data-setting="${this.lastFocusKey}"]`,
+      ) || this.host.querySelector<HTMLButtonElement>('[data-settings-back]')
+    )?.focus({ preventScroll: true });
   }
   private bind(): void {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button'));
-    this.buttons.forEach((button) => button.addEventListener('focus', () => this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button)), { signal }));
-    this.host.querySelector('[data-settings-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
-    this.host.querySelectorAll<HTMLButtonElement>('[data-setting]').forEach((button) => button.addEventListener('click', () => this.toggle(button.dataset.setting || ''), { signal }));
+    this.buttons.forEach((button) => {
+      button.addEventListener(
+        'pointerdown',
+        () => button.focus({ preventScroll: true }),
+        { signal },
+      );
+      button.addEventListener(
+        'focus',
+        () => {
+          if (button.dataset.setting)
+            this.lastFocusKey = button.dataset.setting;
+          this.buttons.forEach((candidate) =>
+            candidate.classList.toggle('is-selected', candidate === button),
+          );
+        },
+        { signal },
+      );
+    });
+    this.host
+      .querySelector('[data-settings-back]')
+      ?.addEventListener(
+        'click',
+        () => animateBackNavigation(this.host, this.navigator),
+        { signal },
+      );
+    this.host
+      .querySelectorAll<HTMLButtonElement>('[data-setting]')
+      .forEach((button) =>
+        button.addEventListener(
+          'click',
+          () => this.toggle(button.dataset.setting || ''),
+          { signal },
+        ),
+      );
   }
   private toggle(key: string): void {
-    if (key === 'mute') { this.audio.setGlobalMuted(!this.audio.isGlobalMuted()); this.audio.saveSettings(); this.render(); }
-    if (key === 'scanline') { const enabled = !this.storage.getBoolean(config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES, false); this.storage.setBoolean(config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES, enabled); this.storage.save(); document.body.classList.toggle('scanlines-disabled', !enabled); this.render(); }
+    if (key === 'mute') {
+      this.audio.setGlobalMuted(!this.audio.isGlobalMuted());
+      this.audio.saveSettings();
+      this.render();
+    }
+    if (key === 'scanline') {
+      const enabled = !this.storage.getBoolean(
+        config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
+        false,
+      );
+      this.storage.setBoolean(
+        config.STORAGE_KEY_SETTINGS_SHOW_SCANLINES,
+        enabled,
+      );
+      this.storage.save();
+      document.body.classList.toggle('scanlines-disabled', !enabled);
+      this.render();
+    }
     if (key === 'notifications') void this.toggleNotifications();
-    this.buttons.find((button) => button.dataset.setting === key)?.focus({ preventScroll: true });
+    this.buttons
+      .find((button) => button.dataset.setting === key)
+      ?.focus({ preventScroll: true });
   }
-  private async loadNotifications(): Promise<void> { try { this.notificationSettings = await this.notificationClient.getSettings(); if (this.active) this.render(); } catch { this.status = 'ANDROID NOTIFICATIONS UNAVAILABLE'; if (this.active) this.render(); } }
-  private async toggleNotifications(): Promise<void> { try { this.status = 'UPDATING ANDROID NOTIFICATIONS'; this.render(); this.notificationSettings = await this.notificationClient.setEnabled(!this.notificationsEnabled()); this.status = this.notificationsEnabled() ? 'ANDROID NOTIFICATIONS ON' : 'ANDROID NOTIFICATIONS OFF'; } catch { this.status = 'ANDROID NOTIFICATIONS UNAVAILABLE'; } if (this.active) this.render(); }
-  private notificationsEnabled(): boolean { return this.notificationSettings?.supported === true && this.notificationSettings.enabled && this.notificationSettings.permission === 'granted'; }
-  private focused(): HTMLButtonElement | null { return document.activeElement instanceof HTMLButtonElement && this.buttons.includes(document.activeElement) ? document.activeElement : null; }
-  private move(x: number, y: number): void { moveFocus(this.buttons, this.focused() || this.buttons[0], x, y); }
+  private async loadNotifications(): Promise<void> {
+    try {
+      this.notificationSettings = await this.notificationClient.getSettings();
+      if (this.active) this.render();
+    } catch {
+      this.status = 'ANDROID NOTIFICATIONS UNAVAILABLE';
+      if (this.active) this.render();
+    }
+  }
+  private async toggleNotifications(): Promise<void> {
+    try {
+      this.status = 'UPDATING ANDROID NOTIFICATIONS';
+      this.render();
+      this.notificationSettings = await this.notificationClient.setEnabled(
+        !this.notificationsEnabled(),
+      );
+      this.status = this.notificationsEnabled()
+        ? 'ANDROID NOTIFICATIONS ON'
+        : 'ANDROID NOTIFICATIONS OFF';
+    } catch {
+      this.status = 'ANDROID NOTIFICATIONS UNAVAILABLE';
+    }
+    if (this.active) this.render();
+  }
+  private notificationsEnabled(): boolean {
+    return (
+      this.notificationSettings?.supported === true &&
+      this.notificationSettings.enabled &&
+      this.notificationSettings.permission === 'granted'
+    );
+  }
+  private focused(): HTMLButtonElement | null {
+    return document.activeElement instanceof HTMLButtonElement &&
+      this.buttons.includes(document.activeElement)
+      ? document.activeElement
+      : null;
+  }
+  private move(x: number, y: number): void {
+    moveFocus(this.buttons, this.focused() || this.buttons[0], x, y);
+  }
 }
