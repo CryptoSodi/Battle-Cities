@@ -78,7 +78,7 @@ export class SettingsWebUi {
         ? [['notifications', 'NOTIFICATIONS', this.notificationsEnabled()]]
         : []),
     ] as Array<[string, string, boolean]>;
-    this.host.innerHTML = `<main class="settings-web"><header><h1>SETTINGS</h1><button data-settings-back>◀ BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows
+    this.host.innerHTML = `<main class="settings-web" data-ui-page><header data-ui-nav style="--ui-tab-count:1"><h1 data-ui-tab class="is-active">SETTINGS</h1><span data-ui-spacer aria-hidden="true"></span><button type="button" data-ui-back data-settings-back>◀ BACK</button></header><section class="settings-web__shell"><section class="settings-web__rows">${rows
       .map(
         ([key, label, enabled]) =>
           `<article><h2>${label}</h2><button class="settings-web__toggle ${
@@ -113,6 +113,8 @@ export class SettingsWebUi {
         () => {
           if (button.dataset.setting)
             this.lastFocusKey = button.dataset.setting;
+          else if (button.hasAttribute('data-settings-back'))
+            this.lastFocusKey = 'back';
           this.buttons.forEach((candidate) =>
             candidate.classList.toggle('is-selected', candidate === button),
           );

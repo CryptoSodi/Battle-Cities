@@ -92,11 +92,11 @@ export class RankingWebUi {
           { id: '', label: 'CURRENT' },
           { id: null, label: 'ALL TIME' },
         ];
-    this.host.innerHTML = `<main class="ranking-web"><nav class="ranking-web__tabs"><button data-rank-key="scope-gaming" data-rank-scope="gaming" class="${
+    this.host.innerHTML = `<main class="ranking-web" data-ui-page><nav class="ranking-web__tabs" data-ui-nav style="--ui-tab-count:2" aria-label="Ranking views"><button type="button" data-ui-tab data-rank-key="scope-gaming" data-rank-scope="gaming" class="${
       this.scope === 'gaming' ? 'is-active' : ''
-    }">GAMING</button><button data-rank-key="scope-trading" data-rank-scope="trading" class="${
+    }">GAMING</button><button type="button" data-ui-tab data-rank-key="scope-trading" data-rank-scope="trading" class="${
       this.scope === 'trading' ? 'is-active' : ''
-    }">TRADING</button><span></span><button data-rank-key="back" data-rank-back class="ranking-web__back">◀ BACK</button></nav><section class="ranking-web__shell"><section class="ranking-web__summary"><div><span>GAMING RANK (S${this
+    }">TRADING</button><span data-ui-spacer aria-hidden="true"></span><button type="button" data-ui-back data-rank-key="back" data-rank-back class="ranking-web__back">◀ BACK</button></nav><section class="ranking-web__shell"><section class="ranking-web__summary"><div><span>GAMING RANK (S${this
       .data?.currentSeason.number ?? '-'})</span><strong>${
       me?.guest
         ? 'GUEST'

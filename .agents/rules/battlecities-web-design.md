@@ -40,6 +40,15 @@
 Use the Shop as the reference implementation when converting other full-screen
 HTML interfaces.
 
+- `public/shop-ui-contract.css` owns the shared HTML navigation contract. Mark
+  participating screens with `data-ui-page`, their navigation with `data-ui-nav`,
+  and controls with `data-ui-tab`, `data-ui-back`, and `data-ui-spacer`. Shop and
+  the other screens use these same dimensions, typography, and state rules.
+  Desktop tabs are 210px by 58px and Back is 152px by 58px; compact screens use
+  Shop's four proportional tracks and 42px height at 620px or below. Extra Field
+  Manual tabs wrap into another row while Back stays visible. Do not add local
+  overrides for these controls.
+
 - Build frames, panels, tabs, cards, corner cuts, bevels, rivets, shadows, and
   state glows with HTML/CSS. Never use a screenshot or rasterized panel as a UI
   background. Raster assets are reserved for game art and semantic icons.

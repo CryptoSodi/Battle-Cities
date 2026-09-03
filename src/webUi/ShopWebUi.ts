@@ -118,14 +118,14 @@ export class ShopWebUi {
     }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
     const content = this.shopContent(currency);
-    return `<main class="shop-container shop-web" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
-      <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
+    return `<main class="shop-container shop-web" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
+      <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
         'TOKEN SHOP',
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'loadout',
       'LOADOUT',
-    )}<button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav>
+    )}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button">${
@@ -147,14 +147,14 @@ export class ShopWebUi {
   }
   private renderDesktop(status: string): string {
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
-    return `<main class="shop-container shop-web shop-web--desktop" aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
-      <nav class="shop-web__tabs" aria-label="Shop views">${this.tabButton(
+    return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
+      <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
         'TOKEN SHOP',
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'loadout',
       'LOADOUT',
-    )}<span class="shop-web__tab-spacer" aria-hidden="true"></span><button class="shop-web__back" data-shop-back type="button">◀ BACK</button></nav>
+    )}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button">${
@@ -220,7 +220,7 @@ export class ShopWebUi {
     }[tab];
     return `<button class="shop-web__tab${
       this.tab === tab ? ' is-active' : ''
-    }" data-shop-tab="${tab}" type="button"><img src="${icon}" alt=""><span>${label}</span></button>`;
+    }" data-ui-tab data-shop-tab="${tab}" type="button"><img src="${icon}" alt=""><span>${label}</span></button>`;
   }
   private resource(label: string, value: string): string {
     const icon = {

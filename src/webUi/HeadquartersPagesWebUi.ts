@@ -244,7 +244,7 @@ export class HeadquartersPagesWebUi {
       : this.error
       ? this.errorMarkup()
       : this.renderPage();
-    this.host.innerHTML = `<main class="hq-page-web">${this.renderTabs()}<section class="hq-page-web__shell"><div class="hq-page-web__content">${content}</div><p class="hq-page-web__status" role="status" aria-live="polite">${this.escape(
+    this.host.innerHTML = `<main class="hq-page-web" data-ui-page>${this.renderTabs()}<section class="hq-page-web__shell"><div class="hq-page-web__content">${content}</div><p class="hq-page-web__status" role="status" aria-live="polite">${this.escape(
       this.status,
     )}</p></section></main>`;
     this.bind();
@@ -279,17 +279,17 @@ export class HeadquartersPagesWebUi {
         this.wikiCategory === item.id,
       ]);
     else tabs = [['page-title', this.title(), true]];
-    return `<nav class="shop-web__tabs hq-page-web__tabs" style="--hq-tab-count:${
+    return `<nav class="shop-web__tabs hq-page-web__tabs" data-ui-nav style="--ui-tab-count:${
       tabs.length
     }" aria-label="${this.escape(
       this.title(),
     )} views">${tabs
       .map(([key, label, active]) =>
         key === 'page-title'
-          ? `<span class="shop-web__tab is-active" aria-current="page">${this.escape(
+          ? `<span data-ui-tab class="shop-web__tab is-active" aria-current="page">${this.escape(
               label,
             )}</span>`
-          : `<button class="shop-web__tab ${
+          : `<button data-ui-tab class="shop-web__tab ${
               active ? 'is-active' : ''
             }" data-page-tab="${key}" aria-current="${
               active ? 'page' : 'false'
@@ -303,7 +303,7 @@ export class HeadquartersPagesWebUi {
       )
       .join(
         '',
-      )}<span class="hq-page-web__tab-spacer"></span><button class="shop-web__back" data-page-back type="button">◀ BACK</button></nav>`;
+      )}<span class="hq-page-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-page-back type="button">◀ BACK</button></nav>`;
   }
 
   private renderPage(): string {
@@ -676,9 +676,19 @@ export class HeadquartersPagesWebUi {
         const art = WIKI_ART[this.wikiCategory]?.[entry.slug];
         return `<article class="hq-page-web__manual-card"><h3>${this.escape(
           entry.name,
-        )}</h3>${art ? `<img src="${art}" alt="">` : ''}<div><b>${this.escape(
-          entry.role,
-        )}</b><p>${this.escape(entry.lore)}</p><strong>${this.escape(
+        )}</h3>${
+          art?.includes('/TANKS/')
+            ? `<i class="hq-page-web__tank-art" aria-hidden="true" style="background-image:url('${art}');--sheet-columns:${
+                art.includes('enemy-armor-default') ? 8 : 4
+              };--sheet-rows:${
+                art.includes('enemy-armor-default') ? 1 : 13
+              }"></i>`
+            : art
+            ? `<img src="${art}" alt="">`
+            : ''
+        }<div><b>${this.escape(entry.role)}</b><p>${this.escape(
+          entry.lore,
+        )}</p><strong>${this.escape(
           entry.effect,
         )}</strong></div><span>SOURCE: ${this.escape(
           entry.source,

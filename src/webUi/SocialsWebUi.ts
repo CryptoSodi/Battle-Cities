@@ -189,9 +189,9 @@ export class SocialsWebUi {
         this.discord.rewardClaimed === true,
       ),
     ];
-    this.host.innerHTML = `<main class="operations-web socials-web"><header class="operations-web__header"><div><span class="operations-web__header-mark">@</span><h1>SOCIALS</h1></div><nav><button class="socials-web__refresh" data-social-refresh data-social-key="refresh" ${
+    this.host.innerHTML = `<main class="operations-web socials-web" data-ui-page><header class="operations-web__header" data-ui-nav style="--ui-tab-count:2"><div data-ui-tab class="is-active"><h1>SOCIALS</h1></div><button type="button" data-ui-tab class="socials-web__refresh" data-social-refresh data-social-key="refresh" ${
       this.loading ? 'disabled' : ''
-    }>↻ REFRESH</button><button class="operations-web__back" data-social-back data-social-key="back">◀ BACK</button></nav></header><section class="operations-web__shell"><section class="operations-web__intro"><h2>JOIN THE BATTLE CITIES COMMUNITY</h2><p>COMPLETE SOCIAL TASKS, VERIFY THEM HERE AND SECURE AVAILABLE FUEL REWARDS.</p></section><section class="operations-web__grid operations-web__grid--social">${cards.join(
+    }>↻ REFRESH</button><span data-ui-spacer aria-hidden="true"></span><button type="button" data-ui-back class="operations-web__back" data-social-back data-social-key="back">◀ BACK</button></header><section class="operations-web__shell"><section class="operations-web__intro"><h2>JOIN THE BATTLE CITIES COMMUNITY</h2><p>COMPLETE SOCIAL TASKS, VERIFY THEM HERE AND SECURE AVAILABLE FUEL REWARDS.</p></section><section class="operations-web__grid operations-web__grid--social">${cards.join(
       '',
     )}</section><p class="operations-web__status" aria-live="polite">${
       this.status
