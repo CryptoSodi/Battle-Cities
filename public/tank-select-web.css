@@ -473,48 +473,48 @@
   }
   .tank-select-web__grid {
     gap: 7px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding-right: 4px;
   }
   .tank-select-web__card {
-    grid-template-rows: auto auto auto 70px 1fr 32px;
-    min-height: 212px;
-    padding: 7px;
+    grid-template-rows: auto auto auto 54px 1fr 28px;
+    min-height: 174px;
+    padding: 5px;
   }
   .tank-select-web__card-index {
     font-size: 8px;
   }
   .tank-select-web__grid h2 {
-    font-size: 14px;
-    margin-top: 6px;
+    font-size: 11px;
+    margin-top: 4px;
   }
   .tank-select-web__grid p {
-    font-size: 8px;
-    margin: 3px 0;
+    font-size: 7px;
+    margin: 2px 0;
   }
   .tank-select-web__tank-sprite {
-    background-size: 280px auto;
-    height: 70px;
-    width: 70px;
+    background-size: 216px auto;
+    height: 54px;
+    width: 54px;
   }
   .tank-select-web__lock {
-    height: 70px;
+    height: 54px;
   }
   .tank-select-web__lock i {
-    transform: scale(0.76);
+    transform: scale(0.58);
   }
   .tank-select-web dt {
-    font-size: 7px;
+    font-size: 6px;
   }
   .tank-select-web dd {
-    font-size: 8px;
+    font-size: 7px;
   }
   .tank-select-web__card > strong {
-    font-size: 10px;
+    font-size: 8px;
   }
   .tank-select-web__card > strong img {
-    height: 14px;
-    width: 14px;
+    height: 12px;
+    width: 12px;
   }
   .tank-select-web__actions {
     padding-top: 12px;
