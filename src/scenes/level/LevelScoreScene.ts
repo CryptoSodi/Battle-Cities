@@ -6,6 +6,10 @@ import { getApiBaseUrl } from '../../network/api';
 import { readMultiplayerRuntime } from '../../network/multiplayerRuntime';
 import { PointsHighscoreManager } from '../../points';
 import { TankTier } from '../../tank';
+import {
+  ResultsWebUiController,
+  ResultsWebUiState,
+} from '../../webUi/ResultsWebUi';
 
 import { GameSceneType } from '../GameSceneType';
 import { PanelScene, UI, UiText } from '../main/panelUi';
@@ -30,7 +34,8 @@ interface ResultPlayer {
   isPrimary: boolean;
 }
 
-export class LevelScoreScene extends PanelScene {
+export class LevelScoreScene extends PanelScene
+  implements ResultsWebUiController {
   private session: Session;
   private playerIdentity: PlayerIdentity;
   private pointsHighscoreManager: PointsHighscoreManager;
@@ -58,6 +63,63 @@ export class LevelScoreScene extends PanelScene {
 
   protected update(updateArgs: GameUpdateArgs): void {
     super.update(updateArgs);
+    this.advanceResultsTimer(updateArgs.deltaTime);
+  }
+
+  public advanceResultsFromWebUi(deltaTime: number): void {
+    this.advanceResultsTimer(deltaTime);
+  }
+
+  public continueFromWebUi(): void {
+    this.finish();
+  }
+
+  public getResultsWebUiState(): ResultsWebUiState | null {
+    if (this.session === undefined) return null;
+    const totalKills = this.players.reduce(
+      (sum, result) =>
+        sum + result.player.getLevelPointsRecord().getKillTotalCount(),
+      0,
+    );
+    const gameOver = this.session.isGameOver();
+    const perfect =
+      !gameOver &&
+      this.session.getLevelEnemiesDefeated() >= this.getEnemyTotal();
+
+    return {
+      battleTime: this.getBattleTime(),
+      defeated: this.session.getLevelEnemiesDefeated(),
+      enemyTotal: this.getEnemyTotal(),
+      highscore: this.getDisplayedHighscore(),
+      mvp: this.players[0]?.name || 'PLAYER',
+      players: this.players.map((result) => {
+        const record = result.player.getLevelPointsRecord();
+        return {
+          bonus: record.getBonusTotalPoints(),
+          isPrimary: result.isPrimary,
+          kills: TIERS.map((tier) => record.getTierKillCount(tier)),
+          name: result.name,
+          rank: result.rank,
+          totalKills: record.getKillTotalCount(),
+          totalPoints: result.player.getGamePoints(),
+        };
+      }),
+      result: gameOver ? 'failed' : perfect ? 'perfect' : 'clear',
+      stage: this.session.getLevelNumber(),
+      status: this.statusText,
+      timer:
+        this.isWebRtcMatch && !gameOver
+          ? this.formatTransitionTime(this.stageResultsTimerSecond)
+          : '',
+      totalKills,
+    };
+  }
+
+  public shareResultsFromWebUi(): Promise<void> {
+    return this.shareResults();
+  }
+
+  private advanceResultsTimer(deltaTime: number): void {
     if (
       this.transitionFinished ||
       !this.isWebRtcMatch ||
@@ -67,7 +129,7 @@ export class LevelScoreScene extends PanelScene {
     }
     this.stageResultsRemaining = Math.max(
       0,
-      this.stageResultsRemaining - updateArgs.deltaTime,
+      this.stageResultsRemaining - deltaTime,
     );
     const nextSecond = Math.ceil(this.stageResultsRemaining);
     if (nextSecond !== this.stageResultsTimerSecond) {

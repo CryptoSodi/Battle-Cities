@@ -119,3 +119,11 @@ HTML interfaces.
   contract; their top view tabs and status rail remain fixed while the page
   content is the only scroll region. Async actions preserve the originating
   control key until the resulting view deliberately selects a new anchor.
+- Match Results keeps scoring, bonuses, multiplayer countdowns, sharing, and
+  continuation inside the game scene; the HTML layer is presentation and input
+  only. Desktop uses one compact eight-column scoreboard row per player, while
+  Android changes to stacked player cards with four equal kill-tier cells. The
+  command header, mission status, summary footer, and actions remain fixed; only
+  the player result region may scroll. Continue is the active amber command,
+  Share is inactive gunmetal, and keyboard/pointer selection adds the shared
+  amber edge without replacing either base state.

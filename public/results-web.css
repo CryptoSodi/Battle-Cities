@@ -1,0 +1,641 @@
+.results-web {
+  --results-grid: 72px minmax(170px, 1.35fr) repeat(4, minmax(68px, 0.62fr))
+    minmax(112px, 0.8fr) minmax(118px, 0.82fr);
+  color: var(--bc-text);
+  gap: 10px;
+  position: relative;
+}
+
+.results-web--loading {
+  place-items: center;
+}
+
+.results-web--loading > p {
+  color: var(--bc-command);
+  font: 700 20px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.12em;
+}
+
+.results-web__header {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(290px, 1.15fr) minmax(410px, 1.55fr) 166px;
+  min-height: 76px;
+}
+
+.results-web__title,
+.results-web__headline-stats,
+.results-web__shell,
+.results-web__status-strip,
+.results-web__player,
+.results-web__footer {
+  background: linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 24%),
+    var(--bc-panel);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 0 0 1px #050708, inset 0 0 20px rgb(0 0 0 / 55%);
+}
+
+.results-web__title {
+  align-content: center;
+  clip-path: var(--standard-frame);
+  display: grid;
+  padding: 10px 22px;
+}
+
+.results-web__title span,
+.results-web__status-strip span,
+.results-web__headline-stats span,
+.results-web__footer span,
+.results-web__tier small,
+.results-web__bonus small,
+.results-web__player-name small,
+.results-web__points small {
+  color: var(--bc-muted);
+  display: block;
+  font: 700 11px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.results-web__title h1 {
+  color: var(--bc-command);
+  font: 700 clamp(25px, 2.6vw, 35px) / 1 'Battle Cities UI', 'Arial Narrow',
+    sans-serif;
+  letter-spacing: 0.07em;
+  margin: 6px 0 0;
+  text-transform: uppercase;
+}
+
+.results-web__headline-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.results-web__headline-stats > div {
+  align-content: center;
+  border-left: 1px solid var(--bc-line);
+  display: grid;
+  padding: 8px 16px;
+}
+
+.results-web__headline-stats > div:first-child {
+  border-left: 0;
+}
+
+.results-web__headline-stats strong,
+.results-web__footer strong {
+  color: var(--bc-command);
+  font: 700 25px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.04em;
+  margin-top: 7px;
+}
+
+.results-web__continue {
+  background: linear-gradient(180deg, #ffc22f, #e89a06) !important;
+  border-color: #ffdb78 !important;
+  box-shadow: inset 0 0 0 2px #9b6200, inset 0 4px 0 rgb(255 255 255 / 24%);
+  color: var(--bc-active-ink);
+  font-size: 18px;
+  text-shadow: none !important;
+}
+
+.results-web__continue.is-selected {
+  box-shadow: inset 0 0 0 2px #9b6200, inset 0 4px 0 rgb(255 255 255 / 24%),
+    0 0 17px rgb(255 179 15 / 55%);
+}
+
+.results-web__shell {
+  display: grid;
+  grid-template-rows: 68px 54px minmax(0, 1fr) 78px 58px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+  position: relative;
+}
+
+.results-web__shell::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bc-command-dim) 8%,
+    var(--bc-command) 50%,
+    var(--bc-command-dim) 92%,
+    transparent
+  );
+  content: '';
+  height: 3px;
+  left: 14px;
+  position: absolute;
+  right: 14px;
+  top: 7px;
+}
+
+.results-web__status-strip {
+  align-items: center;
+  background: linear-gradient(90deg, rgb(255 179 15 / 9%), transparent 58%),
+    #090d10;
+  border-width: 1px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  padding: 0 22px;
+}
+
+.results-web__status-strip {
+  grid-row: 1;
+}
+
+.results-web__table-head {
+  grid-row: 2;
+}
+
+.results-web__players {
+  grid-row: 3;
+}
+
+.results-web__footer {
+  grid-row: 4;
+}
+
+.results-web__actions {
+  grid-row: 5;
+}
+
+.results-web__status-strip strong {
+  color: var(--bc-ready);
+  display: block;
+  font: 700 24px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.08em;
+  margin-top: 5px;
+}
+
+.results-web--failed .results-web__status-strip strong {
+  color: var(--bc-danger);
+}
+
+.results-web__status-strip output {
+  color: var(--bc-command);
+  font: 700 21px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.09em;
+}
+
+.results-web__table-head,
+.results-web__player {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: var(--results-grid);
+}
+
+.results-web__table-head {
+  background: var(--bc-panel-raised);
+  border: 1px solid var(--bc-line);
+  color: var(--bc-muted);
+  margin-top: 10px;
+}
+
+.results-web__table-head > span {
+  align-items: center;
+  border-left: 1px solid rgb(58 73 82 / 65%);
+  display: flex;
+  font: 700 11px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  justify-content: center;
+  letter-spacing: 0.08em;
+}
+
+.results-web__table-head > span:nth-child(2) {
+  justify-content: flex-start;
+  padding-left: 18px;
+}
+
+.results-web__table-head > span:first-child {
+  border-left: 0;
+}
+
+.results-web__tier-head {
+  gap: 7px;
+}
+
+.results-web__tier-head small {
+  font-size: 9px;
+}
+
+.results-web__players {
+  align-content: start;
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 3px 4px;
+  scrollbar-color: var(--bc-command-dim) var(--bc-panel);
+}
+
+.results-web__player {
+  min-height: 112px;
+}
+
+.results-web__player > * {
+  align-items: center;
+  border-left: 1px solid rgb(58 73 82 / 52%);
+  display: flex;
+  justify-content: center;
+}
+
+.results-web__player > :first-child {
+  border-left: 0;
+}
+
+.results-web__player.is-primary {
+  background: linear-gradient(90deg, rgb(71 222 23 / 11%), transparent 62%),
+    var(--bc-panel-raised);
+  border-color: var(--bc-ready-dark);
+}
+
+.results-web__rank {
+  color: var(--bc-command);
+  font-size: 27px;
+}
+
+.results-web__player-name {
+  align-content: center;
+  align-items: flex-start;
+  flex-direction: column;
+  padding: 0 18px;
+}
+
+.results-web__player-name > strong {
+  color: var(--bc-text);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.results-web__player.is-primary .results-web__player-name > strong,
+.results-web__player.is-primary .results-web__tier > strong {
+  color: var(--bc-ready);
+}
+
+.results-web__player-name small {
+  color: var(--bc-command);
+  margin-top: 7px;
+}
+
+.results-web__tier {
+  gap: 8px;
+}
+
+.results-web__tier small {
+  display: none;
+}
+
+.results-web__tier > strong {
+  color: var(--bc-text);
+  font-size: 24px;
+}
+
+.results-web__tank-icon {
+  background-position: left top;
+  background-repeat: no-repeat;
+  display: block;
+  flex: 0 0 36px;
+  height: 36px;
+  image-rendering: pixelated;
+  width: 36px;
+}
+
+.results-web__tank-icon--0 {
+  background-image: url('/data/graphics/TANKS/enemy-basic.png');
+  background-size: 144px 468px;
+}
+
+.results-web__tank-icon--1 {
+  background-image: url('/data/graphics/TANKS/enemy-fast.png');
+  background-size: 144px 468px;
+}
+
+.results-web__tank-icon--2 {
+  background-image: url('/data/graphics/TANKS/enemy-power.png');
+  background-position: -3px 0;
+  background-size: 332px 42px;
+}
+
+.results-web__tank-icon--3 {
+  background-image: url('/data/graphics/TANKS/enemy-armor-default.png');
+  background-position: -3px 0;
+  background-size: 332px 42px;
+}
+
+.results-web__bonus {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.results-web__bonus > strong {
+  color: var(--bc-command);
+  font-size: 20px;
+}
+
+.results-web__points {
+  color: var(--bc-command);
+  flex-direction: column;
+  font-size: 28px;
+  gap: 6px;
+}
+
+.results-web__points small {
+  color: var(--bc-muted);
+  font-size: 9px;
+}
+
+.results-web__footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 4px 3px 0;
+}
+
+.results-web__footer > div {
+  align-content: center;
+  border-left: 1px solid var(--bc-line);
+  display: grid;
+  padding: 8px 22px;
+}
+
+.results-web__footer > div:first-child {
+  border-left: 0;
+}
+
+.results-web__footer strong {
+  font-size: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results-web__actions {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  padding: 9px 3px 0;
+}
+
+.results-web__actions p {
+  color: var(--bc-command);
+  font: 700 12px/1.2 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.08em;
+  margin: 0;
+  min-height: 14px;
+}
+
+.results-web__share {
+  background: linear-gradient(180deg, rgb(255 255 255 / 5%), transparent 24%),
+    var(--bc-panel-raised);
+  color: var(--bc-text);
+  min-height: 46px;
+}
+
+.results-web__share.is-selected {
+  border-color: #ffcf45;
+  box-shadow: inset 0 0 0 2px var(--bc-command-dim),
+    0 0 14px rgb(255 179 15 / 40%);
+  color: var(--bc-command);
+}
+
+.results-web button:active {
+  filter: brightness(0.82);
+}
+
+@media (hover: hover) {
+  .results-web button:not(.is-selected):hover {
+    border-color: var(--bc-command);
+    box-shadow: inset 0 0 0 2px #040607, 0 0 12px rgb(255 179 15 / 28%);
+  }
+
+  .results-web__continue:not(.is-selected):hover {
+    filter: brightness(1.08);
+  }
+}
+
+@media (max-width: 899px) {
+  .results-web {
+    gap: 4px;
+    grid-template-rows: 46px minmax(0, 1fr);
+    padding: max(4px, env(safe-area-inset-top))
+      max(5px, env(safe-area-inset-right))
+      max(4px, env(safe-area-inset-bottom))
+      max(5px, env(safe-area-inset-left));
+  }
+
+  .results-web__header {
+    gap: 4px;
+    grid-template-columns: minmax(185px, 1.2fr) minmax(245px, 1.5fr) 104px;
+    min-height: 46px;
+  }
+
+  .results-web__title {
+    padding: 5px 10px;
+  }
+
+  .results-web__title span {
+    font-size: 7px;
+  }
+
+  .results-web__title h1 {
+    font-size: 18px;
+    margin-top: 3px;
+  }
+
+  .results-web__headline-stats > div {
+    padding: 4px 7px;
+  }
+
+  .results-web__headline-stats span {
+    font-size: 7px;
+  }
+
+  .results-web__headline-stats strong {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .results-web__continue {
+    font-size: 11px;
+  }
+
+  .results-web__shell {
+    grid-template-rows: 42px 0 minmax(0, 1fr) 45px 42px;
+    padding: 8px;
+  }
+
+  .results-web__shell::before {
+    left: 7px;
+    right: 7px;
+    top: 3px;
+  }
+
+  .results-web__status-strip {
+    margin-top: 2px;
+    padding: 0 10px;
+  }
+
+  .results-web__status-strip span {
+    font-size: 7px;
+  }
+
+  .results-web__status-strip strong {
+    font-size: 15px;
+    margin-top: 3px;
+  }
+
+  .results-web__status-strip output {
+    font-size: 13px;
+  }
+
+  .results-web__table-head {
+    display: none;
+  }
+
+  .results-web__players {
+    gap: 6px;
+    padding: 7px 2px 3px;
+  }
+
+  .results-web__player {
+    grid-template-columns: 48px minmax(112px, 1.2fr) repeat(4, minmax(52px, 0.7fr))
+      minmax(83px, 0.85fr) minmax(76px, 0.78fr);
+    min-height: 104px;
+  }
+
+  .results-web__rank {
+    font-size: 18px;
+  }
+
+  .results-web__player-name {
+    padding: 0 8px;
+  }
+
+  .results-web__player-name > strong {
+    font-size: 15px;
+  }
+
+  .results-web__player-name small {
+    font-size: 7px;
+    margin-top: 5px;
+  }
+
+  .results-web__tier {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .results-web__tier > strong {
+    font-size: 15px;
+  }
+
+  .results-web__tank-icon {
+    transform: scale(0.72);
+  }
+
+  .results-web__bonus {
+    gap: 5px;
+  }
+
+  .results-web__bonus small {
+    font-size: 7px;
+    text-align: center;
+  }
+
+  .results-web__bonus > strong {
+    font-size: 14px;
+  }
+
+  .results-web__points {
+    font-size: 18px;
+    gap: 4px;
+  }
+
+  .results-web__footer {
+    margin-top: 2px;
+  }
+
+  .results-web__footer > div {
+    padding: 4px 10px;
+  }
+
+  .results-web__footer span {
+    font-size: 7px;
+  }
+
+  .results-web__footer strong {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .results-web__actions {
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 160px;
+    padding-top: 4px;
+  }
+
+  .results-web__actions p {
+    font-size: 8px;
+  }
+
+  .results-web__share {
+    font-size: 10px;
+    min-height: 34px;
+  }
+}
+
+@media (max-width: 620px) {
+  .results-web__header {
+    grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.25fr) 86px;
+  }
+
+  .results-web__headline-stats > div {
+    padding: 3px 4px;
+  }
+
+  .results-web__headline-stats > div:first-child {
+    display: none;
+  }
+
+  .results-web__headline-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .results-web__player {
+    grid-template-columns: 37px minmax(90px, 1.15fr) repeat(4, minmax(38px, 0.68fr))
+      minmax(64px, 0.8fr) minmax(60px, 0.75fr);
+  }
+
+  .results-web__tank-icon {
+    transform: scale(0.58);
+  }
+
+  .results-web__player-name > strong {
+    font-size: 13px;
+  }
+
+  .results-web__tier > strong,
+  .results-web__bonus > strong {
+    font-size: 12px;
+  }
+
+  .results-web__points {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .results-web *,
+  .results-web *::before,
+  .results-web *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

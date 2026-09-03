@@ -53,6 +53,7 @@ import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
 import { HeadquartersPagesWebUi } from './webUi/HeadquartersPagesWebUi';
 import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
+import { ResultsWebUi, ResultsWebUiController } from './webUi/ResultsWebUi';
 import { SettingsWebUi } from './webUi/SettingsWebUi';
 import { SocialsWebUi } from './webUi/SocialsWebUi';
 import { TankSelectWebUi } from './webUi/TankSelectWebUi';
@@ -710,6 +711,11 @@ const shopWebUi = new ShopWebUi({
   },
 });
 const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
+const resultsWebUi = new ResultsWebUi({
+  getController: (): ResultsWebUiController =>
+    (sceneRouter.getCurrentScene() as unknown) as ResultsWebUiController,
+  inputManager,
+});
 const tankSelectWebUi = new TankSelectWebUi(
   gameStorage,
   sceneRouter,
@@ -1019,6 +1025,7 @@ sceneRouter.transitionStarted.addListener(() => {
   mainMenuWebUi.unmount();
   shopWebUi.unmount();
   rankingWebUi.unmount();
+  resultsWebUi.unmount();
   tankSelectWebUi.unmount();
   playerProfileWebUi.unmount();
   headquartersWebUi.unmount();
@@ -1038,6 +1045,7 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   if (sceneType === GameSceneType.MainRanking) {
     rankingWebUi.mount();
   }
+  if (sceneType === GameSceneType.LevelScore) resultsWebUi.mount();
   if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
   if (sceneType === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
   if (sceneType === GameSceneType.MainMore) headquartersWebUi.mount();
@@ -1448,6 +1456,7 @@ gameLoop.update.addListener((event) => {
   if (
     !shopWebUi.isActive() &&
     !rankingWebUi.isActive() &&
+    !resultsWebUi.isActive() &&
     !tankSelectWebUi.isActive() &&
     !playerProfileWebUi.isActive() &&
     !headquartersWebUi.isActive() &&
@@ -1469,6 +1478,9 @@ gameLoop.update.addListener((event) => {
       break;
     case GameSceneType.MainRanking:
       rankingWebUi.update();
+      break;
+    case GameSceneType.LevelScore:
+      resultsWebUi.update(event.deltaTime);
       break;
     case GameSceneType.MainTankSelect:
       tankSelectWebUi.update();
@@ -1508,6 +1520,7 @@ gameLoop.update.addListener((event) => {
       if (
         !shopWebUi.isActive() &&
         !rankingWebUi.isActive() &&
+        !resultsWebUi.isActive() &&
         !tankSelectWebUi.isActive() &&
         !playerProfileWebUi.isActive() &&
         !headquartersWebUi.isActive() &&
@@ -1538,6 +1551,7 @@ gameLoop.render.addListener((event) => {
     currentSceneType === GameSceneType.MainMenu ||
     currentSceneType === GameSceneType.MainShop ||
     currentSceneType === GameSceneType.MainRanking ||
+    currentSceneType === GameSceneType.LevelScore ||
     currentSceneType === GameSceneType.MainTankSelect ||
     currentSceneType === GameSceneType.MainPlayerProfile ||
     currentSceneType === GameSceneType.MainMore ||
@@ -1730,6 +1744,8 @@ async function main(): Promise<void> {
     if (sceneRouter.getCurrentType() === GameSceneType.MainRanking) {
       rankingWebUi.mount();
     }
+    if (sceneRouter.getCurrentType() === GameSceneType.LevelScore)
+      resultsWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect)
       tankSelectWebUi.mount();
     if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile)

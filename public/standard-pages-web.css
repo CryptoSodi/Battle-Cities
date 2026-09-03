@@ -1,4 +1,4 @@
-:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web) {
+:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web) {
   --standard-frame: polygon(
     8px 0,
     calc(100% - 8px) 0,
@@ -19,7 +19,7 @@
   padding: 34px 24px;
 }
 
-:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web)::before {
+:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web)::before {
   background: radial-gradient(
       ellipse 55% 46% at 10% 0%,
       rgb(22 119 255 / 17%),
@@ -40,7 +40,7 @@
   z-index: -1;
 }
 
-:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web)
+:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web)
   button {
   -webkit-tap-highlight-color: transparent;
   border: 2px solid var(--bc-line);
@@ -53,7 +53,7 @@
   text-shadow: 0 2px 0 rgb(0 0 0 / 72%);
 }
 
-:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web)
+:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web)
   button::before {
   background: radial-gradient(
         circle,
@@ -75,7 +75,7 @@
   z-index: 2;
 }
 
-:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web)
+:is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web)
   button:focus-visible {
   outline: none;
 }
