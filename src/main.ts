@@ -1433,6 +1433,7 @@ gameLoop.update.addListener((event) => {
   pendingPointerSwipe = null;
 
   const scene = sceneRouter.getCurrentScene();
+  const sceneType = sceneRouter.getCurrentType();
   // HTML overlay screens skip their canvas update loop, but their actions can
   // still delegate to the underlying scene and therefore require its setup.
   scene.ensureSetup(updateArgs);
@@ -1456,21 +1457,44 @@ gameLoop.update.addListener((event) => {
   ) {
     scene.invokeUpdate(updateArgs);
   }
-  if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
-    mainMenuWebUi.update();
+  // Dispatch input only to the screen that owned this simulation step. A
+  // navigation action can mount another web UI synchronously; that new screen
+  // must not consume the same key-down later in this step.
+  switch (sceneType) {
+    case GameSceneType.MainMenu:
+      mainMenuWebUi.update();
+      break;
+    case GameSceneType.MainShop:
+      shopWebUi.update();
+      break;
+    case GameSceneType.MainRanking:
+      rankingWebUi.update();
+      break;
+    case GameSceneType.MainTankSelect:
+      tankSelectWebUi.update();
+      break;
+    case GameSceneType.MainPlayerProfile:
+      playerProfileWebUi.update();
+      break;
+    case GameSceneType.MainMore:
+      headquartersWebUi.update();
+      break;
+    case GameSceneType.MainTreasury:
+    case GameSceneType.MainEvents:
+    case GameSceneType.MainStaking:
+    case GameSceneType.MainTrading:
+    case GameSceneType.MainBoost:
+    case GameSceneType.MainAirdrop:
+    case GameSceneType.MainWiki:
+      headquartersPagesWebUi.update();
+      break;
+    case GameSceneType.MainSocials:
+      socialsWebUi.update();
+      break;
+    case GameSceneType.SettingsMenu:
+      settingsWebUi.update();
+      break;
   }
-  if (shopWebUi.isActive()) {
-    shopWebUi.update();
-  }
-  if (rankingWebUi.isActive()) {
-    rankingWebUi.update();
-  }
-  if (tankSelectWebUi.isActive()) tankSelectWebUi.update();
-  if (playerProfileWebUi.isActive()) playerProfileWebUi.update();
-  if (headquartersWebUi.isActive()) headquartersWebUi.update();
-  if (headquartersPagesWebUi.isActive()) headquartersPagesWebUi.update();
-  if (socialsWebUi.isActive()) socialsWebUi.update();
-  if (settingsWebUi.isActive()) settingsWebUi.update();
 
   const replayDeadline = performance.now() + 8;
   let replaySteps = 0;

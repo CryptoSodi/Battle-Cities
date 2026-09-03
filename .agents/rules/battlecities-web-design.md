@@ -74,6 +74,10 @@ HTML interfaces.
   never restore browser-default focus rings. When an action rerenders a screen,
   restore selection by a stable control key instead of resetting to the first
   tab.
+- Dispatch keyboard/gamepad input to only the screen that owned the current
+  simulation step. Navigation may mount the destination synchronously, but the
+  destination must wait until the next input poll so the initiating Select press
+  cannot also activate its focused Back button, card, or external link.
 - When an HTML overlay calls behavior on its underlying canvas scene, ensure the
   scene has completed its one-time setup first. Overlay screens skip the normal
   scene update loop, so calling an uninitialized scene method can otherwise fail
