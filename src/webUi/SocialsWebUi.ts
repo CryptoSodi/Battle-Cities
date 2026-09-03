@@ -211,10 +211,13 @@ export class SocialsWebUi {
     detail: string,
     action: string,
     complete: boolean,
+    disabled = false,
   ): string {
     return `<button class="operations-web__card ${
       complete ? 'is-complete' : ''
-    }" data-social-action="${key}" data-social-key="${key}"><h3>${title}</h3><span class="operations-web__mark">${mark}</span><p>${detail}</p><strong>${action}</strong></button>`;
+    }" data-social-action="${key}" data-social-key="${key}" ${
+      disabled ? 'disabled' : ''
+    }><h3>${title}</h3><span class="operations-web__mark">${mark}</span><p>${detail}</p><strong>${action}</strong></button>`;
   }
   private taskCard(
     key: string,
@@ -232,6 +235,7 @@ export class SocialsWebUi {
         'COMPLETE X FOLLOW FIRST',
         'LOCKED',
         false,
+        true,
       );
     if (task.claimed)
       return this.card(
