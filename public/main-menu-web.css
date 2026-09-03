@@ -573,6 +573,15 @@ body.game-running.web-ui-active .web-ui {
   border-color: var(--bc-ready);
 }
 
+@media (pointer: coarse) and (max-width: 900px) {
+  .main-menu-web {
+    /* Android reports a zero inset when the app is edge-to-edge. Do not add
+       a cosmetic gap above the HUD in that case. */
+    padding-top: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 @media (max-width: 760px) {
   .main-menu-web__commands {
     width: min(280px, calc(100vw - 32px));
