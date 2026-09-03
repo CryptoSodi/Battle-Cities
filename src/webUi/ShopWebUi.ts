@@ -46,6 +46,7 @@ export class ShopWebUi {
   private buttons: HTMLButtonElement[] = [];
   private filter: ShopFilter = 'all';
   private host: HTMLElement = null;
+  private battleStartPending = false;
   private tab: ShopTab = 'bact';
 
   public constructor(private readonly options: ShopWebUiOptions) {
@@ -389,11 +390,23 @@ export class ShopWebUi {
           );
           return;
         }
-        this.refresh('DEPLOYING', '[data-shop-start]');
-        void this.options.startBattle();
+        void this.startBattle();
       },
       { signal },
     );
+  }
+  private async startBattle(): Promise<void> {
+    if (this.battleStartPending) return;
+    this.battleStartPending = true;
+    try {
+      await this.options.startBattle();
+    } catch {
+      if (this.active) {
+        this.refresh('START FAILED - TRY AGAIN', '[data-shop-start]');
+      }
+    } finally {
+      this.battleStartPending = false;
+    }
   }
   private moveFocus(x: -1 | 0 | 1, y: -1 | 0 | 1): void {
     const current = this.focused() || this.buttons[0];
