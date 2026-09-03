@@ -146,7 +146,7 @@ export class TankSelectWebUi {
 
   private render(status = ''): void {
     const tank = tanks[this.selected];
-    this.host.innerHTML = `<main class="tank-select-web"><header class="tank-select-web__header"><div><span>ARMORY</span><h1>SELECT TANK</h1></div><button class="tank-select-web__back" data-tank-back><i aria-hidden="true"></i>BACK</button></header><section class="tank-select-web__shell"><div class="tank-select-web__fuel"><div><img src="/data/graphics/shop/icons/fuel.png" alt=""><span>FUEL AVAILABLE <strong>${this.shop.getFuelBalance()}</strong></span></div><b><small>DEPLOYMENT COST</small>${
+    this.host.innerHTML = `<main class="tank-select-web"><header class="tank-select-web__header"><div><h1>SELECT TANK</h1></div><button class="tank-select-web__back" data-tank-back><i aria-hidden="true"></i>BACK</button></header><section class="tank-select-web__shell"><div class="tank-select-web__fuel"><div><img src="/data/graphics/shop/icons/fuel.png" alt=""><span>FUEL AVAILABLE <strong>${this.shop.getFuelBalance()}</strong></span></div><b><small>DEPLOYMENT COST</small>${
       tank.name
     } / ${
       tank.fuel

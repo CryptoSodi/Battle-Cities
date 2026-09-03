@@ -72,13 +72,7 @@
     0 0 14px rgb(255 179 15 / 24%);
   clip-path: var(--tank-frame);
   display: flex;
-  gap: 18px;
   padding: 0 24px;
-}
-.tank-select-web__header > div > span {
-  color: var(--bc-active-ink);
-  font: 700 12px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  letter-spacing: 0.12em;
 }
 .tank-select-web h1 {
   color: #171006;
@@ -411,11 +405,7 @@
     min-height: 42px;
   }
   .tank-select-web__header > div {
-    gap: 7px;
     padding: 0 10px;
-  }
-  .tank-select-web__header > div > span {
-    font-size: 8px;
   }
   .tank-select-web h1 {
     font-size: 19px;
