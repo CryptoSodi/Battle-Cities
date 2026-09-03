@@ -691,22 +691,31 @@ const mainMenuWebUi = new MainMenuWebUi({
   session,
 });
 const shopWebUi = new ShopWebUi({
-  getBattleFuelCost: () =>
-    Math.max(
-      0,
-      Math.floor(Number(sceneRouter.getCurrentParams().fuelCost) || 1),
-    ),
+  getBattleFuelCost: () => {
+    const fuelCost = Number(sceneRouter.getCurrentParams().fuelCost);
+    return Number.isFinite(fuelCost) ? Math.max(0, Math.floor(fuelCost)) : 1;
+  },
   gameStorage,
   inputManager,
-  isBattleSetup: () => sceneRouter.getCurrentParams().battleSetup === true,
+  isBattleSetup: () => {
+    const params = sceneRouter.getCurrentParams();
+    return params.battleSetup === true && params.tankTier !== undefined;
+  },
   navigator: sceneRouter,
-  startBattle: () =>
-    ((sceneRouter.getCurrentScene() as unknown) as {
+  startBattle: () => {
+    const scene = sceneRouter.getCurrentScene();
+    return ((scene as unknown) as {
       startBattleFromWebUi: () => Promise<void>;
-    }).startBattleFromWebUi(),
+    }).startBattleFromWebUi();
+  },
 });
 const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
-const tankSelectWebUi = new TankSelectWebUi(gameStorage, sceneRouter, inputManager, () => sceneRouter.getCurrentParams());
+const tankSelectWebUi = new TankSelectWebUi(
+  gameStorage,
+  sceneRouter,
+  inputManager,
+  () => sceneRouter.getCurrentParams(),
+);
 const playerProfileWebUi = new PlayerProfileWebUi(
   sceneRouter,
   inputManager,
@@ -716,7 +725,10 @@ const playerProfileWebUi = new PlayerProfileWebUi(
   },
 );
 const headquartersWebUi = new HeadquartersWebUi(sceneRouter, inputManager);
-const headquartersPagesWebUi = new HeadquartersPagesWebUi(sceneRouter, inputManager);
+const headquartersPagesWebUi = new HeadquartersPagesWebUi(
+  sceneRouter,
+  inputManager,
+);
 const socialsWebUi = new SocialsWebUi(sceneRouter, inputManager);
 const settingsWebUi = new SettingsWebUi(
   sceneRouter,
@@ -1037,7 +1049,8 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
     sceneType === GameSceneType.MainBoost ||
     sceneType === GameSceneType.MainAirdrop ||
     sceneType === GameSceneType.MainWiki
-  ) headquartersPagesWebUi.mount(sceneType);
+  )
+    headquartersPagesWebUi.mount(sceneType);
   if (sceneType === GameSceneType.MainSocials) socialsWebUi.mount();
   if (sceneType === GameSceneType.SettingsMenu) settingsWebUi.mount();
   const webUiHost = document.querySelector('[data-web-ui]');
@@ -1420,6 +1433,9 @@ gameLoop.update.addListener((event) => {
   pendingPointerSwipe = null;
 
   const scene = sceneRouter.getCurrentScene();
+  // HTML overlay screens skip their canvas update loop, but their actions can
+  // still delegate to the underlying scene and therefore require its setup.
+  scene.ensureSetup(updateArgs);
   // Snapshot positions before the step moves anything, so the renderer can
   // interpolate between this step and the next for smooth motion.
   const root = scene.getRoot();
@@ -1428,7 +1444,16 @@ gameLoop.update.addListener((event) => {
       object.interpCapture();
     });
   }
-  if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !headquartersPagesWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
+  if (
+    !shopWebUi.isActive() &&
+    !rankingWebUi.isActive() &&
+    !tankSelectWebUi.isActive() &&
+    !playerProfileWebUi.isActive() &&
+    !headquartersWebUi.isActive() &&
+    !headquartersPagesWebUi.isActive() &&
+    !socialsWebUi.isActive() &&
+    !settingsWebUi.isActive()
+  ) {
     scene.invokeUpdate(updateArgs);
   }
   if (sceneRouter.getCurrentType() === GameSceneType.MainMenu) {
@@ -1456,7 +1481,16 @@ gameLoop.update.addListener((event) => {
     }
     updateArgs.deltaTime = replayDeltaTime;
     try {
-      if (!shopWebUi.isActive() && !rankingWebUi.isActive() && !tankSelectWebUi.isActive() && !playerProfileWebUi.isActive() && !headquartersWebUi.isActive() && !headquartersPagesWebUi.isActive() && !socialsWebUi.isActive() && !settingsWebUi.isActive()) {
+      if (
+        !shopWebUi.isActive() &&
+        !rankingWebUi.isActive() &&
+        !tankSelectWebUi.isActive() &&
+        !playerProfileWebUi.isActive() &&
+        !headquartersWebUi.isActive() &&
+        !headquartersPagesWebUi.isActive() &&
+        !socialsWebUi.isActive() &&
+        !settingsWebUi.isActive()
+      ) {
         scene.invokeUpdate(updateArgs);
       }
     } finally {
@@ -1672,9 +1706,12 @@ async function main(): Promise<void> {
     if (sceneRouter.getCurrentType() === GameSceneType.MainRanking) {
       rankingWebUi.mount();
     }
-    if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
-    if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile) playerProfileWebUi.mount();
-    if (sceneRouter.getCurrentType() === GameSceneType.MainMore) headquartersWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainTankSelect)
+      tankSelectWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainPlayerProfile)
+      playerProfileWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.MainMore)
+      headquartersWebUi.mount();
     if (
       sceneRouter.getCurrentType() === GameSceneType.MainTreasury ||
       sceneRouter.getCurrentType() === GameSceneType.MainEvents ||
@@ -1683,9 +1720,14 @@ async function main(): Promise<void> {
       sceneRouter.getCurrentType() === GameSceneType.MainBoost ||
       sceneRouter.getCurrentType() === GameSceneType.MainAirdrop ||
       sceneRouter.getCurrentType() === GameSceneType.MainWiki
-    ) headquartersPagesWebUi.mount(sceneRouter.getCurrentType() as GameSceneType);
-    if (sceneRouter.getCurrentType() === GameSceneType.MainSocials) socialsWebUi.mount();
-    if (sceneRouter.getCurrentType() === GameSceneType.SettingsMenu) settingsWebUi.mount();
+    )
+      headquartersPagesWebUi.mount(
+        sceneRouter.getCurrentType() as GameSceneType,
+      );
+    if (sceneRouter.getCurrentType() === GameSceneType.MainSocials)
+      socialsWebUi.mount();
+    if (sceneRouter.getCurrentType() === GameSceneType.SettingsMenu)
+      settingsWebUi.mount();
   } else {
     document.body.classList.add('headless-broadcaster');
     log.info('Headless WebRTC broadcaster simulation started');

@@ -11,14 +11,17 @@ export abstract class GameScene<T extends SceneParams = {}> extends Scene {
     return this.root;
   }
 
-  public invokeUpdate(updateArgs: GameUpdateArgs): void {
+  public ensureSetup(updateArgs: GameUpdateArgs): void {
     if (this.needsSetup === true) {
       this.needsSetup = false;
       this.root = this.createRoot();
       this.root.invokeUpdate(updateArgs);
       this.setup(updateArgs);
     }
+  }
 
+  public invokeUpdate(updateArgs: GameUpdateArgs): void {
+    this.ensureSetup(updateArgs);
     this.update(updateArgs);
   }
 

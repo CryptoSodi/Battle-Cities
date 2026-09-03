@@ -74,6 +74,10 @@ HTML interfaces.
   never restore browser-default focus rings. When an action rerenders a screen,
   restore selection by a stable control key instead of resetting to the first
   tab.
+- When an HTML overlay calls behavior on its underlying canvas scene, ensure the
+  scene has completed its one-time setup first. Overlay screens skip the normal
+  scene update loop, so calling an uninitialized scene method can otherwise fail
+  silently even though the button and its event handler are working.
 - Keep icon boxes explicit and use `object-fit: contain` plus
   `image-rendering: pixelated` for pixel art. Missing art must use a labeled
   placeholder, never an emoji.
