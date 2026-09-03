@@ -414,6 +414,7 @@ body.game-running.web-ui-active .web-ui {
   padding-right: 14%;
   position: relative;
   text-shadow: 0 2px 3px rgb(0 0 0 / 72%);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .main-menu-web__action-image {
