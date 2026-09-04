@@ -3,47 +3,57 @@ import { InputManager, MenuInputContext } from '../input';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 
+export const HEADQUARTERS_ICON_NAMES = {
+  treasury: 'treasury-safe',
+  campaigns: 'campaigns-medal',
+  staking: 'staking-lock',
+  trading: 'trading-arrows',
+  boosts: 'boosts-chevrons',
+  airdrop: 'airdrop-crate',
+  manual: 'field-manual',
+} as const;
+
 const entries = [
   [
     'TREASURY',
     'BALANCES, ITEMS AND HISTORY',
-    'treasury-safe',
+    HEADQUARTERS_ICON_NAMES.treasury,
     GameSceneType.MainTreasury,
   ],
   [
     'CAMPAIGNS',
     'EVENTS, OPERATIONS AND REWARDS',
-    'campaigns-medal',
+    HEADQUARTERS_ICON_NAMES.campaigns,
     GameSceneType.MainEvents,
   ],
   [
     'STAKING',
     'LOCK BATC, EARN SP AND PERKS',
-    'staking-lock',
+    HEADQUARTERS_ICON_NAMES.staking,
     GameSceneType.MainStaking,
   ],
   [
     'TRADING',
     'RAYDIUM SWAPS AND MARKET BOOSTS',
-    'trading-arrows',
+    HEADQUARTERS_ICON_NAMES.trading,
     GameSceneType.MainTrading,
   ],
   [
     'BOOSTS',
     'ACTIVE TRAIT BOOSTS AND PERKS',
-    'boosts-chevrons',
+    HEADQUARTERS_ICON_NAMES.boosts,
     GameSceneType.MainBoost,
   ],
   [
     'AIRDROP',
     'TRACK BATC ALLOCATION AND CLAIM STATUS',
-    'airdrop-crate',
+    HEADQUARTERS_ICON_NAMES.airdrop,
     GameSceneType.MainAirdrop,
   ],
   [
     'FIELD MANUAL',
     'TANKS, WEAPONS, POWERUPS AND ENEMY INTELLIGENCE',
-    'field-manual',
+    HEADQUARTERS_ICON_NAMES.manual,
     GameSceneType.MainWiki,
   ],
 ] as const;

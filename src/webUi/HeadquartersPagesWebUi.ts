@@ -22,7 +22,7 @@ import {
   DiscordVerification,
 } from '../airdrops';
 import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../wiki';
-import { moveFocus } from './HeadquartersWebUi';
+import { HEADQUARTERS_ICON_NAMES, moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
 
 interface LedgerEntry {
@@ -914,7 +914,7 @@ export class HeadquartersPagesWebUi {
   }
 
   private heading(title: string, detail: string): string {
-    return `<header class="hq-page-web__heading"><div><span class="operations-web__mark operations-web__mark--sprite operations-web__icon-${this.iconIndex()}" aria-hidden="true"></span><h1>${this.escape(
+    return `<header class="hq-page-web__heading"><div><span class="operations-web__mark operations-web__mark--illustration" aria-hidden="true"><img src="/assets/headquarters/${this.iconName()}.png" alt=""></span><h1>${this.escape(
       title,
     )}</h1></div><p>${this.escape(detail)}</p></header>`;
   }
@@ -987,20 +987,20 @@ export class HeadquartersPagesWebUi {
       ? 'AIRDROP'
       : 'FIELD MANUAL';
   }
-  private iconIndex(): number {
+  private iconName(): string {
     return this.sceneType === GameSceneType.MainTreasury
-      ? 4
+      ? HEADQUARTERS_ICON_NAMES.treasury
       : this.sceneType === GameSceneType.MainEvents
-      ? 1
+      ? HEADQUARTERS_ICON_NAMES.campaigns
       : this.sceneType === GameSceneType.MainStaking
-      ? 2
+      ? HEADQUARTERS_ICON_NAMES.staking
       : this.sceneType === GameSceneType.MainTrading
-      ? 7
+      ? HEADQUARTERS_ICON_NAMES.trading
       : this.sceneType === GameSceneType.MainBoost
-      ? 3
+      ? HEADQUARTERS_ICON_NAMES.boosts
       : this.sceneType === GameSceneType.MainAirdrop
-      ? 6
-      : 5;
+      ? HEADQUARTERS_ICON_NAMES.airdrop
+      : HEADQUARTERS_ICON_NAMES.manual;
   }
   private key(button: HTMLButtonElement): string {
     return button.dataset.pageTab
