@@ -701,6 +701,9 @@ html[data-ui-device='psg1'] body.game-running.level-playing .game-stage {
 html[data-ui-device='psg1'] body.game-running .mobile-touch-controller {
   display: none !important;
 }
+html[data-ui-device='psg1'] .mobile-gamepad-qr {
+  display: none !important;
+}
 
 @media (min-width: 900px) {
   html[data-ui-device='psg1'] .tank-select-web__grid {

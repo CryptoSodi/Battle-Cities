@@ -590,7 +590,16 @@ export class MainMenuWebUi {
       .createQrElement()
       .then((element) => {
         this.mobileGamepadQrRequested = false;
-        if (!this.active) return;
+        if (
+          !this.active ||
+          isPlaySolanaPsg1(
+            this.options.inputManager
+              .getNativeAndroidGamepad()
+              .getDeviceProfile(),
+          )
+        ) {
+          return;
+        }
 
         this.removeMobileGamepadQrElement();
         this.mobileGamepadQrElement = element;
@@ -604,6 +613,16 @@ export class MainMenuWebUi {
   }
 
   private updateMobileGamepadQrVisibility(): void {
+    if (
+      isPlaySolanaPsg1(
+        this.options.inputManager.getNativeAndroidGamepad().getDeviceProfile(),
+      )
+    ) {
+      this.removeMobileGamepadQrElement();
+      this.mobileGamepadQrRequested = false;
+      return;
+    }
+
     if (this.mobileGamepadQrElement === null) return;
 
     const gamepad = this.options.inputManager
