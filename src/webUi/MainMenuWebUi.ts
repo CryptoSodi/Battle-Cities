@@ -511,7 +511,7 @@ export class MainMenuWebUi {
     if (button !== null && button !== undefined) {
       button.disabled = true;
       button.setAttribute('aria-busy', 'true');
-      button.textContent = 'Signing out...';
+      button.classList.add('is-selected');
     }
 
     apiFetch('/api/session', { method: 'DELETE' }).finally(() => {
