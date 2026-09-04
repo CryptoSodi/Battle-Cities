@@ -9,6 +9,7 @@ import { PointsHighscoreManager } from '../points';
 import { beginSinglePlayerReplaySession } from '../replay';
 import { GameSceneType } from '../scenes';
 import { TradingClient } from '../trading';
+import { CherryChatWebUi } from './CherryChatWebUi';
 
 interface MainMenuWebUiOptions {
   inputManager: InputManager;
@@ -46,6 +47,7 @@ export class MainMenuWebUi {
   private readonly eventClient = new EventClient();
   private readonly tradingClient = new TradingClient();
   private readonly options: MainMenuWebUiOptions;
+  private readonly cherryChat: CherryChatWebUi;
   private abortController: AbortController = null;
   private actionButtons: HTMLButtonElement[] = [];
   private active = false;
@@ -58,6 +60,7 @@ export class MainMenuWebUi {
 
   public constructor(options: MainMenuWebUiOptions) {
     this.options = options;
+    this.cherryChat = new CherryChatWebUi(options.playerIdentity);
   }
 
   public mount(): void {
@@ -80,6 +83,7 @@ export class MainMenuWebUi {
     host.innerHTML = this.render();
 
     this.hydrateHud();
+    this.cherryChat.mount();
     this.bindActions();
     this.bindEventTicker();
     this.bindNotificationDialog();
@@ -103,6 +107,7 @@ export class MainMenuWebUi {
       this.touchActionTimer = null;
     }
     this.actionButtons = [];
+    this.cherryChat.unmount();
     this.removeMobileGamepadQrElement();
 
     const dialog = this.host?.querySelector('dialog');
@@ -120,6 +125,7 @@ export class MainMenuWebUi {
 
   public update(): void {
     if (!this.active) return;
+    if (this.cherryChat.blocksMenuInput()) return;
 
     this.updateMobileGamepadQrVisibility();
     const inputMethod = this.options.inputManager.getActiveMethod();
@@ -363,6 +369,19 @@ export class MainMenuWebUi {
         if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           event.preventDefault();
         }
+      },
+      { signal },
+    );
+    // Append chat to directional order without the route-changing touch delay.
+    const launcher = this.cherryChat.getLauncher();
+    if (!launcher) return;
+    this.actionButtons.push(launcher);
+    launcher.addEventListener(
+      'focus',
+      () => {
+        this.actionButtons.forEach((button) =>
+          button.classList.toggle('is-selected', button === launcher),
+        );
       },
       { signal },
     );

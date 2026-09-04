@@ -1,0 +1,175 @@
+.game-cherry {
+  --chat-edge: 20px;
+  --chat-width: 400px;
+  --chat-height: 600px;
+  position: fixed;
+  right: max(var(--chat-edge), env(safe-area-inset-right));
+  bottom: max(var(--chat-edge), env(safe-area-inset-bottom));
+  z-index: 20;
+}
+
+.game-cherry button {
+  -webkit-tap-highlight-color: transparent;
+  background: var(--bc-panel);
+  border: 2px solid var(--bc-line);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px #06090b;
+  color: var(--bc-text);
+  cursor: pointer;
+  font: 700 15px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.07em;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.game-cherry button:focus-visible,
+.game-cherry button.is-selected {
+  outline: none;
+  border-color: var(--bc-command);
+  box-shadow: inset 0 0 0 2px var(--bc-command-dim),
+    0 0 14px rgb(255 179 15 / 45%);
+  color: var(--bc-command);
+}
+
+.game-cherry button.is-active {
+  background: var(--bc-command);
+  color: var(--bc-active-ink);
+}
+
+.game-cherry button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.game-cherry button:active:not(:disabled) {
+  filter: brightness(0.8);
+}
+
+.game-cherry__launcher {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  height: 52px;
+}
+
+.game-cherry__launcher svg {
+  fill: none;
+  stroke: var(--bc-command);
+  stroke-width: 2;
+  height: 22px;
+  width: 22px;
+}
+
+.game-cherry__launcher.is-authenticated {
+  border-color: var(--bc-ready);
+}
+
+.game-cherry__dialog {
+  background: var(--bc-bg);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 3px var(--bc-command), 0 10px 40px rgb(0 0 0 / 75%);
+  box-sizing: border-box;
+  color: var(--bc-text);
+  position: fixed;
+  inset: auto max(var(--chat-edge), env(safe-area-inset-right))
+    max(var(--chat-edge), env(safe-area-inset-bottom)) auto;
+  width: min(var(--chat-width), calc(100vw - 2 * var(--chat-edge)));
+  height: min(var(--chat-height), calc(100dvh - 2 * var(--chat-edge)));
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.game-cherry__dialog[open] {
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr) auto;
+}
+
+.game-cherry__dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.game-cherry__dialog header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.game-cherry__dialog h2 {
+  color: var(--bc-command);
+  font-size: 18px;
+  margin: 0 auto 0 8px;
+}
+.game-cherry__dialog header button {
+  min-height: 40px;
+}
+.game-cherry__dialog header button:focus-visible {
+  border-color: var(--bc-danger);
+  color: var(--bc-text);
+  background: var(--bc-danger-surface);
+}
+.game-cherry__embed {
+  min-height: 0;
+  overflow: hidden;
+}
+.game-cherry__embed iframe {
+  border-radius: 0;
+}
+.game-cherry__dialog footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 4px 2px;
+}
+.game-cherry__dialog footer p {
+  color: var(--bc-muted);
+  font-size: 14px;
+  line-height: 1.25;
+  margin: 0;
+  width: 100%;
+}
+.game-cherry__dialog footer p.is-error {
+  color: var(--bc-danger);
+}
+.game-cherry__dialog footer button {
+  font-size: 13px;
+}
+
+@media (hover: hover) {
+  .game-cherry button:not(:disabled):hover {
+    border-color: var(--bc-command);
+    color: var(--bc-command);
+  }
+  .game-cherry button.is-active:hover {
+    color: var(--bc-active-ink);
+  }
+}
+
+@media (max-width: 899px), (max-height: 600px) {
+  .game-cherry {
+    --chat-edge: 8px;
+  }
+  .game-cherry__launcher {
+    height: 44px;
+    width: 44px;
+    justify-content: center;
+    padding: 0 !important;
+  }
+  .game-cherry__launcher span {
+    display: none;
+  }
+  .game-cherry__dialog[open] {
+    grid-template-rows: 42px minmax(0, 1fr) auto;
+  }
+  .game-cherry__dialog h2 {
+    font-size: 16px;
+  }
+  .game-cherry__dialog footer {
+    padding-top: 4px;
+  }
+  .game-cherry__dialog footer p {
+    font-size: 12px;
+  }
+}

@@ -136,3 +136,9 @@ HTML interfaces.
   the player result region may scroll. Continue is the active amber command,
   Share is inactive gunmetal, and keyboard/pointer selection adds the shared
   amber edge without replacing either base state.
+- Main-menu community chat uses the main website's bottom-right launcher and
+  CHERRY room. Load the embed only on request, keep it inside a responsive modal
+  frame, suspend menu input while open, and restore launcher focus on close.
+  Destroy the embed when leaving the menu. Reuse the current game wallet session
+  and server-minted chat tokens; never switch the game login to authenticate chat.
+  Hide the launcher and do not mount chat for Google-signed-in players.
