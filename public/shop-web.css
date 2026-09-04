@@ -493,6 +493,24 @@ body.shop-web-active::after {
   top: 45%;
 }
 
+.shop-web__card--starter-pack .shop-web__card-icon {
+  bottom: auto;
+  height: clamp(44px, 8vw, 64px);
+  left: 50%;
+  top: clamp(34px, 5vw, 46px);
+  transform: translateX(-50%);
+  width: clamp(68px, 15vw, 94px);
+}
+
+.shop-web__card--starter-pack p {
+  bottom: clamp(52px, 7vw, 70px);
+  font-size: clamp(18px, 2.7vw, 28px);
+  left: 9%;
+  line-height: 0.96;
+  right: 9%;
+  top: auto;
+}
+
 .shop-web__card > button {
   align-items: center;
   background: linear-gradient(180deg, rgb(91 255 51 / 11%), transparent 45%),

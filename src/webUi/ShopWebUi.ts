@@ -251,11 +251,13 @@ export class ShopWebUi {
           currency === ShopCurrency.Sol
             ? '/data/graphics/shop/icons/solana.png'
             : '/data/graphics/shop/icons/token-bact.png';
-        return `<article class="shop-web__card"><div class="shop-web__card-icon"><img src="${itemIcon}" alt=""></div><h2>${
+        return `<article class="shop-web__card${
+          item.id === ShopItemId.StarterPack ? ' shop-web__card--starter-pack' : ''
+        }"><div class="shop-web__card-icon"><img src="${itemIcon}" alt=""></div><h2>${
           item.name
         }</h2><p>${
           item.id === ShopItemId.StarterPack
-            ? '5 FUEL + 2 POWERS'
+            ? '5 FUEL + 2<br>POWER-UPS'
             : item.reward.fuel
             ? `+${item.reward.fuel}`
             : `+${Object.values(item.reward.inventory || {})[0] || 1}`
