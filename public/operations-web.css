@@ -10,6 +10,10 @@
 .operations-web__mark--sprite{background-color:var(--bc-panel-alt);background-image:url('/data/graphics/ui/icons.png');background-repeat:no-repeat;background-size:352px 44px;height:44px;min-width:44px;padding:0;width:44px}.operations-web__icon-1{background-position:-44px 0}.operations-web__icon-2{background-position:-88px 0}.operations-web__icon-3{background-position:-132px 0}.operations-web__icon-4{background-position:-176px 0}.operations-web__icon-5{background-position:-220px 0}.operations-web__icon-6{background-position:-264px 0}.operations-web__icon-7{background-position:-308px 0}
 @media(max-width:700px){.operations-web__mark--sprite{background-size:296px 37px;height:37px;min-width:37px;width:37px}.operations-web__icon-1{background-position:-37px 0}.operations-web__icon-2{background-position:-74px 0}.operations-web__icon-3{background-position:-111px 0}.operations-web__icon-4{background-position:-148px 0}.operations-web__icon-5{background-position:-185px 0}.operations-web__icon-6{background-position:-222px 0}.operations-web__icon-7{background-position:-259px 0}}
 
+/* Supplied Headquarters illustrations replace the generic UI sprite marks. */
+.operations-web__mark--illustration{background:none;border:0;height:52px;min-width:52px;padding:0;width:52px}.operations-web__mark--illustration img{display:block;height:100%;object-fit:contain;width:100%}
+@media(max-width:700px){.operations-web__mark--illustration{height:40px;min-width:40px;width:40px}}
+
 /* Match the original canvas SettingsMenuScene UiToggleButton: a text state,
    thin top highlight, and square status lamp — never a browser-style switch. */
 .settings-web__toggle{background:var(--bc-panel-alt);border:2px solid var(--bc-line);display:grid;grid-template-columns:1fr 44px;height:72px;padding:8px 12px 8px 18px;position:relative}

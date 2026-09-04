@@ -4,21 +4,46 @@ import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 
 const entries = [
-  ['TREASURY', 'BALANCES, ITEMS AND HISTORY', 4, GameSceneType.MainTreasury],
-  ['CAMPAIGNS', 'EVENTS, OPERATIONS AND REWARDS', 1, GameSceneType.MainEvents],
-  ['STAKING', 'LOCK BATC, EARN SP AND PERKS', 2, GameSceneType.MainStaking],
-  ['TRADING', 'RAYDIUM SWAPS AND MARKET BOOSTS', 7, GameSceneType.MainTrading],
-  ['BOOSTS', 'ACTIVE TRAIT BOOSTS AND PERKS', 3, GameSceneType.MainBoost],
+  [
+    'TREASURY',
+    'BALANCES, ITEMS AND HISTORY',
+    'treasury-safe',
+    GameSceneType.MainTreasury,
+  ],
+  [
+    'CAMPAIGNS',
+    'EVENTS, OPERATIONS AND REWARDS',
+    'campaigns-medal',
+    GameSceneType.MainEvents,
+  ],
+  [
+    'STAKING',
+    'LOCK BATC, EARN SP AND PERKS',
+    'staking-lock',
+    GameSceneType.MainStaking,
+  ],
+  [
+    'TRADING',
+    'RAYDIUM SWAPS AND MARKET BOOSTS',
+    'trading-arrows',
+    GameSceneType.MainTrading,
+  ],
+  [
+    'BOOSTS',
+    'ACTIVE TRAIT BOOSTS AND PERKS',
+    'boosts-chevrons',
+    GameSceneType.MainBoost,
+  ],
   [
     'AIRDROP',
     'TRACK BATC ALLOCATION AND CLAIM STATUS',
-    6,
+    'airdrop-crate',
     GameSceneType.MainAirdrop,
   ],
   [
     'FIELD MANUAL',
     'TANKS, WEAPONS, POWERUPS AND ENEMY INTELLIGENCE',
-    5,
+    'field-manual',
     GameSceneType.MainWiki,
   ],
 ] as const;
@@ -75,7 +100,7 @@ export class HeadquartersWebUi {
     this.host.innerHTML = `<main class="operations-web headquarters-web" data-ui-page><header class="operations-web__header" data-ui-nav style="--ui-tab-count:1"><div data-ui-tab class="is-active"><h1>HEADQUARTERS</h1></div><span data-ui-spacer aria-hidden="true"></span><button data-ui-back class="operations-web__back" data-hq-key="back" data-hq-back type="button">◀ BACK</button></header><section class="operations-web__shell"><section class="operations-web__intro"><h2>COMMAND CENTER</h2><p>MANAGE YOUR ASSETS, OPERATIONS, REWARDS AND BATTLE INTELLIGENCE.</p></section><h2 class="operations-web__section-title">OPERATIONS</h2><section class="operations-web__grid operations-web__grid--hq">${entries
       .map(
         (entry, index) =>
-          `<button class="operations-web__card" data-hq-key="entry-${index}" data-hq-entry="${index}" type="button"><h3>${entry[0]}</h3><span class="operations-web__mark operations-web__mark--sprite operations-web__icon-${entry[2]}" aria-hidden="true"></span><p>${entry[1]}</p><strong>OPEN</strong></button>`,
+          `<button class="operations-web__card" data-hq-key="entry-${index}" data-hq-entry="${index}" type="button"><h3>${entry[0]}</h3><span class="operations-web__mark operations-web__mark--illustration" aria-hidden="true"><img src="/assets/headquarters/${entry[2]}.png" alt=""></span><p>${entry[1]}</p><strong>OPEN</strong></button>`,
       )
       .join('')}</section></section></main>`;
     this.bind();
