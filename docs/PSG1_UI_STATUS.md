@@ -1,9 +1,9 @@
 # PSG1 UI Conversion Status
 
 Target display: 1240 × 1080. PSG1 mode reuses the desktop visual system while
-keeping touch input available and hiding the gameplay joystick.
+using the full console viewport and hiding the phone-only gameplay joystick.
 
-## Completed — first UI pass
+## Completed — UI conversion
 
 - Main menu
 - Shop: Token Shop and SOL Shop
@@ -16,14 +16,8 @@ keeping touch input available and hiding the gameplay joystick.
 - Boosts
 - Airdrop
 - Field Manual
-
-These screens use the PSG1 device profile, responsive console-sized type and
-controls, independently scrolling content, fixed navigation, and Shop-standard
-active/selected/Back treatments.
-
-## Remaining
-
-- Login and profile setup
+- Login and authentication
+- Loading and boot splash
 - Tank selection
 - Rankings
 - Socials
@@ -31,12 +25,27 @@ active/selected/Back treatments.
 - Player profile and replay history
 - Battle results
 - Events and campaign detail flows
-- Gameplay HUD, pause, game over, victory, and loading screens
-- Dialogs and transient states across all screens
+- Gameplay HUD, pause, game over, and victory canvas presentation
+- Dialogs, empty states, error states, and transient status treatments
 
-## Verification still required
+These screens use the PSG1 device profile, responsive console-sized type and
+controls, independently scrolling content, fixed navigation, and Shop-standard
+active/selected/Back treatments. Gameplay reclaims the full screen when the
+PSG1 profile is detected and the hidden touch controller no longer reserves
+the lower 40 percent of the viewport.
+
+## Remaining — hardware validation
 
 - Native PSG1 or DevKit safe areas and effective CSS viewport size
-- Touch scrolling and tap-target behavior on hardware
 - Longest live labels, wallet values, empty/error states, and multiplayer data
-- Physical controller navigation and button prompts (outside the current UI-only pass)
+- Performance and focus visibility during extended controller-only play
+
+## Verified locally
+
+- Production components compile in the development webpack build
+- 1240 × 1080 target viewport stays within both axes
+- 620 × 540 density-scaled viewport stays within both axes
+- Tank, ranking, settings, and results content scrolls inside its intended panel
+
+Physical controller mappings and button-prompt copy remain outside this UI-only
+pass.
