@@ -3,7 +3,9 @@
     minmax(112px, 0.8fr) minmax(118px, 0.82fr);
   color: var(--bc-text);
   gap: 10px;
+  min-width: 0;
   position: relative;
+  width: 100%;
 }
 
 .results-web--loading {
@@ -21,6 +23,11 @@
   gap: 10px;
   grid-template-columns: minmax(290px, 1.15fr) minmax(410px, 1.55fr) 166px;
   min-height: 76px;
+}
+
+.results-web__header > *,
+.results-web__player > * {
+  min-width: 0;
 }
 
 .results-web__title,
@@ -592,7 +599,25 @@
 
 @media (max-width: 620px) {
   .results-web__header {
-    grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.25fr) 86px;
+    grid-template-columns: minmax(0, 1fr) 94px;
+    grid-template-rows: 48px 40px;
+    min-height: 0;
+  }
+
+  .results-web__title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .results-web__continue {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .results-web__headline-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .results-web__headline-stats > div {
@@ -607,9 +632,75 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .results-web__shell {
+    grid-template-rows: 42px 0 minmax(0, 1fr) 70px 48px;
+    padding: 8px 6px;
+  }
+
   .results-web__player {
-    grid-template-columns: 37px minmax(90px, 1.15fr) repeat(4, minmax(38px, 0.68fr))
-      minmax(64px, 0.8fr) minmax(60px, 0.75fr);
+    grid-template-columns: 37px minmax(86px, 1.15fr) repeat(4, minmax(0, 0.68fr));
+    grid-template-rows: 66px 38px;
+    min-height: 104px;
+  }
+
+  .results-web__rank,
+  .results-web__player-name {
+    grid-row: 1 / -1;
+  }
+
+  .results-web__tier {
+    grid-row: 1;
+  }
+
+  .results-web__bonus {
+    grid-column: 3 / 5;
+    grid-row: 2;
+  }
+
+  .results-web__points {
+    grid-column: 5 / 7;
+    grid-row: 2;
+  }
+
+  .results-web__bonus,
+  .results-web__points {
+    flex-direction: row;
+    gap: 5px;
+  }
+
+  .results-web__bonus small,
+  .results-web__points small {
+    font-size: 6px;
+  }
+
+  .results-web__footer {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .results-web__footer > div {
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  .results-web__footer > div:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid var(--bc-line);
+    grid-column: 1 / -1;
+  }
+
+  .results-web__actions {
+    gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 3px;
+  }
+
+  .results-web__actions p {
+    display: none;
+  }
+
+  .results-web__share {
+    min-height: 40px;
+    width: 100%;
   }
 
   .results-web__tank-icon {
