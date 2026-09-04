@@ -348,7 +348,8 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web__bottom-tank-scroller {
-  bottom: max(8px, env(safe-area-inset-bottom));
+  /* Park the tank's tracks directly on the hazard stripe's top edge. */
+  bottom: 32px;
   height: 44px;
   left: -44px;
   pointer-events: none;
@@ -629,10 +630,6 @@ body.game-running.web-ui-active .web-ui {
     padding-top: env(safe-area-inset-top);
   }
 
-  .main-menu-web__bottom-tank-scroller {
-    /* Deliberately overlaps the hazard stripe on Android. */
-    bottom: max(3px, env(safe-area-inset-bottom));
-  }
 }
 
 @media (max-width: 760px) {
