@@ -347,6 +347,54 @@ body.game-running.web-ui-active .web-ui {
   font-style: normal;
 }
 
+.main-menu-web__bottom-tank-scroller {
+  bottom: max(8px, env(safe-area-inset-bottom));
+  height: 44px;
+  left: -44px;
+  pointer-events: none;
+  position: absolute;
+  width: 44px;
+  z-index: 3;
+}
+
+.main-menu-web__bottom-tank-sprite {
+  background-image: url('/data/graphics/TANKS/player-tank-primary-star1.png');
+  background-position: -132px 0;
+  background-repeat: no-repeat;
+  background-size: 176px 572px;
+  display: block;
+  height: 44px;
+  image-rendering: pixelated;
+  width: 44px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .main-menu-web__bottom-tank-scroller {
+    animation: main-menu-web-bottom-tank-patrol 22s linear infinite;
+    will-change: transform;
+  }
+
+  .main-menu-web__bottom-tank-sprite {
+    animation: main-menu-web-bottom-tank-walk 760ms steps(13) infinite;
+  }
+}
+
+@keyframes main-menu-web-bottom-tank-patrol {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(100vw + 44px));
+  }
+}
+
+@keyframes main-menu-web-bottom-tank-walk {
+  to {
+    background-position: -132px -572px;
+  }
+}
+
 @keyframes main-menu-web-hazard-marquee {
   from {
     transform: translateX(0);
@@ -580,6 +628,11 @@ body.game-running.web-ui-active .web-ui {
     padding-top: 0;
     padding-top: env(safe-area-inset-top);
   }
+
+  .main-menu-web__bottom-tank-scroller {
+    /* Deliberately overlaps the hazard stripe on Android. */
+    bottom: max(3px, env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 760px) {
@@ -633,5 +686,9 @@ body.game-running.web-ui-active .web-ui {
   .web-ui-screen--leaving,
   .web-ui-screen--returning {
     animation: none;
+  }
+
+  .main-menu-web__bottom-tank-scroller {
+    transform: translateX(22vw);
   }
 }

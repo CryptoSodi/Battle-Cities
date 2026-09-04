@@ -270,6 +270,9 @@ export class MainMenuWebUi {
             <span aria-hidden="true"><i>✦</i>Reloading cannon // Prepare for battle</span>
           </div>
         </footer>
+        <div class="main-menu-web__bottom-tank-scroller" aria-hidden="true">
+          <span class="main-menu-web__bottom-tank-sprite"></span>
+        </div>
 
         <dialog class="main-menu-web__dialog" data-menu-notification-dialog aria-labelledby="notification-title">
           <h2 id="notification-title">Battle updates</h2>
