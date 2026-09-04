@@ -11,6 +11,7 @@ import {
 } from '../shop';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
+import { isPsg1Ui } from './deviceUi';
 
 interface ShopWebUiOptions {
   getBattleFuelCost: () => number;
@@ -66,6 +67,9 @@ export class ShopWebUi {
     this.host = host;
     document.body.classList.add('web-ui-active', 'shop-web-active');
     host.hidden = false;
+    window.addEventListener('battlecities:ui-device', () => this.refresh(), {
+      signal: this.abortController.signal,
+    });
     window
       .matchMedia('(min-width: 900px)')
       .addEventListener('change', () => this.refresh(), {
@@ -113,7 +117,7 @@ export class ShopWebUi {
     }
   }
   private render(status: string): string {
-    if (window.matchMedia('(min-width: 900px)').matches) {
+    if (isPsg1Ui() || window.matchMedia('(min-width: 900px)').matches) {
       return this.renderDesktop(status);
     }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
@@ -146,6 +150,9 @@ export class ShopWebUi {
         : 'ALL ITEMS LOADED')}</p></section></main>`;
   }
   private renderDesktop(status: string): string {
+    const loadoutHint = isPsg1Ui()
+      ? 'CHOOSE UP TO FOUR POWERS FOR YOUR LOADOUT'
+      : 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS';
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
     return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
@@ -175,7 +182,7 @@ export class ShopWebUi {
         currency,
       )}</div><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
-        ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
+        ? loadoutHint
         : 'ALL ITEMS LOADED')}</p></section></section></main>`;
   }
   private shopContent(currency: ShopCurrency): string {

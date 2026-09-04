@@ -1,4 +1,5 @@
 import * as Stats from 'stats.js';
+import { initializeDeviceUi } from './webUi/deviceUi';
 
 import {
   AudioLoader,
@@ -114,6 +115,7 @@ const authStatusElement = document.querySelector(
 ) as HTMLElement;
 
 const log = new Logger('main', Logger.Level.Debug);
+initializeDeviceUi();
 
 const runtimeParams = new URLSearchParams(window.location.search);
 const isHeadlessBroadcaster =
