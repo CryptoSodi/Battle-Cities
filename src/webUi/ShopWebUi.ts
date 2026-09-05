@@ -103,10 +103,7 @@ export class ShopWebUi {
       if (input.isDownAny(MenuInputContext.Select)) {
         openDialog.querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')?.click();
       } else if (input.isDownAny(MenuInputContext.Back)) {
-        openDialog.close();
-        this.host.querySelector<HTMLButtonElement>('[data-shop-start]')?.focus({
-          preventScroll: true,
-        });
+        this.closeDesktopControlsDialog();
       }
       return;
     }
@@ -171,7 +168,7 @@ export class ShopWebUi {
       : 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS';
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
     const controlsDialog = !isPsg1Ui()
-      ? `<dialog class="shop-web__controls-dialog" data-shop-controls-dialog aria-labelledby="shop-controls-title"><h2 id="shop-controls-title">BATTLE CONTROLS</h2><dl><div><dt>MOVE</dt><dd><kbd>ARROW KEYS</kbd></dd></div><div><dt>FIRE</dt><dd><kbd>Z</kbd></dd></div><div><dt>RAPID FIRE</dt><dd><kbd>X</kbd></dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">CONFIRM / START BATTLE</button></dialog>`
+      ? `<dialog class="shop-web__controls-dialog" data-shop-controls-dialog aria-labelledby="shop-controls-title"><h2 id="shop-controls-title">BATTLE CONTROLS</h2><dl><div><dt>MOVE</dt><dd class="shop-web__keyboard shop-web__keyboard--arrows" aria-label="Arrow keys"><span><kbd>&uarr;</kbd></span><span><kbd>&larr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></span></dd></div><div><dt>FIRE</dt><dd class="shop-web__keyboard"><kbd>Z</kbd></dd></div><div><dt>RAPID FIRE</dt><dd class="shop-web__keyboard"><kbd>X</kbd></dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">CONFIRM / START BATTLE</button></dialog>`
       : '';
     return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
@@ -438,6 +435,17 @@ export class ShopWebUi {
         },
         { signal },
       );
+    this.host
+      .querySelector<HTMLDialogElement>('[data-shop-controls-dialog]')
+      ?.addEventListener(
+        'click',
+        (event) => {
+          if (event.target === event.currentTarget) {
+            this.closeDesktopControlsDialog();
+          }
+        },
+        { signal },
+      );
   }
   private shouldShowDesktopControls(): boolean {
     return !isPsg1Ui() && window.matchMedia('(min-width: 900px)').matches;
@@ -449,6 +457,13 @@ export class ShopWebUi {
     dialog
       .querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')
       ?.focus({ preventScroll: true });
+  }
+  private closeDesktopControlsDialog(): void {
+    const dialog = this.host.querySelector('[data-shop-controls-dialog]');
+    if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
+    this.host.querySelector<HTMLButtonElement>('[data-shop-start]')?.focus({
+      preventScroll: true,
+    });
   }
   private async startBattle(): Promise<void> {
     if (this.battleStartPending) return;
