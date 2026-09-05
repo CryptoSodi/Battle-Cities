@@ -148,7 +148,7 @@ export class TankSelectWebUi {
 
   private render(status = ''): void {
     const tank = tanks[this.selected];
-    this.host.innerHTML = `<main class="tank-select-web" data-ui-page><header class="tank-select-web__header"><div><h1>SELECT TANK</h1></div><button class="tank-select-web__back" data-ui-back data-tank-back><i aria-hidden="true"></i>BACK</button></header><section class="tank-select-web__shell"><div class="tank-select-web__fuel"><div><img src="/data/graphics/shop/icons/fuel.png" alt=""><span>FUEL AVAILABLE <strong>${this.shop.getFuelBalance()}</strong></span></div><b><small>DEPLOYMENT COST</small>${
+    this.host.innerHTML = `<main class="tank-select-web" data-ui-page><header class="tank-select-web__header" data-ui-nav style="--ui-tab-count:1" aria-label="Tank selection commands"><div data-ui-tab class="is-active"><h1>SELECT TANK</h1></div><span data-ui-spacer aria-hidden="true"></span><button class="tank-select-web__back" data-ui-back data-tank-back type="button">◀ BACK</button></header><section class="tank-select-web__shell"><div class="tank-select-web__fuel"><div><img src="/data/graphics/shop/icons/fuel.png" alt=""><span>FUEL AVAILABLE <strong>${this.shop.getFuelBalance()}</strong></span></div><b><small>DEPLOYMENT COST</small>${
       tank.name
     } / ${
       tank.fuel
