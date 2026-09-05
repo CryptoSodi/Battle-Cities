@@ -70,7 +70,7 @@ test('maps Start and Menu buttons to the shared menu select control', (t) => {
   );
 });
 
-test('keeps PSG1 face-button labels aligned with menu confirm and back', (t) => {
+test('maps PSG1 A to confirm and B to menu back', (t) => {
   const changes: Array<[InputControl, boolean]> = [];
   const gamepad = new NativeAndroidGamepad((control, pressed) =>
     changes.push([control, pressed]),
@@ -81,17 +81,11 @@ test('keeps PSG1 face-button labels aligned with menu confirm and back', (t) => 
         type: 'button',
         control,
         pressed: true,
-        device: {
-          id: 1,
-          name: 'PSG1_GAMEPAD',
-          vendorId: 0x1234,
-          productId: 0x5678,
-        },
       },
     });
 
-  dispatch('button_b');
   dispatch('button_a');
+  dispatch('button_b');
 
   t.true(
     changes.some(

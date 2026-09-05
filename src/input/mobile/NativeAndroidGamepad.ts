@@ -86,7 +86,6 @@ export class NativeAndroidGamepad {
   private axes: NativeGamepadAxes = this.emptyAxes();
   private mappedControls: { [control: number]: boolean } = {};
   private deviceProfile: AndroidDeviceProfile = null;
-  private controllerDevice: NativeControllerDevice = null;
   private deviceProfilePromise: Promise<void> = null;
   private listening = false;
 
@@ -145,10 +144,6 @@ export class NativeAndroidGamepad {
     const detail = event.detail as NativeGamepadEventDetail;
     if (detail === undefined || detail === null) {
       return;
-    }
-
-    if (detail.device !== undefined) {
-      this.controllerDevice = detail.device;
     }
 
     if (detail.type === 'reset') {
@@ -258,25 +253,6 @@ export class NativeAndroidGamepad {
   }
 
   private normalizePhysicalButton(control: string): string {
-    const psg1 =
-      this.controllerDevice !== null &&
-      (this.controllerDevice.name.toLowerCase().includes('psg1_gamepad') ||
-        (this.controllerDevice.vendorId === 0x1234 &&
-          this.controllerDevice.productId === 0x5678));
-
-    if (psg1) {
-      switch (control) {
-        case 'button_a':
-          return 'b';
-        case 'button_b':
-          return 'a';
-        case 'button_x':
-          return 'y';
-        case 'button_y':
-          return 'x';
-      }
-    }
-
     return control.indexOf('button_') === 0 ? control.slice(7) : control;
   }
 }
