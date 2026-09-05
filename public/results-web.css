@@ -426,7 +426,9 @@
   }
 }
 
-@media (max-width: 899px) {
+/* Android WebViews can report more than 899 CSS pixels on high-density or
+   tablet-class displays. Coarse input is the stable signal for this layout. */
+@media (pointer: coarse), (max-width: 899px) {
   .results-web {
     gap: 4px;
     grid-template-rows: 46px minmax(0, 1fr);
