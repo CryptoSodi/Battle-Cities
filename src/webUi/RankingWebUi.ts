@@ -66,6 +66,15 @@ export class RankingWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalNext))
       this.moveFocus(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back)) {
+      if (this.seasonMenuOpen) {
+        this.seasonMenuOpen = false;
+        this.pendingFocusSelector = '[data-rank-season-toggle]';
+        this.render();
+      } else {
+        this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
+      }
+    }
   }
   private async load(): Promise<void> {
     this.loading = true;

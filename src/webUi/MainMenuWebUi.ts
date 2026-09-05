@@ -157,6 +157,9 @@ export class MainMenuWebUi {
       if (inputMethod.isDownAny(MenuInputContext.Select)) {
         (dialogButtons[currentIndex] || dialogButtons[0])?.click();
       }
+      if (inputMethod.isDownAny(MenuInputContext.Back)) {
+        openDialog.close();
+      }
       return;
     }
 

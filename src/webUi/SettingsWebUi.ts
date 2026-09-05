@@ -62,6 +62,8 @@ export class SettingsWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalPrev)) this.move(0, -1);
     else if (input.isDownAny(MenuInputContext.VerticalNext)) this.move(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back))
+      this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
   private render(): void {
     const rows = [

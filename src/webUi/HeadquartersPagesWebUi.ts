@@ -185,6 +185,8 @@ export class HeadquartersPagesWebUi {
     else if (method.isDownAny(MenuInputContext.VerticalPrev)) this.move(0, -1);
     else if (method.isDownAny(MenuInputContext.VerticalNext)) this.move(0, 1);
     else if (method.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (method.isDownAny(MenuInputContext.Back))
+      this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
 
   private async load(): Promise<void> {

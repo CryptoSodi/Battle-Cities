@@ -4,7 +4,9 @@ import {
   AndroidDeviceProfile,
   isPlaySolanaPsg1,
   isSolanaSeeker,
+  NativeAndroidGamepad,
 } from './NativeAndroidGamepad';
+import { InputControl } from '../InputControl';
 
 function profile(
   overrides: Partial<AndroidDeviceProfile>,
@@ -48,4 +50,59 @@ test('detects PSG1 across model, device, and product build fields', (t) => {
   );
   t.false(isPlaySolanaPsg1(profile({ model: 'Seeker' })));
   t.false(isPlaySolanaPsg1(profile({ model: 'PSG2' })));
+});
+
+test('maps Start and Menu buttons to the shared menu select control', (t) => {
+  const changes: Array<[InputControl, boolean]> = [];
+  const gamepad = new NativeAndroidGamepad((control, pressed) =>
+    changes.push([control, pressed]),
+  );
+
+  (gamepad as any).handleNativeEvent({
+    detail: { type: 'button', control: 'button_start', pressed: true },
+  });
+
+  t.true(
+    changes.some(
+      ([control, pressed]) =>
+        control === InputControl.Select && pressed === true,
+    ),
+  );
+});
+
+test('keeps PSG1 face-button labels aligned with menu confirm and back', (t) => {
+  const changes: Array<[InputControl, boolean]> = [];
+  const gamepad = new NativeAndroidGamepad((control, pressed) =>
+    changes.push([control, pressed]),
+  );
+  const dispatch = (control: string) =>
+    (gamepad as any).handleNativeEvent({
+      detail: {
+        type: 'button',
+        control,
+        pressed: true,
+        device: {
+          id: 1,
+          name: 'PSG1_GAMEPAD',
+          vendorId: 0x1234,
+          productId: 0x5678,
+        },
+      },
+    });
+
+  dispatch('button_b');
+  dispatch('button_a');
+
+  t.true(
+    changes.some(
+      ([control, pressed]) =>
+        control === InputControl.PrimaryAction && pressed === true,
+    ),
+  );
+  t.true(
+    changes.some(
+      ([control, pressed]) =>
+        control === InputControl.SecondaryAction && pressed === true,
+    ),
+  );
 });

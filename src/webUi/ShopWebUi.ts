@@ -104,6 +104,8 @@ export class ShopWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalNext))
       this.moveFocus(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back))
+      this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
   private refresh(status = '', restoreSelector = this.focusSelector()): void {
     if (!this.active || !this.host) return;

@@ -61,6 +61,8 @@ export class PlayerProfileWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalPrev)) this.moveFocus(0, -1);
     else if (input.isDownAny(MenuInputContext.VerticalNext)) this.moveFocus(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back))
+      this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
 
   private async load(page: number): Promise<void> {
@@ -93,7 +95,7 @@ export class PlayerProfileWebUi {
 
   private render(): void {
     if (!this.host) return;
-    this.host.innerHTML = `<main class="player-profile-web"><header class="player-profile-web__header"><h1>PLAYER PROFILE</h1><button data-profile-back type="button">← BACK</button></header><section class="player-profile-web__shell">${this.loading ? '<p class="player-profile-web__state">LOADING PLAYER PROFILE...</p>' : this.profile ? this.content(this.profile) : `<section class="player-profile-web__error"><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN</p><button data-profile-retry type="button">RETRY</button></section>`}</section></main>`;
+    this.host.innerHTML = `<main class="player-profile-web" data-ui-page><header class="player-profile-web__header"><h1>PLAYER PROFILE</h1><button data-ui-back data-profile-back type="button">← BACK</button></header><section class="player-profile-web__shell">${this.loading ? '<p class="player-profile-web__state">LOADING PLAYER PROFILE...</p>' : this.profile ? this.content(this.profile) : `<section class="player-profile-web__error"><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN</p><button data-profile-retry type="button">RETRY</button></section>`}</section></main>`;
     this.bind();
   }
 

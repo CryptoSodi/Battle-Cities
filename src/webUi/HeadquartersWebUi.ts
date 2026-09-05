@@ -105,6 +105,8 @@ export class HeadquartersWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalPrev)) this.move(0, -1);
     else if (input.isDownAny(MenuInputContext.VerticalNext)) this.move(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back))
+      this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
   private render(): void {
     this.host.innerHTML = `<main class="operations-web headquarters-web" data-ui-page><header class="operations-web__header" data-ui-nav style="--ui-tab-count:1"><div data-ui-tab class="is-active"><h1>HEADQUARTERS</h1></div><span data-ui-spacer aria-hidden="true"></span><button data-ui-back class="operations-web__back" data-hq-key="back" data-hq-back type="button">◀ BACK</button></header><section class="operations-web__shell"><section class="operations-web__intro"><h2>COMMAND CENTER</h2><p>MANAGE YOUR ASSETS, OPERATIONS, REWARDS AND BATTLE INTELLIGENCE.</p></section><h2 class="operations-web__section-title">OPERATIONS</h2><section class="operations-web__grid operations-web__grid--hq">${entries

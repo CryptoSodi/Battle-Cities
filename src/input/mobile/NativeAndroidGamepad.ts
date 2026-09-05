@@ -197,6 +197,10 @@ export class NativeAndroidGamepad {
       InputControl.SecondaryAction,
       this.isButtonPressed('b'),
     );
+    this.setMappedControl(
+      InputControl.Select,
+      this.isButtonPressed('start') || this.isButtonPressed('menu'),
+    );
   }
 
   private setMappedControl(control: InputControl, pressed: boolean): void {

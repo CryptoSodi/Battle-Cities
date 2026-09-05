@@ -98,6 +98,10 @@ export class ResultsWebUi {
     else if (input.isDownAny(MenuInputContext.VerticalNext))
       this.moveFocus(0, 1);
     else if (input.isDownAny(MenuInputContext.Select)) this.focused()?.click();
+    else if (input.isDownAny(MenuInputContext.Back))
+      this.host
+        .querySelector<HTMLButtonElement>('[data-results-continue]')
+        ?.click();
   }
 
   private render(state: ResultsWebUiState | null = null): void {
