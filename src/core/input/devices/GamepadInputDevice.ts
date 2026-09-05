@@ -1,4 +1,7 @@
+import { GamepadButtonCode } from '../codes';
 import { InputDevice } from '../InputDevice';
+
+const AXIS_DEAD_ZONE = 0.22;
 
 export class GamepadInputDevice implements InputDevice {
   private deviceIndex: number;
@@ -49,6 +52,7 @@ export class GamepadInputDevice implements InputDevice {
         codes.push(i);
       }
     }
+    this.addStickCodes(codes, gamepad.axes);
 
     const downCodes = [];
     const holdCodes = [];
@@ -125,5 +129,27 @@ export class GamepadInputDevice implements InputDevice {
     }
 
     return gamepad;
+  }
+
+  private addStickCodes(codes: number[], axes: ReadonlyArray<number>): void {
+    const leftX = axes[0] || 0;
+    const leftY = axes[1] || 0;
+    const rightX = axes[2] || 0;
+    const rightY = axes[3] || 0;
+
+    if (leftY < -AXIS_DEAD_ZONE) codes.push(GamepadButtonCode.Up);
+    if (leftY > AXIS_DEAD_ZONE) codes.push(GamepadButtonCode.Down);
+    if (leftX < -AXIS_DEAD_ZONE) codes.push(GamepadButtonCode.Left);
+    if (leftX > AXIS_DEAD_ZONE) codes.push(GamepadButtonCode.Right);
+
+    const rightStickHorizontal = Math.abs(rightX) >= Math.abs(rightY);
+    if (rightStickHorizontal && rightX > AXIS_DEAD_ZONE)
+      codes.push(GamepadButtonCode.RightStickRight);
+    if (!rightStickHorizontal && rightY < -AXIS_DEAD_ZONE)
+      codes.push(GamepadButtonCode.RightStickUp);
+    if (!rightStickHorizontal && rightY > AXIS_DEAD_ZONE)
+      codes.push(GamepadButtonCode.RightStickDown);
+    if (rightStickHorizontal && rightX < -AXIS_DEAD_ZONE)
+      codes.push(GamepadButtonCode.RightStickLeft);
   }
 }

@@ -86,6 +86,7 @@ export class NativeAndroidGamepad {
   private axes: NativeGamepadAxes = this.emptyAxes();
   private mappedControls: { [control: number]: boolean } = {};
   private deviceProfile: AndroidDeviceProfile = null;
+  private controllerDevice: NativeControllerDevice = null;
   private deviceProfilePromise: Promise<void> = null;
   private listening = false;
 
@@ -151,6 +152,10 @@ export class NativeAndroidGamepad {
       return;
     }
 
+    if (detail.device !== undefined) {
+      this.controllerDevice = detail.device;
+    }
+
     if (detail.type === 'button' && detail.control !== undefined) {
       const control = this.normalizePhysicalButton(detail.control);
       this.buttons[control] = detail.pressed === true;
@@ -196,24 +201,25 @@ export class NativeAndroidGamepad {
       InputControl.Select,
       this.isButtonPressed('start') || this.isButtonPressed('menu'),
     );
-    const psg1 = isPlaySolanaPsg1(this.deviceProfile);
+    const powerStick =
+      isPlaySolanaPsg1(this.deviceProfile) || this.isPlayStationController();
     const rightStickHorizontal =
       Math.abs(this.axes.rightX) >= Math.abs(this.axes.rightY);
     this.setMappedControl(
       InputControl.PowerOne,
-      psg1 && rightStickHorizontal && this.axes.rightX > threshold,
+      powerStick && rightStickHorizontal && this.axes.rightX > threshold,
     );
     this.setMappedControl(
       InputControl.PowerTwo,
-      psg1 && !rightStickHorizontal && this.axes.rightY < -threshold,
+      powerStick && !rightStickHorizontal && this.axes.rightY < -threshold,
     );
     this.setMappedControl(
       InputControl.PowerThree,
-      psg1 && !rightStickHorizontal && this.axes.rightY > threshold,
+      powerStick && !rightStickHorizontal && this.axes.rightY > threshold,
     );
     this.setMappedControl(
       InputControl.PowerFour,
-      psg1 && rightStickHorizontal && this.axes.rightX < -threshold,
+      powerStick && rightStickHorizontal && this.axes.rightX < -threshold,
     );
   }
 
@@ -274,5 +280,17 @@ export class NativeAndroidGamepad {
 
   private normalizePhysicalButton(control: string): string {
     return control.indexOf('button_') === 0 ? control.slice(7) : control;
+  }
+
+  private isPlayStationController(): boolean {
+    if (this.controllerDevice === null) return false;
+    const name = normalizeDeviceValue(this.controllerDevice.name);
+    return (
+      this.controllerDevice.vendorId === 0x054c ||
+      name.includes('playstation') ||
+      name.includes('dualshock') ||
+      name.includes('dualsense') ||
+      name === 'wirelesscontroller'
+    );
   }
 }
