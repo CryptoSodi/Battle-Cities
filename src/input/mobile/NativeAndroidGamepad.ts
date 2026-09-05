@@ -196,6 +196,25 @@ export class NativeAndroidGamepad {
       InputControl.Select,
       this.isButtonPressed('start') || this.isButtonPressed('menu'),
     );
+    const psg1 = isPlaySolanaPsg1(this.deviceProfile);
+    const rightStickHorizontal =
+      Math.abs(this.axes.rightX) >= Math.abs(this.axes.rightY);
+    this.setMappedControl(
+      InputControl.PowerOne,
+      psg1 && rightStickHorizontal && this.axes.rightX > threshold,
+    );
+    this.setMappedControl(
+      InputControl.PowerTwo,
+      psg1 && !rightStickHorizontal && this.axes.rightY < -threshold,
+    );
+    this.setMappedControl(
+      InputControl.PowerThree,
+      psg1 && !rightStickHorizontal && this.axes.rightY > threshold,
+    );
+    this.setMappedControl(
+      InputControl.PowerFour,
+      psg1 && rightStickHorizontal && this.axes.rightX < -threshold,
+    );
   }
 
   private setMappedControl(control: InputControl, pressed: boolean): void {
@@ -244,6 +263,7 @@ export class NativeAndroidGamepad {
 
   private updateDeviceProfile(profile: AndroidDeviceProfile): void {
     this.deviceProfile = profile;
+    this.syncMappedControls();
     (window as any).battleCitiesAndroidDevice = { ...profile };
     window.dispatchEvent(
       new CustomEvent('battlecities:android-device', {
