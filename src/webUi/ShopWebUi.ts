@@ -96,6 +96,20 @@ export class ShopWebUi {
   public update(): void {
     if (!this.active) return;
     const input = this.options.inputManager.getActiveMethod();
+    const openDialog = this.host.querySelector(
+      '[data-shop-controls-dialog][open]',
+    );
+    if (openDialog instanceof HTMLDialogElement) {
+      if (input.isDownAny(MenuInputContext.Select)) {
+        openDialog.querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')?.click();
+      } else if (input.isDownAny(MenuInputContext.Back)) {
+        openDialog.close();
+        this.host.querySelector<HTMLButtonElement>('[data-shop-start]')?.focus({
+          preventScroll: true,
+        });
+      }
+      return;
+    }
     if (input.isDownAny(MenuInputContext.HorizontalPrev)) this.moveFocus(-1, 0);
     else if (input.isDownAny(MenuInputContext.HorizontalNext))
       this.moveFocus(1, 0);
@@ -156,6 +170,9 @@ export class ShopWebUi {
       ? 'CHOOSE UP TO FOUR POWERS FOR YOUR LOADOUT'
       : 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS';
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
+    const controlsDialog = !isPsg1Ui()
+      ? `<dialog class="shop-web__controls-dialog" data-shop-controls-dialog aria-labelledby="shop-controls-title"><h2 id="shop-controls-title">BATTLE CONTROLS</h2><dl><div><dt>MOVE</dt><dd><kbd>ARROW KEYS</kbd></dd></div><div><dt>FIRE</dt><dd><kbd>Z</kbd></dd></div><div><dt>RAPID FIRE</dt><dd><kbd>X</kbd></dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">CONFIRM / START BATTLE</button></dialog>`
+      : '';
     return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
@@ -185,7 +202,7 @@ export class ShopWebUi {
       )}</div><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
         ? loadoutHint
-        : 'ALL ITEMS LOADED')}</p></section></section></main>`;
+        : 'ALL ITEMS LOADED')}</p></section></section>${controlsDialog}</main>`;
   }
   private shopContent(currency: ShopCurrency): string {
     return this.tab === 'loadout'
@@ -402,10 +419,36 @@ export class ShopWebUi {
           );
           return;
         }
+        if (this.shouldShowDesktopControls()) {
+          this.openDesktopControlsDialog();
+          return;
+        }
         void this.startBattle();
       },
       { signal },
     );
+    this.host
+      .querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')
+      ?.addEventListener(
+        'click',
+        () => {
+          const dialog = this.host.querySelector('[data-shop-controls-dialog]');
+          if (dialog instanceof HTMLDialogElement) dialog.close();
+          void this.startBattle();
+        },
+        { signal },
+      );
+  }
+  private shouldShowDesktopControls(): boolean {
+    return !isPsg1Ui() && window.matchMedia('(min-width: 900px)').matches;
+  }
+  private openDesktopControlsDialog(): void {
+    const dialog = this.host.querySelector('[data-shop-controls-dialog]');
+    if (!(dialog instanceof HTMLDialogElement) || dialog.open) return;
+    dialog.showModal();
+    dialog
+      .querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')
+      ?.focus({ preventScroll: true });
   }
   private async startBattle(): Promise<void> {
     if (this.battleStartPending) return;

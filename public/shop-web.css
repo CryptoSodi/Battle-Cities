@@ -704,6 +704,74 @@ body.shop-web-active::after {
   color: #171006;
 }
 
+.shop-web__controls-dialog {
+  background: var(--shop-panel);
+  border: 1px solid var(--shop-gold);
+  box-shadow: 0 0 0 2px #06090b, 0 18px 48px rgb(0 0 0 / 58%);
+  color: var(--shop-white);
+  padding: 22px;
+  width: min(360px, calc(100vw - 48px));
+}
+
+.shop-web__controls-dialog::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+.shop-web__controls-dialog h2 {
+  color: var(--shop-gold-bright);
+  font-size: 19px;
+  letter-spacing: 0.08em;
+  margin: 0 0 18px;
+  text-align: center;
+}
+
+.shop-web__controls-dialog dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.shop-web__controls-dialog dl div {
+  align-items: center;
+  background: var(--shop-panel-raised);
+  border: 1px solid var(--shop-line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.shop-web__controls-dialog dt,
+.shop-web__controls-dialog dd {
+  font: 700 12px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.shop-web__controls-dialog dt {
+  color: var(--shop-muted);
+}
+
+.shop-web__controls-dialog kbd {
+  color: var(--shop-gold-bright);
+  font: 700 13px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+}
+
+.shop-web__controls-confirm {
+  background: linear-gradient(180deg, #ffc22f, #e89a06);
+  border: 1px solid var(--shop-gold-bright);
+  color: #171006;
+  font: 700 14px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  margin-top: 18px;
+  min-height: 44px;
+  width: 100%;
+}
+
+.shop-web__controls-confirm.is-selected {
+  box-shadow: 0 0 14px rgb(255 179 15 / 50%);
+}
+
 .shop-web button:focus-visible {
   outline: none;
 }
