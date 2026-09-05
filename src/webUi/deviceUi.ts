@@ -7,8 +7,11 @@ export function isPsg1Ui(): boolean {
 }
 
 export function initializeDeviceUi(): void {
-  const preview = process.env.NODE_ENV === 'development' &&
-    new URLSearchParams(window.location.search).get('ui') === 'psg1';
+  // Keep the explicit preview available in deployed builds so PSG1 layouts can
+  // be tested without the physical device. Hardware detection still enables
+  // the same mode automatically on the console.
+  const preview = new URLSearchParams(window.location.search).get('ui') ===
+    'psg1';
   const update = (profile: AndroidDeviceProfile): void => {
     const next = preview || isPlaySolanaPsg1(profile) ? 'psg1' : 'standard';
     if (document.documentElement.dataset.uiDevice === next) return;
