@@ -413,7 +413,7 @@ body.web-ui-active [data-web-ui] [data-ui-page] [data-ui-nav] button:active {
 }
 
 @media (max-width: 899px) {
-  body.web-ui-active [data-web-ui] [data-ui-page]:not(.shop-web) {
+  body.web-ui-active [data-web-ui] [data-ui-page]:not(.shop-web):not(.results-web) {
     padding: clamp(10px, 1.7vw, 18px);
   }
   body.web-ui-active [data-web-ui] [data-ui-page] .hq-page-web__stats {
@@ -434,7 +434,7 @@ body.web-ui-active [data-web-ui] [data-ui-page] [data-ui-nav] button:active {
     --ui-nav-icon-gap: 4px;
     --ui-frame-cut: 5px;
   }
-  body.web-ui-active [data-web-ui] [data-ui-page]:not(.shop-web) {
+  body.web-ui-active [data-web-ui] [data-ui-page]:not(.shop-web):not(.results-web) {
     padding: 5px;
   }
   body.web-ui-active [data-web-ui] [data-ui-page] .hq-page-web__heading {
