@@ -752,39 +752,9 @@ body.shop-web-active::after {
   color: var(--shop-muted);
 }
 
-.shop-web__keyboard {
-  align-items: center;
-  display: flex;
-  gap: 4px;
-}
-
-.shop-web__keyboard kbd {
-  align-items: center;
-  background: linear-gradient(180deg, #2b353b, #11181d);
-  border: 1px solid #65747c;
-  box-shadow: inset 0 -2px 0 #06090b, 0 1px 0 #88969d;
+.shop-web__controls-dialog kbd {
   color: var(--shop-gold-bright);
-  display: inline-flex;
   font: 700 13px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  height: 23px;
-  justify-content: center;
-  min-width: 25px;
-  padding: 0 5px;
-}
-
-.shop-web__keyboard--arrows {
-  align-items: flex-end;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.shop-web__keyboard--arrows span {
-  display: flex;
-  gap: 2px;
-}
-
-.shop-web__keyboard--arrows span:first-child {
-  padding-right: 27px;
 }
 
 .shop-web__controls-confirm {

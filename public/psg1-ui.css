@@ -242,6 +242,31 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__status {
   white-space: normal;
 }
 
+html[data-ui-device='psg1'] .shop-web__controls-dialog {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 2 * var(--psg1-gap));
+  max-width: min(620px, calc(100vw - 2 * var(--psg1-gap)));
+  padding: clamp(18px, 3vw, 30px);
+}
+
+html[data-ui-device='psg1'] .shop-web__controls-dialog h2 {
+  font-size: var(--psg1-title);
+}
+
+html[data-ui-device='psg1'] .shop-web__controls-dialog dl div {
+  min-height: var(--psg1-control);
+}
+
+html[data-ui-device='psg1'] .shop-web__controls-dialog dt,
+html[data-ui-device='psg1'] .shop-web__controls-dialog dd,
+html[data-ui-device='psg1'] .shop-web__controls-confirm {
+  font-size: var(--psg1-body);
+}
+
+html[data-ui-device='psg1'] .shop-web__controls-confirm {
+  min-height: var(--psg1-control);
+}
+
 /* Headquarters and all seven destinations share the same panel geometry. */
 html[data-ui-device='psg1'] :is(.headquarters-web .operations-web__shell, .hq-page-web__shell) {
   margin-top: var(--psg1-gap);
