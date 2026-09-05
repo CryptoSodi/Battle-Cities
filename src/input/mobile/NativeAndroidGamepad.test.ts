@@ -101,6 +101,33 @@ test('maps PSG1 A to confirm and B to menu back', (t) => {
   );
 });
 
+test('maps PlayStation Cross and Circle aliases to fire and rapid fire', (t) => {
+  const changes: Array<[InputControl, boolean]> = [];
+  const gamepad = new NativeAndroidGamepad((control, pressed) =>
+    changes.push([control, pressed]),
+  );
+  const dispatch = (control: string) =>
+    (gamepad as any).handleNativeEvent({
+      detail: { type: 'button', control, pressed: true },
+    });
+
+  dispatch('button_x');
+  dispatch('button_circle');
+
+  t.true(
+    changes.some(
+      ([control, pressed]) =>
+        control === InputControl.PrimaryAction && pressed === true,
+    ),
+  );
+  t.true(
+    changes.some(
+      ([control, pressed]) =>
+        control === InputControl.SecondaryAction && pressed === true,
+    ),
+  );
+});
+
 test('maps PSG1 right-stick directions to equipped power slots', (t) => {
   const changes: Array<[InputControl, boolean]> = [];
   const gamepad = new NativeAndroidGamepad((control, pressed) =>

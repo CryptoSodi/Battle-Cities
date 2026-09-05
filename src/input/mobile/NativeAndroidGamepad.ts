@@ -170,36 +170,39 @@ export class NativeAndroidGamepad {
     const threshold = NativeAndroidGamepad.AXIS_THRESHOLD;
     this.setMappedControl(
       InputControl.Up,
-      this.isButtonPressed('dpad_up') ||
+      this.isButtonPressedAny('dpad_up', 'up') ||
         this.axes.leftY < -threshold ||
         this.axes.hatY < -threshold,
     );
     this.setMappedControl(
       InputControl.Down,
-      this.isButtonPressed('dpad_down') ||
+      this.isButtonPressedAny('dpad_down', 'down') ||
         this.axes.leftY > threshold ||
         this.axes.hatY > threshold,
     );
     this.setMappedControl(
       InputControl.Left,
-      this.isButtonPressed('dpad_left') ||
+      this.isButtonPressedAny('dpad_left', 'left') ||
         this.axes.leftX < -threshold ||
         this.axes.hatX < -threshold,
     );
     this.setMappedControl(
       InputControl.Right,
-      this.isButtonPressed('dpad_right') ||
+      this.isButtonPressedAny('dpad_right', 'right') ||
         this.axes.leftX > threshold ||
         this.axes.hatX > threshold,
     );
-    this.setMappedControl(InputControl.PrimaryAction, this.isButtonPressed('a'));
+    this.setMappedControl(
+      InputControl.PrimaryAction,
+      this.isButtonPressedAny('a', 'x', 'cross'),
+    );
     this.setMappedControl(
       InputControl.SecondaryAction,
-      this.isButtonPressed('b'),
+      this.isButtonPressedAny('b', 'circle', 'o'),
     );
     this.setMappedControl(
       InputControl.Select,
-      this.isButtonPressed('start') || this.isButtonPressed('menu'),
+      this.isButtonPressedAny('start', 'menu', 'select', 'options', 'dpad_center'),
     );
     const powerStick =
       isPlaySolanaPsg1(this.deviceProfile) || this.isPlayStationController();
@@ -279,7 +282,14 @@ export class NativeAndroidGamepad {
   }
 
   private normalizePhysicalButton(control: string): string {
-    return control.indexOf('button_') === 0 ? control.slice(7) : control;
+    const normalized = String(control || '').trim().toLowerCase();
+    return normalized.indexOf('button_') === 0
+      ? normalized.slice(7)
+      : normalized;
+  }
+
+  private isButtonPressedAny(...controls: string[]): boolean {
+    return controls.some((control) => this.isButtonPressed(control));
   }
 
   private isPlayStationController(): boolean {

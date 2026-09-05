@@ -287,9 +287,9 @@ export class InputManager {
   }
 
   public setTouchControl(control: InputControl, pressed: boolean): void {
-    const device = this.liveDeviceMap.get(InputDeviceType.Keyboard)?.[0];
-    const binding = this.getBinding(InputBindingType.PrimaryKeyboard);
-    if (device instanceof KeyboardInputDevice) {
+    const device = this.liveDeviceMap.get(InputDeviceType.Gamepad)?.[0];
+    const binding = this.getBinding(InputBindingType.PrimaryGamepad);
+    if (device instanceof GamepadInputDevice) {
       device.setCodePressed(binding.get(control), pressed);
     }
   }
