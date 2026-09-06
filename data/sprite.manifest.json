@@ -331,13 +331,23 @@
     "scale": 4
   },
   "powerup.life": {
-    "file": "data/graphics/TANKS/powerup-life.png",
+    "file": "data/graphics/powerup-life.png",
     "rect": [
       0,
       0,
       256,
       240
     ],
+    "scale": 4
+  },
+  "powerup.batc-100": {
+    "file": "data/graphics/powerup-batc-100.png",
+    "rect": [0, 0, 256, 240],
+    "scale": 4
+  },
+  "powerup.batc-200": {
+    "file": "data/graphics/powerup-batc-200.png",
+    "rect": [0, 0, 256, 240],
     "scale": 4
   },
   "powerup.gun": {

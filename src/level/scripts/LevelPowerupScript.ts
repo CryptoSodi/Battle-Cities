@@ -2,11 +2,19 @@ import { Prng, Rect, Timer, Vector } from '../../core';
 import { DebugLevelPowerupMenu } from '../../debug';
 import { GameUpdateArgs } from '../../game';
 import { Powerup } from '../../gameObjects';
-import { PowerupFactory, PowerupGrid, PowerupType } from '../../powerup';
+import {
+  claimBatcDrop,
+  BatcDropRoll,
+  PowerupFactory,
+  PowerupGrid,
+  PowerupType,
+  retryPendingBatcDropClaims,
+  rollBatcDrop,
+} from '../../powerup';
 import { PowerupSpawnFrame } from '../../replay';
 import { TerrainType } from '../../terrain';
 import * as config from '../../config';
-import type { LocalPowerupSnapshot } from '../../network/local';
+import { LocalPowerupSnapshot } from '../../network/local';
 
 import { LevelScript } from '../LevelScript';
 import {
@@ -15,6 +23,31 @@ import {
   LevelMapTileDestroyedEvent,
   LevelPowerupPickedEvent,
 } from '../events';
+
+function createDropRequestId(sequence: number): string {
+  const random =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random()
+          .toString(36)
+          .slice(2)}`;
+  return `${random}-${sequence}`;
+}
+
+function detectNetworkMode(): {
+  isLocalServerMatch: boolean;
+  isWebRtcClient: boolean;
+} {
+  if (typeof window === 'undefined') {
+    return { isLocalServerMatch: false, isWebRtcClient: false };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    isLocalServerMatch: params.get('mode') === 'local',
+    isWebRtcClient:
+      params.get('mode') === 'webrtc' && params.get('broadcaster') !== '1',
+  };
+}
 
 export interface NetworkPowerupSnapshot {
   id: number;
@@ -53,6 +86,9 @@ export class LevelPowerupScript extends LevelScript {
   private isRecordingPowerups = false;
   private recordedPowerupSpawns: PowerupSpawnFrame[] = [];
   private readonly headless: boolean;
+  private dropRequestSequence = 0;
+  private nextBatcDropRoll: BatcDropRoll | null = null;
+  private batcDropRollPending = false;
 
   public constructor(
     options: {
@@ -174,6 +210,11 @@ export class LevelPowerupScript extends LevelScript {
     this.blockGridDefaults();
     this.blockGridInitialMap();
 
+    if (!this.isNetworkControlled() && this.replayPowerupSpawns === null) {
+      retryPendingBatcDropClaims();
+      this.primeBatcDropRoll();
+    }
+
     if (config.IS_DEV && !this.headless) {
       const debugMenu = new DebugLevelPowerupMenu(this.world, this.grid, {
         top: 125,
@@ -203,7 +244,10 @@ export class LevelPowerupScript extends LevelScript {
       return;
     }
 
-    this.spawn();
+    const reward = this.nextBatcDropRoll;
+    this.nextBatcDropRoll = null;
+    this.spawn(reward?.type ?? null, reward?.claimId ?? null);
+    this.primeBatcDropRoll();
   };
 
   // Remove active powerup whenever new enemy spawns with drop
@@ -222,6 +266,24 @@ export class LevelPowerupScript extends LevelScript {
 
     this.revoke();
   };
+
+  private primeBatcDropRoll(): void {
+    if (
+      this.isNetworkControlled() ||
+      this.replayPowerupSpawns !== null ||
+      this.batcDropRollPending ||
+      this.nextBatcDropRoll !== null
+    )
+      return;
+    this.batcDropRollPending = true;
+    const requestId = createDropRequestId(++this.dropRequestSequence);
+    void rollBatcDrop(requestId, this.session.getLevelNumber()).then(
+      (reward) => {
+        this.nextBatcDropRoll = reward;
+        this.batcDropRollPending = false;
+      },
+    );
+  }
 
   // Remove powerup after timer expires
   private handleTimer = (): void => {
@@ -243,7 +305,7 @@ export class LevelPowerupScript extends LevelScript {
     this.grid.freeRect(rect);
   };
 
-  private spawn(type: PowerupType = null): void {
+  private spawn(type: PowerupType = null, batcClaimId: string = null): void {
     // Override previous powerup with newly picked up one
     this.revoke();
 
@@ -321,6 +383,7 @@ export class LevelPowerupScript extends LevelScript {
         centerPosition: directRect.getCenter(),
         partyIndex,
       });
+      if (batcClaimId !== null) void claimBatcDrop(batcClaimId);
       return;
     }
 
@@ -335,6 +398,7 @@ export class LevelPowerupScript extends LevelScript {
         centerPosition: powerup.getCenter(),
         partyIndex,
       });
+      if (batcClaimId !== null) void claimBatcDrop(batcClaimId);
     });
 
     // Salvage boost: dropped powerups stay on the field longer. Deterministic
@@ -364,6 +428,15 @@ export class LevelPowerupScript extends LevelScript {
     this.activePowerupId = null;
 
     this.eventBus.powerupRevoked.notify(null);
+  }
+
+  private isNetworkControlled(): boolean {
+    return (
+      this.isLocalServerMatch ||
+      this.isWebRtcClient ||
+      this.headless ||
+      this.session.isMultiplayer()
+    );
   }
 
   private capturePowerupPickup = (event: LevelPowerupPickedEvent): void => {
@@ -444,20 +517,4 @@ export class LevelPowerupScript extends LevelScript {
       );
     });
   }
-}
-
-function detectNetworkMode(): {
-  isLocalServerMatch: boolean;
-  isWebRtcClient: boolean;
-} {
-  if (typeof window === 'undefined') {
-    return { isLocalServerMatch: false, isWebRtcClient: false };
-  }
-  const params = new URLSearchParams(window.location.search);
-  return {
-    isLocalServerMatch: params.get('mode') === 'local',
-    isWebRtcClient:
-      params.get('mode') === 'webrtc' &&
-      params.get('broadcaster') !== '1',
-  };
 }

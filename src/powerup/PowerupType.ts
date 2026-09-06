@@ -7,4 +7,6 @@ export enum PowerupType {
   Upgrade = 'upgrade',
   ZoomOut = 'zoomout',
   Wipeout = 'wipeout',
+  Batc100 = 'batc100',
+  Batc200 = 'batc200',
 }

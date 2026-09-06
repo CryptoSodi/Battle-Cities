@@ -116,6 +116,10 @@ export class Powerup extends GameObject {
         return 'powerup.zoomout';
       case PowerupType.Wipeout:
         return 'powerup.grenade';
+      case PowerupType.Batc100:
+        return 'powerup.batc-100';
+      case PowerupType.Batc200:
+        return 'powerup.batc-200';
     }
     return 'unknown';
   }
