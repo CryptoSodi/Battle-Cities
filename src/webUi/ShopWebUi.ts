@@ -8,6 +8,8 @@ import {
   ShopItemId,
   ShopLoadoutSlot,
   ShopManager,
+  PresaleQuote,
+  PresaleState,
 } from '../shop';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
@@ -21,7 +23,7 @@ interface ShopWebUiOptions {
   navigator: SceneNavigator;
   startBattle: () => Promise<void>;
 }
-type ShopTab = 'bact' | 'sol' | 'loadout';
+type ShopTab = 'bact' | 'sol' | 'swap' | 'loadout';
 type ShopFilter = 'all' | 'fuel' | 'powerups' | 'packs';
 const icons: Partial<Record<ShopInventoryItemId, string>> = {
   [ShopInventoryItemId.Shield]: '/data/graphics/shop/owned/helmet.png',
@@ -49,6 +51,9 @@ export class ShopWebUi {
   private host: HTMLElement = null;
   private battleStartPending = false;
   private tab: ShopTab = 'bact';
+  private presaleState: PresaleState = null;
+  private presaleQuote: PresaleQuote = null;
+  private swapAmount = '';
 
   public constructor(private readonly options: ShopWebUiOptions) {
     this.shop = new ShopManager(options.gameStorage);
@@ -80,6 +85,7 @@ export class ShopWebUi {
       image.src = src;
     });
     this.refresh();
+    if (this.tab === 'swap') void this.loadPresaleState();
     this.buttons[0]?.focus({ preventScroll: true });
   }
   public unmount(): void {
@@ -96,19 +102,24 @@ export class ShopWebUi {
   public update(): void {
     if (!this.active) return;
     const input = this.options.inputManager.getActiveMethod();
-    const openDialog = this.host.querySelector(
-      '[data-shop-controls-dialog][open]',
+    const openDialog = this.host.querySelector<HTMLDialogElement>(
+      '[data-shop-controls-dialog][open], [data-shop-swap-dialog][open]',
     );
     if (openDialog instanceof HTMLDialogElement) {
       if (input.isDownAny(MenuInputContext.Select)) {
         openDialog
-          .querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')
+          .querySelector<HTMLButtonElement>(
+            '[data-shop-controls-confirm], [data-shop-swap-confirm]',
+          )
           ?.click();
       } else if (input.isDownAny(MenuInputContext.Back)) {
         openDialog.close();
-        this.host.querySelector<HTMLButtonElement>('[data-shop-start]')?.focus({
-          preventScroll: true,
-        });
+        const focusTarget = openDialog.hasAttribute('data-shop-swap-dialog')
+          ? '[data-shop-swap-review]'
+          : '[data-shop-start]';
+        this.host
+          .querySelector<HTMLButtonElement>(focusTarget)
+          ?.focus({ preventScroll: true });
       }
       return;
     }
@@ -145,9 +156,9 @@ export class ShopWebUi {
         'bact',
         'TOKEN SHOP',
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
-      'loadout',
-      'LOADOUT',
-    )}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
+      'swap',
+      'SWAP',
+    )}${this.tabButton('loadout', 'LOADOUT')}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button"${
@@ -167,7 +178,9 @@ export class ShopWebUi {
       <section class="shop-web__content">${content}</section><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
         ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
-        : 'ALL ITEMS LOADED')}</p></section></main>`;
+        : this.tab === 'swap'
+        ? 'LIVE BATC PRESALE'
+        : 'ALL ITEMS LOADED')}</p></section>${this.swapDialog()}</main>`;
   }
   private renderDesktop(status: string): string {
     const loadoutHint = isPsg1Ui()
@@ -184,9 +197,9 @@ export class ShopWebUi {
         'bact',
         'TOKEN SHOP',
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
-      'loadout',
-      'LOADOUT',
-    )}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
+      'swap',
+      'SWAP',
+    )}${this.tabButton('loadout', 'LOADOUT')}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button"${
@@ -210,11 +223,15 @@ export class ShopWebUi {
       )}</div><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
         ? loadoutHint
-        : 'ALL ITEMS LOADED')}</p></section></section>${controlsDialog}</main>`;
+        : this.tab === 'swap'
+        ? 'LIVE BATC PRESALE'
+        : 'ALL ITEMS LOADED')}</p></section></section>${controlsDialog}${this.swapDialog()}</main>`;
   }
   private shopContent(currency: ShopCurrency): string {
     return this.tab === 'loadout'
       ? this.loadout()
+      : this.tab === 'swap'
+      ? this.swap()
       : `${this.filters()}<h2 class="shop-web__label">${this.categoryTitle()}</h2><div class="shop-web__cards">${this.cards(
           currency,
         )}</div>`;
@@ -250,6 +267,7 @@ export class ShopWebUi {
     const icon = {
       bact: '/data/graphics/shop/icons/token-bact.png',
       sol: '/data/graphics/shop/icons/solana.png',
+      swap: '/assets/headquarters/trading-arrows.png',
       loadout: '/data/graphics/shop/icons/loadout.png',
     }[tab];
     return `<button class="shop-web__tab${
@@ -319,6 +337,147 @@ export class ShopWebUi {
       })
       .join('')}</div>${battleAction}</section>`;
   }
+  private swap(): string {
+    const state = this.presaleState;
+    const price = Number(state?.currentPriceSol || 0);
+    const payAmount = Number(this.swapAmount);
+    const receiveAmount =
+      price > 0 && Number.isFinite(payAmount) && payAmount > 0
+        ? payAmount / price
+        : 0;
+    const rate = price > 0 ? 1 / price : 0;
+    const activeStage = state?.stages?.find(
+      (stage) => stage.id === state.currentStageId,
+    );
+    const available = Math.max(
+      0,
+      Number(activeStage?.allocationBatc || 0) - Number(activeStage?.soldBatc || 0),
+    );
+    const canSwap = state?.configured === true && state.ended !== true;
+    const sanitizedAmount = this.swapAmount.replace(/[^0-9.]/g, '');
+    return `<section class="shop-web__swap" aria-labelledby="shop-swap-title"><section class="shop-web__swap-overview"><p class="shop-web__swap-eyebrow">LIVE ${state?.network?.toUpperCase() || 'PRESALE'} FLOW</p><h2 id="shop-swap-title">SWAP SOL FOR BATC</h2><p class="shop-web__swap-copy">Secure your BATC allocation from inside Battle Cities.</p><dl class="shop-web__swap-stats"><div><dt>ACTIVE STAGE</dt><dd>${activeStage?.label || 'LOADING'}</dd></div><div><dt>BATC AVAILABLE</dt><dd>${this.formatSwapNumber(available)} BATC</dd></div><div><dt>PRICE</dt><dd>${price > 0 ? `${this.formatSwapNumber(price, 9)} SOL` : 'LOADING'}</dd></div><div><dt>RATE</dt><dd data-shop-swap-rate>${rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'}</dd></div></dl></section><section class="shop-web__swap-form"><h3>PAY WITH SOL</h3><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(receiveAmount)} <span>BATC</span></output><p class="shop-web__swap-note">${state?.network?.toUpperCase() === 'MAINNET-BETA' ? 'MAINNET' : state?.network?.toUpperCase() || 'NETWORK'} · Review the exact wallet transaction before signing.</p><button class="shop-web__swap-review" data-shop-swap-review type="button"${canSwap ? '' : ' disabled'}>${this.shop.isWalletConnected() ? 'REVIEW SWAP' : 'CONNECT WALLET'}</button></section></section>`;
+  }
+  private swapDialog(): string {
+    const quote = this.presaleQuote;
+    return `<dialog class="shop-web__swap-dialog" data-shop-swap-dialog aria-labelledby="shop-swap-dialog-title"><p class="shop-web__swap-eyebrow">VERIFY TRANSACTION</p><h2 id="shop-swap-dialog-title">REVIEW SWAP</h2><dl><div><dt>YOU PAY</dt><dd>${quote ? `${quote.payAmount} SOL` : '--'}</dd></div><div><dt>YOU RECEIVE</dt><dd>${quote ? `${this.formatSwapNumber(Number(quote.batcAmount))} BATC` : '--'}</dd></div><div><dt>PRICE</dt><dd>${quote ? `${quote.tokenPriceSol} SOL` : '--'}</dd></div><div><dt>STAGE / NETWORK</dt><dd>${quote ? `${quote.stageLabel} · ${quote.network.toUpperCase()}` : '--'}</dd></div></dl><p>Confirm only after checking the amount and network in your wallet.</p><div class="shop-web__swap-dialog-actions"><button data-shop-swap-cancel type="button">CANCEL</button><button data-shop-swap-confirm type="button">CONFIRM IN WALLET</button></div></dialog>`;
+  }
+  private async loadPresaleState(status = ''): Promise<void> {
+    try {
+      const state = await this.shop.getPresaleState();
+      if (!this.active || this.tab !== 'swap') return;
+      this.presaleState = state;
+      this.refresh(
+        status ||
+          (state.configured && !state.ended
+            ? `LIVE ${state.network.toUpperCase()} DATA LOADED`
+            : 'PRESALE IS NOT AVAILABLE'),
+        '[data-shop-tab="swap"]',
+      );
+    } catch (error) {
+      if (!this.active || this.tab !== 'swap') return;
+      this.refresh(
+        error instanceof Error ? error.message : 'LIVE PRESALE DATA IS UNAVAILABLE',
+        '[data-shop-tab="swap"]',
+      );
+    }
+  }
+  private updateSwapPreview(): void {
+    const price = Number(this.presaleState?.currentPriceSol || 0);
+    const payAmount = Number(this.swapAmount);
+    const receiveAmount = price > 0 && payAmount > 0 ? payAmount / price : 0;
+    const output = this.host.querySelector<HTMLOutputElement>(
+      '[data-shop-swap-receive]',
+    );
+    if (output) {
+      output.innerHTML = `${this.formatSwapNumber(receiveAmount)} <span>BATC</span>`;
+    }
+  }
+  private async setSwapPreset(preset: string): Promise<void> {
+    try {
+      if (preset === 'max') {
+        const balance = await this.shop.getPresaleWalletBalance();
+        const reserve = 0.01;
+        const stageMax = Number(this.presaleState?.maxPaySol || 0);
+        const amount = Math.max(
+          0,
+          Math.min(balance - reserve, stageMax || Number.POSITIVE_INFINITY),
+        );
+        this.swapAmount = amount.toFixed(9).replace(/\.?0+$/, '');
+      } else {
+        this.swapAmount = preset;
+      }
+      const input = this.host.querySelector<HTMLInputElement>('[data-shop-swap-amount]');
+      if (input) input.value = this.swapAmount;
+      this.updateSwapPreview();
+    } catch (error) {
+      this.refresh(
+        error instanceof Error ? error.message : 'WALLET BALANCE IS UNAVAILABLE',
+        '[data-shop-swap-review]',
+      );
+    }
+  }
+  private async reviewSwap(): Promise<void> {
+    if (this.presaleState?.configured !== true || this.presaleState.ended) {
+      this.refresh('PRESALE IS NOT AVAILABLE', '[data-shop-swap-review]');
+      return;
+    }
+    if (!(Number(this.swapAmount) > 0)) {
+      this.refresh('ENTER A SOL AMOUNT', '[data-shop-swap-review]');
+      this.host.querySelector<HTMLInputElement>('[data-shop-swap-amount]')?.focus();
+      return;
+    }
+    try {
+      this.presaleQuote = await this.shop.createPresaleQuote(
+        this.swapAmount,
+        this.presaleQuote?.quoteToken,
+      );
+      this.refresh('REVIEW THE EXACT WALLET TRANSACTION', '[data-shop-swap-review]');
+      const dialog = this.host.querySelector<HTMLDialogElement>(
+        '[data-shop-swap-dialog]',
+      );
+      dialog?.showModal();
+      dialog
+        ?.querySelector<HTMLButtonElement>('[data-shop-swap-confirm]')
+        ?.focus({ preventScroll: true });
+    } catch (error) {
+      this.refresh(
+        error instanceof Error ? error.message.toUpperCase() : 'QUOTE FAILED',
+        '[data-shop-swap-review]',
+      );
+    }
+  }
+  private async submitSwap(): Promise<void> {
+    if (this.presaleQuote === null) return;
+    const confirm = this.host.querySelector<HTMLButtonElement>(
+      '[data-shop-swap-confirm]',
+    );
+    if (confirm) {
+      confirm.disabled = true;
+      confirm.textContent = 'WAITING FOR WALLET';
+    }
+    const result = await this.shop.submitPresaleQuote(this.presaleQuote);
+    if (result.ok) {
+      this.swapAmount = '';
+      this.presaleQuote = null;
+      await this.loadPresaleState(result.statusText);
+      return;
+    }
+    this.closeSwapDialog();
+    this.refresh(result.statusText, '[data-shop-swap-review]');
+  }
+  private closeSwapDialog(): void {
+    const dialog = this.host.querySelector<HTMLDialogElement>(
+      '[data-shop-swap-dialog]',
+    );
+    if (dialog?.open) dialog.close();
+    this.host
+      .querySelector<HTMLButtonElement>('[data-shop-swap-review]')
+      ?.focus({ preventScroll: true });
+  }
+  private formatSwapNumber(value: number, maximumFractionDigits = 2): string {
+    if (!Number.isFinite(value) || value <= 0) return '0.0';
+    return value.toLocaleString('en-US', { maximumFractionDigits });
+  }
   private bind(): void {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button'));
@@ -366,9 +525,49 @@ export class ShopWebUi {
           () => {
             this.tab = b.dataset.shopTab as ShopTab;
             this.refresh('', `[data-shop-tab="${b.dataset.shopTab}"]`);
+            if (this.tab === 'swap') void this.loadPresaleState();
           },
           { signal },
         ),
+      );
+    this.host
+      .querySelector<HTMLInputElement>('[data-shop-swap-amount]')
+      ?.addEventListener(
+        'input',
+        (event) => {
+          const input = event.target;
+          if (!(input instanceof HTMLInputElement)) return;
+          this.swapAmount = input.value.replace(/[^0-9.]/g, '');
+          this.updateSwapPreview();
+        },
+        { signal },
+      );
+    this.host
+      .querySelectorAll<HTMLButtonElement>('[data-shop-swap-preset]')
+      .forEach((button) =>
+        button.addEventListener(
+          'click',
+          () => void this.setSwapPreset(button.dataset.shopSwapPreset || ''),
+          { signal },
+        ),
+      );
+    this.host
+      .querySelector<HTMLButtonElement>('[data-shop-swap-review]')
+      ?.addEventListener('click', () => void this.reviewSwap(), { signal });
+    this.host
+      .querySelector<HTMLButtonElement>('[data-shop-swap-confirm]')
+      ?.addEventListener('click', () => void this.submitSwap(), { signal });
+    this.host
+      .querySelector<HTMLButtonElement>('[data-shop-swap-cancel]')
+      ?.addEventListener('click', () => this.closeSwapDialog(), { signal });
+    this.host
+      .querySelector<HTMLDialogElement>('[data-shop-swap-dialog]')
+      ?.addEventListener(
+        'click',
+        (event) => {
+          if (event.target === event.currentTarget) this.closeSwapDialog();
+        },
+        { signal },
       );
     this.host
       .querySelectorAll<HTMLButtonElement>('[data-shop-filter]')

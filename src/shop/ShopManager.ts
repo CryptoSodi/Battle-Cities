@@ -145,6 +145,40 @@ const ACTIVE_LOADOUT_SLOTS = [
   ShopLoadoutSlot.ActiveFour,
 ];
 
+export interface PresaleStage {
+  id: number;
+  label: string;
+  priceSol: string;
+  allocationBatc: string;
+  soldBatc: string;
+  status: 'active' | 'upcoming' | 'sold-out';
+}
+
+export interface PresaleState {
+  configured: boolean;
+  network: string;
+  ended: boolean;
+  currentStageId: number | null;
+  currentPriceSol: string | null;
+  maxPaySol: string | null;
+  participants: number;
+  stages: PresaleStage[];
+}
+
+export interface PresaleQuote {
+  quoteToken: string;
+  transaction: string;
+  blockhash: string;
+  lastValidBlockHeight: number;
+  stageLabel: string;
+  method: 'SOL';
+  payAmount: string;
+  batcAmount: string;
+  tokenPriceSol: string;
+  treasury: string;
+  network: string;
+}
+
 export class ShopManager {
   private storage: GameStorage;
 
@@ -346,6 +380,130 @@ export class ShopManager {
           error instanceof Error && error.message
             ? error.message.toUpperCase()
             : 'PURCHASE CANCELLED',
+      };
+    }
+  }
+
+  public async getPresaleState(): Promise<PresaleState> {
+    const response = await apiFetch('/api/presale/state', {
+      cache: 'no-store',
+    });
+    const state = await response.json();
+    if (!response.ok || typeof state !== 'object' || state === null) {
+      throw new Error('LIVE PRESALE DATA IS UNAVAILABLE');
+    }
+    return state as PresaleState;
+  }
+
+  public async getPresaleWalletBalance(): Promise<number> {
+    const walletAddress = this.getWalletAddress();
+    if (!this.isWalletConnected()) {
+      throw new Error('CONNECT WALLET FIRST');
+    }
+    const response = await apiFetch(
+      `/api/presale/balance?wallet=${encodeURIComponent(walletAddress)}`,
+      { cache: 'no-store' },
+    );
+    const balance = await response.json();
+    if (!response.ok || !/^\d+$/.test(String(balance?.lamports || ''))) {
+      throw new Error(balance?.error || 'WALLET BALANCE IS UNAVAILABLE');
+    }
+    return Number(balance.lamports) / 1_000_000_000;
+  }
+
+  public async createPresaleQuote(
+    payAmount: string,
+    replaceQuoteToken?: string,
+  ): Promise<PresaleQuote> {
+    if (this.isVirtualEconomyAccount()) {
+      throw new Error('CONNECT A SOLANA WALLET TO SWAP');
+    }
+    const provider = getPhantomProvider();
+    if (provider === null) {
+      throw new Error('CONNECT A SOLANA WALLET TO SWAP');
+    }
+
+    const connection = await provider.connect();
+    const walletAddress = connection.publicKey.toString();
+    this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+    this.storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'wallet');
+    this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, walletAddress);
+    this.storage.save();
+
+    const response = await apiFetch('/api/presale/quote', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        wallet: walletAddress,
+        method: 'SOL',
+        payAmount,
+        replaceQuoteToken,
+      }),
+    });
+    const quote = await response.json();
+    if (!response.ok || typeof quote?.quoteToken !== 'string') {
+      throw new Error(quote?.error || 'QUOTE FAILED');
+    }
+    return quote as PresaleQuote;
+  }
+
+  public async submitPresaleQuote(
+    quote: PresaleQuote,
+  ): Promise<ShopPurchaseResult> {
+    const provider = getPhantomProvider();
+    if (provider === null) {
+      return { ok: false, statusText: 'CONNECT WALLET' };
+    }
+    try {
+      const transaction = Transaction.from(this.fromBase64(quote.transaction));
+      const signed = await provider.signTransaction(transaction);
+      const rpcUrl =
+        quote.network === 'devnet'
+          ? 'https://api.devnet.solana.com'
+          : SHOP_RPC_URL;
+      const connection = new Connection(rpcUrl, 'confirmed');
+      const txHash = await connection.sendRawTransaction(signed.serialize());
+      const confirmation = await connection.confirmTransaction(
+        {
+          signature: txHash,
+          blockhash: quote.blockhash,
+          lastValidBlockHeight: quote.lastValidBlockHeight,
+        },
+        'confirmed',
+      );
+      if (confirmation.value.err !== null) {
+        return { ok: false, statusText: 'PAYMENT FAILED', txHash };
+      }
+
+      let verified = false;
+      let lastError = 'PAYMENT VERIFICATION FAILED';
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const response = await apiFetch('/api/presale/verify', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ quoteToken: quote.quoteToken, signature: txHash }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          verified = true;
+          break;
+        }
+        lastError = result?.error || lastError;
+        if (!/not confirmed/i.test(lastError) || attempt === 4) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      }
+      if (!verified) {
+        return { ok: false, statusText: lastError.toUpperCase(), txHash };
+      }
+      await this.refreshWalletBalances();
+      return { ok: true, statusText: 'SWAP CONFIRMED - BATC DELIVERED', txHash };
+    } catch (error) {
+      return {
+        ok: false,
+        statusText:
+          error instanceof Error && error.message
+            ? error.message.toUpperCase()
+            : 'SWAP CANCELLED',
       };
     }
   }
