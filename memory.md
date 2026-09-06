@@ -99,6 +99,12 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 - Live HUD consumables for authenticated players are approved by `POST /api/economy/powerups/consume` before their gameplay effect is sent or applied.
 - The Oracle API atomically checks and decrements inventory, removes an exhausted item from the loadout, writes an economy-ledger debit, and uses the client request ID for idempotent retries.
 - The API validates the canonical inventory-item-to-power-up mapping; clients fail closed when approval is unavailable, and replay playback never consumes live inventory.
+- Offline single-player prefetches every battlefield drop choice from `POST /api/economy/drops/roll`; the API chooses normal powerups as well as the rare 100 BATC (2%) and 200 BATC (1%) drops. Local random selection is only an availability fallback.
+- Mainnet BATC drop transfers spend from the production treasury's Token-2022 token account. Oracle holds only a separately configured delegate signer with a capped allowance; the treasury and mint-authority private keys must never be installed on the server.
+- Multiplayer/headless drops remain authoritative inside the match simulation and are replicated to clients; direct WebRTC uses its broadcaster as the authoritative simulation peer.
+- Offline single-player prefetches every battlefield drop choice from `POST /api/economy/drops/roll`; the API chooses normal powerups as well as the rare 100 BATC (2%) and 200 BATC (1%) drops. Local random selection is only an availability fallback.
+- Mainnet BATC drop transfers spend from the production treasury's Token-2022 token account. Oracle holds only a separately configured delegate signer with a capped allowance; the treasury and mint-authority private keys must never be installed on the server.
+- Multiplayer/headless drops remain authoritative inside the match simulation and are replicated to clients; direct WebRTC uses its broadcaster as the authoritative simulation peer.
 
 ## Authentication providers
 

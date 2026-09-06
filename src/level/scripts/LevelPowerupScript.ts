@@ -4,7 +4,7 @@ import { GameUpdateArgs } from '../../game';
 import { Powerup } from '../../gameObjects';
 import {
   claimBatcDrop,
-  BatcDropRoll,
+  ServerPowerupDrop,
   PowerupFactory,
   PowerupGrid,
   PowerupType,
@@ -87,7 +87,7 @@ export class LevelPowerupScript extends LevelScript {
   private recordedPowerupSpawns: PowerupSpawnFrame[] = [];
   private readonly headless: boolean;
   private dropRequestSequence = 0;
-  private nextBatcDropRoll: BatcDropRoll | null = null;
+  private nextBatcDropRoll: ServerPowerupDrop | null = null;
   private batcDropRollPending = false;
 
   public constructor(

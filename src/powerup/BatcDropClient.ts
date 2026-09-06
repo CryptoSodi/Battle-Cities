@@ -4,10 +4,12 @@ import { PowerupType } from './PowerupType';
 
 const PENDING_CLAIMS_KEY = 'battlecities.pendingBatcDropClaims';
 
-export interface BatcDropRoll {
-  claimId: string;
-  type: PowerupType.Batc100 | PowerupType.Batc200;
+export interface ServerPowerupDrop {
+  claimId?: string;
+  type: PowerupType;
 }
+
+const SERVER_DROP_TYPES = new Set<string>(Object.values(PowerupType));
 
 function readPendingClaims(): string[] {
   if (typeof window === 'undefined') return [];
@@ -42,7 +44,7 @@ function removePendingClaim(claimId: string): void {
 export async function rollBatcDrop(
   requestId: string,
   levelNumber: number,
-): Promise<BatcDropRoll | null> {
+): Promise<ServerPowerupDrop | null> {
   try {
     const response = await apiFetchDirect('/api/economy/drops/roll', {
       method: 'POST',
@@ -51,11 +53,13 @@ export async function rollBatcDrop(
     });
     if (!response.ok) return null;
     const body = await response.json();
-    if (body?.amount !== 100 && body?.amount !== 200) return null;
-    if (typeof body?.claimId !== 'string') return null;
+    if (!SERVER_DROP_TYPES.has(body?.dropType)) return null;
+    const isBatc = body.dropType === PowerupType.Batc100 ||
+      body.dropType === PowerupType.Batc200;
+    if (isBatc && typeof body?.claimId !== 'string') return null;
     return {
-      claimId: body.claimId,
-      type: body.amount === 200 ? PowerupType.Batc200 : PowerupType.Batc100,
+      claimId: isBatc ? body.claimId : undefined,
+      type: body.dropType as PowerupType,
     };
   } catch {
     return null;
