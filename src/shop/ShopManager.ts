@@ -1,6 +1,8 @@
 import { GameStorage } from '../game';
 import * as config from '../config';
 import { apiFetch } from '../network/api';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { getPhantomProvider } from '../wallet/PhantomProvider';
 
 import {
   getPowerupTypeForInventoryItem,
@@ -132,6 +134,10 @@ const ACTIVE_ITEMS = [
 const PASSIVE_ITEMS = [ShopInventoryItemId.ExtraLife];
 
 const MAX_POWERUP_STACK = 2;
+const SHOP_RPC_URL = 'https://api.mainnet-beta.solana.com';
+const BATC_TOKEN_MINT = new PublicKey(
+  'Hxs5gXuPHv3Jhm7PYQv9iFMQp5ZYL2Fk6bgWdvQz15bz',
+);
 const ACTIVE_LOADOUT_SLOTS = [
   ShopLoadoutSlot.ActiveOne,
   ShopLoadoutSlot.ActiveTwo,
@@ -151,30 +157,31 @@ export class ShopManager {
   }
 
   public isWalletConnected(): boolean {
-    return this.storage.getBoolean(
-      config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
-      false,
+    const address =
+      this.storage.get(config.STORAGE_KEY_SHOP_WALLET_ADDRESS) || '';
+    return (
+      this.storage.getBoolean(
+        config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
+        false,
+      ) && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
     );
   }
 
-  public connectWallet(): void {
-    this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
-    this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, '0XBATTLECITIES');
-
-    if (this.storage.get(config.STORAGE_KEY_SHOP_TOKEN_BALANCE) === undefined) {
-      this.storage.setNumber(
-        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
-        config.SHOP_STARTING_TOKEN_BALANCE,
-      );
+  public async connectWallet(): Promise<boolean> {
+    const provider = getPhantomProvider();
+    if (provider === null) return false;
+    try {
+      const result = await provider.connect();
+      const address = result.publicKey.toString();
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return false;
+      this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+      this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, address);
+      this.storage.save();
+      await this.refreshOnChainBalances(address);
+      return true;
+    } catch {
+      return false;
     }
-    if (this.storage.get(config.STORAGE_KEY_SHOP_SOL_BALANCE) === undefined) {
-      this.storage.setNumber(
-        config.STORAGE_KEY_SHOP_SOL_BALANCE,
-        config.SHOP_STARTING_SOL_BALANCE,
-      );
-    }
-
-    this.storage.save();
   }
 
   public getWalletAddress(): string {
@@ -238,11 +245,12 @@ export class ShopManager {
     return Math.min(MAX_POWERUP_STACK, this.getInventoryCount(itemId));
   }
 
-  public purchaseItem(
+  public async purchaseItem(
     itemId: ShopItemId,
     currency = ShopCurrency.Token,
-  ): ShopPurchaseResult {
-    if (!this.isWalletConnected()) {
+  ): Promise<ShopPurchaseResult> {
+    const provider = getPhantomProvider();
+    if (provider === null) {
       return { ok: false, statusText: 'CONNECT WALLET' };
     }
 
@@ -251,34 +259,75 @@ export class ShopManager {
       return { ok: false, statusText: 'ITEM NOT FOUND' };
     }
 
-    if (currency === ShopCurrency.Sol) {
-      const solBalance = this.getSolBalance();
-      if (solBalance < item.solPrice) {
-        return { ok: false, statusText: 'NEED MORE SOL' };
+    try {
+      const connectionResult = await provider.connect();
+      const walletAddress = connectionResult.publicKey.toString();
+      this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+      this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, walletAddress);
+      this.storage.save();
+
+      const quoteResponse = await apiFetch('/api/economy/purchase/quote', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ itemId, currency, walletAddress }),
+      });
+      const quote = await quoteResponse.json();
+      if (!quoteResponse.ok || quote?.ok !== true) {
+        return { ok: false, statusText: quote?.statusText || 'QUOTE FAILED' };
       }
-      this.storage.setNumber(
-        config.STORAGE_KEY_SHOP_SOL_BALANCE,
-        Number((solBalance - item.solPrice).toFixed(4)),
+
+      const transaction = Transaction.from(this.fromBase64(quote.transaction));
+      const signed = await provider.signTransaction(transaction);
+      const connection = new Connection(
+        quote.rpcUrl || SHOP_RPC_URL,
+        'confirmed',
       );
-    } else {
-      const tokenBalance = this.getTokenBalance();
-      if (tokenBalance < item.price) {
-        return { ok: false, statusText: 'NEED MORE BACT' };
+      const txHash = await connection.sendRawTransaction(signed.serialize());
+      const confirmation = await connection.confirmTransaction(
+        {
+          signature: txHash,
+          blockhash: quote.blockhash,
+          lastValidBlockHeight: quote.lastValidBlockHeight,
+        },
+        'confirmed',
+      );
+      if (confirmation.value.err !== null) {
+        return { ok: false, statusText: 'PAYMENT FAILED' };
       }
-      this.storage.setNumber(
-        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
-        tokenBalance - item.price,
-      );
+
+      const verifyResponse = await apiFetch('/api/economy/purchase/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          quoteToken: quote.quoteToken,
+          signature: txHash,
+        }),
+      });
+      const result = await verifyResponse.json();
+      if (!verifyResponse.ok || result?.ok !== true) {
+        return {
+          ok: false,
+          statusText: result?.statusText || 'PAYMENT VERIFICATION FAILED',
+          txHash,
+        };
+      }
+      if (result.account !== undefined)
+        this.applyAccountSnapshot(result.account);
+      await this.refreshOnChainBalances(walletAddress);
+      return {
+        ok: true,
+        statusText: result.statusText || `BOUGHT ${item.name}`,
+        txHash,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        statusText:
+          error instanceof Error && error.message
+            ? error.message.toUpperCase()
+            : 'PURCHASE CANCELLED',
+      };
     }
-
-    this.addFuel(item.reward.fuel || 0);
-    this.addInventory(item.reward.inventory || {});
-
-    const txHash = this.createMockTransactionHash();
-    this.storage.save();
-    void this.syncPurchase(itemId, currency);
-
-    return { ok: true, statusText: `BOUGHT ${item.name}`, txHash };
   }
 
   public equipNext(slot: ShopLoadoutSlot): ShopInventoryItemId {
@@ -296,7 +345,9 @@ export class ShopManager {
       }
     });
     const ownedItems = items.filter((itemId) => {
-      return this.getInventoryCount(itemId) > 0 && !equippedElsewhere.has(itemId);
+      return (
+        this.getInventoryCount(itemId) > 0 && !equippedElsewhere.has(itemId)
+      );
     });
     const choices = [null, ...ownedItems];
     const currentIndex = choices.indexOf(currentItem);
@@ -490,7 +541,9 @@ export class ShopManager {
     );
   }
 
-  private addInventory(reward: Partial<Record<ShopInventoryItemId, number>>): void {
+  private addInventory(
+    reward: Partial<Record<ShopInventoryItemId, number>>,
+  ): void {
     const inventory = this.getInventory();
 
     Object.keys(reward).forEach((key) => {
@@ -582,29 +635,32 @@ export class ShopManager {
     }
   }
 
-  private async syncPurchase(
-    itemId: ShopItemId,
-    currency: ShopCurrency,
-  ): Promise<void> {
+  private async refreshOnChainBalances(walletAddress: string): Promise<void> {
     try {
-      const response = await apiFetch('/api/economy/purchase', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ itemId, currency }),
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      const body = await response.json();
-      if (body?.ok === true && body?.account !== undefined) {
-        this.applyAccountSnapshot(body.account);
-      }
+      const connection = new Connection(SHOP_RPC_URL, 'confirmed');
+      const owner = new PublicKey(walletAddress);
+      const [lamports, tokenAccounts] = await Promise.all([
+        connection.getBalance(owner, 'confirmed'),
+        connection.getParsedTokenAccountsByOwner(owner, {
+          mint: BATC_TOKEN_MINT,
+        }),
+      ]);
+      const tokenBalance =
+        tokenAccounts.value.reduce((total, account) => {
+          const amount = account.account.data.parsed?.info?.tokenAmount?.amount;
+          return total + (typeof amount === 'string' ? Number(amount) : 0);
+        }, 0) / 1_000_000;
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_SOL_BALANCE,
+        lamports / 1_000_000_000,
+      );
+      this.storage.setNumber(
+        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+        tokenBalance,
+      );
+      this.storage.save();
     } catch {
-      // Best-effort sync only.
+      // Keep the last displayed balances when the public RPC is unavailable.
     }
   }
 
@@ -641,12 +697,13 @@ export class ShopManager {
     return loadout;
   }
 
-  private createMockTransactionHash(): string {
-    const nextIndex =
-      this.storage.getNumber(config.STORAGE_KEY_SHOP_TX_INDEX, 0) + 1;
-    this.storage.setNumber(config.STORAGE_KEY_SHOP_TX_INDEX, nextIndex);
-
-    return `MOCKTX${nextIndex.toString().padStart(4, '0')}`;
+  private fromBase64(value: string): Uint8Array {
+    const binary = window.atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
   }
 
   private getJson<T>(key: string, defaultValue: T): T {

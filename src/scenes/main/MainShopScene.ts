@@ -583,6 +583,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   private pendingActionIndex: number = null;
   private verticalParentKeys: { [layer: string]: string } = {};
   private battleStartPending = false;
+  private shopPaymentPending = false;
   private transitionTimerText: ShopText = null;
   private transitionTimerSecond = -1;
   private transitionExpired = false;
@@ -1945,20 +1946,12 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     }
 
     if (action.kind === 'wallet') {
-      this.shopManager.connectWallet();
-      this.statusText = 'WALLET CONNECTED';
-      this.verticalParentKeys = {};
-      this.renderShop(this.getActiveTopKey());
+      void this.connectShopWallet();
       return;
     }
 
     if (action.kind === 'catalog') {
-      const result = this.shopManager.purchaseItem(
-        action.itemId,
-        this.market === ShopMarket.Sol ? ShopCurrency.Sol : ShopCurrency.Token,
-      );
-      this.statusText = result.statusText;
-      this.renderShop(action.key);
+      void this.purchaseCatalogItem(action);
       return;
     }
 
@@ -1981,6 +1974,34 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     if (action.kind === 'back') {
       this.navigator.back();
     }
+  }
+
+  private async connectShopWallet(): Promise<void> {
+    if (this.shopPaymentPending) return;
+    this.shopPaymentPending = true;
+    this.statusText = 'CONNECTING WALLET';
+    this.renderShop(this.getActiveTopKey());
+    const connected = await this.shopManager.connectWallet();
+    this.statusText = connected
+      ? 'WALLET CONNECTED'
+      : 'WALLET CONNECTION CANCELLED';
+    this.verticalParentKeys = {};
+    this.shopPaymentPending = false;
+    this.renderShop(this.getActiveTopKey());
+  }
+
+  private async purchaseCatalogItem(action: ShopAction): Promise<void> {
+    if (this.shopPaymentPending || action.itemId === undefined) return;
+    this.shopPaymentPending = true;
+    this.statusText = 'APPROVE PAYMENT IN WALLET';
+    this.renderShop(action.key);
+    const result = await this.shopManager.purchaseItem(
+      action.itemId,
+      this.market === ShopMarket.Sol ? ShopCurrency.Sol : ShopCurrency.Token,
+    );
+    this.statusText = result.statusText;
+    this.shopPaymentPending = false;
+    this.renderShop(action.key);
   }
 
   private focusActionByKey(preferredFocusKey: string): boolean {

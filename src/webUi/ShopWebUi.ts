@@ -101,7 +101,9 @@ export class ShopWebUi {
     );
     if (openDialog instanceof HTMLDialogElement) {
       if (input.isDownAny(MenuInputContext.Select)) {
-        openDialog.querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')?.click();
+        openDialog
+          .querySelector<HTMLButtonElement>('[data-shop-controls-confirm]')
+          ?.click();
       } else if (input.isDownAny(MenuInputContext.Back)) {
         openDialog.close();
         this.host.querySelector<HTMLButtonElement>('[data-shop-start]')?.focus({
@@ -280,7 +282,9 @@ export class ShopWebUi {
             ? '/data/graphics/shop/icons/solana.png'
             : '/data/graphics/shop/icons/token-bact.png';
         return `<article class="shop-web__card${
-          item.id === ShopItemId.StarterPack ? ' shop-web__card--starter-pack' : ''
+          item.id === ShopItemId.StarterPack
+            ? ' shop-web__card--starter-pack'
+            : ''
         }"><div class="shop-web__card-icon"><img src="${itemIcon}" alt=""></div><h2>${
           item.name
         }</h2><p>${
@@ -341,9 +345,12 @@ export class ShopWebUi {
       );
     this.host.querySelector('[data-shop-wallet]')?.addEventListener(
       'click',
-      () => {
-        if (!this.shop.isWalletConnected()) this.shop.connectWallet();
-        this.refresh('WALLET CONNECTED', '[data-shop-wallet]');
+      async () => {
+        const connected = await this.shop.connectWallet();
+        this.refresh(
+          connected ? 'WALLET CONNECTED' : 'WALLET CONNECTION CANCELLED',
+          '[data-shop-wallet]',
+        );
       },
       { signal },
     );
@@ -376,15 +383,15 @@ export class ShopWebUi {
       .forEach((b) =>
         b.addEventListener(
           'click',
-          () => {
+          async () => {
             const itemId = b.dataset.shopBuy as ShopItemId;
-            this.refresh(
-              this.shop.purchaseItem(
-                itemId,
-                this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token,
-              ).statusText,
-              `[data-shop-buy="${itemId}"]`,
+            b.disabled = true;
+            b.setAttribute('aria-busy', 'true');
+            const result = await this.shop.purchaseItem(
+              itemId,
+              this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token,
             );
+            this.refresh(result.statusText, `[data-shop-buy="${itemId}"]`);
           },
           { signal },
         ),
