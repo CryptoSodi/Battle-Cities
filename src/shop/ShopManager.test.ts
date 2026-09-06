@@ -10,9 +10,14 @@ import { ShopInventoryItemId } from './ShopTypes';
 // Storage is purely in-memory unless load() is called, so a fixed namespace
 // keeps tests isolated from each other and from the real game data. save() is
 // stubbed out: jsdom's opaque-origin localStorage throws on any access.
-function makeManager(): ShopManager {
-  const storage = new GameStorage('test.shop');
+function makeStorage(namespace = 'test.shop'): GameStorage {
+  const storage = new GameStorage(namespace);
   storage.save = (): void => undefined;
+  return storage;
+}
+
+function makeManager(): ShopManager {
+  const storage = makeStorage();
   return new ShopManager(storage);
 }
 
@@ -48,18 +53,28 @@ test('guest items and fuel never deplete when consumed', async (t) => {
 // Connecting a wallet switches to the real, storage-backed economy: nothing
 // owned until bought, and consumption actually fails on an empty inventory.
 test('a connected wallet uses the real storage-backed inventory', async (t) => {
-  const manager = makeManager();
-  manager.connectWallet();
+  const storage = makeStorage('test.shop.wallet');
+  storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'wallet');
+  storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+  storage.set(
+    config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
+    '9YpW9nYJaUVhRwqWaJBBh9wkjCYh5RLr6krYvfr7GGKo',
+  );
+  const manager = new ShopManager(storage);
 
   t.is(manager.getInventoryCount(ShopInventoryItemId.Shield), 0);
   t.false(await manager.consumeInventoryItem(ShopInventoryItemId.Shield));
 });
 
 test('a tank deployment consumes its variable fuel cost', (t) => {
-  const storage = new GameStorage('test.shop.variable-fuel');
-  storage.save = (): void => undefined;
+  const storage = makeStorage('test.shop.variable-fuel');
+  storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'wallet');
+  storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+  storage.set(
+    config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
+    '9YpW9nYJaUVhRwqWaJBBh9wkjCYh5RLr6krYvfr7GGKo',
+  );
   const manager = new ShopManager(storage);
-  manager.connectWallet();
   storage.setNumber(config.STORAGE_KEY_SHOP_FUEL_BALANCE, 4);
 
   t.true(manager.canStartRun(4));
@@ -68,4 +83,20 @@ test('a tank deployment consumes its variable fuel cost', (t) => {
   t.false(manager.canStartRun(2));
   t.false(manager.consumeFuelForRun(2));
   t.is(manager.getFuelBalance(), 1);
+});
+
+test('a Google account keeps its server-backed virtual economy', (t) => {
+  const storage = makeStorage('test.shop.google');
+  storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'google');
+  storage.setNumber(config.STORAGE_KEY_SHOP_TOKEN_BALANCE, 810);
+  storage.setNumber(config.STORAGE_KEY_SHOP_SOL_BALANCE, 1.25);
+  storage.setNumber(config.STORAGE_KEY_SHOP_FUEL_BALANCE, 23);
+  const manager = new ShopManager(storage);
+
+  t.false(manager.isWalletConnected());
+  t.true(manager.isVirtualEconomyAccount());
+  t.true(manager.isShopAccountConnected());
+  t.is(manager.getTokenBalance(), 810);
+  t.is(manager.getSolBalance(), 1.25);
+  t.is(manager.getFuelBalance(), 23);
 });

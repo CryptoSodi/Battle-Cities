@@ -831,9 +831,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       y + 17,
       154,
       60,
-      this.shopManager.isWalletConnected() ? 'CONNECTED' : 'CONNECT',
+      this.shopManager.isWalletConnected()
+        ? 'CONNECTED'
+        : this.shopManager.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT',
       { key: 'wallet', kind: 'wallet' },
-      this.shopManager.isWalletConnected(),
+      this.shopManager.isShopAccountConnected(),
     );
 
     [180, 356, 532].forEach((offset) => {
@@ -1159,9 +1161,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       y + 68,
       SIDE_CONTENT_WIDTH,
       44,
-      this.shopManager.isWalletConnected() ? 'CONNECTED' : 'CONNECT',
+      this.shopManager.isWalletConnected()
+        ? 'CONNECTED'
+        : this.shopManager.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT',
       { key: 'wallet', kind: 'wallet' },
-      this.shopManager.isWalletConnected(),
+      this.shopManager.isShopAccountConnected(),
     );
 
     this.addResourceChip(
@@ -1977,6 +1981,11 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   }
 
   private async connectShopWallet(): Promise<void> {
+    if (this.shopManager.isVirtualEconomyAccount()) {
+      this.statusText = 'GOOGLE ACCOUNT ACTIVE';
+      this.renderShop(this.getActiveTopKey());
+      return;
+    }
     if (this.shopPaymentPending) return;
     this.shopPaymentPending = true;
     this.statusText = 'CONNECTING WALLET';
@@ -2104,7 +2113,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
       currentAction.navLayer === 'category' &&
       dx < 0 &&
       currentIndex === 0 &&
-      !this.shopManager.isWalletConnected() &&
+      !this.shopManager.isShopAccountConnected() &&
       this.focusActionByKey('wallet')
     ) {
       return;
@@ -2132,7 +2141,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
   private focusVertical(currentAction: ShopAction, dy: number): void {
     if (currentAction.navLayer === 'top' && dy > 0) {
       if (
-        !this.shopManager.isWalletConnected() &&
+        !this.shopManager.isShopAccountConnected() &&
         this.focusActionByKey('wallet')
       ) {
         return;
@@ -2145,13 +2154,13 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     if (currentAction.navLayer === 'category') {
       if (dy < 0) {
         if (
-          !this.shopManager.isWalletConnected() &&
+          !this.shopManager.isShopAccountConnected() &&
           this.focusActionByKey('wallet')
         ) {
           return;
         }
 
-        if (this.shopManager.isWalletConnected()) {
+        if (this.shopManager.isShopAccountConnected()) {
           this.focusActionByKey(this.getActiveTopKey());
         } else {
           this.focusParentLayer('category', 'top', currentAction.navCol);
@@ -2283,7 +2292,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     const parentKey = this.verticalParentKeys[childLayer];
     if (
       parentKey === 'wallet' &&
-      this.shopManager.isWalletConnected()
+      this.shopManager.isShopAccountConnected()
     ) {
       this.focusActionByKey(this.getActiveTopKey());
       return;

@@ -150,10 +150,12 @@ export class ShopWebUi {
     )}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
-      }" data-shop-wallet type="button">${
+      }" data-shop-wallet type="button"${
+        this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
+      }>${
       this.shop.isWalletConnected()
         ? '<i aria-hidden="true"></i>CONNECTED'
-        : 'CONNECT'
+        : this.shop.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT'
     }</button>${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),
@@ -187,10 +189,12 @@ export class ShopWebUi {
     )}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
-      }" data-shop-wallet type="button">${
+      }" data-shop-wallet type="button"${
+        this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
+      }>${
       this.shop.isWalletConnected()
         ? '<i aria-hidden="true"></i>CONNECTED'
-        : 'CONNECT'
+        : this.shop.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT'
     }</button>${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),

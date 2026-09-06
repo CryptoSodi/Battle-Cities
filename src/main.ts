@@ -59,6 +59,7 @@ import { SettingsWebUi } from './webUi/SettingsWebUi';
 import { SocialsWebUi } from './webUi/SocialsWebUi';
 import { TankSelectWebUi } from './webUi/TankSelectWebUi';
 import { ShopWebUi } from './webUi/ShopWebUi';
+import { ShopManager } from './shop';
 
 import * as config from './config';
 
@@ -1397,19 +1398,25 @@ async function hydrateShopCacheFromServer(): Promise<void> {
     }
 
     const account = body.account;
-    gameStorage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+    const provider = account.provider === 'wallet' ? 'wallet' : 'google';
+    const walletAddress = provider === 'wallet' ? account.walletAddress || '' : '';
+    const isWalletAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress);
+    gameStorage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, provider);
+    gameStorage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, isWalletAddress);
     gameStorage.set(
       config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
-      account.walletAddress || '',
+      walletAddress,
     );
-    gameStorage.setNumber(
-      config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
-      Number(account.tokenBalance ?? config.SHOP_STARTING_TOKEN_BALANCE),
-    );
-    gameStorage.setNumber(
-      config.STORAGE_KEY_SHOP_SOL_BALANCE,
-      Number(account.solBalance ?? config.SHOP_STARTING_SOL_BALANCE),
-    );
+    if (provider === 'google') {
+      gameStorage.setNumber(
+        config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+        Number(account.tokenBalance ?? config.SHOP_STARTING_TOKEN_BALANCE),
+      );
+      gameStorage.setNumber(
+        config.STORAGE_KEY_SHOP_SOL_BALANCE,
+        Number(account.solBalance ?? config.SHOP_STARTING_SOL_BALANCE),
+      );
+    }
     gameStorage.setNumber(
       config.STORAGE_KEY_SHOP_FUEL_BALANCE,
       Number(account.fuelBalance ?? 0),
@@ -1423,6 +1430,9 @@ async function hydrateShopCacheFromServer(): Promise<void> {
       JSON.stringify(account.loadout || {}),
     );
     gameStorage.save();
+    if (isWalletAddress) {
+      await new ShopManager(gameStorage).refreshWalletBalances(walletAddress);
+    }
   } catch {
     // Best effort only.
   }

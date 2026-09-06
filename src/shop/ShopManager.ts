@@ -164,7 +164,21 @@ export class ShopManager {
         config.STORAGE_KEY_SHOP_WALLET_CONNECTED,
         false,
       ) && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
+      && this.getAccountProvider() !== 'google'
     );
+  }
+
+  public getAccountProvider(): 'wallet' | 'google' | null {
+    const provider = this.storage.get(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER);
+    return provider === 'wallet' || provider === 'google' ? provider : null;
+  }
+
+  public isVirtualEconomyAccount(): boolean {
+    return this.getAccountProvider() === 'google';
+  }
+
+  public isShopAccountConnected(): boolean {
+    return this.getAccountProvider() !== null || this.isWalletConnected();
   }
 
   public async connectWallet(): Promise<boolean> {
@@ -175,9 +189,10 @@ export class ShopManager {
       const address = result.publicKey.toString();
       if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return false;
       this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+      this.storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'wallet');
       this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, address);
       this.storage.save();
-      await this.refreshOnChainBalances(address);
+      await this.refreshWalletBalances(address);
       return true;
     } catch {
       return false;
@@ -203,7 +218,7 @@ export class ShopManager {
   }
 
   public getFuelBalance(): number {
-    if (!this.isWalletConnected()) {
+    if (!this.isShopAccountConnected()) {
       return config.SHOP_GUEST_FUEL_BALANCE;
     }
 
@@ -215,7 +230,7 @@ export class ShopManager {
     // every item, mirroring the unlimited-fuel rule in getFuelBalance().
     // Built fresh on every call so callers that mutate the returned object
     // (the consume paths) can't corrupt a shared copy.
-    if (!this.isWalletConnected()) {
+    if (!this.isShopAccountConnected()) {
       const inventory: ShopInventory = {};
       for (const itemId of ACTIVE_ITEMS) {
         inventory[itemId] = config.SHOP_GUEST_INVENTORY_COUNT;
@@ -249,6 +264,10 @@ export class ShopManager {
     itemId: ShopItemId,
     currency = ShopCurrency.Token,
   ): Promise<ShopPurchaseResult> {
+    if (this.isVirtualEconomyAccount()) {
+      return this.purchaseVirtualItem(itemId, currency);
+    }
+
     const provider = getPhantomProvider();
     if (provider === null) {
       return { ok: false, statusText: 'CONNECT WALLET' };
@@ -263,6 +282,7 @@ export class ShopManager {
       const connectionResult = await provider.connect();
       const walletAddress = connectionResult.publicKey.toString();
       this.storage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, true);
+      this.storage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, 'wallet');
       this.storage.set(config.STORAGE_KEY_SHOP_WALLET_ADDRESS, walletAddress);
       this.storage.save();
 
@@ -313,7 +333,7 @@ export class ShopManager {
       }
       if (result.account !== undefined)
         this.applyAccountSnapshot(result.account);
-      await this.refreshOnChainBalances(walletAddress);
+      await this.refreshWalletBalances(walletAddress);
       return {
         ok: true,
         statusText: result.statusText || `BOUGHT ${item.name}`,
@@ -377,7 +397,7 @@ export class ShopManager {
       return false;
     }
 
-    if (!this.isWalletConnected()) {
+    if (!this.isShopAccountConnected()) {
       return true;
     }
 
@@ -439,7 +459,7 @@ export class ShopManager {
   ): Promise<boolean> {
     // Guest items never deplete (see getInventory) — report success without
     // persisting a decrement, like consumeFuelForRun does for guest fuel.
-    if (!this.isWalletConnected()) {
+    if (!this.isShopAccountConnected()) {
       return true;
     }
 
@@ -492,7 +512,7 @@ export class ShopManager {
     // Guest items never deplete: hand out the equipped consumables but leave
     // both the inventory and the loadout untouched, so the guest's slots stay
     // equipped run after run.
-    const isGuest = !this.isWalletConnected();
+    const isGuest = !this.isShopAccountConnected();
 
     Object.keys(loadout).forEach((slotKey) => {
       const slot = slotKey as ShopLoadoutSlot;
@@ -584,13 +604,13 @@ export class ShopManager {
       return;
     }
 
-    if (typeof account.tokenBalance === 'number') {
+    if (!this.isWalletConnected() && typeof account.tokenBalance === 'number') {
       this.storage.setNumber(
         config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
         account.tokenBalance,
       );
     }
-    if (typeof account.solBalance === 'number') {
+    if (!this.isWalletConnected() && typeof account.solBalance === 'number') {
       this.storage.setNumber(
         config.STORAGE_KEY_SHOP_SOL_BALANCE,
         account.solBalance,
@@ -635,7 +655,10 @@ export class ShopManager {
     }
   }
 
-  private async refreshOnChainBalances(walletAddress: string): Promise<void> {
+  public async refreshWalletBalances(
+    walletAddress = this.getWalletAddress(),
+  ): Promise<void> {
+    if (!this.isWalletConnected()) return;
     try {
       const connection = new Connection(SHOP_RPC_URL, 'confirmed');
       const owner = new PublicKey(walletAddress);
@@ -661,6 +684,27 @@ export class ShopManager {
       this.storage.save();
     } catch {
       // Keep the last displayed balances when the public RPC is unavailable.
+    }
+  }
+
+  private async purchaseVirtualItem(
+    itemId: ShopItemId,
+    currency: ShopCurrency,
+  ): Promise<ShopPurchaseResult> {
+    try {
+      const response = await apiFetch('/api/economy/purchase', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ itemId, currency }),
+      });
+      const result = await response.json();
+      if (!response.ok || result?.ok !== true) {
+        return { ok: false, statusText: result?.statusText || 'PURCHASE FAILED' };
+      }
+      if (result.account !== undefined) this.applyAccountSnapshot(result.account);
+      return { ok: true, statusText: result.statusText || `BOUGHT ${itemId.toUpperCase()}` };
+    } catch {
+      return { ok: false, statusText: 'PURCHASE FAILED' };
     }
   }
 
