@@ -101,33 +101,6 @@ test('maps PSG1 A to confirm and B to menu back', (t) => {
   );
 });
 
-test('maps PlayStation Cross and Circle aliases to fire and rapid fire', (t) => {
-  const changes: Array<[InputControl, boolean]> = [];
-  const gamepad = new NativeAndroidGamepad((control, pressed) =>
-    changes.push([control, pressed]),
-  );
-  const dispatch = (control: string) =>
-    (gamepad as any).handleNativeEvent({
-      detail: { type: 'button', control, pressed: true },
-    });
-
-  dispatch('button_x');
-  dispatch('button_circle');
-
-  t.true(
-    changes.some(
-      ([control, pressed]) =>
-        control === InputControl.PrimaryAction && pressed === true,
-    ),
-  );
-  t.true(
-    changes.some(
-      ([control, pressed]) =>
-        control === InputControl.SecondaryAction && pressed === true,
-    ),
-  );
-});
-
 test('maps PSG1 right-stick directions to equipped power slots', (t) => {
   const changes: Array<[InputControl, boolean]> = [];
   const gamepad = new NativeAndroidGamepad((control, pressed) =>
@@ -147,50 +120,6 @@ test('maps PSG1 right-stick directions to equipped power slots', (t) => {
   const dispatch = (rightX: number, rightY: number) =>
     (gamepad as any).handleNativeEvent({
       detail: { type: 'axes', axes: axes(rightX, rightY) },
-    });
-
-  dispatch(1, 0);
-  dispatch(0, -1);
-  dispatch(0, 1);
-  dispatch(-1, 0);
-
-  [
-    InputControl.PowerOne,
-    InputControl.PowerTwo,
-    InputControl.PowerThree,
-    InputControl.PowerFour,
-  ].forEach((control) =>
-    t.true(changes.some(([changed, pressed]) => changed === control && pressed)),
-  );
-});
-
-test('maps PlayStation right-stick directions to equipped power slots', (t) => {
-  const changes: Array<[InputControl, boolean]> = [];
-  const gamepad = new NativeAndroidGamepad((control, pressed) =>
-    changes.push([control, pressed]),
-  );
-  const axes = (rightX: number, rightY: number) => ({
-    leftX: 0,
-    leftY: 0,
-    rightX,
-    rightY,
-    hatX: 0,
-    hatY: 0,
-    leftTrigger: 0,
-    rightTrigger: 0,
-  });
-  const dispatch = (rightX: number, rightY: number) =>
-    (gamepad as any).handleNativeEvent({
-      detail: {
-        type: 'axes',
-        axes: axes(rightX, rightY),
-        device: {
-          id: 1,
-          name: 'Wireless Controller',
-          vendorId: 0x054c,
-          productId: 0x0ce6,
-        },
-      },
     });
 
   dispatch(1, 0);

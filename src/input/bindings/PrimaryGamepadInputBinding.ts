@@ -11,13 +11,9 @@ export class PrimaryGamepadInputBinding extends InputBinding {
     this.setDefault(InputControl.Left, GamepadButtonCode.Left);
     this.setDefault(InputControl.Right, GamepadButtonCode.Right);
     this.setDefault(InputControl.Select, GamepadButtonCode.Start);
-    this.setDefault(InputControl.PrimaryAction, GamepadButtonCode.A);
-    this.setDefault(InputControl.SecondaryAction, GamepadButtonCode.B);
-    this.setDefault(InputControl.PowerOne, GamepadButtonCode.RightStickRight);
-    this.setDefault(InputControl.PowerTwo, GamepadButtonCode.RightStickUp);
-    this.setDefault(InputControl.PowerThree, GamepadButtonCode.RightStickDown);
-    this.setDefault(InputControl.PowerFour, GamepadButtonCode.RightStickLeft);
-    this.setDefault(InputControl.Rewind, GamepadButtonCode.X);
-    this.setDefault(InputControl.FastForward, GamepadButtonCode.Y);
+    this.setDefault(InputControl.PrimaryAction, GamepadButtonCode.X);
+    this.setDefault(InputControl.SecondaryAction, GamepadButtonCode.Y);
+    this.setDefault(InputControl.Rewind, GamepadButtonCode.A);
+    this.setDefault(InputControl.FastForward, GamepadButtonCode.B);
   }
 }

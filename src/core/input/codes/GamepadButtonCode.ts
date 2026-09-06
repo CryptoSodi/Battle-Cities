@@ -19,8 +19,4 @@ export enum GamepadButtonCode {
   Down = 13,
   Left = 14,
   Right = 15,
-  RightStickRight = 16,
-  RightStickUp = 17,
-  RightStickDown = 18,
-  RightStickLeft = 19,
 }

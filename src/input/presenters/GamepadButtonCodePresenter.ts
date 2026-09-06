@@ -35,14 +35,6 @@ export class GamepadButtonCodePresenter implements InputButtonCodePresenter {
         return 'D-LEFT';
       case 15:
         return 'D-RIGHT';
-      case 16:
-        return 'RIGHT STICK RIGHT';
-      case 17:
-        return 'RIGHT STICK UP';
-      case 18:
-        return 'RIGHT STICK DOWN';
-      case 19:
-        return 'RIGHT STICK LEFT';
     }
 
     return `GP[${code}]`;
