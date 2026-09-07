@@ -245,9 +245,8 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__status {
   white-space: normal;
 }
 
-/* The normal Shop checkout uses a deliberately narrow web form. PSG1 has a
-   dedicated wide console canvas, so let the transaction surface use the panel
-   instead of leaving an oversized empty field below the controls. */
+/* PSG1 keeps the proven vertical checkout sequence, but removes the normal web
+   form cap so it occupies the full framed console panel. */
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
   display: flex;
   flex: 1 1 auto;
@@ -256,10 +255,10 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
 }
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-body {
-  align-content: stretch;
+  align-content: start;
   flex: 1 1 auto;
-  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
-  grid-template-rows: var(--psg1-control) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--psg1-control) auto auto;
   max-width: none;
   min-height: 0;
   padding: clamp(18px, 2.2vw, 32px);
@@ -268,24 +267,25 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-body {
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-method {
   font-size: var(--psg1-body);
-  grid-column: 1 / -1;
+  grid-column: auto;
   height: var(--psg1-control);
 }
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-form,
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-summary {
-  align-self: center;
+  align-self: stretch;
   min-width: 0;
 }
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-form {
   gap: clamp(10px, 1.4vw, 16px);
-  padding-right: clamp(16px, 2vw, 30px);
+  padding-right: 0;
 }
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-summary {
-  border-left: 1px solid var(--bc-line);
-  padding-left: clamp(16px, 2vw, 30px);
+  border-left: 0;
+  padding-left: 0;
+  padding-top: clamp(6px, 1vw, 12px);
 }
 
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-input {
