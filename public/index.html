@@ -9,6 +9,15 @@
       (() => {
         const initialParams = new URLSearchParams(window.location.search);
         document.documentElement.classList.add('auth-bootstrap');
+        const isWebRtcRuntime = initialParams.get('mode') === 'webrtc';
+        if (!isWebRtcRuntime) {
+          document.documentElement.classList.add('game-deployment-arrival');
+        }
+        if (initialParams.get('arrival') === 'main-site') {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete('arrival');
+          window.history.replaceState(null, '', cleanUrl);
+        }
         if (
           initialParams.get('mode') === 'webrtc' &&
           initialParams.get('observer') === '1'
@@ -162,6 +171,17 @@
             <img src="assets/magicblock-logo.png" alt="MagicBlock" />
           </span>
         </div>
+      </div>
+    </div>
+    <div class="game-deployment" aria-hidden="true">
+      <div class="game-deployment__door game-deployment__door--left"><i></i></div>
+      <div class="game-deployment__door game-deployment__door--right"><i></i></div>
+      <div class="game-deployment__readout">
+        <small>DEPLOYMENT COMPLETE // BATTLE STATION</small>
+        <b>ENTERING BATTLEFIELD</b>
+        <strong>SECTOR 01</strong>
+        <i><em></em></i>
+        <span>ARMOR SYSTEMS ONLINE // STAND BY</span>
       </div>
     </div>
     <div class="web-ui" data-web-ui hidden></div>
