@@ -16,6 +16,7 @@ export class PlayerProfileWebUi {
   private loading = false;
   private profile: PublicProfile = null;
   private error = '';
+  private status = '';
   private page = 1;
 
   public constructor(
@@ -71,21 +72,25 @@ export class PlayerProfileWebUi {
       this.error = 'INVALID PLAYER PROFILE';
       this.profile = null;
       this.loading = false;
+      this.status = 'PROFILE ID INVALID';
       this.render();
       return;
     }
     this.loading = true;
     this.error = '';
+    this.status = 'SYNCING PLAYER RECORD';
     this.render();
     try {
       const profile = await this.client.getProfile(playerId, page);
       if (!this.active) return;
       this.profile = profile;
       this.page = profile.recentMatchesPage.page;
+      this.status = 'LIVE PLAYER RECORD LOADED';
     } catch (error) {
       if (!this.active) return;
       this.profile = null;
       this.error = error instanceof PlayerProfileRequestError && error.status === 404 ? 'PLAYER NOT FOUND' : 'PROFILE SERVICE UNAVAILABLE';
+      this.status = 'PROFILE LINK OFFLINE';
     } finally {
       if (!this.active) return;
       this.loading = false;
@@ -95,13 +100,27 @@ export class PlayerProfileWebUi {
 
   private render(): void {
     if (!this.host) return;
-    this.host.innerHTML = `<main class="player-profile-web" data-ui-page><header class="player-profile-web__header"><h1>PLAYER PROFILE</h1><button data-ui-back data-profile-back type="button">← BACK</button></header><section class="player-profile-web__shell">${this.loading ? '<p class="player-profile-web__state">LOADING PLAYER PROFILE...</p>' : this.profile ? this.content(this.profile) : `<section class="player-profile-web__error"><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN</p><button data-profile-retry type="button">RETRY</button></section>`}</section></main>`;
+    const content = this.loading
+      ? this.loadingMarkup()
+      : this.profile
+        ? this.content(this.profile)
+        : `<section class="player-profile-web__error"><span>CONNECTION ERROR</span><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN.</p><button data-profile-retry type="button">RETRY CONNECTION</button></section>`;
+    this.host.innerHTML = `<main class="player-profile-web" data-ui-page><header class="shop-web__tabs player-profile-web__header" data-ui-nav style="--ui-tab-count:1" aria-label="Player profile commands"><span class="shop-web__tab is-active" data-ui-tab aria-current="page"><h1>PLAYER PROFILE</h1></span><span data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-profile-back type="button">◀ BACK</button></header><section class="player-profile-web__shell" aria-busy="${this.loading}"><div class="player-profile-web__content">${content}</div><p class="player-profile-web__status" data-profile-status role="status" aria-live="polite">${this.escape(this.status)}</p></section></main>`;
     this.bind();
   }
 
   private content(profile: PublicProfile): string {
     const totalPages = Math.max(1, Math.ceil(profile.recentMatchesPage.total / profile.recentMatchesPage.pageSize));
-    return `<section class="player-profile-web__hero"><div class="player-profile-web__avatar">${this.avatar(profile)}</div><div class="player-profile-web__identity"><h2>${this.escape(profile.displayName || 'PLAYER')}</h2><p>${this.provider(profile.provider)} · JOINED ${this.date(profile.joinedAt)}</p><small>${this.escape(profile.walletAddress || profile.id)}</small></div><button data-profile-share type="button">SHARE PROFILE</button></section><section class="player-profile-web__stats">${this.stat('SEASON RANK', this.rank(profile.stats.currentSeason.rank), profile.stats.currentSeason.name, 'is-yellow')}${this.stat('GAME POINTS', this.number(profile.stats.allTime.totalPoints), 'ALL TIME', 'is-green')}${this.stat('MATCHES', this.number(profile.stats.allTime.matches), 'RECORDED RUNS', '')}${this.stat('BEST SCORE', this.number(profile.highscores.primary), 'PRIMARY MODE', 'is-yellow')}</section><section class="player-profile-web__battles"><header><h2>RECENT BATTLES</h2><span>${profile.recentMatchesPage.total} ${profile.recentMatchesPage.total === 1 ? 'RECORD' : 'RECORDS'}</span></header>${profile.recentMatches.length ? `<div class="player-profile-web__match-header"><span>RESULT</span><span>MODE</span><span>STAGE</span><span>SCORE</span><span>POINTS</span><span>REPLAY</span></div><div class="player-profile-web__matches">${profile.recentMatches.map((match) => `<button class="player-profile-web__match ${match.won ? 'is-won' : 'is-lost'}" data-profile-match="${this.escape(match.id)}" ${match.replayAvailable ? '' : 'disabled'}><strong>${match.won ? 'VICTORY' : 'DEFEAT'}</strong><span>${match.mode === 'multi' ? 'MULTI' : 'SINGLE'}</span><span>${match.levelNumber}</span><b>${this.number(match.score)}</b><b>${this.number(match.gamePoints)}</b><em>${match.replayAvailable ? 'WATCH' : 'UNAVAILABLE'}</em></button>`).join('')}</div>` : '<p class="player-profile-web__empty">NO RECORDED BATTLES YET</p>'}${totalPages > 1 ? `<nav class="player-profile-web__pages"><button data-profile-page="${this.page - 1}" ${this.page <= 1 ? 'disabled' : ''}>← PREVIOUS</button><span>PAGE ${this.page} / ${totalPages}</span><button data-profile-page="${this.page + 1}" ${this.page >= totalPages ? 'disabled' : ''}>NEXT →</button></nav>` : ''}</section>`;
+    const recordLabel = profile.recentMatchesPage.total === 1 ? 'RECORD' : 'RECORDS';
+    return `<section class="player-profile-web__hero"><div class="player-profile-web__avatar">${this.avatar(profile)}</div><div class="player-profile-web__identity"><span>ACTIVE COMMANDER</span><h2>${this.escape(profile.displayName || 'PLAYER')}</h2><p>${this.provider(profile.provider)} <i aria-hidden="true">◆</i> JOINED ${this.date(profile.joinedAt)}</p><small>${this.escape(profile.walletAddress || profile.id)}</small></div><button class="player-profile-web__share" data-profile-share type="button"><span aria-hidden="true">↗</span> SHARE PROFILE</button></section><section class="player-profile-web__stats" aria-label="Player statistics">${this.stat('SEASON RANK', this.rank(profile.stats.currentSeason.rank), profile.stats.currentSeason.name, 'is-yellow')}${this.stat('GAME POINTS', this.number(profile.stats.allTime.totalPoints), 'ALL TIME', 'is-green')}${this.stat('MATCHES', this.number(profile.stats.allTime.matches), 'RECORDED RUNS', '')}${this.stat('BEST SCORE', this.number(profile.highscores.primary), 'PRIMARY MODE', 'is-yellow')}</section><section class="player-profile-web__battles"><header><div><span>BATTLE LOG</span><h2>RECENT BATTLES</h2></div><strong>${this.number(profile.recentMatchesPage.total)} ${recordLabel}</strong></header>${profile.recentMatches.length ? `<div class="player-profile-web__match-header" aria-hidden="true"><span>RESULT</span><span>MODE</span><span>STAGE</span><span>SCORE</span><span>POINTS</span><span>REPLAY</span></div><div class="player-profile-web__matches">${profile.recentMatches.map((match) => this.matchMarkup(match)).join('')}</div>` : '<section class="player-profile-web__empty"><strong>NO RECORDED BATTLES</strong><span>COMPLETED RUNS WILL BE LOGGED HERE.</span></section>'}${totalPages > 1 ? `<nav class="player-profile-web__pages" aria-label="Battle history pages"><button data-profile-page="${this.page - 1}" type="button" ${this.page <= 1 ? 'disabled' : ''}>◀ PREVIOUS</button><span>PAGE ${this.page} / ${totalPages}</span><button data-profile-page="${this.page + 1}" type="button" ${this.page >= totalPages ? 'disabled' : ''}>NEXT ▶</button></nav>` : ''}</section>`;
+  }
+
+  private matchMarkup(match: PublicProfile['recentMatches'][number]): string {
+    return `<button class="player-profile-web__match ${match.won ? 'is-won' : 'is-lost'}" data-profile-match="${this.escape(match.id)}" type="button" ${match.replayAvailable ? '' : 'disabled'}><strong class="player-profile-web__match-result">${match.won ? 'VICTORY' : 'DEFEAT'}</strong><span><small>MODE</small>${match.mode === 'multi' ? 'MULTI' : 'SINGLE'}</span><span><small>STAGE</small>${match.levelNumber}</span><b><small>SCORE</small>${this.number(match.score)}</b><b><small>POINTS</small>${this.number(match.gamePoints)}</b><em>${match.replayAvailable ? 'WATCH ▶' : 'UNAVAILABLE'}</em></button>`;
+  }
+
+  private loadingMarkup(): string {
+    return `<section class="player-profile-web__loading" aria-label="Loading player profile"><p>SYNCING PLAYER PROFILE...</p><div class="player-profile-web__loading-hero"><i></i><span></span><b></b></div><div class="player-profile-web__loading-stats"><i></i><i></i><i></i><i></i></div><div class="player-profile-web__loading-log"><span></span><i></i><i></i><i></i></div></section>`;
   }
 
   private bind(): void {
@@ -124,8 +143,10 @@ export class PlayerProfileWebUi {
     try {
       if (typeof navigator.share === 'function') {
         await navigator.share({ title: `${this.profile.displayName} | Battle Cities`, url: url.toString() });
+        this.setStatus('PROFILE LINK SHARED');
       } else {
         await navigator.clipboard.writeText(url.toString());
+        this.setStatus('PROFILE LINK COPIED');
       }
     } catch { /* user cancelled or sharing is unavailable */ }
   }
@@ -143,8 +164,9 @@ export class PlayerProfileWebUi {
     return `<article class="player-profile-web__stat ${color}"><span>${label}</span><strong>${value}</strong><small>${this.escape(note)}</small></article>`;
   }
   private avatar(profile: PublicProfile): string {
-    return profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl) ? `<img src="${this.escape(profile.avatarUrl)}" alt="">` : this.escape(profile.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('') || 'BC');
+    return profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl) ? `<img src="${this.escape(profile.avatarUrl)}" alt="${this.escape(profile.displayName || 'Player')} avatar">` : this.escape(profile.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('') || 'BC');
   }
+  private setStatus(value: string): void { this.status = value; const element = this.host?.querySelector<HTMLElement>('[data-profile-status]'); if (element) element.textContent = value; }
   private number(value: number): string { return Math.max(0, Number(value) || 0).toLocaleString(); }
   private rank(value: number | null): string { return value ? `#${value}` : '--'; }
   private date(value: string): string { const date = new Date(value); return Number.isNaN(date.valueOf()) ? 'UNKNOWN' : date.toLocaleDateString(); }

@@ -1,12 +1,783 @@
-.player-profile-web{box-sizing:border-box;color:var(--bc-text);height:100dvh;margin:auto;max-width:1240px;overflow:hidden;padding:clamp(8px,2dvh,28px) clamp(10px,3vw,28px)}
-.player-profile-web button{background:var(--bc-panel);border:1px solid var(--bc-line);color:var(--bc-command);cursor:pointer;font:700 clamp(12px,1.5vw,18px)/1 "Battle Cities UI","Arial Narrow",sans-serif;letter-spacing:.07em;text-transform:uppercase}
-.player-profile-web__header{align-items:center;display:grid;grid-template-columns:1fr 160px;gap:12px}.player-profile-web h1{font:700 clamp(25px,3vw,34px)/1 "Battle Cities UI","Arial Narrow",sans-serif;letter-spacing:.08em;margin:0}.player-profile-web__header button{height:46px}.player-profile-web__header button.is-selected{background:var(--bc-danger-surface);border-color:var(--bc-danger);color:var(--bc-text)}
-.player-profile-web__shell{background:rgb(11 16 20 / 96%);border:1px solid var(--bc-line);height:calc(100% - 56px);margin-top:8px;overflow:auto;padding:16px}.player-profile-web__state,.player-profile-web__empty{color:var(--bc-muted-light);font:700 18px/1 "Battle Cities UI","Arial Narrow",sans-serif;padding:80px 12px;text-align:center}.player-profile-web__error{margin:auto;max-width:540px;padding:80px 18px;text-align:center}.player-profile-web__error h2{color:var(--bc-danger);font:700 25px/1 "Battle Cities UI","Arial Narrow",sans-serif}.player-profile-web__error p{color:var(--bc-muted);font:700 14px/1.4 "Battle Cities UI","Arial Narrow",sans-serif}.player-profile-web__error button{height:48px;margin-top:16px;padding:0 34px}.player-profile-web__error button.is-selected{background:var(--bc-command);border-color:var(--bc-command);color:var(--bc-text)}
-.player-profile-web__hero{align-items:center;background:var(--bc-page);border:1px solid var(--bc-line);display:grid;gap:22px;grid-template-columns:92px minmax(0,1fr) 190px;padding:18px}.player-profile-web__avatar{align-items:center;background:var(--bc-panel-raised);border:2px solid var(--bc-command);color:var(--bc-command);display:flex;font:700 34px/1 "Battle Cities UI","Arial Narrow",sans-serif;height:88px;justify-content:center;overflow:hidden;width:88px}.player-profile-web__avatar img{height:100%;object-fit:cover;width:100%}.player-profile-web__identity h2{color:var(--bc-ready);font:700 clamp(23px,3vw,33px)/1 "Battle Cities UI","Arial Narrow",sans-serif;margin:0}.player-profile-web__identity p,.player-profile-web__identity small{color:var(--bc-muted-light);display:block;font:700 13px/1.4 "Battle Cities UI","Arial Narrow",sans-serif;margin:10px 0 0;overflow-wrap:anywhere}.player-profile-web__identity small{color:var(--bc-muted)}.player-profile-web__hero button{height:50px}.player-profile-web__hero button.is-selected{background:var(--bc-command);border-color:var(--bc-command);color:var(--bc-text)}
-.player-profile-web__stats{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:14px}.player-profile-web__stat{background:var(--bc-panel-alt);border:1px solid var(--bc-line);display:flex;flex-direction:column;min-height:94px;padding:12px}.player-profile-web__stat>span,.player-profile-web__stat small{color:var(--bc-muted);font:700 13px/1 "Battle Cities UI","Arial Narrow",sans-serif}.player-profile-web__stat strong{color:var(--bc-text);font:700 30px/1 "Battle Cities UI","Arial Narrow",sans-serif;margin-top:10px}.player-profile-web__stat small{margin-top:auto;text-align:right}.player-profile-web__stat.is-yellow strong{color:var(--bc-command)}.player-profile-web__stat.is-green strong{color:var(--bc-ready)}
-.player-profile-web__battles{margin-top:24px}.player-profile-web__battles>header{align-items:baseline;display:flex;justify-content:space-between}.player-profile-web__battles h2{font:700 28px/1 "Battle Cities UI","Arial Narrow",sans-serif;margin:0}.player-profile-web__battles>header span{color:var(--bc-muted);font:700 14px/1 "Battle Cities UI","Arial Narrow",sans-serif}.player-profile-web__match-header,.player-profile-web__match{align-items:center;display:grid;grid-template-columns:1.25fr 1fr .8fr 1fr 1fr 1.3fr;gap:12px}.player-profile-web__match-header{background:var(--bc-panel-alt);border:1px solid var(--bc-line);color:var(--bc-muted);font:700 13px/1 "Battle Cities UI","Arial Narrow",sans-serif;margin-top:12px;padding:14px 18px}.player-profile-web__match{box-sizing:border-box;min-height:56px;padding:0 18px;text-align:left;width:100%}.player-profile-web__match strong{color:var(--bc-danger)}.player-profile-web__match.is-won strong,.player-profile-web__match b{color:var(--bc-ready)}.player-profile-web__match b{color:var(--bc-command)}.player-profile-web__match em{color:var(--bc-command);font-style:normal;text-align:right}.player-profile-web__match.is-selected{background:var(--bc-panel-raised);border-color:var(--bc-command)}.player-profile-web__match:disabled{color:var(--bc-muted);cursor:not-allowed}.player-profile-web__match:disabled em{color:var(--bc-muted)}.player-profile-web__pages{align-items:center;display:flex;gap:12px;justify-content:flex-end;margin-top:14px}.player-profile-web__pages button{height:42px;padding:0 15px}.player-profile-web__pages button.is-selected{background:var(--bc-command);border-color:var(--bc-command);color:var(--bc-text)}.player-profile-web__pages span{color:var(--bc-muted);font:700 13px/1 "Battle Cities UI","Arial Narrow",sans-serif}
-@media(max-width:700px){.player-profile-web{padding:6px 0}.player-profile-web__header{grid-template-columns:1fr 100px}.player-profile-web__header button{height:38px;font-size:11px}.player-profile-web__shell{height:calc(100% - 44px);margin-top:5px;padding:8px}.player-profile-web__hero{gap:12px;grid-template-columns:70px minmax(0,1fr);padding:12px}.player-profile-web__avatar{font-size:26px;height:66px;width:66px}.player-profile-web__identity h2{font-size:21px}.player-profile-web__identity p,.player-profile-web__identity small{font-size:10px;margin-top:6px}.player-profile-web__hero button{grid-column:1/-1;height:42px}.player-profile-web__stats{gap:8px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}.player-profile-web__stat{min-height:76px;padding:9px}.player-profile-web__stat>span,.player-profile-web__stat small{font-size:10px}.player-profile-web__stat strong{font-size:23px;margin-top:7px}.player-profile-web__battles{margin-top:16px}.player-profile-web__battles h2{font-size:22px}.player-profile-web__battles>header span{font-size:10px}.player-profile-web__match-header{display:none}.player-profile-web__match{gap:7px;grid-template-columns:1.1fr .7fr .6fr .9fr 1fr;min-height:58px;padding:0 9px}.player-profile-web__match span:nth-of-type(1){display:none}.player-profile-web__match b:nth-of-type(2){display:none}.player-profile-web__match em{font-size:10px}.player-profile-web__pages{justify-content:space-between}.player-profile-web__pages span{font-size:10px}}
-/* Shared active-state contrast: yellow action plates use dark ink. */
+.player-profile-web {
+  box-sizing: border-box;
+  color: var(--bc-text);
+  height: 100dvh;
+  margin: 0 auto;
+  max-width: 1280px;
+  overflow: hidden;
+  padding: 34px 24px;
+  position: relative;
+}
+
+.player-profile-web::before {
+  background:
+    radial-gradient(ellipse 68% 52% at 8% 14%, var(--bc-blue-glow), transparent 72%),
+    radial-gradient(ellipse 62% 48% at 92% 88%, rgb(255 106 26 / 18%), transparent 74%),
+    var(--bc-bg);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: -2;
+}
+
+.player-profile-web button {
+  background: var(--bc-panel);
+  border: 2px solid var(--bc-line);
+  color: var(--bc-command);
+  cursor: pointer;
+  font: 700 clamp(12px, 1.7vw, 18px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.07em;
+  min-height: 42px;
+  text-transform: uppercase;
+}
+
+.player-profile-web button:focus-visible {
+  outline: 3px solid var(--bc-command);
+  outline-offset: 2px;
+}
+
+.player-profile-web__header {
+  max-width: none;
+}
+
+.player-profile-web__header span.shop-web__tab {
+  box-sizing: border-box;
+  font: 700 clamp(12px, 1.7vw, 18px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.player-profile-web__shell {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 2%), transparent 16%),
+    rgb(11 16 20 / 97%);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 0 0 2px #030506, inset 0 0 32px rgb(0 0 0 / 45%);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 30px;
+  height: calc(100% - 70px);
+  margin-top: 8px;
+  min-height: 0;
+  padding: 16px 16px 0;
+  position: relative;
+}
+
+.player-profile-web__shell::before {
+  background: linear-gradient(90deg, transparent, var(--bc-command), transparent);
+  content: '';
+  height: 2px;
+  left: 8px;
+  position: absolute;
+  right: 8px;
+  top: 5px;
+}
+
+.player-profile-web__content {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 6px 14px;
+  scrollbar-color: var(--bc-command-dim) var(--bc-panel);
+}
+
+.player-profile-web__status {
+  align-items: center;
+  color: var(--bc-command);
+  display: flex;
+  font: 700 12px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  justify-content: center;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.player-profile-web__hero {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgb(255 179 15 / 8%), transparent 30%),
+    repeating-linear-gradient(122deg, transparent 0 6px, rgb(255 255 255 / 0.8%) 6px 7px),
+    #0b1115;
+  border: 2px solid var(--ui-nav-steel);
+  box-shadow: inset 0 0 0 2px #030506, inset 0 0 18px rgb(0 0 0 / 70%), 0 3px 0 #020303;
+  clip-path: var(--ui-frame);
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(170px, 210px);
+  min-height: 124px;
+  padding: 16px 20px;
+  position: relative;
+}
+
+.player-profile-web__hero::after {
+  background: var(--bc-command);
+  bottom: 10px;
+  content: '';
+  left: 10px;
+  position: absolute;
+  top: 10px;
+  width: 3px;
+}
+
+.player-profile-web__avatar {
+  align-items: center;
+  background: linear-gradient(135deg, rgb(255 179 15 / 18%), transparent 58%), var(--bc-panel-raised);
+  border: 3px solid var(--bc-command);
+  box-shadow: inset 0 0 0 3px #151003, 0 0 14px rgb(255 179 15 / 18%);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  color: var(--bc-command);
+  display: flex;
+  font: 700 34px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  height: 88px;
+  justify-content: center;
+  overflow: hidden;
+  width: 88px;
+}
+
+.player-profile-web__avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.player-profile-web__identity {
+  min-width: 0;
+}
+
+.player-profile-web__identity > span,
+.player-profile-web__identity h2,
+.player-profile-web__identity p,
+.player-profile-web__identity small {
+  display: block;
+  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.player-profile-web__identity > span {
+  color: var(--bc-command);
+  font-size: 11px;
+}
+
+.player-profile-web__identity h2 {
+  color: var(--bc-ready);
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1;
+  margin: 7px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-profile-web__identity p,
+.player-profile-web__identity small {
+  color: var(--bc-muted-light);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 8px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-profile-web__identity p i {
+  color: var(--bc-command-dim);
+  font-style: normal;
+  margin: 0 6px;
+}
+
+.player-profile-web__identity small {
+  color: var(--bc-muted);
+  font-size: 10px;
+}
+
+.player-profile-web__share,
+.player-profile-web__error button,
+.player-profile-web__pages button {
+  background: linear-gradient(180deg, rgb(91 255 51 / 11%), transparent 45%), linear-gradient(180deg, #12680c, #063705);
+  border-color: #73e91b;
+  box-shadow: inset 0 0 0 2px #052104, inset 0 3px 0 rgb(180 255 113 / 20%);
+  clip-path: var(--ui-frame);
+  color: var(--bc-text);
+}
+
+.player-profile-web__share {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  min-height: 52px;
+}
+
+.player-profile-web__share > span {
+  color: var(--bc-ready);
+  font-size: 22px;
+}
+
+.player-profile-web__stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.player-profile-web__stat {
+  background: linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 24%), var(--bc-panel-alt);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 0 0 2px #030506;
+  clip-path: var(--ui-frame);
+  display: flex;
+  flex-direction: column;
+  min-height: 104px;
+  padding: 13px 15px;
+  position: relative;
+}
+
+.player-profile-web__stat::before {
+  background: var(--bc-line);
+  content: '';
+  height: 2px;
+  left: 10px;
+  position: absolute;
+  right: 10px;
+  top: 5px;
+}
+
+.player-profile-web__stat.is-yellow::before {
+  background: var(--bc-command);
+}
+
+.player-profile-web__stat.is-green::before {
+  background: var(--bc-ready);
+}
+
+.player-profile-web__stat > span,
+.player-profile-web__stat small {
+  color: var(--bc-muted);
+  font: 700 12px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.player-profile-web__stat strong {
+  color: var(--bc-text);
+  font: 700 30px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  margin-top: 12px;
+}
+
+.player-profile-web__stat small {
+  font-size: 10px;
+  margin-top: auto;
+  text-align: right;
+}
+
+.player-profile-web__stat.is-yellow strong {
+  color: var(--bc-command);
+}
+
+.player-profile-web__stat.is-green strong {
+  color: var(--bc-ready);
+}
+
+.player-profile-web__battles {
+  background: rgb(5 9 12 / 68%);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 0 0 2px #030506;
+  margin-top: 16px;
+  min-height: 210px;
+  padding: 14px;
+}
+
+.player-profile-web__battles > header {
+  align-items: center;
+  border-bottom: 2px solid var(--bc-line);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px 12px;
+}
+
+.player-profile-web__battles > header div > span,
+.player-profile-web__battles > header > strong {
+  color: var(--bc-command);
+  font: 700 11px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.player-profile-web__battles h2 {
+  font: 700 25px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  margin: 6px 0 0;
+}
+
+.player-profile-web__battles > header > strong {
+  background: var(--bc-command-surface);
+  border: 1px solid var(--bc-command-dim);
+  padding: 8px 12px;
+}
+
+.player-profile-web__match-header,
+.player-profile-web__match {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1.25fr 1fr 0.75fr 1fr 1fr 1.25fr;
+}
+
+.player-profile-web__match-header {
+  background: var(--bc-panel-raised);
+  border: 1px solid var(--bc-line);
+  color: var(--bc-muted);
+  font: 700 11px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  margin-top: 10px;
+  padding: 10px 14px;
+}
+
+.player-profile-web__matches {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.player-profile-web__match {
+  background: linear-gradient(90deg, rgb(255 255 255 / 2%), transparent 55%), var(--bc-panel);
+  border: 1px solid var(--bc-line);
+  box-sizing: border-box;
+  color: var(--bc-text);
+  min-height: 58px;
+  padding: 0 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.player-profile-web__match > :is(span, b) {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-profile-web__match small {
+  color: var(--bc-muted);
+  display: none;
+  font-size: 8px;
+}
+
+.player-profile-web__match-result {
+  color: var(--bc-danger);
+}
+
+.player-profile-web__match.is-won .player-profile-web__match-result {
+  color: var(--bc-ready);
+}
+
+.player-profile-web__match b {
+  color: var(--bc-command);
+}
+
+.player-profile-web__match em {
+  color: var(--bc-command);
+  font-style: normal;
+  text-align: right;
+}
+
+.player-profile-web__match.is-selected {
+  background: linear-gradient(90deg, rgb(255 179 15 / 14%), var(--bc-panel-raised));
+  border-color: var(--bc-command);
+  box-shadow: inset 4px 0 0 var(--bc-command), 0 0 10px rgb(255 179 15 / 18%);
+}
+
+.player-profile-web__match:disabled {
+  color: var(--bc-muted);
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.player-profile-web__match:disabled em {
+  color: var(--bc-muted);
+}
+
+.player-profile-web__empty {
+  align-items: center;
+  color: var(--bc-muted-light);
+  display: flex;
+  flex-direction: column;
+  font: 700 14px / 1.4 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  justify-content: center;
+  min-height: 126px;
+  padding: 24px 12px;
+  text-align: center;
+}
+
+.player-profile-web__empty::before {
+  color: var(--bc-command-dim);
+  content: '◇';
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.player-profile-web__empty strong {
+  color: var(--bc-text);
+}
+
+.player-profile-web__empty span {
+  color: var(--bc-muted);
+  font-size: 10px;
+  margin-top: 7px;
+}
+
+.player-profile-web__pages {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.player-profile-web__pages button {
+  min-height: 42px;
+  padding: 0 15px;
+}
+
+.player-profile-web__pages button:disabled {
+  background: var(--bc-panel);
+  border-color: var(--bc-line);
+  box-shadow: none;
+  color: var(--bc-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.player-profile-web__pages span {
+  color: var(--bc-muted-light);
+  font: 700 11px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.player-profile-web__error {
+  align-items: center;
+  background: var(--bc-page);
+  border: 2px solid var(--bc-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0 auto;
+  min-height: min(420px, 72dvh);
+  padding: 40px 18px;
+  text-align: center;
+}
+
+.player-profile-web__error > span {
+  color: var(--bc-danger);
+  font: 700 11px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.player-profile-web__error h2 {
+  color: var(--bc-text);
+  font: 700 26px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  margin: 10px 0 0;
+}
+
+.player-profile-web__error p {
+  color: var(--bc-muted);
+  font: 700 12px / 1.5 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  margin: 12px 0 0;
+}
+
+.player-profile-web__error button {
+  margin-top: 22px;
+  min-width: 210px;
+}
+
+.player-profile-web__loading > p {
+  color: var(--bc-command);
+  font: 700 12px / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.06em;
+  margin: 0 0 10px;
+}
+
+.player-profile-web__loading-hero,
+.player-profile-web__loading-stats i,
+.player-profile-web__loading-log i,
+.player-profile-web__loading-log span {
+  background: linear-gradient(90deg, var(--bc-panel-alt), var(--bc-panel-raised), var(--bc-panel-alt));
+  background-size: 200% 100%;
+  border: 1px solid var(--bc-line);
+}
+
+.player-profile-web__loading-hero {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 88px minmax(0, 1fr) 190px;
+  min-height: 124px;
+  padding: 16px;
+}
+
+.player-profile-web__loading-hero i,
+.player-profile-web__loading-hero span,
+.player-profile-web__loading-hero b {
+  background: rgb(255 255 255 / 7%);
+  display: block;
+}
+
+.player-profile-web__loading-hero i {
+  height: 88px;
+}
+
+.player-profile-web__loading-hero span {
+  height: 30px;
+}
+
+.player-profile-web__loading-hero b {
+  height: 52px;
+}
+
+.player-profile-web__loading-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.player-profile-web__loading-stats i {
+  height: 104px;
+}
+
+.player-profile-web__loading-log {
+  border: 1px solid var(--bc-line);
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.player-profile-web__loading-log span {
+  height: 36px;
+  margin-bottom: 4px;
+  width: 42%;
+}
+
+.player-profile-web__loading-log i {
+  height: 54px;
+}
+
+.player-profile-web__share.is-selected,
 .player-profile-web__error button.is-selected,
-.player-profile-web__hero button.is-selected,
-.player-profile-web__pages button.is-selected { color: var(--bc-active-ink); }
+.player-profile-web__pages button.is-selected {
+  background: var(--ui-active-plate);
+  border-color: var(--ui-nav-gold-edge);
+  box-shadow: inset 0 0 0 2px var(--ui-nav-gold-dark), 0 0 13px rgb(255 179 15 / 35%);
+  color: var(--bc-active-ink);
+  text-shadow: none;
+}
+
+@media (hover: hover) {
+  .player-profile-web__share:hover,
+  .player-profile-web__error button:hover,
+  .player-profile-web__pages button:not(:disabled):hover {
+    border-color: var(--bc-command);
+    box-shadow: inset 0 0 0 2px #3b2603, 0 0 12px rgb(255 179 15 / 30%);
+  }
+
+  .player-profile-web__match:not(:disabled):hover {
+    border-color: var(--bc-command);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .player-profile-web__loading-hero,
+  .player-profile-web__loading-stats i,
+  .player-profile-web__loading-log i,
+  .player-profile-web__loading-log span {
+    animation: player-profile-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes player-profile-pulse {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 800px) {
+  .player-profile-web {
+    padding: 6px 0;
+  }
+
+  .player-profile-web__shell {
+    height: calc(100% - 47px);
+    margin-top: 4px;
+    padding: 8px 6px 0;
+  }
+
+  .player-profile-web__content {
+    padding: 4px 3px 10px;
+  }
+
+  .player-profile-web__hero {
+    gap: 11px;
+    grid-template-columns: 72px minmax(0, 1fr) minmax(126px, 180px);
+    min-height: 98px;
+    padding: 11px 12px;
+  }
+
+  .player-profile-web__avatar {
+    font-size: 26px;
+    height: 66px;
+    width: 66px;
+  }
+
+  .player-profile-web__identity h2 {
+    font-size: 21px;
+  }
+
+  .player-profile-web__identity > span,
+  .player-profile-web__identity p {
+    font-size: 9px;
+  }
+
+  .player-profile-web__identity small {
+    font-size: 8px;
+  }
+
+  .player-profile-web__share {
+    font-size: 11px;
+    min-height: 46px;
+  }
+
+  .player-profile-web__stats {
+    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 8px;
+  }
+
+  .player-profile-web__stat {
+    min-height: 78px;
+    padding: 10px;
+  }
+
+  .player-profile-web__stat > span {
+    font-size: 9px;
+  }
+
+  .player-profile-web__stat strong {
+    font-size: 22px;
+    margin-top: 8px;
+  }
+
+  .player-profile-web__stat small {
+    font-size: 8px;
+  }
+
+  .player-profile-web__battles {
+    margin-top: 8px;
+    padding: 9px;
+  }
+
+  .player-profile-web__battles h2 {
+    font-size: 19px;
+  }
+
+  .player-profile-web__battles > header div > span,
+  .player-profile-web__battles > header > strong {
+    font-size: 9px;
+  }
+
+  .player-profile-web__match-header {
+    display: none;
+  }
+
+  .player-profile-web__matches {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .player-profile-web__match {
+    gap: 7px;
+    grid-template-columns: 1.2fr 0.8fr 0.65fr 0.9fr 0.9fr;
+    min-height: 64px;
+    padding: 6px 9px;
+  }
+
+  .player-profile-web__match > span:first-of-type,
+  .player-profile-web__match > b:last-of-type {
+    display: none;
+  }
+
+  .player-profile-web__match small {
+    display: block;
+  }
+
+  .player-profile-web__match em {
+    font-size: 9px;
+  }
+
+  .player-profile-web__pages {
+    justify-content: space-between;
+  }
+
+  .player-profile-web__pages button {
+    font-size: 10px;
+  }
+
+  .player-profile-web__loading-hero {
+    grid-template-columns: 66px minmax(0, 1fr) 130px;
+    min-height: 98px;
+    padding: 11px;
+  }
+
+  .player-profile-web__loading-hero i {
+    height: 66px;
+  }
+
+  .player-profile-web__loading-stats {
+    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 8px;
+  }
+
+  .player-profile-web__loading-stats i {
+    height: 78px;
+  }
+}
+
+@media (max-width: 520px) {
+  .player-profile-web__hero {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
+  .player-profile-web__share {
+    grid-column: 1 / -1;
+  }
+
+  .player-profile-web__battles > header {
+    align-items: flex-end;
+  }
+
+  .player-profile-web__match {
+    grid-template-columns: 1.3fr 0.85fr 0.9fr;
+  }
+
+  .player-profile-web__match > span:nth-of-type(2) {
+    display: none;
+  }
+
+  .player-profile-web__loading-hero {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
+  .player-profile-web__loading-hero b {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-profile-web * {
+    animation: none !important;
+    scroll-behavior: auto;
+  }
+}
