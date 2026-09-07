@@ -906,10 +906,7 @@ body.shop-web-active::after {
 }
 
 .shop-web__swap-header {
-  align-items: center;
   border-bottom: 1px solid var(--shop-steel-dark);
-  display: flex;
-  justify-content: space-between;
   padding: 18px 20px;
 }
 
@@ -927,7 +924,6 @@ body.shop-web-active::after {
   color: var(--shop-gold);
 }
 
-.shop-web__swap-header > p,
 .shop-web__swap-summary > p,
 .shop-web__swap-dialog > p:not(.shop-web__swap-eyebrow) {
   color: var(--shop-muted);
@@ -937,16 +933,32 @@ body.shop-web-active::after {
   margin: 0;
 }
 
-.shop-web__swap-header > p {
-  max-width: 390px;
-  text-align: right;
-}
-
 .shop-web__swap-body {
   display: grid;
-  gap: 24px;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(310px, 1.1fr);
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 760px;
   padding: 24px;
+}
+
+.shop-web__swap-method {
+  align-items: center;
+  background: linear-gradient(180deg, #ffc22f, #e89a06);
+  border: 1px solid var(--shop-gold-bright);
+  box-shadow: inset 0 0 0 1px #8f5700, inset 0 3px 0 rgb(255 255 255 / 20%),
+    0 4px 0 #050708;
+  color: #171006;
+  display: flex;
+  font: 700 14px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  gap: 8px;
+  height: 52px;
+  justify-content: center;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 0 rgb(255 238 164 / 60%);
+}
+
+.shop-web__swap-method span {
+  font-size: 19px;
 }
 
 .shop-web__swap-form {
@@ -956,11 +968,9 @@ body.shop-web-active::after {
 }
 
 .shop-web__swap-summary {
-  border-left: 1px solid var(--shop-steel-dark);
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-left: 24px;
 }
 
 .shop-web__swap-dialog dt,
@@ -1054,16 +1064,14 @@ body.shop-web-active::after {
 }
 
 .shop-web__swap-summary dl {
-  border-top: 1px solid var(--shop-steel-dark);
-  margin: 0 0 14px;
+  margin: 0 0 12px;
 }
 
 .shop-web__swap-summary dl div {
   align-items: center;
-  border-bottom: 1px solid var(--shop-steel-dark);
   display: flex;
   justify-content: space-between;
-  min-height: 45px;
+  min-height: 32px;
 }
 
 .shop-web__swap-summary dt {
@@ -1081,8 +1089,46 @@ body.shop-web-active::after {
   text-align: right;
 }
 
-.shop-web__swap-summary > p {
-  margin: 0 0 14px;
+.shop-web__swap-wallet {
+  align-items: center;
+  border-top: 1px solid var(--shop-steel-dark);
+  color: var(--shop-muted);
+  display: flex;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 8px;
+  letter-spacing: 0.07em;
+  min-height: 38px;
+}
+
+.shop-web__swap-wallet i {
+  background: var(--shop-muted);
+  display: block;
+  height: 8px;
+  width: 8px;
+}
+
+.shop-web__swap-wallet.is-connected i {
+  background: var(--shop-green);
+  box-shadow: 0 0 7px rgb(71 222 23 / 65%);
+}
+
+.shop-web__swap-live {
+  color: var(--shop-green) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.05em;
+  margin: 14px 0 0 !important;
+}
+
+.shop-web__swap-notice {
+  border-top: 1px solid var(--shop-steel-dark);
+  font-size: 10px !important;
+  margin: 12px 0 0 !important;
+  padding-top: 12px;
+}
+
+.shop-web__swap-notice strong {
+  color: var(--shop-gold);
 }
 
 .shop-web__swap-review {
@@ -1091,7 +1137,7 @@ body.shop-web-active::after {
   border-color: var(--shop-green-edge);
   color: var(--shop-white);
   height: 48px;
-  margin-top: auto;
+  margin-top: 4px;
   width: 100%;
 }
 
@@ -1610,26 +1656,21 @@ body.shop-web-active::after {
   }
 
   .shop-web__swap-header {
-    align-items: flex-start;
     padding: 12px;
   }
 
-  .shop-web__swap-header > p {
-    font-size: 9px;
-    max-width: 45%;
-  }
-
   .shop-web__swap-body {
-    gap: 14px;
-    grid-template-columns: 1fr;
+    gap: 12px;
     padding: 12px;
   }
 
   .shop-web__swap-summary {
-    border-left: 0;
-    border-top: 1px solid var(--shop-steel-dark);
-    padding-left: 0;
-    padding-top: 12px;
+    padding-top: 2px;
+  }
+
+  .shop-web__swap-method {
+    font-size: 11px;
+    height: 42px;
   }
 
   .shop-web__swap-form > label {
@@ -1640,7 +1681,8 @@ body.shop-web-active::after {
     min-height: 36px;
   }
 
-  .shop-web__swap-summary > p {
+  .shop-web__swap-summary > p,
+  .shop-web__swap-wallet {
     font-size: 9px;
   }
 
