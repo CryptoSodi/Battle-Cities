@@ -75,6 +75,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(AndroidDevicePlugin.class);
+        registerPlugin(BattleCitiesHapticsPlugin.class);
         registerPlugin(BattleCitiesNotificationsPlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
         registerPlugin(SolanaMobileWalletPlugin.class);
