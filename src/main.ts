@@ -1398,9 +1398,25 @@ async function hydrateShopCacheFromServer(): Promise<void> {
     }
 
     const account = body.account;
-    const provider = account.provider === 'wallet' ? 'wallet' : 'google';
-    const walletAddress = provider === 'wallet' ? account.walletAddress || '' : '';
+    const player = typeof body.player === 'object' && body.player !== null
+      ? body.player
+      : {};
+    // The authenticated player identity is authoritative. Economy records can
+    // predate a wallet connection and therefore still contain old virtual
+    // balance metadata.
+    const provider = player.provider === 'wallet'
+      ? 'wallet'
+      : player.provider === 'google'
+        ? 'google'
+        : account.provider === 'wallet' ? 'wallet' : 'google';
+    const walletAddress = provider === 'wallet'
+      ? player.walletAddress || account.walletAddress || gameStorage.get(
+        config.STORAGE_KEY_SHOP_WALLET_ADDRESS,
+      ) || ''
+      : '';
     const isWalletAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress);
+    const wasWalletAccount =
+      gameStorage.get(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER) === 'wallet';
     gameStorage.set(config.STORAGE_KEY_SHOP_ACCOUNT_PROVIDER, provider);
     gameStorage.setBoolean(config.STORAGE_KEY_SHOP_WALLET_CONNECTED, isWalletAddress);
     gameStorage.set(
@@ -1416,6 +1432,11 @@ async function hydrateShopCacheFromServer(): Promise<void> {
         config.STORAGE_KEY_SHOP_SOL_BALANCE,
         Number(account.solBalance ?? config.SHOP_STARTING_SOL_BALANCE),
       );
+    } else if (!wasWalletAccount) {
+      // Never show values inherited from a Google virtual account while the
+      // authenticated wallet balance request is in flight.
+      gameStorage.setNumber(config.STORAGE_KEY_SHOP_TOKEN_BALANCE, 0);
+      gameStorage.setNumber(config.STORAGE_KEY_SHOP_SOL_BALANCE, 0);
     }
     gameStorage.setNumber(
       config.STORAGE_KEY_SHOP_FUEL_BALANCE,

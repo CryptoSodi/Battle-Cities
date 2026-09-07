@@ -817,6 +817,34 @@ export class ShopManager {
     walletAddress = this.getWalletAddress(),
   ): Promise<void> {
     if (!this.isWalletConnected()) return;
+
+    try {
+      const response = await apiFetch('/api/economy/wallet-balance', {
+        cache: 'no-store',
+      });
+      const balance = await response.json();
+      if (
+        response.ok &&
+        balance?.ok === true &&
+        balance.walletAddress === walletAddress &&
+        Number.isFinite(Number(balance.solBalance)) &&
+        Number.isFinite(Number(balance.tokenBalance))
+      ) {
+        this.storage.setNumber(
+          config.STORAGE_KEY_SHOP_SOL_BALANCE,
+          Number(balance.solBalance),
+        );
+        this.storage.setNumber(
+          config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+          Number(balance.tokenBalance),
+        );
+        this.storage.save();
+        return;
+      }
+    } catch {
+      // Keep the direct mainnet RPC fallback for temporary API outages.
+    }
+
     try {
       const connection = new Connection(SHOP_RPC_URL, 'confirmed');
       const owner = new PublicKey(walletAddress);
