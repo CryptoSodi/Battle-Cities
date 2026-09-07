@@ -642,9 +642,14 @@ html[data-ui-device='psg1'] .operations-web.socials-web .operations-web__grid {
   margin-top: var(--psg1-gap);
 }
 html[data-ui-device='psg1'] .operations-web.socials-web .operations-web__card {
-  grid-template-rows: auto 58px 1fr var(--psg1-control);
-  min-height: 210px;
+  grid-template-rows: auto 72px 1fr var(--psg1-control);
+  min-height: 224px;
   padding: var(--psg1-gap);
+}
+html[data-ui-device='psg1'] .operations-web.socials-web .operations-web__mark--social {
+  height: 68px;
+  min-width: 84px;
+  width: 84px;
 }
 html[data-ui-device='psg1'] .operations-web.socials-web .operations-web__card h3,
 html[data-ui-device='psg1'] .operations-web.socials-web .operations-web__card strong {

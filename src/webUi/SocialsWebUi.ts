@@ -145,7 +145,7 @@ export class SocialsWebUi {
       this.card(
         'website',
         'WEBSITE',
-        'WWW',
+        'social-website.png',
         'BATTLECITIES.COM',
         'VISIT WEBSITE',
         false,
@@ -153,7 +153,7 @@ export class SocialsWebUi {
       this.card(
         'x-follow',
         'X FOLLOW',
-        'X',
+        'social-x-follow.png',
         this.xFollowDetail(),
         this.xFollowAction(),
         this.xStatus.follows === true,
@@ -161,7 +161,7 @@ export class SocialsWebUi {
       this.taskCard(
         'x-repost',
         'X REPOST',
-        'RP',
+        'social-x-repost.png',
         this.xStatus.repostTask,
         REPOST_READY,
         'REPOST',
@@ -169,7 +169,7 @@ export class SocialsWebUi {
       this.taskCard(
         'x-comment',
         'X COMMENT',
-        'CM',
+        'social-x-comment.png',
         this.xStatus.commentTask,
         COMMENT_READY,
         'COMMENT',
@@ -177,7 +177,7 @@ export class SocialsWebUi {
       this.card(
         'instagram',
         'INSTAGRAM',
-        'IG',
+        'social-instagram.png',
         '@BATTLECITIESHQ',
         'FOLLOW INSTAGRAM',
         false,
@@ -185,7 +185,7 @@ export class SocialsWebUi {
       this.card(
         'discord',
         'DISCORD',
-        'D',
+        'social-discord.png',
         this.discordDetail(),
         this.discordAction(),
         this.discord.rewardClaimed === true,
@@ -209,7 +209,7 @@ export class SocialsWebUi {
   private card(
     key: string,
     title: string,
-    mark: string,
+    icon: string,
     detail: string,
     action: string,
     complete: boolean,
@@ -219,12 +219,12 @@ export class SocialsWebUi {
       complete ? 'is-complete' : ''
     }" data-social-action="${key}" data-social-key="${key}" ${
       disabled ? 'disabled' : ''
-    }><h3>${title}</h3><span class="operations-web__mark">${mark}</span><p>${detail}</p><strong>${action}</strong></button>`;
+    }><h3>${title}</h3><span class="operations-web__mark operations-web__mark--social" aria-hidden="true"><img src="/assets/${icon}" alt=""></span><p>${detail}</p><strong>${action}</strong></button>`;
   }
   private taskCard(
     key: string,
     title: string,
-    mark: string,
+    icon: string,
     task: SocialTask | null | undefined,
     storageKey: string,
     verb: string,
@@ -233,7 +233,7 @@ export class SocialsWebUi {
       return this.card(
         key,
         title,
-        mark,
+        icon,
         'COMPLETE X FOLLOW FIRST',
         'LOCKED',
         false,
@@ -243,7 +243,7 @@ export class SocialsWebUi {
       return this.card(
         key,
         title,
-        mark,
+        icon,
         `COMPLETED · +${task.rewardFuel} FUEL`,
         `${verb}ED`,
         true,
@@ -252,7 +252,7 @@ export class SocialsWebUi {
     return this.card(
       key,
       title,
-      mark,
+      icon,
       ready
         ? 'READY FOR LIVE VERIFICATION'
         : `ACTIVE TASK · +${task.rewardFuel} FUEL`,
