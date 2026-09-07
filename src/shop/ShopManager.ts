@@ -819,33 +819,6 @@ export class ShopManager {
     if (!this.isWalletConnected()) return;
 
     try {
-      const response = await apiFetch('/api/economy/wallet-balance', {
-        cache: 'no-store',
-      });
-      const balance = await response.json();
-      if (
-        response.ok &&
-        balance?.ok === true &&
-        balance.walletAddress === walletAddress &&
-        Number.isFinite(Number(balance.solBalance)) &&
-        Number.isFinite(Number(balance.tokenBalance))
-      ) {
-        this.storage.setNumber(
-          config.STORAGE_KEY_SHOP_SOL_BALANCE,
-          Number(balance.solBalance),
-        );
-        this.storage.setNumber(
-          config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
-          Number(balance.tokenBalance),
-        );
-        this.storage.save();
-        return;
-      }
-    } catch {
-      // Keep the direct mainnet RPC fallback for temporary API outages.
-    }
-
-    try {
       const connection = new Connection(SHOP_RPC_URL, 'confirmed');
       const owner = new PublicKey(walletAddress);
       const [lamports, tokenAccounts] = await Promise.all([
@@ -868,8 +841,37 @@ export class ShopManager {
         tokenBalance,
       );
       this.storage.save();
+      return;
     } catch {
-      // Keep the last displayed balances when the public RPC is unavailable.
+      // Continue to the server fallback for public-RPC rate limits or browser
+      // transport failures. It reads the same mainnet wallet and never uses
+      // the virtual economy account.
+    }
+
+    try {
+      const response = await apiFetch('/api/economy/wallet-balance', {
+        cache: 'no-store',
+      });
+      const balance = await response.json();
+      if (
+        response.ok &&
+        balance?.ok === true &&
+        balance.walletAddress === walletAddress &&
+        Number.isFinite(Number(balance.solBalance)) &&
+        Number.isFinite(Number(balance.tokenBalance))
+      ) {
+        this.storage.setNumber(
+          config.STORAGE_KEY_SHOP_SOL_BALANCE,
+          Number(balance.solBalance),
+        );
+        this.storage.setNumber(
+          config.STORAGE_KEY_SHOP_TOKEN_BALANCE,
+          Number(balance.tokenBalance),
+        );
+        this.storage.save();
+      }
+    } catch {
+      // Keep the last on-chain balance if both chain reads are unavailable.
     }
   }
 
