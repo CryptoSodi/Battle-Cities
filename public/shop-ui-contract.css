@@ -147,6 +147,24 @@ body.web-ui-active
   grid-row: 2;
 }
 
+/* Shop has four peer tabs; keep every tab on the same equal-width track. */
+body.web-ui-active [data-web-ui] .shop-web [data-ui-nav] {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 0.86fr);
+}
+
+body.web-ui-active
+  [data-web-ui]
+  .shop-web
+  [data-ui-nav]
+  [data-ui-tab]:nth-child(4) {
+  grid-column: auto;
+  grid-row: 1;
+}
+
+body.web-ui-active [data-web-ui] .shop-web [data-ui-nav] [data-ui-back] {
+  grid-column: -2;
+}
+
 body.web-ui-active
   [data-web-ui]
   [data-ui-page]
