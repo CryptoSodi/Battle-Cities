@@ -905,12 +905,6 @@ body.shop-web-active::after {
   text-transform: uppercase;
 }
 
-.shop-web__swap-header {
-  border-bottom: 1px solid var(--shop-steel-dark);
-  padding: 18px 20px;
-}
-
-.shop-web__swap-header h2,
 .shop-web__swap-dialog h2 {
   color: var(--shop-white);
   font: 700 clamp(20px, 2.6vw, 28px) / 1 'Battle Cities UI',
@@ -918,10 +912,6 @@ body.shop-web-active::after {
   letter-spacing: 0.06em;
   margin: 0;
   text-shadow: 0 2px 0 #020303;
-}
-
-.shop-web__swap-header h2 span {
-  color: var(--shop-gold);
 }
 
 .shop-web__swap-summary > p,
@@ -1653,10 +1643,6 @@ body.shop-web-active::after {
 
   .shop-web__label {
     margin-top: 13px;
-  }
-
-  .shop-web__swap-header {
-    padding: 12px;
   }
 
   .shop-web__swap-body {
