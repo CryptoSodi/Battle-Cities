@@ -375,6 +375,118 @@ body.shop-web-active::after {
   right: 2px;
 }
 
+.shop-web__presale-legend {
+  border-bottom: 1px solid var(--shop-steel);
+  min-width: 0;
+  padding: clamp(14px, 2vw, 20px) 4px;
+}
+
+.shop-web__presale-legend > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.shop-web__presale-legend h3 {
+  color: var(--shop-white);
+  font: 700 clamp(15px, 2.2vw, 21px) / 1 'Battle Cities UI',
+    'Arial Narrow', sans-serif;
+  letter-spacing: 0.055em;
+  margin: 0;
+}
+
+.shop-web__presale-legend > header > span {
+  color: var(--shop-green);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.shop-web__presale-available {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.shop-web__presale-available strong {
+  color: var(--shop-gold);
+  font-size: clamp(20px, 3vw, 27px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.shop-web__presale-available span,
+.shop-web__presale-available small,
+.shop-web__presale-meta {
+  color: var(--shop-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.065em;
+}
+
+.shop-web__presale-available small {
+  color: var(--shop-white);
+}
+
+.shop-web__presale-progress {
+  background: #111a20;
+  border: 1px solid var(--shop-steel);
+  height: 10px;
+  margin-top: 10px;
+  padding: 2px;
+}
+
+.shop-web__presale-progress i {
+  background: var(--shop-gold);
+  display: block;
+  height: 100%;
+  width: var(--presale-progress, 0%);
+}
+
+.shop-web__presale-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+
+.shop-web__presale-meta span:last-child {
+  color: var(--shop-gold);
+}
+
+.shop-web__presale-table {
+  border-top: 1px solid var(--shop-steel-dark);
+  margin-top: 12px;
+}
+
+.shop-web__presale-row {
+  align-items: center;
+  border-bottom: 1px solid var(--shop-steel-dark);
+  display: grid;
+  font-size: clamp(8px, 1.15vw, 11px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  gap: 5px;
+  grid-template-columns: 1.05fr 1.05fr 0.8fr 0.9fr;
+  min-height: 27px;
+}
+
+.shop-web__presale-row span:not(:first-child) {
+  text-align: right;
+}
+
+.shop-web__presale-row.is-active {
+  color: var(--shop-gold-bright);
+}
+
+.shop-web__presale-row--head {
+  color: var(--shop-muted);
+  font-size: 8px;
+}
+
+.shop-web__presale-row--total {
+  color: var(--shop-gold);
+}
+
 .shop-web__content {
   min-height: 0;
   overflow: auto;
@@ -1162,6 +1274,10 @@ body.shop-web-active::after {
     position: relative;
   }
 
+  .shop-web__desktop-shell--swap {
+    grid-template-columns: minmax(350px, 0.92fr) minmax(0, 1.48fr);
+  }
+
   .shop-web__desktop-shell::before {
     background: linear-gradient(
       90deg,
@@ -1237,6 +1353,26 @@ body.shop-web-active::after {
   .shop-web__desktop-side .shop-web__resource strong {
     font-size: 17px;
     margin-top: 3px;
+  }
+
+  .shop-web__desktop-side .shop-web__presale-legend {
+    border-bottom: 0;
+    margin-top: 17px;
+    overflow-y: auto;
+    padding: 0 2px 4px;
+  }
+
+  .shop-web__desktop-side .shop-web__presale-legend h3 {
+    font-size: 17px;
+    margin: 0;
+  }
+
+  .shop-web__desktop-side .shop-web__presale-available strong {
+    font-size: 23px;
+  }
+
+  .shop-web__desktop-side .shop-web__presale-row {
+    font-size: 9px;
   }
 
   .shop-web__desktop-owned {
@@ -1428,6 +1564,32 @@ body.shop-web-active::after {
   .shop-web__owned-tile strong {
     font-size: clamp(10px, 3.2vw, 13px);
     height: 19px;
+  }
+
+  .shop-web__presale-legend {
+    padding: 9px 0;
+  }
+
+  .shop-web__presale-legend h3 {
+    font-size: 13px;
+  }
+
+  .shop-web__presale-available {
+    margin-top: 7px;
+  }
+
+  .shop-web__presale-available strong {
+    font-size: 16px;
+  }
+
+  .shop-web__presale-progress,
+  .shop-web__presale-table {
+    margin-top: 7px;
+  }
+
+  .shop-web__presale-row {
+    font-size: 8px;
+    min-height: 21px;
   }
 
   .shop-web__content {

@@ -174,7 +174,11 @@ export class ShopWebUi {
       'SOL',
       this.shop.getSolBalance().toFixed(3),
     )}${this.resource('FUEL', this.shop.getFuelBalance().toString())}</section>
-      <section class="shop-web__owned"><h2>OWNED ITEMS</h2><div>${this.inventoryTiles()}</div></section>
+      ${
+        this.tab === 'swap'
+          ? this.presaleLegend()
+          : `<section class="shop-web__owned"><h2>OWNED ITEMS</h2><div>${this.inventoryTiles()}</div></section>`
+      }
       <section class="shop-web__content">${content}</section><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
         ? 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS'
@@ -200,24 +204,9 @@ export class ShopWebUi {
       'swap',
       'SWAP',
     )}${this.tabButton('loadout', 'LOADOUT')}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
-      <section class="shop-web__desktop-shell"><aside class="shop-web__desktop-side"><h2>INVENTORY</h2><button class="shop-web__connect${
-        this.shop.isWalletConnected() ? ' is-connected' : ''
-      }" data-shop-wallet type="button"${
-        this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
-      }>${
-      this.shop.isWalletConnected()
-        ? '<i aria-hidden="true"></i>CONNECTED'
-        : this.shop.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT'
-    }</button>${this.resource(
-      'BATC',
-      this.shop.getTokenBalance().toString(),
-    )}${this.resource(
-      'SOL',
-      this.shop.getSolBalance().toFixed(3),
-    )}${this.resource(
-      'FUEL',
-      this.shop.getFuelBalance().toString(),
-    )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div></aside>
+      <section class="shop-web__desktop-shell${
+        this.tab === 'swap' ? ' shop-web__desktop-shell--swap' : ''
+      }"><aside class="shop-web__desktop-side">${this.desktopSidebar()}</aside>
       <section class="shop-web__desktop-content"><div class="shop-web__content">${this.shopContent(
         currency,
       )}</div><p class="shop-web__status" aria-live="polite">${status ||
@@ -262,6 +251,84 @@ export class ShopWebUi {
           )} quantity">${this.count(id)}</strong></div>`,
       )
       .join('');
+  }
+  private desktopSidebar(): string {
+    const wallet = `<h2>${this.tab === 'swap' ? 'WALLET' : 'INVENTORY'}</h2><button class="shop-web__connect${
+      this.shop.isWalletConnected() ? ' is-connected' : ''
+    }" data-shop-wallet type="button"${
+      this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
+    }>${
+      this.shop.isWalletConnected()
+        ? '<i aria-hidden="true"></i>CONNECTED'
+        : this.shop.isVirtualEconomyAccount()
+        ? 'GOOGLE ACCOUNT'
+        : 'CONNECT'
+    }</button>${this.resource(
+      'BATC',
+      this.shop.getTokenBalance().toString(),
+    )}${this.resource('SOL', this.shop.getSolBalance().toFixed(3))}`;
+    return this.tab === 'swap'
+      ? `${wallet}${this.presaleLegend(true)}`
+      : `${wallet}${this.resource(
+          'FUEL',
+          this.shop.getFuelBalance().toString(),
+        )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div>`;
+  }
+  private presaleLegend(desktop = false): string {
+    const state = this.presaleState;
+    const stages = state?.stages || [];
+    const activeStage = stages.find(
+      (stage) => stage.id === state?.currentStageId,
+    );
+    const allocation = Number(activeStage?.allocationBatc || 0);
+    const sold = Number(activeStage?.soldBatc || 0);
+    const available = Math.max(0, allocation - sold);
+    const soldPercent = allocation > 0 ? Math.min(100, (sold / allocation) * 100) : 0;
+    const totalSold = stages.reduce(
+      (total, stage) => total + Number(stage.soldBatc || 0),
+      0,
+    );
+    const totalAllocation = stages.reduce(
+      (total, stage) => total + Number(stage.allocationBatc || 0),
+      0,
+    );
+    const rows = stages
+      .map((stage) => {
+        const stageSold = Number(stage.soldBatc || 0);
+        const remaining = Math.max(
+          0,
+          Number(stage.allocationBatc || 0) - stageSold,
+        );
+        return `<div class="shop-web__presale-row${
+          stage.status === 'active' ? ' is-active' : ''
+        }"><span>${stage.label}</span><span>${this.formatSwapNumber(
+          Number(stage.priceSol || 0),
+          9,
+        )} SOL</span><span>${this.formatSwapNumber(stageSold)}</span><span>${this.formatSwapNumber(
+          remaining,
+        )}</span></div>`;
+      })
+      .join('');
+    return `<section class="shop-web__presale-legend${
+      desktop ? ' shop-web__presale-legend--desktop' : ''
+    }" aria-label="Live presale status"><header><h3>PRESALE LEGEND</h3><span>LIVE</span></header><div class="shop-web__presale-available"><strong>${
+      state ? this.formatSwapNumber(available) : '--'
+    } BATC</strong><span>AVAILABLE IN THIS STAGE</span><small>${
+      activeStage
+        ? `${activeStage.label} allocation: ${this.formatSwapNumber(allocation)} BATC`
+        : 'Loading stage allocation'
+    }</small></div><div class="shop-web__presale-progress" style="--presale-progress:${soldPercent.toFixed(
+      2,
+    )}%"><i></i></div><div class="shop-web__presale-meta"><span>${this.formatSwapNumber(
+      soldPercent,
+    )}% SOLD</span><span>${this.formatSwapNumber(
+      Number(state?.participants || 0),
+      0,
+    )} PARTICIPANTS</span></div><div class="shop-web__presale-table"><div class="shop-web__presale-row shop-web__presale-row--head"><span>STAGE</span><span>PRICE</span><span>SOLD</span><span>LEFT</span></div>${rows}<div class="shop-web__presale-row"><span>DEX LAUNCH</span><span>TBA</span><span>—</span><span>—</span></div><div class="shop-web__presale-row shop-web__presale-row--total"><span>TOTAL</span><span></span><span>${this.formatSwapNumber(
+      totalSold,
+    )}</span><span>${this.formatSwapNumber(
+      Math.max(0, totalAllocation - totalSold),
+    )}</span></div></div></section>`;
   }
   private tabButton(tab: ShopTab, label: string): string {
     const icon = {
@@ -346,20 +413,13 @@ export class ShopWebUi {
         ? payAmount / price
         : 0;
     const rate = price > 0 ? 1 / price : 0;
-    const activeStage = state?.stages?.find(
-      (stage) => stage.id === state.currentStageId,
-    );
-    const available = Math.max(
-      0,
-      Number(activeStage?.allocationBatc || 0) - Number(activeStage?.soldBatc || 0),
-    );
     const canSwap = state?.configured === true && state.ended !== true;
     const sanitizedAmount = this.swapAmount.replace(/[^0-9.]/g, '');
     const network =
       state?.network?.toUpperCase() === 'MAINNET-BETA'
         ? 'MAINNET'
         : state?.network?.toUpperCase() || 'LOADING';
-    return `<section class="shop-web__swap" aria-labelledby="shop-swap-title"><header class="shop-web__swap-header"><div><p class="shop-web__swap-eyebrow">BATC PRESALE · ${network}</p><h2 id="shop-swap-title">SOL <span aria-hidden="true">→</span> BATC</h2></div><p>Enter SOL, review the quote, then confirm in your wallet.</p></header><div class="shop-web__swap-body"><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(receiveAmount)} <span>BATC</span></output></section><aside class="shop-web__swap-summary" aria-label="Live quote details"><dl><div><dt>CURRENT RATE</dt><dd data-shop-swap-rate>${rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'}</dd></div><div><dt>ACTIVE STAGE</dt><dd>${activeStage?.label || 'LOADING'}</dd></div><div><dt>BATC AVAILABLE</dt><dd>${this.formatSwapNumber(available)} BATC</dd></div><div><dt>TOKEN PRICE</dt><dd>${price > 0 ? `${this.formatSwapNumber(price, 9)} SOL` : 'LOADING'}</dd></div></dl><p>${network} · The final amount and network appear again before signing.</p><button class="shop-web__swap-review" data-shop-swap-review type="button"${canSwap ? '' : ' disabled'}>${this.shop.isWalletConnected() ? 'REVIEW SWAP' : 'CONNECT WALLET'}</button></aside></div></section>`;
+    return `<section class="shop-web__swap" aria-labelledby="shop-swap-title"><header class="shop-web__swap-header"><div><p class="shop-web__swap-eyebrow">BATC PRESALE · ${network}</p><h2 id="shop-swap-title">SOL <span aria-hidden="true">→</span> BATC</h2></div><p>Enter SOL, review the quote, then confirm in your wallet.</p></header><div class="shop-web__swap-body"><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(receiveAmount)} <span>BATC</span></output></section><aside class="shop-web__swap-summary" aria-label="Live exchange details"><dl><div><dt>CURRENT RATE</dt><dd data-shop-swap-rate>${rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'}</dd></div><div><dt>PRICE PER TOKEN</dt><dd>${price > 0 ? `${this.formatSwapNumber(price, 9)} SOL` : 'LOADING'}</dd></div></dl><p>${network} · The exact amount and network appear again before signing.</p><button class="shop-web__swap-review" data-shop-swap-review type="button"${canSwap ? '' : ' disabled'}>${this.shop.isWalletConnected() ? 'REVIEW SWAP' : 'CONNECT WALLET'}</button></aside></div></section>`;
   }
   private swapDialog(): string {
     const quote = this.presaleQuote;
@@ -479,7 +539,7 @@ export class ShopWebUi {
       ?.focus({ preventScroll: true });
   }
   private formatSwapNumber(value: number, maximumFractionDigits = 2): string {
-    if (!Number.isFinite(value) || value <= 0) return '0.0';
+    if (!Number.isFinite(value) || value <= 0) return '0';
     return value.toLocaleString('en-US', { maximumFractionDigits });
   }
   private bind(): void {

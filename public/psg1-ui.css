@@ -101,6 +101,9 @@ html[data-ui-device='psg1'] .shop-web__desktop-shell {
   padding: var(--psg1-gap);
   overflow: hidden;
 }
+html[data-ui-device='psg1'] .shop-web__desktop-shell--swap {
+  grid-template-columns: minmax(260px, 36%) minmax(0, 1fr);
+}
 html[data-ui-device='psg1'] .shop-web__desktop-shell::before {
   display: none;
 }
