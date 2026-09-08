@@ -88,6 +88,7 @@ if (process.argv.includes('--serve')) {
               'shop-ui-contract',
               'psg1-ui',
               'home-rewards',
+              'home-chrome',
             ]
               .map((f) => '<link rel="stylesheet" href="/' + f + '.css">')
               .join('') +
@@ -136,6 +137,7 @@ if (process.argv.includes('--serve')) {
               'shop-ui-contract',
               'psg1-ui',
               'home-rewards',
+              'home-chrome',
             ]
               .map((f) => '<link rel="stylesheet" href="/' + f + '.css">')
               .join('') +

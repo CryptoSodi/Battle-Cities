@@ -1,0 +1,44 @@
+/* Fixed status plate overlays the scrolling live-event track. */
+.main-menu-web-active { --home-round-width: clamp(174px, 20vw, 286px); --home-hazard-height: 44px; }
+.main-menu-web__hazard { display: flex; align-items: stretch; height: calc(var(--home-hazard-height) + env(safe-area-inset-bottom,0px)); min-height: 44px; padding: 3px 0 calc(3px + env(safe-area-inset-bottom,0px)); overflow: hidden; }
+.main-menu-web__ticker-window { min-width: 0; flex: 1; overflow: hidden; }
+.main-menu-web__ticker-window .main-menu-web__live-event { display: block; width: 100%; height: 100%; overflow: hidden; }
+.main-menu-web__ticker-window .main-menu-web__hazard-track { display: flex; flex-wrap: nowrap; justify-content: flex-start; width: max-content; height: 100%; min-height: 0; gap: 0; margin: 0; padding: 0; animation: main-menu-web-hazard-marquee 30s linear infinite; will-change: transform; }
+.main-menu-web__hazard-track .main-menu-web__ticker-run { display: inline-flex; align-items: center; flex: 0 0 auto; min-width: 70vw; padding: 0 80px 0 24px; gap: 16px; white-space: nowrap; }
+.main-menu-web__ticker-run span { white-space: nowrap; }
+.main-menu-web__ticker-run b { color: var(--bc-command); }
+.main-menu-web__round-status { position: relative; z-index: 4; flex: 0 0 var(--home-round-width); width: var(--home-round-width); display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 10px; background: #080e12; border-left: 2px solid var(--bc-command-dim); box-shadow: -18px 0 18px #080e12; color: var(--bc-command); font: 12px/1.25 'Battle Cities UI',sans-serif; text-align: right; font-variant-numeric: tabular-nums; }
+.main-menu-web__round-status [data-home-presence] { color: var(--bc-muted); font-size: 10px; }
+.main-menu-web__round-status [hidden] { display: none; }
+.main-menu-web__bottom-tank-scroller { display: block; bottom: calc(var(--home-hazard-height) + env(safe-area-inset-bottom,0px)); }
+.main-menu-web-active .game-cherry { right: calc(var(--home-round-width) + 6px); bottom: env(safe-area-inset-bottom,0px); }
+.main-menu-web-active .game-cherry__launcher { height: var(--home-hazard-height); min-height: var(--home-hazard-height); }
+@media (max-width: 899px) {
+  .main-menu-web { padding-top: env(safe-area-inset-top,0px); }
+  .main-menu-web__hud { margin-top: 0; }
+  .main-menu-web__stat--player, .main-menu-web__stat--score, .main-menu-web__stat--highscore { top: 0; height: 100%; }
+}
+@media (max-width: 600px) {
+  .main-menu-web-active { --home-round-width: 166px; }
+  .main-menu-web-active .game-cherry__launcher { width: 44px; padding: 0; justify-content: center; }
+  .main-menu-web-active .game-cherry__launcher span { display: none; }
+  .main-menu-web__round-status { font-size: 10px; padding: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-menu-web__ticker-window .main-menu-web__hazard-track { animation: none; transform: none; }
+  .main-menu-web__hazard-track .main-menu-web__ticker-run { min-width: 0; padding-inline: 10px; }
+  .main-menu-web__ticker-run[aria-hidden] { display: none; }
+  .main-menu-web__bottom-tank-scroller { transform: translateX(22vw); }
+}
+
+/* Fourth-place rewards use the same chest-over-podium format as their peers. */
+.main-menu-web__reward-tier--4 { display: flex; flex-direction: column; align-self: end; justify-content: end; align-items: stretch; border: 0; background: none; clip-path: none; padding: 0; margin: 0; gap: 0; grid-column: auto; }
+.main-menu-web__reward-tier--4 .main-menu-web__chest { width: min(100%,132px); max-width: 132px; flex: none; margin: 0 auto -18px; }
+.main-menu-web__reward-tier--4 .main-menu-web__podium { width: 100%; min-height: 98px; padding: 22px 4px 12px; background: linear-gradient(#102638,#06131d); border: 2px solid #286080; clip-path: var(--reward-cut); gap: 9px; }
+.main-menu-web__reward-tier--4 strong { position: static; font-size: clamp(15px,1.4vw,21px); color: var(--bc-text); }
+@media (max-width: 600px), (min-width: 860px) and (max-width: 1099px) {
+  .main-menu-web__reward-tiers { grid-template-columns: 1fr 1.15fr 1fr 1fr; }
+  .main-menu-web__reward-tier--4 .main-menu-web__chest { width: 100%; max-width: 104px; }
+  .main-menu-web__podium span { font-size: 11px; }
+  .main-menu-web__reward-tier--4 strong { font-size: 13px; }
+}

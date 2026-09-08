@@ -359,8 +359,15 @@ export class MainMenuWebUi {
         </section>
 
         <footer class="main-menu-web__hazard" aria-label="Live battlefield status">
-          <div class="main-menu-web__hazard-track">
-            <button type="button" class="main-menu-web__live-event" data-menu-event-ticker><i aria-hidden="true">★</i><b>LIVE EVENTS</b><span data-menu-events-primary>Loading events…</span></button>
+          <div class="main-menu-web__ticker-window">
+            <button type="button" class="main-menu-web__live-event" data-menu-event-ticker aria-label="Live events">
+              <span class="main-menu-web__hazard-track">
+                <span class="main-menu-web__ticker-run"><b>LIVE EVENTS</b><span data-menu-events-primary>Loading events…</span></span>
+                <span class="main-menu-web__ticker-run" aria-hidden="true"><b>LIVE EVENTS</b><span data-menu-events-repeat>Loading events…</span></span>
+              </span>
+            </button>
+          </div>
+          <div class="main-menu-web__round-status">
             <span data-home-round>SYNCING ROUND</span>
             <span data-home-presence hidden></span>
           </div>
