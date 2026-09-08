@@ -434,7 +434,6 @@
     grid-template-rows: 46px minmax(0, 1fr);
     margin: 0;
     max-width: none;
-    padding: 0;
   }
 
   .results-web__header {

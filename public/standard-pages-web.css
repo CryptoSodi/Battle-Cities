@@ -902,8 +902,8 @@
   }
 }
 
-@media (max-width: 899px) {
-  :is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web) {
+@media (pointer: coarse), (max-width: 899px) {
+  :is(.ranking-web, .operations-web.socials-web, .settings-web, .operations-web.headquarters-web, .hq-page-web, .results-web) {
     padding: 6px 5px;
   }
   .ranking-web__tabs {
