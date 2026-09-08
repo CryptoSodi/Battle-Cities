@@ -432,10 +432,9 @@
   .results-web {
     gap: 4px;
     grid-template-rows: 46px minmax(0, 1fr);
-    padding: max(4px, env(safe-area-inset-top))
-      max(5px, env(safe-area-inset-right))
-      max(4px, env(safe-area-inset-bottom))
-      max(5px, env(safe-area-inset-left));
+    margin: 0;
+    max-width: none;
+    padding: 0;
   }
 
   .results-web__header {
