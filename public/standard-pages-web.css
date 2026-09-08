@@ -491,6 +491,30 @@
 .settings-web__toggle.is-selected:not(.is-active) {
   background: var(--bc-panel-raised);
 }
+.settings-web__pairing {
+  background: var(--bc-panel);
+  border: 1px solid var(--bc-line);
+  padding: 20px;
+  color: var(--bc-text);
+}
+.settings-web__pairing h2 { color: var(--bc-command); margin: 0 0 8px; }
+.settings-web__pairing p { color: var(--bc-muted); font-size: 14px; line-height: 1.5; }
+body.game-running.settings-web-active .settings-web__pairing .mobile-gamepad-qr {
+  display: block;
+  position: static !important;
+  transform: none !important;
+  margin: 16px 0 0;
+  width: min(240px, 100%);
+  padding: 12px;
+  background: #06090b;
+  border: 1px solid var(--bc-command-dim);
+  text-align: center;
+}
+.settings-web__pairing .mobile-gamepad-qr__image { width: 100%; max-width: 216px; height: auto; display: block; margin: 10px auto; }
+.settings-web__pairing .mobile-gamepad-qr__title { display: none; }
+.settings-web__pairing .mobile-gamepad-qr__code { color: var(--bc-command); font: 18px 'Share Tech Mono', monospace; letter-spacing: .15em; }
+.settings-web__pairing-retry { min-height: 44px; padding: 8px 20px; color: var(--bc-command); background: var(--bc-panel-raised); }
+.settings-web__pairing-retry.is-selected { border-color: var(--bc-command); box-shadow: inset 0 0 0 2px var(--bc-command-dim); }
 .settings-web__status {
   margin: 14px 0 4px;
 }

@@ -2,7 +2,7 @@ import { SceneNavigator } from '../core';
 import { PlayerIdentity } from '../auth';
 import { EventClient } from '../events';
 import { Session } from '../game';
-import { InputManager, isPlaySolanaPsg1, MenuInputContext } from '../input';
+import { InputManager, MenuInputContext } from '../input';
 import { apiFetch } from '../network/api';
 import { NativeNotificationClient } from '../notifications/NativeNotificationClient';
 import { PointsHighscoreManager } from '../points';
@@ -43,6 +43,7 @@ interface HomeRewardRow {
 
 interface HomeRewardsResponse {
   enabled: boolean;
+  intervalStartedAt?: string;
   nextRewardAt: string | null;
   rewardIntervalMinutes: number;
   rows: HomeRewardRow[];
@@ -80,14 +81,12 @@ export class MainMenuWebUi {
   private abortController: AbortController = null;
   private actionButtons: HTMLButtonElement[] = [];
   private active = false;
-  private eventTickerClickCount = 0;
   private host: HTMLElement = null;
-  private mobileGamepadQrElement: HTMLElement = null;
-  private mobileGamepadQrRequested = false;
   private mountId = 0;
   private rewardsData: HomeRewardsResponse | null = null;
   private rewardsLoading = false;
   private rewardsTimer: number | null = null;
+  private refreshTick = 0;
   private touchActionTimer: number | null = null;
 
   public constructor(options: MainMenuWebUiOptions) {
@@ -105,12 +104,11 @@ export class MainMenuWebUi {
 
     this.active = true;
     this.abortController = new AbortController();
-    this.eventTickerClickCount = 0;
     this.host = host;
     this.mountId += 1;
     const currentMountId = this.mountId;
 
-    document.body.classList.add('web-ui-active');
+    document.body.classList.add('web-ui-active', 'main-menu-web-active');
     host.hidden = false;
     host.innerHTML = this.render();
 
@@ -120,16 +118,21 @@ export class MainMenuWebUi {
     this.bindEventTicker();
     this.bindNotificationDialog();
     this.focusInitialAction();
-    this.ensureMobileGamepadQrElement();
 
+    this.refreshTick = 0;
+    void this.loadPresence(currentMountId);
     void this.loadEvents(currentMountId);
     void this.loadHomeRewards(currentMountId);
     void this.refreshRunBoosts();
     void this.prepareNotificationPrompt(currentMountId);
-    this.rewardsTimer = window.setInterval(
-      () => this.syncHomeRewardsCountdown(),
-      1000,
-    );
+    this.rewardsTimer = window.setInterval(() => {
+      this.syncHomeRewardsCountdown();
+      if (++this.refreshTick % 30 === 0 && !document.hidden) {
+        void this.loadHomeRewards(currentMountId);
+        void this.loadEvents(currentMountId);
+        void this.loadPresence(currentMountId);
+      }
+    }, 1000);
   }
 
   public unmount(): void {
@@ -151,7 +154,6 @@ export class MainMenuWebUi {
     this.rewardsData = null;
     this.rewardsLoading = false;
     this.cherryChat.unmount();
-    this.removeMobileGamepadQrElement();
 
     const dialog = this.host?.querySelector('dialog');
     if (dialog instanceof HTMLDialogElement && dialog.open) {
@@ -163,14 +165,13 @@ export class MainMenuWebUi {
       this.host.hidden = true;
     }
     this.host = null;
-    document.body.classList.remove('web-ui-active');
+    document.body.classList.remove('web-ui-active', 'main-menu-web-active');
   }
 
   public update(): void {
     if (!this.active) return;
     if (this.cherryChat.blocksMenuInput()) return;
 
-    this.updateMobileGamepadQrVisibility();
     const inputMethod = this.options.inputManager.getActiveMethod();
     const openDialog = this.host.querySelector('dialog[open]');
 
@@ -206,15 +207,29 @@ export class MainMenuWebUi {
       return;
     }
 
-    if (inputMethod.isDownAny(MenuInputContext.VerticalPrev)) {
+    if (
+      inputMethod.isDownAny(MenuInputContext.VerticalPrev) ||
+      inputMethod.isDownAny(MenuInputContext.HorizontalPrev)
+    ) {
       this.focusRelativeAction(-1);
     }
 
-    if (inputMethod.isDownAny(MenuInputContext.VerticalNext)) {
+    if (
+      inputMethod.isDownAny(MenuInputContext.VerticalNext) ||
+      inputMethod.isDownAny(MenuInputContext.HorizontalNext)
+    ) {
       this.focusRelativeAction(1);
     }
 
     if (inputMethod.isDownAny(MenuInputContext.Select)) {
+      const focused = document.activeElement;
+      if (
+        focused instanceof HTMLButtonElement &&
+        focused.hasAttribute('data-home-rewards-retry')
+      ) {
+        focused.click();
+        return;
+      }
       const activeButton = this.getFocusedAction();
       (activeButton || this.actionButtons[0])?.click();
     }
@@ -295,31 +310,17 @@ export class MainMenuWebUi {
             ${developerActions.length > 0 ? renderActions('developer') : ''}
           </nav>
           <section class="main-menu-web__overview" aria-label="Battle Cities command overview">
-            <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="1024">
-            <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
-              <span class="main-menu-web__events-viewport">
-                <span class="main-menu-web__events-track" role="status" aria-live="polite">
-                  <span class="main-menu-web__events-run">
-                    <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
-                    <span data-menu-events-primary>Loading live operations...</span>
-                  </span>
-                  <span class="main-menu-web__events-run" aria-hidden="true">
-                    <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
-                    <span data-menu-events-repeat>Loading live operations...</span>
-                  </span>
-                </span>
-              </span>
-            </button>
+            <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
             <section class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
               <header class="main-menu-web__reward-header">
-                <span class="main-menu-web__panel-icon" aria-hidden="true">★</span>
+                <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
                 <div>
                   <h2 id="home-rewards-title">Live Rewards</h2>
                   <p>Top 10 every 30 minutes</p>
                 </div>
                 <output class="main-menu-web__reward-countdown" data-home-rewards-countdown>SYNCING ROUND</output>
               </header>
-              <div class="main-menu-web__reward-tiers" aria-label="BATC reward tiers">
+              <div class="main-menu-web__reward-tiers" data-home-reward-tiers aria-label="BATC reward tiers">
                 ${this.rewardTiersMarkup(HOME_REWARD_TIERS)}
               </div>
               <section class="main-menu-web__how-it-works" aria-labelledby="home-rewards-how-title">
@@ -333,7 +334,7 @@ export class MainMenuWebUi {
             </section>
             <section class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
               <header class="main-menu-web__leaderboard-header">
-                <span class="main-menu-web__panel-icon" aria-hidden="true">♜</span>
+                <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
                 <div>
                   <h2 id="home-leaderboard-title">Rewards Leaderboard</h2>
                   <p data-home-rewards-state>Loading current round</p>
@@ -353,16 +354,11 @@ export class MainMenuWebUi {
           </section>
         </section>
 
-        <footer class="main-menu-web__hazard" aria-label="Battlefield system status">
+        <footer class="main-menu-web__hazard" aria-label="Live battlefield status">
           <div class="main-menu-web__hazard-track">
-            <span><i aria-hidden="true">✦</i>Battlefield loading // Sector 01</span>
-            <span><i aria-hidden="true">✦</i>Armor systems online // Tanks ready</span>
-            <span><i aria-hidden="true">✦</i>Targeting grid locked // Stand by</span>
-            <span><i aria-hidden="true">✦</i>Reloading cannon // Prepare for battle</span>
-            <span aria-hidden="true"><i>✦</i>Battlefield loading // Sector 01</span>
-            <span aria-hidden="true"><i>✦</i>Armor systems online // Tanks ready</span>
-            <span aria-hidden="true"><i>✦</i>Targeting grid locked // Stand by</span>
-            <span aria-hidden="true"><i>✦</i>Reloading cannon // Prepare for battle</span>
+            <button type="button" class="main-menu-web__live-event" data-menu-event-ticker><i aria-hidden="true">★</i><b>LIVE EVENTS</b><span data-menu-events-primary>Loading events…</span></button>
+            <span data-home-round>SYNCING ROUND</span>
+            <span data-home-presence hidden></span>
           </div>
         </footer>
         <div class="main-menu-web__bottom-tank-scroller" aria-hidden="true">
@@ -477,15 +473,12 @@ export class MainMenuWebUi {
   }
 
   private bindEventTicker(): void {
-    const ticker = this.host.querySelector('[data-menu-event-ticker]');
-    if (!(ticker instanceof HTMLButtonElement)) return;
-
-    ticker.addEventListener(
+    // Preserve the existing opt-in multiplayer shortcut on the relocated bar.
+    let clicks = 0;
+    this.host.querySelector('[data-menu-event-ticker]')?.addEventListener(
       'click',
       () => {
-        this.eventTickerClickCount += 1;
-        if (this.eventTickerClickCount < 10) return;
-
+        if (++clicks < 10) return;
         const url = new URL(window.location.href);
         url.searchParams.set('enable2players', '1');
         window.location.replace(url.toString());
@@ -612,8 +605,44 @@ export class MainMenuWebUi {
     });
   }
 
+  private async loadPresence(mountId: number): Promise<void> {
+    try {
+      const response = await apiFetch('/api/presence', {
+        signal: this.abortController.signal,
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('Presence unavailable');
+      const data = await response.json();
+      if (!this.active || mountId !== this.mountId) return;
+      const element = this.host.querySelector<HTMLElement>(
+        '[data-home-presence]',
+      );
+      if (!element) return;
+      element.hidden =
+        data.liveUsersEnabled !== true || !Number.isFinite(data.online);
+      element.textContent = `PLAYERS ONLINE · ${Math.max(
+        0,
+        data.online,
+      ).toLocaleString()}`;
+    } catch {
+      if (this.active && mountId === this.mountId) {
+        const element = this.host.querySelector<HTMLElement>(
+          '[data-home-presence]',
+        );
+        if (element) element.hidden = true;
+      }
+    }
+  }
+
   private async loadEvents(mountId: number): Promise<void> {
-    const events = await this.eventClient.listEvents();
+    let events;
+    try {
+      events = await this.eventClient.listEvents();
+    } catch {
+      if (this.active && mountId === this.mountId)
+        this.setEventTickerText('Events unavailable');
+      return;
+    }
     if (!this.active || mountId !== this.mountId) return;
 
     const liveEvents = events.filter((event) => event.status === 'live');
@@ -627,10 +656,13 @@ export class MainMenuWebUi {
   private async loadHomeRewards(mountId: number): Promise<void> {
     if (this.rewardsLoading) return;
     this.rewardsLoading = true;
-    this.setHomeRewardsLoadingState();
+    if (!this.rewardsData) this.setHomeRewardsLoadingState();
 
     try {
-      const response = await apiFetch('/api/leaderboard/rewards');
+      const response = await apiFetch('/api/leaderboard/rewards', {
+        signal: this.abortController.signal,
+        cache: 'no-store',
+      });
       if (!response.ok) {
         throw new Error('Rewards leaderboard is unavailable.');
       }
@@ -681,8 +713,10 @@ export class MainMenuWebUi {
       '[data-home-rewards-state]',
       this.rewardsData.enabled
         ? 'Top 10 · current 30-minute round'
-        : 'Live scores · rewards arming',
+        : 'Live scores · payouts not enabled',
     );
+    const tiers = this.host.querySelector('[data-home-reward-tiers]');
+    if (tiers) tiers.innerHTML = this.rewardTiersMarkup(this.rewardsData.tiers);
     this.syncHomeRewardsCountdown();
   }
 
@@ -698,11 +732,9 @@ export class MainMenuWebUi {
     this.setText('[data-home-rewards-countdown]', 'ROUND UNAVAILABLE');
     rows
       .querySelector<HTMLButtonElement>('[data-home-rewards-retry]')
-      ?.addEventListener(
-        'click',
-        () => void this.loadHomeRewards(mountId),
-        { signal: this.abortController.signal },
-      );
+      ?.addEventListener('click', () => void this.loadHomeRewards(mountId), {
+        signal: this.abortController.signal,
+      });
   }
 
   private syncHomeRewardsCountdown(): void {
@@ -716,7 +748,8 @@ export class MainMenuWebUi {
     if (!Number.isFinite(target)) {
       output.textContent = this.rewardsLoading
         ? 'SYNCING ROUND'
-        : 'REWARDS ARMING';
+        : 'ROUND UNAVAILABLE';
+      this.setText('[data-home-round]', output.textContent);
       return;
     }
 
@@ -725,7 +758,23 @@ export class MainMenuWebUi {
       .toString()
       .padStart(2, '0');
     const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
-    output.textContent = `NEXT REWARD ${minutes}:${remainingSeconds}`;
+    output.textContent = `ROUND ENDS ${minutes}:${remainingSeconds}`;
+    const started = this.rewardsData?.intervalStartedAt;
+    const roundTime =
+      started && Number.isFinite(Date.parse(started))
+        ? new Date(started).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
+            hour12: false,
+          }) + ' UTC'
+        : 'CURRENT';
+    this.setText(
+      '[data-home-round]',
+      `${
+        this.rewardsData?.enabled ? 'PAYOUT ROUND' : 'SCORE ROUND'
+      } ${roundTime} · ${minutes}:${remainingSeconds}`,
+    );
   }
 
   private rewardRowsMarkup(
@@ -740,7 +789,14 @@ export class MainMenuWebUi {
       .slice(0, 10)
       .map((row) => {
         const reward = this.rewardForRank(row.rank, tiers);
-        return `<div class="main-menu-web__leaderboard-row main-menu-web__leaderboard-row--${Math.min(row.rank, 4)}"><strong>${row.rank}</strong><span>${this.escapeMarkup(row.displayName)}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em>${reward > 0 ? `${reward.toLocaleString()} BATC` : '—'}</em></div>`;
+        return `<div class="main-menu-web__leaderboard-row main-menu-web__leaderboard-row--${Math.min(
+          row.rank,
+          4,
+        )}"><strong>${row.rank}</strong><span>${this.escapeMarkup(
+          row.displayName,
+        )}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em>${
+          reward > 0 ? `${reward.toLocaleString()} BATC` : '—'
+        }</em></div>`;
       })
       .join('');
   }
@@ -749,7 +805,8 @@ export class MainMenuWebUi {
     return Array.from(
       { length: 6 },
       (_, index) =>
-        `<div class="main-menu-web__leaderboard-skeleton" aria-hidden="true"><i>${index + 1}</i><span></span><b></b><em></em></div>`,
+        `<div class="main-menu-web__leaderboard-skeleton" aria-hidden="true"><i>${index +
+          1}</i><span></span><b></b><em></em></div>`,
     ).join('');
   }
 
@@ -760,7 +817,14 @@ export class MainMenuWebUi {
           tier.fromRank === tier.toRank
             ? this.ordinal(tier.fromRank)
             : `${tier.fromRank}TH–${tier.toRank}TH`;
-        return `<article class="main-menu-web__reward-tier main-menu-web__reward-tier--${tier.fromRank}"><strong>${rank}</strong><span>${tier.amount.toLocaleString()} BATC${tier.fromRank === tier.toRank ? '' : ' EACH'}</span></article>`;
+        return `<article class="main-menu-web__reward-tier main-menu-web__reward-tier--${
+          tier.fromRank
+        }"><i class="main-menu-web__chest main-menu-web__chest--${Math.min(
+          tier.fromRank,
+          4,
+        )}" aria-hidden="true"></i><strong>${rank}</strong><span>${tier.amount.toLocaleString()} BATC${
+          tier.fromRank === tier.toRank ? '' : ' EACH'
+        }</span></article>`;
       })
       .join('');
   }
@@ -832,72 +896,6 @@ export class MainMenuWebUi {
     } catch {
       // Native notifications are optional; the menu remains fully usable.
     }
-  }
-
-  private ensureMobileGamepadQrElement(): void {
-    if (
-      this.mobileGamepadQrRequested ||
-      this.mobileGamepadQrElement !== null ||
-      isPlaySolanaPsg1(
-        this.options.inputManager.getNativeAndroidGamepad().getDeviceProfile(),
-      )
-    ) {
-      return;
-    }
-
-    this.mobileGamepadQrRequested = true;
-    this.options.inputManager
-      .getMobileGamepadHost()
-      .createQrElement()
-      .then((element) => {
-        this.mobileGamepadQrRequested = false;
-        if (
-          !this.active ||
-          isPlaySolanaPsg1(
-            this.options.inputManager
-              .getNativeAndroidGamepad()
-              .getDeviceProfile(),
-          )
-        ) {
-          return;
-        }
-
-        this.removeMobileGamepadQrElement();
-        this.mobileGamepadQrElement = element;
-        document.body.appendChild(element);
-        this.updateMobileGamepadQrVisibility();
-      })
-      .catch((error) => {
-        this.mobileGamepadQrRequested = false;
-        console.error(error);
-      });
-  }
-
-  private updateMobileGamepadQrVisibility(): void {
-    if (
-      isPlaySolanaPsg1(
-        this.options.inputManager.getNativeAndroidGamepad().getDeviceProfile(),
-      )
-    ) {
-      this.removeMobileGamepadQrElement();
-      this.mobileGamepadQrRequested = false;
-      return;
-    }
-
-    if (this.mobileGamepadQrElement === null) return;
-
-    const gamepad = this.options.inputManager
-      .getMobileGamepadHost()
-      .getGamepad(0);
-    const isConnected = gamepad !== null && gamepad.connected === true;
-    this.mobileGamepadQrElement.classList.toggle('hidden', isConnected);
-  }
-
-  private removeMobileGamepadQrElement(): void {
-    document
-      .querySelectorAll('.mobile-gamepad-qr')
-      .forEach((element) => element.remove());
-    this.mobileGamepadQrElement = null;
   }
 
   private getSafePlayerName(): string {

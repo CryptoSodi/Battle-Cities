@@ -1,7 +1,7 @@
 import * as config from '../config';
 import { SceneNavigator } from '../core';
 import { AudioManager, GameStorage } from '../game';
-import { InputManager, MenuInputContext } from '../input';
+import { InputManager, isPlaySolanaPsg1, MenuInputContext } from '../input';
 import {
   NativeNotificationClient,
   NativeNotificationSettings,
@@ -18,6 +18,8 @@ export class SettingsWebUi {
   private lastFocusKey = 'mute';
   private notificationSettings: NativeNotificationSettings = null;
   private status = '';
+  private pairingRequest: Promise<HTMLElement> = null;
+  private renderId = 0;
 
   public constructor(
     private readonly navigator: SceneNavigator,
@@ -66,6 +68,7 @@ export class SettingsWebUi {
       this.host.querySelector<HTMLButtonElement>('[data-ui-back]')?.click();
   }
   private render(): void {
+    const renderId = ++this.renderId;
     const rows = [
       ['mute', 'MUTE', this.audio.isGlobalMuted()],
       [
@@ -89,12 +92,17 @@ export class SettingsWebUi {
             enabled ? 'ON' : 'OFF'
           }</span><i></i></button></article>`,
       )
-      .join('')}</section><p class="settings-web__status">${
+      .join('')}${
+      this.supportsPhonePairing()
+        ? '<section class="settings-web__pairing"><h2>PHONE CONTROLLER</h2><p>Scan with your phone to use it as a controller for this game.</p><div data-settings-pairing role="status">Preparing pairing code…</div><button type="button" data-setting="pairing" class="settings-web__pairing-retry" hidden>RETRY PAIRING</button></section>'
+        : ''
+    }</section><p class="settings-web__status">${
       this.status
     }</p><small>VERSION ${
       process.env.BATTLECITY_VERSION
     }</small></section></main>`;
     this.bind();
+    if (this.supportsPhonePairing()) void this.loadPairing(renderId);
     (
       this.host.querySelector<HTMLButtonElement>(
         `[data-setting="${this.lastFocusKey}"]`,
@@ -147,6 +155,10 @@ export class SettingsWebUi {
       );
   }
   private toggle(key: string): void {
+    if (key === 'pairing') {
+      this.pairingRequest = null;
+      this.render();
+    }
     if (key === 'mute') {
       this.audio.setGlobalMuted(!this.audio.isGlobalMuted());
       this.audio.saveSettings();
@@ -169,6 +181,34 @@ export class SettingsWebUi {
     this.buttons
       .find((button) => button.dataset.setting === key)
       ?.focus({ preventScroll: true });
+  }
+  private supportsPhonePairing(): boolean {
+    return !isPlaySolanaPsg1(
+      this.input.getNativeAndroidGamepad().getDeviceProfile(),
+    );
+  }
+  private async loadPairing(renderId: number): Promise<void> {
+    try {
+      if (!this.pairingRequest)
+        this.pairingRequest = this.input
+          .getMobileGamepadHost()
+          .createQrElement();
+      const element = await this.pairingRequest;
+      if (!this.active || this.renderId !== renderId) return;
+      this.host
+        .querySelector('[data-settings-pairing]')
+        ?.replaceChildren(element);
+    } catch {
+      if (!this.active || this.renderId !== renderId) return;
+      const target = this.host.querySelector('[data-settings-pairing]');
+      if (target)
+        target.textContent =
+          'Pairing unavailable. Check your connection and retry.';
+      const retry = this.host.querySelector<HTMLButtonElement>(
+        '[data-setting="pairing"]',
+      );
+      if (retry) retry.hidden = false;
+    }
   }
   private async loadNotifications(): Promise<void> {
     try {
@@ -208,6 +248,9 @@ export class SettingsWebUi {
       : null;
   }
   private move(x: number, y: number): void {
-    moveFocus(this.buttons, this.focused() || this.buttons[0], x, y);
+    const visible = this.buttons.filter(
+      (button) => !button.hidden && !button.disabled,
+    );
+    moveFocus(visible, this.focused() || visible[0], x, y);
   }
 }

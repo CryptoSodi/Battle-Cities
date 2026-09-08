@@ -5,10 +5,10 @@
   --bc-line: #3a4952;
   --bc-text: #f5f2e8;
   --bc-muted: #a3adb0;
---bc-command: #ffb30f;
---bc-command-dim: #a96a05;
---bc-command-surface: #201d08;
---bc-active-ink: #1b1404;
+  --bc-command: #ffb30f;
+  --bc-command-dim: #a96a05;
+  --bc-command-surface: #201d08;
+  --bc-active-ink: #1b1404;
   --bc-blue: #1677ff;
   --bc-blue-glow: rgb(112 183 255 / 38%);
   --bc-ember: #ff6a1a;
@@ -58,8 +58,7 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web::before {
-  background:
-    radial-gradient(
+  background: radial-gradient(
       ellipse 68% 52% at 8% 14%,
       var(--bc-blue-glow),
       transparent 72%
@@ -82,8 +81,7 @@ body.game-running.web-ui-active .web-ui {
 }
 
 .main-menu-web::after {
-  background-image:
-    linear-gradient(var(--bc-line) 1px, transparent 1px),
+  background-image: linear-gradient(var(--bc-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--bc-line) 1px, transparent 1px);
   background-size: 42px 42px;
   content: '';
@@ -333,8 +331,8 @@ body.game-running.web-ui-active .web-ui {
   color: var(--bc-text);
   display: inline-flex;
   flex: none;
-  font: 700 clamp(8px, 1.1dvh, 11px) / 1 'Battle Cities UI',
-    'Arial Narrow', 'Segoe UI', Arial, sans-serif;
+  font: 700 clamp(8px, 1.1dvh, 11px) / 1 'Battle Cities UI', 'Arial Narrow',
+    'Segoe UI', Arial, sans-serif;
   gap: 8px;
   letter-spacing: 0.08em;
   padding: 0 clamp(14px, 2vw, 26px);
@@ -640,7 +638,6 @@ body.game-running.web-ui-active .web-ui {
     padding-top: 0;
     padding-top: env(safe-area-inset-top);
   }
-
 }
 
 @media (max-width: 760px) {
@@ -685,762 +682,668 @@ body.game-running.web-ui-active .web-ui {
   }
 }
 
-@media (min-width: 1000px) and (min-height: 640px) {
-  .main-menu-web {
-    padding-inline: clamp(20px, 2vw, 36px);
-  }
-
-  .main-menu-web__hud {
-    margin-left: clamp(8px, 2vw, 28px);
-    margin-right: auto;
-    width: min(560px, 42vw);
-  }
-
-  .main-menu-web__events {
-    margin-left: clamp(8px, 2vw, 28px);
-    margin-right: auto;
-    width: min(520px, 40vw);
-  }
-
-  .main-menu-web__content {
-    align-items: stretch;
-    display: grid;
-    gap: clamp(18px, 2vw, 32px);
-    grid-template-columns: minmax(270px, 22vw) minmax(0, 1fr);
-    margin: 0 auto;
-    max-width: 1480px;
-    padding-block: clamp(14px, 2dvh, 24px);
-    width: 100%;
-  }
-
-  .main-menu-web__commands {
-    align-content: center;
-    margin: 0;
-    width: 100%;
-  }
-
-  .main-menu-web__overview {
-    display: grid;
-    gap: clamp(14px, 1.5vw, 22px);
-    grid-template-columns: minmax(0, 1.42fr) minmax(320px, 0.9fr);
-    grid-template-rows: minmax(180px, 0.9fr) minmax(190px, 0.8fr);
-    min-height: 0;
-  }
-
-  .main-menu-web__overview-banner {
-    border: 1px solid var(--bc-command-dim);
-    box-shadow: inset 0 0 0 3px rgb(0 0 0 / 42%), 0 0 20px rgb(255 179 15 / 12%);
-    grid-row: 1 / -1;
-    height: 100%;
-    image-rendering: pixelated;
-    min-height: 0;
-    object-fit: cover;
-    width: 100%;
-  }
-
-  .main-menu-web__overview-grid {
-    contents: initial;
-    display: contents;
-  }
-
-  .main-menu-web__reward-briefing,
-  .main-menu-web__leaderboard-preview {
-    background: linear-gradient(135deg, rgb(13 25 35 / 96%), rgb(6 11 16 / 96%));
-    border: 1px solid #28516d;
-    box-shadow: inset 0 0 0 2px rgb(0 0 0 / 42%);
-    display: grid;
-    min-height: 0;
-    padding: clamp(14px, 1.4vw, 22px);
-  }
-
-  .main-menu-web__reward-briefing header,
-  .main-menu-web__leaderboard-preview header {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-  }
-
-  .main-menu-web__reward-briefing header > span,
-  .main-menu-web__leaderboard-preview header > span {
-    align-items: center;
-    background: var(--bc-command-surface);
-    border: 1px solid var(--bc-command);
-    color: var(--bc-command);
-    display: inline-flex;
-    font-size: 25px;
-    height: 42px;
-    justify-content: center;
-    width: 42px;
-  }
-
-  .main-menu-web__reward-briefing h2,
-  .main-menu-web__leaderboard-preview h2 {
-    color: var(--bc-command);
-    font: 700 clamp(19px, 1.8vw, 28px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-    letter-spacing: 0.05em;
-    margin: 0;
-    text-transform: uppercase;
-  }
-
-  .main-menu-web__reward-briefing p,
-  .main-menu-web__leaderboard-preview p {
-    color: #8ac5ff;
-    font: 700 clamp(11px, 1vw, 14px) / 1.25 'Battle Cities UI', 'Arial Narrow', sans-serif;
-    letter-spacing: 0.05em;
-    margin: 5px 0 0;
-    text-transform: uppercase;
-  }
-
-  .main-menu-web__reward-tiers {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin-top: clamp(10px, 1dvh, 16px);
-  }
-
-  .main-menu-web__reward-tiers div {
-    align-content: center;
-    background: rgb(3 9 14 / 80%);
-    border: 1px solid var(--bc-line);
-    min-width: 0;
-    padding: 8px;
-    text-align: center;
-  }
-
-  .main-menu-web__reward-tiers strong,
-  .main-menu-web__reward-tiers span {
-    display: block;
-    font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
-    text-transform: uppercase;
-  }
-
-  .main-menu-web__reward-tiers strong {
-    color: var(--bc-text);
-    font-size: clamp(13px, 1.1vw, 17px);
-  }
-
-  .main-menu-web__reward-tiers span {
-    color: var(--bc-command);
-    font-size: clamp(10px, 0.9vw, 13px);
-    margin-top: 5px;
-  }
-
-  .main-menu-web__leaderboard-preview {
-    grid-column: 2;
-  }
-
-  .main-menu-web__leaderboard-empty {
-    align-content: center;
-    background: rgb(3 9 14 / 76%);
-    border-block: 1px solid var(--bc-line);
-    display: grid;
-    gap: 8px;
-    margin: 12px 0;
-    padding: 12px 0;
-  }
-
-  .main-menu-web__leaderboard-empty strong {
-    color: var(--bc-command);
-    font: 700 clamp(15px, 1.25vw, 19px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-    letter-spacing: 0.06em;
-  }
-
-  .main-menu-web__leaderboard-empty span {
-    color: var(--bc-muted);
-    font-size: clamp(12px, 1vw, 14px);
-    line-height: 1.35;
-  }
-
-  .main-menu-web__overview-link {
-    align-items: center;
-    background: linear-gradient(90deg, #1b5e08, #0c3005);
-    border: 1px solid var(--bc-ready);
-    color: var(--bc-text);
-    cursor: pointer;
-    display: flex;
-    font: 700 clamp(13px, 1.15vw, 16px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-    justify-content: space-between;
-    letter-spacing: 0.05em;
-    margin-top: auto;
-    min-height: 42px;
-    padding: 0 13px;
-    text-align: left;
-    text-transform: uppercase;
-  }
-
-  .main-menu-web__overview-link:hover,
-  .main-menu-web__overview-link:focus-visible,
-  .main-menu-web__overview-link.is-selected {
-    background: linear-gradient(90deg, #277f0e, #124c09);
-    outline: 3px solid var(--bc-command);
-    outline-offset: 2px;
-  }
-
-  .main-menu-web__overview-link span {
-    color: var(--bc-command);
-    font-size: 1.55em;
-    line-height: 0;
-  }
+/* One responsive home contract for web, Android and PSG1. Only the central
+   content scrolls; the HUD and live status rail remain available. */
+.main-menu-web,
+.main-menu-web * {
+  box-sizing: border-box;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .main-menu-web__action {
-    transition: none;
-  }
-
-  .web-ui-screen--entering,
-  .web-ui-screen--leaving,
-  .web-ui-screen--returning {
-    animation: none;
-  }
-
-  .main-menu-web__bottom-tank-scroller {
-    transform: translateX(22vw);
-  }
-}
-
-/* Command-center home. The supplied battlefield banner and live reward board
-   belong to the main menu; the existing ranking screen remains unchanged. */
 .main-menu-web {
+  --home-gap: clamp(8px, 1vw, 18px);
   grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right)) 0
+    max(8px, env(safe-area-inset-left));
+  height: 100dvh;
+  overflow: hidden;
 }
-
+.main-menu-web__hud {
+  margin: 0 auto;
+  width: min(860px, 100%);
+  max-height: 146px;
+}
+.main-menu-web__content {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.9fr) minmax(0, 4.1fr);
+  align-items: start;
+  gap: var(--home-gap);
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 4px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bc-command-dim) var(--bc-bg);
+}
+.main-menu-web__commands {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+}
+.main-menu-web__commands .main-menu-web__action {
+  height: auto;
+  min-height: 52px;
+  aspect-ratio: 4.1;
+  font-size: clamp(13px, 1.2vw, 20px);
+  letter-spacing: 0.04em;
+  padding-left: 29%;
+  padding-right: 8%;
+}
+.main-menu-web__action-image {
+  object-fit: fill;
+}
+.main-menu-web__action:focus-visible {
+  outline: none;
+  filter: drop-shadow(0 0 5px var(--bc-command-dim));
+}
 .main-menu-web__overview {
   display: grid;
-  min-height: 0;
+  grid-template-columns: minmax(0, 1.6fr) minmax(310px, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: var(--home-gap);
+  min-width: 0;
 }
-
-.main-menu-web__panel-icon {
-  align-items: center;
-  background: var(--bc-command-surface);
-  border: 1px solid var(--bc-command);
-  color: var(--bc-command);
-  display: inline-flex;
-  flex: 0 0 42px;
-  font-size: 24px;
-  height: 42px;
-  justify-content: center;
-  width: 42px;
+.main-menu-web__overview-banner {
+  display: block;
+  grid-area: 1 / 1;
+  height: auto;
+  max-height: none;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  object-fit: contain;
+  border: 2px solid var(--bc-line);
+  padding: 4px;
+  background: var(--bc-bg);
+  box-shadow: 0 0 0 1px #050708, inset 0 2px #61727b;
 }
-
+.main-menu-web__reward-briefing,
+.main-menu-web__leaderboard-preview {
+  background: linear-gradient(145deg, #101e29, #080e13 60%);
+  border: 2px solid var(--bc-line);
+  box-shadow: inset 0 0 0 3px #06090b, inset 0 5px #456173;
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+  min-width: 0;
+}
+.main-menu-web__reward-briefing {
+  display: grid;
+  grid-area: 2 / 1;
+  gap: 16px;
+  padding: clamp(12px, 1.3vw, 22px);
+}
 .main-menu-web__reward-header,
 .main-menu-web__leaderboard-header {
-  align-items: center;
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
-
+.main-menu-web__panel-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
 .main-menu-web__reward-header h2,
 .main-menu-web__leaderboard-header h2,
 .main-menu-web__how-it-works h3 {
   color: var(--bc-command);
-  font-family: 'Battle Cities UI', 'Arial Narrow', 'Segoe UI', sans-serif;
-  letter-spacing: 0.05em;
-  margin: 0;
+  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
   text-transform: uppercase;
+  margin: 0;
+  letter-spacing: 0.035em;
+  line-height: 1.15;
 }
-
 .main-menu-web__reward-header h2,
 .main-menu-web__leaderboard-header h2 {
-  font-size: clamp(18px, 1.7vw, 26px);
-  line-height: 1;
+  font-size: clamp(18px, 1.6vw, 26px);
 }
-
 .main-menu-web__reward-header p,
 .main-menu-web__leaderboard-header p {
   color: #9ccfff;
-  font: 700 12px/1.2 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  letter-spacing: 0.06em;
-  margin: 5px 0 0;
+  font: 700 12px/1.35 'Battle Cities UI', sans-serif;
+  margin: 4px 0 0;
   text-transform: uppercase;
 }
-
 .main-menu-web__reward-countdown {
-  color: var(--bc-command);
-  font: 700 clamp(12px, 1.15vw, 17px) / 1 'Battle Cities UI',
-    'Arial Narrow', sans-serif;
-  font-variant-numeric: tabular-nums;
   margin-left: auto;
-  text-align: right;
-}
-
-.main-menu-web__reward-tier {
-  align-content: center;
-  background: linear-gradient(180deg, rgb(255 179 15 / 10%), transparent 62%),
-    #091016;
-  border: 1px solid var(--bc-line);
-  display: grid;
-  min-width: 0;
-  padding: 10px 8px;
+  padding: 10px;
+  border: 1px solid #3e6176;
+  color: var(--bc-command);
+  font: 700 14px/1.4 'Share Tech Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  max-width: 142px;
   text-align: center;
 }
-
+.main-menu-web__reward-tiers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+.main-menu-web__reward-tier {
+  display: grid;
+  align-content: end;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 4px 12px;
+  border: 1px solid #3d596c;
+  background: linear-gradient(0deg, #10202b, #080e13);
+  text-align: center;
+}
 .main-menu-web__reward-tier--1 {
+  order: 1;
   border-color: var(--bc-command);
-  box-shadow: inset 0 0 18px rgb(255 179 15 / 14%);
+  background: linear-gradient(0deg, #342705, #080e13);
+  padding-top: 22px;
+  box-shadow: inset 0 0 18px rgb(255 179 15 / 12%);
 }
-
-.main-menu-web__reward-tier strong,
-.main-menu-web__reward-tier span {
+.main-menu-web__reward-tier--2 {
+  order: 0;
+}
+.main-menu-web__reward-tier--3 {
+  order: 2;
+  border-color: #a76538;
+}
+.main-menu-web__reward-tier--4 {
+  order: 3;
+}
+.main-menu-web__chest {
   display: block;
-  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  text-transform: uppercase;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 168px;
+  background: url('/assets/home-reward-chests.png') 0 center / 400% 100%
+    no-repeat;
+  image-rendering: pixelated;
 }
-
+.main-menu-web__chest--2 {
+  background-position-x: 33.3333%;
+}
+.main-menu-web__chest--3 {
+  background-position-x: 66.6667%;
+}
+.main-menu-web__chest--4 {
+  background-position-x: 100%;
+}
 .main-menu-web__reward-tier strong {
   color: var(--bc-text);
-  font-size: clamp(14px, 1.2vw, 18px);
+  font: 700 19px/1 'Battle Cities UI', sans-serif;
 }
-
 .main-menu-web__reward-tier span {
   color: var(--bc-command);
-  font-size: clamp(10px, 0.85vw, 13px);
-  margin-top: 6px;
+  font: 700 13px/1.3 'Battle Cities UI', sans-serif;
 }
-
 .main-menu-web__how-it-works {
-  border: 1px solid var(--bc-line);
-  margin-top: 12px;
-  padding: 12px;
+  border-top: 1px solid var(--bc-line);
+  padding-top: 12px;
 }
-
 .main-menu-web__how-it-works h3 {
   font-size: 15px;
 }
-
 .main-menu-web__how-it-works ol {
   display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  list-style: none;
-  margin: 10px 0 0;
   padding: 0;
+  margin: 12px 0 0;
+  list-style: none;
 }
-
 .main-menu-web__how-it-works li {
+  display: flex;
+  gap: 8px;
   align-items: center;
   color: #b7d8fb;
-  display: flex;
-  font: 700 11px/1.3 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  gap: 8px;
+  font: 12px/1.4 'Battle Cities UI', sans-serif;
 }
-
 .main-menu-web__how-it-works b {
-  align-items: center;
-  border: 2px solid var(--bc-command);
-  border-radius: 50%;
-  color: var(--bc-command);
-  display: inline-flex;
-  flex: 0 0 28px;
-  font-size: 14px;
-  height: 28px;
-  justify-content: center;
-}
-
-.main-menu-web__leaderboard-preview {
-  background: linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 25%),
-    #080d10;
-  border: 1px solid #28516d;
-  box-shadow: inset 0 0 0 1px #050708;
   display: grid;
-  grid-template-rows: auto 32px minmax(0, 1fr) auto;
-  min-height: 0;
+  place-items: center;
+  flex: 0 0 28px;
+  height: 28px;
+  border: 1px solid var(--bc-command-dim);
+  color: var(--bc-command);
+  font-size: 16px;
+}
+.main-menu-web__leaderboard-preview {
+  display: grid;
+  grid-area: 1 / 2 / 3 / 3;
+  grid-template-rows: auto 32px minmax(260px, 1fr) auto;
+  align-self: stretch;
   overflow: hidden;
 }
-
 .main-menu-web__leaderboard-header {
+  padding: 16px 12px;
   border-bottom: 1px solid var(--bc-line);
-  padding: 12px;
 }
-
 .main-menu-web__leaderboard-columns,
 .main-menu-web__leaderboard-row,
 .main-menu-web__leaderboard-skeleton {
-  align-items: center;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) minmax(58px, 0.55fr)
-    minmax(76px, 0.76fr);
-  padding-inline: 10px;
+  grid-template-columns: 28px minmax(0, 1fr) 62px 76px;
+  gap: 5px;
+  padding: 0 10px;
+  align-items: center;
 }
-
 .main-menu-web__leaderboard-columns {
-  background: var(--bc-panel-raised);
-  border-bottom: 1px solid var(--bc-line);
+  background: #16232c;
   color: var(--bc-muted);
-  font: 700 10px/1 'Battle Cities UI', 'Arial Narrow', sans-serif;
-  letter-spacing: 0.06em;
+  font: 11px/1 'Battle Cities UI', sans-serif;
   text-transform: uppercase;
 }
-
 .main-menu-web__leaderboard-columns span:nth-child(n + 3) {
   text-align: right;
 }
-
 .main-menu-web__leaderboard-rows {
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #536775 #080e13;
 }
-
 .main-menu-web__leaderboard-row {
-  border-bottom: 1px solid rgb(58 73 82 / 68%);
+  min-height: 46px;
   color: var(--bc-text);
-  font: 700 clamp(10px, 0.9vw, 13px) / 1 'Battle Cities UI',
-    'Arial Narrow', sans-serif;
-  min-height: 40px;
+  border-bottom: 1px solid #253b49;
+  font: 13px/1.25 'Battle Cities UI', sans-serif;
 }
-
 .main-menu-web__leaderboard-row > span {
-  overflow: hidden;
-  padding-right: 5px;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
+.main-menu-web__leaderboard-row > strong {
+  display: grid;
+  place-items: center;
+  color: #aed8f7;
+  background: #20394b;
+  height: 26px;
+  border: 1px solid #4a6c83;
+  clip-path: polygon(
+    5px 0,
+    calc(100% - 5px) 0,
+    100% 5px,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    5px 100%,
+    0 calc(100% - 5px),
+    0 5px
+  );
+}
 .main-menu-web__leaderboard-row > b,
 .main-menu-web__leaderboard-row > em {
-  color: #b7d8fb;
+  text-align: right;
   font-style: normal;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
-
 .main-menu-web__leaderboard-row > em {
   color: var(--bc-command);
 }
-
 .main-menu-web__leaderboard-row--1 {
-  background: linear-gradient(90deg, rgb(255 179 15 / 22%), transparent),
-    #181309;
-  border: 1px solid var(--bc-command);
-}
-
-.main-menu-web__leaderboard-row--1 > strong,
-.main-menu-web__leaderboard-row--1 > span {
+  background: linear-gradient(90deg, #433405, #1c1c0e);
+  box-shadow: inset 0 0 0 1px var(--bc-command);
   color: var(--bc-command);
 }
-
+.main-menu-web__leaderboard-row--1 > strong {
+  background: #725608;
+  color: #ffdf76;
+  border-color: var(--bc-command);
+}
+.main-menu-web__leaderboard-row--3 > strong {
+  background: #573623;
+  border-color: #a76538;
+  color: #ffc694;
+}
 .main-menu-web__leaderboard-skeleton {
-  gap: 7px;
-  min-height: 40px;
-}
-
-.main-menu-web__leaderboard-skeleton i {
+  min-height: 46px;
   color: var(--bc-muted);
-  font: 700 11px/1 'Battle Cities UI', sans-serif;
 }
-
-.main-menu-web__leaderboard-skeleton span,
-.main-menu-web__leaderboard-skeleton b,
-.main-menu-web__leaderboard-skeleton em {
-  animation: main-menu-web-skeleton-pulse 1.2s ease-in-out infinite alternate;
-  background: var(--bc-panel-raised);
-  display: block;
+.main-menu-web__leaderboard-skeleton :is(span, b, em) {
   height: 10px;
+  background: #1a2b36;
+  animation: main-menu-web-skeleton-pulse 1.2s ease-in-out infinite alternate;
 }
-
 @keyframes main-menu-web-skeleton-pulse {
   to {
-    opacity: 0.42;
+    opacity: 0.4;
   }
 }
-
 .main-menu-web__leaderboard-message {
-  align-content: center;
-  color: var(--bc-muted);
   display: grid;
-  gap: 8px;
-  height: 100%;
+  align-content: center;
   justify-items: center;
-  min-height: 132px;
-  padding: 20px;
+  gap: 10px;
+  min-height: 260px;
+  height: 100%;
+  padding: 24px;
   text-align: center;
+  color: var(--bc-muted);
 }
-
+.main-menu-web__leaderboard-message::before {
+  content: '';
+  display: block;
+  width: 92px;
+  height: 92px;
+  background: url('/data/graphics/shop/icons/token-bact.png') center / contain
+    no-repeat;
+  image-rendering: pixelated;
+  opacity: 0.75;
+  margin-bottom: 8px;
+}
 .main-menu-web__leaderboard-message strong {
   color: var(--bc-command);
-  font: 700 14px/1 'Battle Cities UI', sans-serif;
+  font: 700 16px/1.2 'Battle Cities UI', sans-serif;
 }
-
 .main-menu-web__leaderboard-message span {
-  font-size: 12px;
-  line-height: 1.4;
+  font: 13px/1.5 'Battle Cities UI', sans-serif;
+  max-width: 240px;
 }
-
 .main-menu-web__leaderboard-message button {
-  background: var(--bc-command-surface);
-  border: 1px solid var(--bc-command);
   color: var(--bc-text);
-  cursor: pointer;
-  font: 700 12px/1 'Battle Cities UI', sans-serif;
-  min-height: 40px;
-  padding: 0 18px;
-}
-
-.main-menu-web__leaderboard-message button:focus-visible {
-  outline: 3px solid var(--bc-command);
-  outline-offset: 2px;
-}
-
-.main-menu-web__leaderboard-footer {
-  align-items: center;
-  background: linear-gradient(90deg, rgb(255 179 15 / 13%), transparent 75%);
+  background: var(--bc-panel-raised);
   border: 1px solid var(--bc-command-dim);
+  padding: 10px 24px;
+  min-height: 44px;
+  cursor: pointer;
+  font: 700 14px 'Battle Cities UI', sans-serif;
+}
+.main-menu-web__leaderboard-message button:focus-visible {
+  outline: none;
+  border-color: var(--bc-command);
+  box-shadow: inset 0 0 0 2px var(--bc-command-dim);
+}
+.main-menu-web__leaderboard-footer {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
   margin: 10px;
-  padding: 8px;
+  border: 1px solid var(--bc-command-dim);
+  background: linear-gradient(90deg, #29230e, #091016);
 }
-
 .main-menu-web__leaderboard-footer img {
-  height: 52px;
-  image-rendering: pixelated;
-  object-fit: contain;
   width: 52px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
-
-.main-menu-web__leaderboard-footer strong,
-.main-menu-web__leaderboard-footer span {
-  display: block;
-  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
-}
-
 .main-menu-web__leaderboard-footer strong {
+  display: block;
   color: var(--bc-command);
-  font-size: 15px;
+  font: 700 18px/1.2 'Battle Cities UI', sans-serif;
   text-transform: uppercase;
 }
-
 .main-menu-web__leaderboard-footer span {
+  display: block;
   color: #b7d8fb;
-  font-size: 10px;
+  font: 12px/1.4 'Battle Cities UI', sans-serif;
   margin-top: 4px;
 }
-
-@media (min-width: 1000px) and (min-height: 640px) {
-  .main-menu-web {
-    padding-inline: clamp(12px, 1.25vw, 24px);
-  }
-
+.main-menu-web__hazard {
+  height: auto;
+  min-height: 44px;
+  max-height: none;
+  padding: 7px 12px max(7px, env(safe-area-inset-bottom));
+  margin-top: 0;
+}
+.main-menu-web__hazard-track {
+  animation: none;
+  transform: none;
+  will-change: auto;
+  width: 100%;
+  height: auto;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+}
+.main-menu-web__hazard-track span {
+  white-space: normal;
+  flex: initial;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 0;
+  gap: 8px;
+}
+.main-menu-web__hazard-track [hidden] {
+  display: none;
+}
+.main-menu-web__hazard-track b {
+  color: var(--bc-command);
+}
+.main-menu-web__live-event {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--bc-text);
+  font: 700 12px/1.4 'Battle Cities UI', sans-serif;
+}
+.main-menu-web__live-event:focus-visible {
+  outline: none;
+  box-shadow: 0 2px var(--bc-command);
+}
+.main-menu-web__bottom-tank-scroller {
+  display: none;
+}
+.main-menu-web-active .game-cherry {
+  bottom: 58px;
+}
+.main-menu-web__action[data-menu-action='leaderboard']::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  top: 18%;
+  width: 23%;
+  height: 64%;
+  background: #0b1013 url('/assets/home-reward-trophy.png') center / contain
+    no-repeat;
+  image-rendering: pixelated;
+}
+@media (min-width: 1100px) {
   .main-menu-web__hud {
-    margin-inline: auto;
-    max-height: 138px;
-    width: min(680px, calc(100vw - 40px));
+    max-height: 118px;
+    width: min(760px, 100%);
   }
-
-  .main-menu-web__content {
-    align-items: stretch;
-    display: grid;
-    gap: clamp(12px, 1.25vw, 20px);
-    grid-template-columns: minmax(240px, 19vw) minmax(0, 1fr);
-    margin-inline: auto;
-    max-width: 1480px;
-    overflow: hidden;
-    padding-block: clamp(8px, 1.2dvh, 14px);
-    width: 100%;
-  }
-
-  .main-menu-web__commands {
-    align-content: center;
-    gap: clamp(4px, 0.55dvh, 7px);
-    margin: 0;
-    width: 100%;
-  }
-
-  .main-menu-web__commands .main-menu-web__action {
-    min-height: clamp(48px, 5.6dvh, 60px);
-  }
-
-  .main-menu-web__overview {
-    display: grid;
-    gap: clamp(10px, 1vw, 16px);
-    grid-template-columns: minmax(0, 1.5fr) minmax(350px, 0.9fr);
-    grid-template-rows: minmax(190px, 0.82fr) minmax(250px, 1.18fr);
-  }
-
   .main-menu-web__overview-banner {
-    grid-column: 1;
-    grid-row: 1;
-    height: 100%;
-    min-height: 0;
-    object-fit: cover;
-    width: 100%;
+    max-height: 31dvh;
   }
-
-  .main-menu-web__events {
-    display: none;
-  }
-
-  .main-menu-web__reward-briefing {
-    grid-column: 1;
-    grid-row: 2;
-    padding: clamp(14px, 1.1vw, 18px);
-  }
-
-  .main-menu-web__leaderboard-preview {
-    grid-column: 2;
-    grid-row: 1 / -1;
-  }
-
-  .main-menu-web__reward-tiers {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .main-menu-web__chest {
+    width: min(100%, 84px);
+    max-height: none;
+    margin-inline: auto;
   }
 }
 
-@media (max-width: 999px) {
-  body.game-running.web-ui-active {
-    overflow-y: auto;
+@media (max-width: 1099px) {
+  .main-menu-web__hud {
+    width: min(700px, 100%);
+    max-height: 122px;
   }
-
-  .main-menu-web {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-
   .main-menu-web__content {
-    align-items: start;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(112px, 31%) minmax(0, 69%);
-    overflow: visible;
-    padding-block: 8px;
+    grid-template-columns: minmax(140px, 0.85fr) minmax(0, 2fr);
+    max-width: 900px;
+    gap: 10px;
   }
-
   .main-menu-web__overview {
     display: contents;
   }
-
   .main-menu-web__overview-banner {
-    border: 1px solid var(--bc-command-dim);
-    grid-column: 1 / -1;
-    grid-row: 1;
-    max-height: 240px;
-    object-fit: cover;
-    width: 100%;
+    grid-area: 1 / 1 / 2 / -1;
   }
-
-  .main-menu-web__events {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin: 0;
-    max-width: none;
-    width: 100%;
-  }
-
   .main-menu-web__commands {
-    gap: 4px;
-    grid-column: 1;
-    grid-row: 3;
-    margin: 0;
-    width: 100%;
+    grid-area: 2 / 1;
+    gap: 8px;
   }
-
   .main-menu-web__commands .main-menu-web__action {
-    font-size: clamp(10px, 2.4vw, 15px);
-    min-height: clamp(44px, 6.4dvh, 58px);
-    padding-left: 31%;
-    padding-right: 8%;
+    min-height: 48px;
+    font-size: clamp(11px, 2vw, 17px);
+    aspect-ratio: 3.7;
   }
-
-  .main-menu-web__reward-briefing {
-    display: none;
-  }
-
   .main-menu-web__leaderboard-preview {
-    grid-column: 2;
-    grid-row: 3;
+    grid-area: 2 / 2;
     min-height: 100%;
   }
-
+  .main-menu-web__reward-briefing {
+    grid-area: 3 / 1 / 4 / -1;
+  }
+  .main-menu-web__chest {
+    max-height: 140px;
+  }
   .main-menu-web__leaderboard-header {
-    padding: 8px;
+    padding: 12px 8px;
+    gap: 6px;
   }
-
-  .main-menu-web__panel-icon {
-    flex-basis: 34px;
-    font-size: 18px;
-    height: 34px;
-    width: 34px;
-  }
-
   .main-menu-web__leaderboard-header h2 {
-    font-size: clamp(12px, 3vw, 17px);
+    font-size: 18px;
   }
-
   .main-menu-web__leaderboard-header p {
-    font-size: clamp(8px, 1.9vw, 11px);
+    font-size: 11px;
   }
-
+  .main-menu-web__panel-icon {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+  }
   .main-menu-web__leaderboard-columns,
   .main-menu-web__leaderboard-row,
   .main-menu-web__leaderboard-skeleton {
-    grid-template-columns: 26px minmax(0, 1fr) minmax(48px, 0.55fr)
-      minmax(58px, 0.72fr);
+    grid-template-columns: 23px minmax(0, 1fr) 49px 66px;
+    gap: 3px;
     padding-inline: 6px;
   }
-
-  .main-menu-web__leaderboard-columns {
-    font-size: clamp(7px, 1.6vw, 9px);
-  }
-
   .main-menu-web__leaderboard-row {
-    font-size: clamp(8px, 1.9vw, 11px);
-    min-height: 36px;
+    font-size: 12px;
   }
-
-  .main-menu-web__leaderboard-footer {
-    margin: 6px;
+}
+@media (max-width: 479px) {
+  .main-menu-web__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .main-menu-web__commands {
+    grid-area: 2 / 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .main-menu-web__commands .main-menu-web__action {
+    font-size: 12px;
+    min-height: 46px;
+  }
+  .main-menu-web__leaderboard-preview {
+    grid-area: 3 / 1;
+    min-height: 440px;
+  }
+  .main-menu-web__reward-briefing {
+    grid-area: 4 / 1;
+  }
+  .main-menu-web__reward-header {
+    flex-wrap: wrap;
+  }
+  .main-menu-web__reward-countdown {
+    max-width: none;
     padding: 6px;
   }
-
-  .main-menu-web__leaderboard-footer img {
-    height: 40px;
-    width: 40px;
+  .main-menu-web__reward-tier strong {
+    font-size: 16px;
   }
-
-  .main-menu-web__leaderboard-footer strong {
-    font-size: clamp(11px, 2.5vw, 14px);
+  .main-menu-web__reward-tier span {
+    font-size: 11px;
   }
-
-  .main-menu-web__leaderboard-footer span {
-    font-size: clamp(8px, 1.8vw, 10px);
+  .main-menu-web__how-it-works ol {
+    grid-template-columns: 1fr;
   }
-
-  .main-menu-web__hazard {
-    margin-top: 8px;
+  .main-menu-web__hazard-track {
+    justify-content: flex-start;
+    gap: 4px 10px;
+  }
+  .main-menu-web__hazard-track span {
+    font-size: 10px;
   }
 }
-
-@media (max-width: 480px) {
-  .main-menu-web {
-    padding-inline: 5px;
-  }
-
+@media (min-width: 860px) and (max-width: 1099px) and (orientation: landscape) {
   .main-menu-web__hud {
-    width: 100%;
+    width: min(560px, 100%);
+    max-height: 94px;
   }
-
   .main-menu-web__content {
-    grid-template-columns: minmax(104px, 32%) minmax(0, 68%);
+    max-width: none;
+    grid-template-columns: 170px minmax(0, 1fr);
   }
-
-  .main-menu-web__leaderboard-columns,
-  .main-menu-web__leaderboard-row,
-  .main-menu-web__leaderboard-skeleton {
-    grid-template-columns: 22px minmax(0, 1fr) 48px 54px;
-    padding-inline: 4px;
+  .main-menu-web__commands {
+    grid-area: 1 / 1;
+    gap: 4px;
   }
-
-  .main-menu-web__leaderboard-row > em {
-    font-size: 7px;
+  .main-menu-web__commands .main-menu-web__action {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .main-menu-web__overview {
+    display: grid;
+    grid-area: 1 / 2;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+  }
+  .main-menu-web__overview-banner {
+    grid-area: 1 / 1;
+    max-height: 30dvh;
+  }
+  .main-menu-web__reward-briefing {
+    grid-area: 2 / 1;
+    gap: 10px;
+    padding: 10px;
+  }
+  .main-menu-web__reward-header {
+    flex-wrap: wrap;
+  }
+  .main-menu-web__reward-countdown {
+    max-width: none;
+    padding: 4px;
+    font-size: 12px;
+  }
+  .main-menu-web__chest {
+    width: min(100%, 60px);
+    margin-inline: auto;
+    max-height: none;
+  }
+  .main-menu-web__reward-tier {
+    padding-inline: 2px;
+  }
+  .main-menu-web__reward-tier span {
+    font-size: 10px;
+  }
+  .main-menu-web__reward-tier strong {
+    font-size: 15px;
+  }
+  .main-menu-web__how-it-works ol {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .main-menu-web__leaderboard-preview {
+    grid-area: 1 / 2 / 3 / 3;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .main-menu-web__leaderboard-skeleton span,
-  .main-menu-web__leaderboard-skeleton b,
-  .main-menu-web__leaderboard-skeleton em {
-    animation: none;
+  .main-menu-web *,
+  .web-ui-screen--entering,
+  .web-ui-screen--leaving,
+  .web-ui-screen--returning {
+    animation: none !important;
+    transition: none !important;
   }
 }
