@@ -413,6 +413,13 @@ body.game-running.web-ui-active .web-ui {
   width: min(320px, calc(100vw - 32px));
 }
 
+/* The compact command stack remains the primary layout for phones and the
+   handheld.  Wide displays get a command-center view so the home screen does
+   not become a mostly-empty background around a single narrow rail. */
+.main-menu-web__overview {
+  display: none;
+}
+
 .main-menu-web__action {
   align-items: center;
   background: var(--bc-panel-raised);
@@ -675,6 +682,204 @@ body.game-running.web-ui-active .web-ui {
 @media (max-width: 420px) {
   .main-menu-web__dialog-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1000px) and (min-height: 640px) {
+  .main-menu-web {
+    padding-inline: clamp(20px, 2vw, 36px);
+  }
+
+  .main-menu-web__hud {
+    margin-left: clamp(8px, 2vw, 28px);
+    margin-right: auto;
+    width: min(560px, 42vw);
+  }
+
+  .main-menu-web__events {
+    margin-left: clamp(8px, 2vw, 28px);
+    margin-right: auto;
+    width: min(520px, 40vw);
+  }
+
+  .main-menu-web__content {
+    align-items: stretch;
+    display: grid;
+    gap: clamp(18px, 2vw, 32px);
+    grid-template-columns: minmax(270px, 22vw) minmax(0, 1fr);
+    margin: 0 auto;
+    max-width: 1480px;
+    padding-block: clamp(14px, 2dvh, 24px);
+    width: 100%;
+  }
+
+  .main-menu-web__commands {
+    align-content: center;
+    margin: 0;
+    width: 100%;
+  }
+
+  .main-menu-web__overview {
+    display: grid;
+    gap: clamp(14px, 1.5vw, 22px);
+    grid-template-columns: minmax(0, 1.42fr) minmax(320px, 0.9fr);
+    grid-template-rows: minmax(180px, 0.9fr) minmax(190px, 0.8fr);
+    min-height: 0;
+  }
+
+  .main-menu-web__overview-banner {
+    border: 1px solid var(--bc-command-dim);
+    box-shadow: inset 0 0 0 3px rgb(0 0 0 / 42%), 0 0 20px rgb(255 179 15 / 12%);
+    grid-row: 1 / -1;
+    height: 100%;
+    image-rendering: pixelated;
+    min-height: 0;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .main-menu-web__overview-grid {
+    contents: initial;
+    display: contents;
+  }
+
+  .main-menu-web__reward-briefing,
+  .main-menu-web__leaderboard-preview {
+    background: linear-gradient(135deg, rgb(13 25 35 / 96%), rgb(6 11 16 / 96%));
+    border: 1px solid #28516d;
+    box-shadow: inset 0 0 0 2px rgb(0 0 0 / 42%);
+    display: grid;
+    min-height: 0;
+    padding: clamp(14px, 1.4vw, 22px);
+  }
+
+  .main-menu-web__reward-briefing header,
+  .main-menu-web__leaderboard-preview header {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+  }
+
+  .main-menu-web__reward-briefing header > span,
+  .main-menu-web__leaderboard-preview header > span {
+    align-items: center;
+    background: var(--bc-command-surface);
+    border: 1px solid var(--bc-command);
+    color: var(--bc-command);
+    display: inline-flex;
+    font-size: 25px;
+    height: 42px;
+    justify-content: center;
+    width: 42px;
+  }
+
+  .main-menu-web__reward-briefing h2,
+  .main-menu-web__leaderboard-preview h2 {
+    color: var(--bc-command);
+    font: 700 clamp(19px, 1.8vw, 28px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+    letter-spacing: 0.05em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .main-menu-web__reward-briefing p,
+  .main-menu-web__leaderboard-preview p {
+    color: #8ac5ff;
+    font: 700 clamp(11px, 1vw, 14px) / 1.25 'Battle Cities UI', 'Arial Narrow', sans-serif;
+    letter-spacing: 0.05em;
+    margin: 5px 0 0;
+    text-transform: uppercase;
+  }
+
+  .main-menu-web__reward-tiers {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: clamp(10px, 1dvh, 16px);
+  }
+
+  .main-menu-web__reward-tiers div {
+    align-content: center;
+    background: rgb(3 9 14 / 80%);
+    border: 1px solid var(--bc-line);
+    min-width: 0;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .main-menu-web__reward-tiers strong,
+  .main-menu-web__reward-tiers span {
+    display: block;
+    font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
+    text-transform: uppercase;
+  }
+
+  .main-menu-web__reward-tiers strong {
+    color: var(--bc-text);
+    font-size: clamp(13px, 1.1vw, 17px);
+  }
+
+  .main-menu-web__reward-tiers span {
+    color: var(--bc-command);
+    font-size: clamp(10px, 0.9vw, 13px);
+    margin-top: 5px;
+  }
+
+  .main-menu-web__leaderboard-preview {
+    grid-column: 2;
+  }
+
+  .main-menu-web__leaderboard-empty {
+    align-content: center;
+    background: rgb(3 9 14 / 76%);
+    border-block: 1px solid var(--bc-line);
+    display: grid;
+    gap: 8px;
+    margin: 12px 0;
+    padding: 12px 0;
+  }
+
+  .main-menu-web__leaderboard-empty strong {
+    color: var(--bc-command);
+    font: 700 clamp(15px, 1.25vw, 19px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+    letter-spacing: 0.06em;
+  }
+
+  .main-menu-web__leaderboard-empty span {
+    color: var(--bc-muted);
+    font-size: clamp(12px, 1vw, 14px);
+    line-height: 1.35;
+  }
+
+  .main-menu-web__overview-link {
+    align-items: center;
+    background: linear-gradient(90deg, #1b5e08, #0c3005);
+    border: 1px solid var(--bc-ready);
+    color: var(--bc-text);
+    cursor: pointer;
+    display: flex;
+    font: 700 clamp(13px, 1.15vw, 16px) / 1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+    justify-content: space-between;
+    letter-spacing: 0.05em;
+    margin-top: auto;
+    min-height: 42px;
+    padding: 0 13px;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .main-menu-web__overview-link:hover,
+  .main-menu-web__overview-link:focus-visible,
+  .main-menu-web__overview-link.is-selected {
+    background: linear-gradient(90deg, #277f0e, #124c09);
+    outline: 3px solid var(--bc-command);
+    outline-offset: 2px;
+  }
+
+  .main-menu-web__overview-link span {
+    color: var(--bc-command);
+    font-size: 1.55em;
+    line-height: 0;
   }
 }
 

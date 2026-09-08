@@ -267,6 +267,41 @@ export class MainMenuWebUi {
             ${renderActions('main')}
             ${developerActions.length > 0 ? renderActions('developer') : ''}
           </nav>
+          <section class="main-menu-web__overview" aria-label="Battle Cities command overview">
+            <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="1024">
+            <div class="main-menu-web__overview-grid">
+              <section class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
+                <header>
+                  <span aria-hidden="true">★</span>
+                  <div>
+                    <h2 id="home-rewards-title">Live Rewards</h2>
+                    <p>Top 10 every 30 minutes</p>
+                  </div>
+                </header>
+                <div class="main-menu-web__reward-tiers" aria-label="BATC reward tiers">
+                  <div><strong>1st</strong><span>1,000 BATC</span></div>
+                  <div><strong>2nd</strong><span>750 BATC</span></div>
+                  <div><strong>3rd</strong><span>500 BATC</span></div>
+                  <div><strong>4th–10th</strong><span>250 BATC each</span></div>
+                </div>
+                <button class="main-menu-web__overview-link" data-menu-action="leaderboard" type="button">View rewards leaderboard <span aria-hidden="true">›</span></button>
+              </section>
+              <section class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title">
+                <header>
+                  <span aria-hidden="true">♜</span>
+                  <div>
+                    <h2 id="home-leaderboard-title">Rewards Leaderboard</h2>
+                    <p>Current reward window</p>
+                  </div>
+                </header>
+                <div class="main-menu-web__leaderboard-empty">
+                  <strong>CLIMB THE RANKS</strong>
+                  <span>Play a battle to enter the next BATC reward round.</span>
+                </div>
+                <button class="main-menu-web__overview-link" data-menu-action="leaderboard" type="button">Open leaderboard <span aria-hidden="true">›</span></button>
+              </section>
+            </div>
+          </section>
         </section>
 
         <footer class="main-menu-web__hazard" aria-label="Battlefield system status">
