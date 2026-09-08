@@ -318,7 +318,11 @@ export class MainMenuWebUi {
                   <h2 id="home-rewards-title">Live Rewards</h2>
                   <p>Top 10 every 30 minutes</p>
                 </div>
-                <output class="main-menu-web__reward-countdown" data-home-rewards-countdown>SYNCING ROUND</output>
+                <div class="main-menu-web__reward-clock">
+                  <i class="main-menu-web__clock-icon" aria-hidden="true"></i>
+                  <div><span data-home-countdown-label>ROUND STATUS</span><output class="main-menu-web__reward-countdown" data-home-rewards-countdown>SYNCING</output></div>
+                  <progress data-home-round-progress max="100" value="0" aria-label="Time remaining in this round"></progress>
+                </div>
               </header>
               <div class="main-menu-web__reward-tiers" data-home-reward-tiers aria-label="BATC reward tiers">
                 ${this.rewardTiersMarkup(HOME_REWARD_TIERS)}
@@ -758,7 +762,10 @@ export class MainMenuWebUi {
       .toString()
       .padStart(2, '0');
     const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
-    output.textContent = `ROUND ENDS ${minutes}:${remainingSeconds}`;
+    output.textContent = `00:${minutes}:${remainingSeconds}`;
+    this.setText('[data-home-countdown-label]', this.rewardsData?.enabled ? 'NEXT REWARD IN' : 'ROUND ENDS IN');
+    const progress = this.host.querySelector<HTMLProgressElement>('[data-home-round-progress]');
+    if (progress) progress.value = Math.min(100, Math.max(0, seconds / Math.max(1, (this.rewardsData?.rewardIntervalMinutes || 30) * 60) * 100));
     const started = this.rewardsData?.intervalStartedAt;
     const roundTime =
       started && Number.isFinite(Date.parse(started))
@@ -822,9 +829,7 @@ export class MainMenuWebUi {
         }"><i class="main-menu-web__chest main-menu-web__chest--${Math.min(
           tier.fromRank,
           4,
-        )}" aria-hidden="true"></i><strong>${rank}</strong><span>${tier.amount.toLocaleString()} BATC${
-          tier.fromRank === tier.toRank ? '' : ' EACH'
-        }</span></article>`;
+        )}" aria-hidden="true"></i><div class="main-menu-web__podium"><strong>${rank}</strong><span>${tier.amount.toLocaleString()} $BATC</span>${tier.fromRank === tier.toRank ? '' : '<small>(Each)</small>'}</div></article>`;
       })
       .join('');
   }

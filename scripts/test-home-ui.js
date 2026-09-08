@@ -27,6 +27,16 @@ vm.runInNewContext(code, sandbox);
 const menu = Object.create(sandbox.exports.MainMenuWebUi.prototype);
 menu.options = { isDev: false };
 const render = menu.render();
+const timerElements = Object.fromEntries(['[data-home-rewards-countdown]', '[data-home-countdown-label]', '[data-home-round-progress]', '[data-home-round]'].map(key => [key, {textContent: '', value: 0}]));
+menu.host = {querySelector: selector => timerElements[selector]};
+menu.rewardsData = {enabled: false, nextRewardAt: new Date(Date.now() + 900000).toISOString(), rewardIntervalMinutes: 30};
+menu.syncHomeRewardsCountdown();
+assert.equal(timerElements['[data-home-countdown-label]'].textContent, 'ROUND ENDS IN');
+assert(timerElements['[data-home-round-progress]'].value > 49 && timerElements['[data-home-round-progress]'].value <= 50);
+assert(/^00:14:59$|^00:15:00$/.test(timerElements['[data-home-rewards-countdown]'].textContent));
+menu.rewardsData.enabled = true;
+menu.syncHomeRewardsCountdown();
+assert.equal(timerElements['[data-home-countdown-label]'].textContent, 'NEXT REWARD IN');
 assert(render.includes('home-reward-chests') === false); // Artwork is CSS-backed.
 assert.equal((render.match(/main-menu-web__chest--/g) || []).length, 4);
 assert(!render.includes('mobile-gamepad-qr'));
@@ -77,6 +87,7 @@ if (process.argv.includes('--serve')) {
               'operations-web',
               'shop-ui-contract',
               'psg1-ui',
+              'home-rewards',
             ]
               .map((f) => '<link rel="stylesheet" href="/' + f + '.css">')
               .join('') +
@@ -124,6 +135,7 @@ if (process.argv.includes('--serve')) {
               'standard-pages-web',
               'shop-ui-contract',
               'psg1-ui',
+              'home-rewards',
             ]
               .map((f) => '<link rel="stylesheet" href="/' + f + '.css">')
               .join('') +
