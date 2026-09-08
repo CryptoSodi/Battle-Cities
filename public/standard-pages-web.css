@@ -515,6 +515,20 @@ body.game-running.settings-web-active .settings-web__pairing .mobile-gamepad-qr 
 .settings-web__pairing .mobile-gamepad-qr__code { color: var(--bc-command); font: 18px 'Share Tech Mono', monospace; letter-spacing: .15em; }
 .settings-web__pairing-retry { min-height: 44px; padding: 8px 20px; color: var(--bc-command); background: var(--bc-panel-raised); }
 .settings-web__pairing-retry.is-selected { border-color: var(--bc-command); box-shadow: inset 0 0 0 2px var(--bc-command-dim); }
+.settings-web__logout {
+  min-height: 50px;
+  padding: 10px 20px;
+  background: var(--bc-panel-raised);
+  color: var(--bc-text);
+  font-size: 20px;
+}
+.settings-web__logout.is-selected,
+.settings-web__logout:hover {
+  background: var(--bc-danger-surface);
+  border-color: var(--bc-danger);
+  box-shadow: inset 0 0 0 1px var(--bc-danger);
+}
+.settings-web__logout:disabled { opacity: .65; cursor: wait; }
 .settings-web__status {
   margin: 14px 0 4px;
 }

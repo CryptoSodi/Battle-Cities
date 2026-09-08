@@ -27,6 +27,8 @@ vm.runInNewContext(code, sandbox);
 const menu = Object.create(sandbox.exports.MainMenuWebUi.prototype);
 menu.options = { isDev: false };
 const render = menu.render();
+assert(!render.includes('data-menu-action="leaderboard"'));
+assert(!render.includes('data-menu-action="logout"'));
 const timerElements = Object.fromEntries(['[data-home-rewards-countdown]', '[data-home-countdown-label]', '[data-home-round-progress]', '[data-home-round]'].map(key => [key, {textContent: '', value: 0}]));
 menu.host = {querySelector: selector => timerElements[selector]};
 menu.rewardsData = {enabled: false, nextRewardAt: new Date(Date.now() + 900000).toISOString(), rewardIntervalMinutes: 30};

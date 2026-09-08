@@ -1,4 +1,6 @@
 import * as config from '../config';
+import { PlayerIdentity } from '../auth';
+import { apiFetch } from '../network/api';
 import { SceneNavigator } from '../core';
 import { AudioManager, GameStorage } from '../game';
 import { InputManager, isPlaySolanaPsg1, MenuInputContext } from '../input';
@@ -20,12 +22,14 @@ export class SettingsWebUi {
   private status = '';
   private pairingRequest: Promise<HTMLElement> = null;
   private renderId = 0;
+  private signingOut = false;
 
   public constructor(
     private readonly navigator: SceneNavigator,
     private readonly input: InputManager,
     private readonly audio: AudioManager,
     private readonly storage: GameStorage,
+    private readonly playerIdentity: PlayerIdentity,
   ) {}
   public isActive(): boolean {
     return this.active;
@@ -92,7 +96,7 @@ export class SettingsWebUi {
             enabled ? 'ON' : 'OFF'
           }</span><i></i></button></article>`,
       )
-      .join('')}${
+      .join('')}<article><h2>ACCOUNT</h2><button type="button" class="settings-web__logout" data-setting="logout" ${this.signingOut ? 'disabled aria-busy="true"' : ''}>${this.signingOut ? 'SIGNING OUT…' : 'LOGOUT'}</button></article>${
       this.supportsPhonePairing()
         ? '<section class="settings-web__pairing"><h2>PHONE CONTROLLER</h2><p>Scan with your phone to use it as a controller for this game.</p><div data-settings-pairing role="status">Preparing pairing code…</div><button type="button" data-setting="pairing" class="settings-web__pairing-retry" hidden>RETRY PAIRING</button></section>'
         : ''
@@ -155,6 +159,10 @@ export class SettingsWebUi {
       );
   }
   private toggle(key: string): void {
+    if (key === 'logout') {
+      void this.logout();
+      return;
+    }
     if (key === 'pairing') {
       this.pairingRequest = null;
       this.render();
@@ -181,6 +189,21 @@ export class SettingsWebUi {
     this.buttons
       .find((button) => button.dataset.setting === key)
       ?.focus({ preventScroll: true });
+  }
+  private async logout(): Promise<void> {
+    if (this.signingOut) return;
+    this.signingOut = true;
+    this.render();
+    try {
+      const response = await apiFetch('/api/session', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Logout failed');
+      this.playerIdentity.clear();
+      window.location.replace('/');
+    } catch {
+      this.signingOut = false;
+      this.status = 'COULD NOT LOG OUT. CHECK YOUR CONNECTION AND TRY AGAIN.';
+      if (this.active) this.render();
+    }
   }
   private supportsPhonePairing(): boolean {
     return !isPlaySolanaPsg1(

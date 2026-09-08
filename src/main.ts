@@ -745,6 +745,7 @@ const settingsWebUi = new SettingsWebUi(
   inputManager,
   audioManager,
   gameStorage,
+  playerIdentity,
 );
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 30_000;
 const presenceClientId = getPresenceClientId();

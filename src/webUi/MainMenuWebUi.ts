@@ -66,11 +66,9 @@ const MAIN_MENU_BUTTON_SPRITES: Record<
   start: { inactive: 'sprite_1.png', active: 'sprite_2.png' },
   shop: { inactive: 'sprite_3.png', active: 'sprite_4.png' },
   ranking: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
-  leaderboard: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
   headquarters: { inactive: 'sprite_7.png', active: 'sprite_8.png' },
   socials: { inactive: 'sprite_9.png', active: 'sprite_10.png' },
   settings: { inactive: 'sprite_11.png', active: 'sprite_12.png' },
-  logout: { inactive: 'sprite_13.png', active: 'sprite_14.png' },
 };
 
 export class MainMenuWebUi {
@@ -253,11 +251,9 @@ export class MainMenuWebUi {
     mainActions.push(
       { action: 'shop', group: 'main', label: 'Shop' },
       { action: 'ranking', group: 'main', label: 'Ranking' },
-      { action: 'leaderboard', group: 'main', label: 'Leaderboard' },
       { action: 'headquarters', group: 'main', label: 'Headquarters' },
       { action: 'socials', group: 'main', label: 'Socials' },
       { action: 'settings', group: 'main', label: 'Settings' },
-      { action: 'logout', group: 'main', label: 'Logout', variant: 'danger' },
     );
 
     const developerActions: MenuAction[] = this.options.isDev
@@ -573,9 +569,6 @@ export class MainMenuWebUi {
       case 'ranking':
         this.options.navigator.push(GameSceneType.MainRanking);
         break;
-      case 'leaderboard':
-        this.options.navigator.push(GameSceneType.MainRanking);
-        break;
       case 'headquarters':
         this.options.navigator.push(GameSceneType.MainMore);
         break;
@@ -594,26 +587,7 @@ export class MainMenuWebUi {
       case 'replay':
         this.options.navigator.push(GameSceneType.MainReplay);
         break;
-      case 'logout':
-        this.logout();
-        break;
     }
-  }
-
-  private logout(): void {
-    const button = this.host?.querySelector<HTMLButtonElement>(
-      '[data-menu-action="logout"]',
-    );
-    if (button !== null && button !== undefined) {
-      button.disabled = true;
-      button.setAttribute('aria-busy', 'true');
-      button.classList.add('is-selected');
-    }
-
-    apiFetch('/api/session', { method: 'DELETE' }).finally(() => {
-      this.options.playerIdentity.clear();
-      window.location.replace('/');
-    });
   }
 
   private async loadPresence(mountId: number): Promise<void> {
