@@ -54,6 +54,7 @@ import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
 import { HeadquartersPagesWebUi } from './webUi/HeadquartersPagesWebUi';
 import { PlayerProfileWebUi } from './webUi/PlayerProfileWebUi';
 import { RankingWebUi } from './webUi/RankingWebUi';
+import { RewardsLeaderboardWebUi } from './webUi/RewardsLeaderboardWebUi';
 import { ResultsWebUi, ResultsWebUiController } from './webUi/ResultsWebUi';
 import { SettingsWebUi } from './webUi/SettingsWebUi';
 import { SocialsWebUi } from './webUi/SocialsWebUi';
@@ -715,6 +716,10 @@ const shopWebUi = new ShopWebUi({
   },
 });
 const rankingWebUi = new RankingWebUi(sceneRouter, inputManager);
+const rewardsLeaderboardWebUi = new RewardsLeaderboardWebUi(
+  sceneRouter,
+  inputManager,
+);
 const resultsWebUi = new ResultsWebUi({
   getController: (): ResultsWebUiController =>
     (sceneRouter.getCurrentScene() as unknown) as ResultsWebUiController,
@@ -1029,6 +1034,7 @@ sceneRouter.transitionStarted.addListener(() => {
   mainMenuWebUi.unmount();
   shopWebUi.unmount();
   rankingWebUi.unmount();
+  rewardsLeaderboardWebUi.unmount();
   resultsWebUi.unmount();
   tankSelectWebUi.unmount();
   playerProfileWebUi.unmount();
@@ -1048,6 +1054,9 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
   }
   if (sceneType === GameSceneType.MainRanking) {
     rankingWebUi.mount();
+  }
+  if (sceneType === GameSceneType.MainRewardsLeaderboard) {
+    rewardsLeaderboardWebUi.mount();
   }
   if (sceneType === GameSceneType.LevelScore) resultsWebUi.mount();
   if (sceneType === GameSceneType.MainTankSelect) tankSelectWebUi.mount();
@@ -1490,6 +1499,7 @@ gameLoop.update.addListener((event) => {
   if (
     !shopWebUi.isActive() &&
     !rankingWebUi.isActive() &&
+    !rewardsLeaderboardWebUi.isActive() &&
     !resultsWebUi.isActive() &&
     !tankSelectWebUi.isActive() &&
     !playerProfileWebUi.isActive() &&
@@ -1512,6 +1522,9 @@ gameLoop.update.addListener((event) => {
       break;
     case GameSceneType.MainRanking:
       rankingWebUi.update();
+      break;
+    case GameSceneType.MainRewardsLeaderboard:
+      rewardsLeaderboardWebUi.update();
       break;
     case GameSceneType.LevelScore:
       resultsWebUi.update(event.deltaTime);
@@ -1554,6 +1567,7 @@ gameLoop.update.addListener((event) => {
       if (
         !shopWebUi.isActive() &&
         !rankingWebUi.isActive() &&
+        !rewardsLeaderboardWebUi.isActive() &&
         !resultsWebUi.isActive() &&
         !tankSelectWebUi.isActive() &&
         !playerProfileWebUi.isActive() &&
@@ -1585,6 +1599,7 @@ gameLoop.render.addListener((event) => {
     currentSceneType === GameSceneType.MainMenu ||
     currentSceneType === GameSceneType.MainShop ||
     currentSceneType === GameSceneType.MainRanking ||
+    currentSceneType === GameSceneType.MainRewardsLeaderboard ||
     currentSceneType === GameSceneType.LevelScore ||
     currentSceneType === GameSceneType.MainTankSelect ||
     currentSceneType === GameSceneType.MainPlayerProfile ||
@@ -1602,7 +1617,8 @@ gameLoop.render.addListener((event) => {
   );
   document.body.classList.toggle(
     'ranking-active',
-    currentSceneType === GameSceneType.MainRanking,
+    currentSceneType === GameSceneType.MainRanking ||
+      currentSceneType === GameSceneType.MainRewardsLeaderboard,
   );
   document.body.classList.toggle(
     'settings-active',
@@ -1777,6 +1793,9 @@ async function main(): Promise<void> {
     }
     if (sceneRouter.getCurrentType() === GameSceneType.MainRanking) {
       rankingWebUi.mount();
+    }
+    if (sceneRouter.getCurrentType() === GameSceneType.MainRewardsLeaderboard) {
+      rewardsLeaderboardWebUi.mount();
     }
     if (sceneRouter.getCurrentType() === GameSceneType.LevelScore)
       resultsWebUi.mount();

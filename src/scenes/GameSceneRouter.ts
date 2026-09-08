@@ -24,6 +24,7 @@ import {
   MainMoreScene,
   MainPlayerProfileScene,
   MainRankingScene,
+  MainRewardsLeaderboardScene,
   MainReplayScene,
   MainShopScene,
   MainSocialsScene,
@@ -65,6 +66,10 @@ export class GameSceneRouter extends SceneRouter<GameScene> {
     this.register(GameSceneType.MainMore, MainMoreScene);
     this.register(GameSceneType.MainPlayerProfile, MainPlayerProfileScene);
     this.register(GameSceneType.MainRanking, MainRankingScene);
+    this.register(
+      GameSceneType.MainRewardsLeaderboard,
+      MainRewardsLeaderboardScene,
+    );
     this.register(GameSceneType.MainReplay, MainReplayScene);
     this.register(GameSceneType.MainShop, MainShopScene);
     this.register(GameSceneType.MainSocials, MainSocialsScene);

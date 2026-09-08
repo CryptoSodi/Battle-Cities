@@ -37,6 +37,7 @@ const MAIN_MENU_BUTTON_SPRITES: Record<
   start: { inactive: 'sprite_1.png', active: 'sprite_2.png' },
   shop: { inactive: 'sprite_3.png', active: 'sprite_4.png' },
   ranking: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
+  leaderboard: { inactive: 'sprite_5.png', active: 'sprite_6.png' },
   headquarters: { inactive: 'sprite_7.png', active: 'sprite_8.png' },
   socials: { inactive: 'sprite_9.png', active: 'sprite_10.png' },
   settings: { inactive: 'sprite_11.png', active: 'sprite_12.png' },
@@ -195,6 +196,7 @@ export class MainMenuWebUi {
     mainActions.push(
       { action: 'shop', group: 'main', label: 'Shop' },
       { action: 'ranking', group: 'main', label: 'Ranking' },
+      { action: 'leaderboard', group: 'main', label: 'Leaderboard' },
       { action: 'headquarters', group: 'main', label: 'Headquarters' },
       { action: 'socials', group: 'main', label: 'Socials' },
       { action: 'settings', group: 'main', label: 'Settings' },
@@ -482,6 +484,9 @@ export class MainMenuWebUi {
         break;
       case 'ranking':
         this.options.navigator.push(GameSceneType.MainRanking);
+        break;
+      case 'leaderboard':
+        this.options.navigator.push(GameSceneType.MainRewardsLeaderboard);
         break;
       case 'headquarters':
         this.options.navigator.push(GameSceneType.MainMore);
