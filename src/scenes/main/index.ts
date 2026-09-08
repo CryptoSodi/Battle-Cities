@@ -8,7 +8,6 @@ export * from './MainMenuScene';
 export * from './MainMoreScene';
 export * from './MainPlayerProfileScene';
 export * from './MainRankingScene';
-export * from './MainRewardsLeaderboardScene';
 export * from './MainReplayScene';
 export * from './MainShopScene';
 export * from './MainSocialsScene';

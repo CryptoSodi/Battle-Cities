@@ -28,6 +28,34 @@ interface MenuAction {
   variant?: 'danger';
 }
 
+interface HomeRewardTier {
+  amount: number;
+  fromRank: number;
+  toRank: number;
+}
+
+interface HomeRewardRow {
+  displayName: string;
+  playerId: string;
+  rank: number;
+  totalPoints: number;
+}
+
+interface HomeRewardsResponse {
+  enabled: boolean;
+  nextRewardAt: string | null;
+  rewardIntervalMinutes: number;
+  rows: HomeRewardRow[];
+  tiers: HomeRewardTier[];
+}
+
+const HOME_REWARD_TIERS: HomeRewardTier[] = [
+  { fromRank: 1, toRank: 1, amount: 1000 },
+  { fromRank: 2, toRank: 2, amount: 750 },
+  { fromRank: 3, toRank: 3, amount: 500 },
+  { fromRank: 4, toRank: 10, amount: 250 },
+];
+
 let notificationPromptDismissedThisSession = false;
 
 const MAIN_MENU_BUTTON_SPRITES: Record<
@@ -57,6 +85,9 @@ export class MainMenuWebUi {
   private mobileGamepadQrElement: HTMLElement = null;
   private mobileGamepadQrRequested = false;
   private mountId = 0;
+  private rewardsData: HomeRewardsResponse | null = null;
+  private rewardsLoading = false;
+  private rewardsTimer: number | null = null;
   private touchActionTimer: number | null = null;
 
   public constructor(options: MainMenuWebUiOptions) {
@@ -92,8 +123,13 @@ export class MainMenuWebUi {
     this.ensureMobileGamepadQrElement();
 
     void this.loadEvents(currentMountId);
+    void this.loadHomeRewards(currentMountId);
     void this.refreshRunBoosts();
     void this.prepareNotificationPrompt(currentMountId);
+    this.rewardsTimer = window.setInterval(
+      () => this.syncHomeRewardsCountdown(),
+      1000,
+    );
   }
 
   public unmount(): void {
@@ -107,7 +143,13 @@ export class MainMenuWebUi {
       window.clearTimeout(this.touchActionTimer);
       this.touchActionTimer = null;
     }
+    if (this.rewardsTimer !== null) {
+      window.clearInterval(this.rewardsTimer);
+      this.rewardsTimer = null;
+    }
     this.actionButtons = [];
+    this.rewardsData = null;
+    this.rewardsLoading = false;
     this.cherryChat.unmount();
     this.removeMobileGamepadQrElement();
 
@@ -243,21 +285,6 @@ export class MainMenuWebUi {
           </section>
         </header>
 
-        <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
-          <span class="main-menu-web__events-viewport">
-            <span class="main-menu-web__events-track" role="status" aria-live="polite">
-              <span class="main-menu-web__events-run">
-                <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
-                <span data-menu-events-primary>Loading live operations...</span>
-              </span>
-              <span class="main-menu-web__events-run" aria-hidden="true">
-                <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
-                <span data-menu-events-repeat>Loading live operations...</span>
-              </span>
-            </span>
-          </span>
-        </button>
-
         <section class="main-menu-web__content">
           <nav class="main-menu-web__commands${
             developerActions.length > 0
@@ -269,38 +296,60 @@ export class MainMenuWebUi {
           </nav>
           <section class="main-menu-web__overview" aria-label="Battle Cities command overview">
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="1024">
-            <div class="main-menu-web__overview-grid">
-              <section class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
-                <header>
-                  <span aria-hidden="true">★</span>
-                  <div>
-                    <h2 id="home-rewards-title">Live Rewards</h2>
-                    <p>Top 10 every 30 minutes</p>
-                  </div>
-                </header>
-                <div class="main-menu-web__reward-tiers" aria-label="BATC reward tiers">
-                  <div><strong>1st</strong><span>1,000 BATC</span></div>
-                  <div><strong>2nd</strong><span>750 BATC</span></div>
-                  <div><strong>3rd</strong><span>500 BATC</span></div>
-                  <div><strong>4th–10th</strong><span>250 BATC each</span></div>
+            <button class="main-menu-web__events" data-menu-event-ticker type="button" aria-label="Live Battle Cities events">
+              <span class="main-menu-web__events-viewport">
+                <span class="main-menu-web__events-track" role="status" aria-live="polite">
+                  <span class="main-menu-web__events-run">
+                    <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
+                    <span data-menu-events-primary>Loading live operations...</span>
+                  </span>
+                  <span class="main-menu-web__events-run" aria-hidden="true">
+                    <span class="main-menu-web__events-label">Live Event&nbsp; -</span>
+                    <span data-menu-events-repeat>Loading live operations...</span>
+                  </span>
+                </span>
+              </span>
+            </button>
+            <section class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
+              <header class="main-menu-web__reward-header">
+                <span class="main-menu-web__panel-icon" aria-hidden="true">★</span>
+                <div>
+                  <h2 id="home-rewards-title">Live Rewards</h2>
+                  <p>Top 10 every 30 minutes</p>
                 </div>
-                <button class="main-menu-web__overview-link" data-menu-action="leaderboard" type="button">View rewards leaderboard <span aria-hidden="true">›</span></button>
+                <output class="main-menu-web__reward-countdown" data-home-rewards-countdown>SYNCING ROUND</output>
+              </header>
+              <div class="main-menu-web__reward-tiers" aria-label="BATC reward tiers">
+                ${this.rewardTiersMarkup(HOME_REWARD_TIERS)}
+              </div>
+              <section class="main-menu-web__how-it-works" aria-labelledby="home-rewards-how-title">
+                <h3 id="home-rewards-how-title">How it works</h3>
+                <ol>
+                  <li><b>1</b><span>Play battles and earn points</span></li>
+                  <li><b>2</b><span>Reach the top 10 before the round closes</span></li>
+                  <li><b>3</b><span>Eligible rewards go to your linked wallet</span></li>
+                </ol>
               </section>
-              <section class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title">
-                <header>
-                  <span aria-hidden="true">♜</span>
-                  <div>
-                    <h2 id="home-leaderboard-title">Rewards Leaderboard</h2>
-                    <p>Current reward window</p>
-                  </div>
-                </header>
-                <div class="main-menu-web__leaderboard-empty">
-                  <strong>CLIMB THE RANKS</strong>
-                  <span>Play a battle to enter the next BATC reward round.</span>
+            </section>
+            <section class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
+              <header class="main-menu-web__leaderboard-header">
+                <span class="main-menu-web__panel-icon" aria-hidden="true">♜</span>
+                <div>
+                  <h2 id="home-leaderboard-title">Rewards Leaderboard</h2>
+                  <p data-home-rewards-state>Loading current round</p>
                 </div>
-                <button class="main-menu-web__overview-link" data-menu-action="leaderboard" type="button">Open leaderboard <span aria-hidden="true">›</span></button>
-              </section>
-            </div>
+              </header>
+              <div class="main-menu-web__leaderboard-columns" aria-hidden="true">
+                <span>#</span><span>Player</span><span>Score</span><span>Reward</span>
+              </div>
+              <div class="main-menu-web__leaderboard-rows" data-home-rewards-rows aria-busy="true">
+                ${this.rewardRowsLoadingMarkup()}
+              </div>
+              <footer class="main-menu-web__leaderboard-footer">
+                <img src="/data/graphics/shop/icons/token-bact.png" alt="" width="64" height="64">
+                <div><strong>BATC Rewards</strong><span>Play. Earn. Climb the leaderboard.</span></div>
+              </footer>
+            </section>
           </section>
         </section>
 
@@ -521,7 +570,7 @@ export class MainMenuWebUi {
         this.options.navigator.push(GameSceneType.MainRanking);
         break;
       case 'leaderboard':
-        this.options.navigator.push(GameSceneType.MainRewardsLeaderboard);
+        this.options.navigator.push(GameSceneType.MainRanking);
         break;
       case 'headquarters':
         this.options.navigator.push(GameSceneType.MainMore);
@@ -572,6 +621,175 @@ export class MainMenuWebUi {
       liveEvents.length === 0
         ? 'No live events right now'
         : liveEvents.map((event) => event.name.toUpperCase()).join('  ·  '),
+    );
+  }
+
+  private async loadHomeRewards(mountId: number): Promise<void> {
+    if (this.rewardsLoading) return;
+    this.rewardsLoading = true;
+    this.setHomeRewardsLoadingState();
+
+    try {
+      const response = await apiFetch('/api/leaderboard/rewards');
+      if (!response.ok) {
+        throw new Error('Rewards leaderboard is unavailable.');
+      }
+      const body = await response.json();
+      if (!Array.isArray(body?.rows) || !Array.isArray(body?.tiers)) {
+        throw new Error('Rewards leaderboard response is invalid.');
+      }
+      if (!this.active || mountId !== this.mountId) return;
+      this.rewardsData = body as HomeRewardsResponse;
+      this.renderHomeRewards();
+    } catch {
+      if (!this.active || mountId !== this.mountId) return;
+      this.rewardsData = null;
+      this.renderHomeRewardsError(mountId);
+    } finally {
+      if (this.active && mountId === this.mountId) {
+        this.rewardsLoading = false;
+      }
+    }
+  }
+
+  private setHomeRewardsLoadingState(): void {
+    const rows = this.host?.querySelector<HTMLElement>(
+      '[data-home-rewards-rows]',
+    );
+    if (rows) {
+      rows.setAttribute('aria-busy', 'true');
+      rows.innerHTML = this.rewardRowsLoadingMarkup();
+    }
+    this.setText('[data-home-rewards-state]', 'Loading current round');
+    this.setText('[data-home-rewards-countdown]', 'SYNCING ROUND');
+  }
+
+  private renderHomeRewards(): void {
+    const rows = this.host?.querySelector<HTMLElement>(
+      '[data-home-rewards-rows]',
+    );
+    if (!rows || !this.rewardsData) return;
+
+    rows.setAttribute('aria-busy', 'false');
+    rows.innerHTML = this.rewardRowsMarkup(
+      this.rewardsData.rows,
+      this.rewardsData.tiers.length > 0
+        ? this.rewardsData.tiers
+        : HOME_REWARD_TIERS,
+    );
+    this.setText(
+      '[data-home-rewards-state]',
+      this.rewardsData.enabled
+        ? 'Top 10 · current 30-minute round'
+        : 'Live scores · rewards arming',
+    );
+    this.syncHomeRewardsCountdown();
+  }
+
+  private renderHomeRewardsError(mountId: number): void {
+    const rows = this.host?.querySelector<HTMLElement>(
+      '[data-home-rewards-rows]',
+    );
+    if (!rows) return;
+
+    rows.setAttribute('aria-busy', 'false');
+    rows.innerHTML = `<div class="main-menu-web__leaderboard-message main-menu-web__leaderboard-message--error"><strong>COULDN'T LOAD LIVE SCORES</strong><span>Check your connection and try again.</span><button type="button" data-home-rewards-retry>RETRY</button></div>`;
+    this.setText('[data-home-rewards-state]', 'Live board unavailable');
+    this.setText('[data-home-rewards-countdown]', 'ROUND UNAVAILABLE');
+    rows
+      .querySelector<HTMLButtonElement>('[data-home-rewards-retry]')
+      ?.addEventListener(
+        'click',
+        () => void this.loadHomeRewards(mountId),
+        { signal: this.abortController.signal },
+      );
+  }
+
+  private syncHomeRewardsCountdown(): void {
+    const output = this.host?.querySelector<HTMLOutputElement>(
+      '[data-home-rewards-countdown]',
+    );
+    if (!output) return;
+
+    const nextRewardAt = this.rewardsData?.nextRewardAt;
+    const target = nextRewardAt ? Date.parse(nextRewardAt) : Number.NaN;
+    if (!Number.isFinite(target)) {
+      output.textContent = this.rewardsLoading
+        ? 'SYNCING ROUND'
+        : 'REWARDS ARMING';
+      return;
+    }
+
+    const seconds = Math.max(0, Math.floor((target - Date.now()) / 1000));
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+    output.textContent = `NEXT REWARD ${minutes}:${remainingSeconds}`;
+  }
+
+  private rewardRowsMarkup(
+    rows: HomeRewardRow[],
+    tiers: HomeRewardTier[],
+  ): string {
+    if (rows.length === 0) {
+      return `<div class="main-menu-web__leaderboard-message"><strong>NO SCORES THIS ROUND</strong><span>Play a battle to claim a place on the board.</span></div>`;
+    }
+
+    return rows
+      .slice(0, 10)
+      .map((row) => {
+        const reward = this.rewardForRank(row.rank, tiers);
+        return `<div class="main-menu-web__leaderboard-row main-menu-web__leaderboard-row--${Math.min(row.rank, 4)}"><strong>${row.rank}</strong><span>${this.escapeMarkup(row.displayName)}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em>${reward > 0 ? `${reward.toLocaleString()} BATC` : '—'}</em></div>`;
+      })
+      .join('');
+  }
+
+  private rewardRowsLoadingMarkup(): string {
+    return Array.from(
+      { length: 6 },
+      (_, index) =>
+        `<div class="main-menu-web__leaderboard-skeleton" aria-hidden="true"><i>${index + 1}</i><span></span><b></b><em></em></div>`,
+    ).join('');
+  }
+
+  private rewardTiersMarkup(tiers: HomeRewardTier[]): string {
+    return tiers
+      .map((tier) => {
+        const rank =
+          tier.fromRank === tier.toRank
+            ? this.ordinal(tier.fromRank)
+            : `${tier.fromRank}TH–${tier.toRank}TH`;
+        return `<article class="main-menu-web__reward-tier main-menu-web__reward-tier--${tier.fromRank}"><strong>${rank}</strong><span>${tier.amount.toLocaleString()} BATC${tier.fromRank === tier.toRank ? '' : ' EACH'}</span></article>`;
+      })
+      .join('');
+  }
+
+  private rewardForRank(rank: number, tiers: HomeRewardTier[]): number {
+    return (
+      tiers.find((tier) => rank >= tier.fromRank && rank <= tier.toRank)
+        ?.amount || 0
+    );
+  }
+
+  private ordinal(value: number): string {
+    if (value === 1) return '1ST';
+    if (value === 2) return '2ND';
+    if (value === 3) return '3RD';
+    return `${value}TH`;
+  }
+
+  private escapeMarkup(value: string): string {
+    return String(value || 'PLAYER').replace(
+      /[&<>'"]/g,
+      (character) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;',
+        }[character]),
     );
   }
 

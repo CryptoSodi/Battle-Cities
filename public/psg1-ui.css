@@ -77,6 +77,78 @@ html[data-ui-device='psg1'] .main-menu-web__dialog-button {
   min-height: var(--psg1-control);
 }
 
+/* PSG1 uses the same command-center home as desktop, scaled to the handheld
+   viewport. Its physical controls keep the sidebar practical at this density. */
+html[data-ui-device='psg1'] .main-menu-web {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web__content {
+  align-items: stretch;
+  display: grid;
+  gap: var(--psg1-gap);
+  grid-template-columns: minmax(190px, 25%) minmax(0, 1fr);
+  overflow: hidden;
+  padding: 4px 0;
+}
+html[data-ui-device='psg1'] .main-menu-web__commands {
+  align-content: center;
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+}
+html[data-ui-device='psg1'] .main-menu-web__overview {
+  display: grid;
+  gap: var(--psg1-gap);
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: minmax(0, 1.28fr) minmax(280px, .92fr);
+  grid-template-rows: minmax(120px, .75fr) minmax(180px, 1.25fr);
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+html[data-ui-device='psg1'] .main-menu-web__overview-banner {
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  width: 100%;
+}
+html[data-ui-device='psg1'] .main-menu-web__events {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-briefing {
+  display: grid;
+  grid-column: 1;
+  grid-row: 2;
+  padding: var(--psg1-gap);
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-preview {
+  grid-column: 2;
+  grid-row: 1 / -1;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-tiers {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+html[data-ui-device='psg1'] .main-menu-web__how-it-works {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-header h2,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-header h2 {
+  font-size: var(--psg1-body);
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-header p,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-header p,
+html[data-ui-device='psg1'] .main-menu-web__reward-countdown {
+  font-size: var(--psg1-small);
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row {
+  font-size: var(--psg1-small);
+}
+
 /* Desktop Shop composition even when the WebView reports <900 CSS pixels. */
 html[data-ui-device='psg1'] body.web-ui-active [data-web-ui] :is(.shop-web, .headquarters-web, .hq-page-web) {
   box-sizing: border-box;
