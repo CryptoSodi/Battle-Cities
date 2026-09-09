@@ -37,7 +37,692 @@ html[data-ui-device='psg1'] [data-ui-nav] img {
   width: clamp(22px, 3vw, 36px);
 }
 
-/* The home menu uses main-menu-web.css responsive tracks on PSG1 too.
+/* PSG1 home HUD uses its tightly cropped native artwork without distortion. */
+html[data-ui-device='psg1'] .main-menu-web__hud {
+  aspect-ratio: 2000 / 171;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+  background-image: url('/assets/psg1/headerpsg1.png');
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  z-index: 2;
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat {
+  top: 0;
+  height: 100%;
+  background: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__stat--player {
+  left: 0.7%;
+  width: 31.2%;
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--score {
+  left: 0;
+  width: 100%;
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--highscore {
+  left: 0;
+  width: 100%;
+}
+html[data-ui-device='psg1'] .main-menu-web__stat .main-menu-web__stat-value {
+  align-items: center;
+  justify-content: center;
+  height: 38%;
+  top: 46%;
+  line-height: 1;
+  text-align: center;
+}
+html[data-ui-device='psg1'] .main-menu-web__stat--player .main-menu-web__stat-value {
+  left: 31%;
+  top: 23%;
+  width: 63%;
+  height: 30%;
+  color: var(--bc-text);
+  font-size: clamp(15px, 2.1cqw, 30px);
+  justify-content: flex-start;
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--score .main-menu-web__stat-value {
+  left: 39.5%;
+  top: 43%;
+  width: 17%;
+  height: 42%;
+  color: var(--bc-command);
+  font-size: clamp(18px, 2.8cqw, 40px);
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--highscore .main-menu-web__stat-value {
+  left: 68.5%;
+  top: 43%;
+  width: 17%;
+  height: 42%;
+  color: var(--bc-text);
+  font-size: clamp(18px, 2.7cqw, 38px);
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .android-home-level {
+  --level-track: #163747;
+  --level-fill: #00aeef;
+  --level-label: #57c8ff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(5px, 0.6cqw, 10px);
+  position: absolute;
+  left: 31%;
+  top: 57%;
+  width: 63%;
+  height: 19%;
+  border: 0;
+  background: transparent;
+}
+html[data-ui-device='psg1'] .main-menu-web__hud .android-home-level span {
+  font-size: clamp(10px, 1.2cqw, 17px);
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] {
+  position: absolute;
+  z-index: 5;
+  left: 3.5%;
+  top: 20%;
+  width: clamp(40px, 4.4cqw, 58px);
+  height: clamp(40px, 4.4cqw, 58px);
+  min-height: 40px;
+  padding: 0;
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image {
+  inset: 10%;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--inactive {
+  content: url('/assets/android-home-v2/gear.png');
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--active {
+  content: url('/assets/android-home-v2/gear-active.png');
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-label {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+/* PSG1 landscape hero: battlefield and Start on the left, four square command
+   plates on the right. Existing buttons remain real controls for gamepad,
+   keyboard and touch input. */
+html[data-ui-device='psg1'] .main-menu-web__content {
+  display: grid;
+  --psg1-hero-row: min(15.1dvh, 16.5vw);
+  grid-template-columns: minmax(0, 1fr) repeat(2, min(15.5dvh, 17%));
+  grid-template-rows: repeat(2, var(--psg1-hero-row)) clamp(36px, 6dvh, 70px) minmax(0, 1fr);
+  align-items: stretch;
+  align-content: start;
+  gap: clamp(4px, 0.55vw, 8px);
+  /* Full-width grid: fixed square commands at right, flexible banner at left. */
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-width: none;
+  justify-self: center;
+  margin: 0;
+  padding: 4px 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+html[data-ui-device='psg1'] :is(.main-menu-web__commands, .main-menu-web__overview) {
+  display: contents;
+}
+html[data-ui-device='psg1'] .main-menu-web__overview-banner {
+  content: url('/assets/psg1/bannerpsg1-v2.png');
+  grid-area: 1 / 1 / 3 / 2;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  object-fit: cover;
+  object-position: center;
+}
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action[data-menu-action='start'] {
+  grid-area: 2 / 1 / 3 / 2;
+  align-self: end;
+  justify-self: center;
+  z-index: 3;
+  width: min(100%, 48dvh);
+  height: min(8dvh, 96px);
+  min-height: 0;
+  aspect-ratio: 2000 / 332;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='start'] .main-menu-web__action-image--inactive {
+  content: url('/assets/android-home-v2/start-v2.png');
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='start'] .main-menu-web__action-image--active {
+  content: url('/assets/android-home-v2/start-active-v2.png');
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='start'] .main-menu-web__action-image {
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='start'] .main-menu-web__action-label {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  --android-button-idle: 1;
+  --android-button-active: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1226 / 1192;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--bc-text);
+  font-family: 'Arial Black', 'Battle Cities UI', Impact, sans-serif;
+  font-weight: 900;
+  font-size: clamp(13px, 1.8vw, 28px);
+  letter-spacing: 0.015em;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 72%);
+  transform: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='shop'] { grid-area: 1 / 2; }
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='ranking'] { grid-area: 1 / 3; }
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='headquarters'] { grid-area: 2 / 2; }
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='socials'] { grid-area: 2 / 3; }
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--inactive {
+  content: url('/assets/psg1/buttonpsg1.png');
+  opacity: var(--android-button-idle);
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--active {
+  content: url('/assets/psg1/buttonactivepsg1.png');
+  opacity: var(--android-button-active);
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):is(:hover, :active, :focus-visible, .is-focused, .is-selected, .is-activating) {
+  --android-button-idle: 0;
+  --android-button-active: 1;
+  color: var(--bc-active-ink);
+}
+html[data-ui-device='psg1'] .android-home-button-icon {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  left: 18%;
+  top: 13%;
+  width: 64%;
+  height: 51%;
+  pointer-events: none;
+}
+html[data-ui-device='psg1'] .android-home-button-icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .android-home-button-icon + .main-menu-web__action-label {
+  position: absolute;
+  z-index: 2;
+  left: 7%;
+  bottom: 8%;
+  width: 86%;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateY(-2%);
+}
+html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='headquarters'] .main-menu-web__action-label {
+  font-size: clamp(13px, 1.8vw, 28px);
+}
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:not([data-menu-action='start']):not([data-menu-action='settings']):not([data-menu-action='shop']):not([data-menu-action='ranking']):not([data-menu-action='headquarters']):not([data-menu-action='socials']) {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__bottom-tank-scroller {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard {
+  display: block;
+  height: clamp(44px, 5.6vw, 112px);
+  min-height: clamp(44px, 5.6vw, 112px);
+  max-height: clamp(44px, 5.6vw, 112px);
+  padding: 0;
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__round-status {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__ticker-window,
+html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__live-event {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__hazard-track {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: max-content;
+  height: calc(100% - 6px);
+  min-height: 0;
+  margin: 3px 0;
+  padding: 0 8px;
+  gap: 0;
+  animation: main-menu-web-hazard-marquee 42s linear infinite;
+  transform: translateX(0);
+  will-change: transform;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__hazard-track .main-menu-web__ticker-run {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 100%;
+  padding: 0 clamp(14px, 2vw, 26px);
+  gap: 8px;
+  white-space: nowrap;
+  font-size: clamp(18px, 1.5vw, 26px);
+  line-height: 1;
+}
+.main-menu-web__psg1-footer-guide {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__psg1-footer-guide {
+  display: block;
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__psg1-footer-guide--hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-ui-device='psg1'] .main-menu-web__psg1-footer-guide {
+    transition: opacity 240ms ease-out, visibility 0s linear 240ms;
+  }
+}
+
+/* PSG1 rewards tabs follow the Android tab contract: two image layers remain
+   mounted and aria-selected chooses the visible active plate. */
+html[data-ui-device='psg1'] .android-home-tabs {
+  display: grid;
+  grid-area: 3 / 1 / 4 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(4px, 0.55vw, 8px);
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 100%;
+  justify-self: center;
+  margin: 0;
+}
+html[data-ui-device='psg1'] .android-home-tabs button {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1876 / 297;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+html[data-ui-device='psg1'] .android-home-tabs button:first-child .android-home-tabs__idle {
+  content: url('/assets/psg1/rewardstabpsg1.png');
+}
+html[data-ui-device='psg1'] .android-home-tabs button:first-child .android-home-tabs__active {
+  content: url('/assets/psg1/rewardsactivetabpsg1.png');
+}
+html[data-ui-device='psg1'] .android-home-tabs button:last-child .android-home-tabs__idle {
+  content: url('/assets/psg1/leadertabpsg1.png');
+}
+html[data-ui-device='psg1'] .android-home-tabs button:last-child .android-home-tabs__active {
+  content: url('/assets/psg1/leaderactivetabpsg1.png');
+}
+html[data-ui-device='psg1'] .android-home-tabs img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-briefing,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-preview {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='rewards'] .main-menu-web__reward-briefing,
+html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='leaderboard'] .main-menu-web__leaderboard-preview {
+  display: block;
+  grid-area: 4 / 1 / 5 / -1;
+  position: relative;
+  align-self: start;
+  justify-self: start;
+  width: 73%;
+  max-width: 73%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  clip-path: none;
+  box-shadow: none;
+  overflow: hidden;
+  container-type: inline-size;
+}
+html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='rewards'] .main-menu-web__reward-briefing {
+  aspect-ratio: auto;
+  background: url('/assets/psg1/rewardspsg1-v2.png') center / 100% 100% no-repeat;
+}
+html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='leaderboard'] .main-menu-web__leaderboard-preview {
+  aspect-ratio: auto;
+  background: url('/assets/psg1/leaderpsg1-v2.png') center / 100% 100% no-repeat;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-header,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-header {
+  display: contents;
+}
+html[data-ui-device='psg1'] :is(.main-menu-web__reward-header, .main-menu-web__leaderboard-header) > :is(.main-menu-web__panel-icon, div:not(.main-menu-web__reward-clock)),
+html[data-ui-device='psg1'] .main-menu-web__clock-icon,
+html[data-ui-device='psg1'] [data-home-countdown-label],
+html[data-ui-device='psg1'] .main-menu-web__how-it-works,
+html[data-ui-device='psg1'] .main-menu-web__reward-tier .main-menu-web__chest,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-columns,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-footer {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-clock {
+  display: block;
+  position: absolute;
+  z-index: 2;
+  top: 3.2%;
+  right: 1.8%;
+  width: 25.8%;
+  height: 31.5%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  clip-path: none;
+  background: transparent;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-clock > div {
+  position: absolute;
+  left: 31%;
+  top: 34%;
+  width: 66%;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-clock .main-menu-web__reward-countdown {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--bc-command);
+  font-size: clamp(11px, 2.1cqw, 30px);
+  line-height: 1;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-clock progress {
+  position: absolute;
+  left: 7%;
+  top: 73%;
+  width: 88%;
+  height: 13%;
+  margin: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-clock progress::-webkit-progress-bar { background: transparent; }
+html[data-ui-device='psg1'] .main-menu-web__reward-clock progress::-webkit-progress-value { background: var(--bc-command); }
+html[data-ui-device='psg1'] .main-menu-web__reward-clock progress::-moz-progress-bar { background: var(--bc-command); }
+html[data-ui-device='psg1'] .main-menu-web__reward-tiers {
+  position: absolute;
+  left: 5.5%;
+  top: 65%;
+  width: 88.5%;
+  height: 19%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2%;
+  padding: 0;
+}
+html[data-ui-device='psg1'] .main-menu-web__reward-tier,
+html[data-ui-device='psg1'] .main-menu-web__reward-tier .main-menu-web__podium {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: clamp(2px, 0.35cqw, 5px);
+  border: 0;
+  clip-path: none;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-ui-device='psg1'] .main-menu-web__podium strong {
+  position: static;
+  font-size: clamp(12px, 2.2cqw, 31px);
+  line-height: 1.05;
+}
+html[data-ui-device='psg1'] .main-menu-web__podium span {
+  font-size: clamp(10px, 1.55cqw, 23px);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-rows {
+  position: absolute;
+  left: 1.55%;
+  top: 12.7%;
+  width: 96.9%;
+  height: 81.5%;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row,
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-skeleton {
+  grid-template-columns: 9.7% 35.8% 27.8% 26.7%;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--bc-line);
+  background: transparent;
+  box-shadow: none;
+  color: var(--bc-text);
+  font-size: clamp(10px, 1.35cqw, 19px);
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row > strong {
+  height: auto;
+  border: 0;
+  clip-path: none;
+  background: transparent;
+  color: inherit;
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row > span { padding-left: 5%; }
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row > b { text-align: center; }
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row > em {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+html[data-ui-device='psg1'] .android-leaderboard-crate {
+  display: block;
+  width: 64%;
+  height: 88%;
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .leaderboard-reward-amount { display: none; }
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-row--self {
+  color: var(--bc-command);
+  background: rgb(255 179 15 / 12%);
+  box-shadow: inset 0 0 0 1px var(--bc-command);
+}
+
+/* Shared across both tab states: one live timer and one instructions block. */
+html[data-ui-device='psg1'] .main-menu-web {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 4px;
+  padding-left: max(8px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right));
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar {
+  grid-area: 4 / 1 / 5 / -1;
+  justify-self: end;
+  align-self: stretch;
+  width: calc(27% - 6px);
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 32% minmax(0, 1fr);
+  gap: 4px;
+  container-type: size;
+  box-sizing: border-box;
+  padding-bottom: 4px;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__reward-clock,
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 4cqw;
+  border: 2px solid #00bad7;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #082331, #020c14);
+  box-shadow: inset 0 0 0 2px #07141d, inset 0 0 0 3px #36586a;
+  clip-path: none;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__reward-clock {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 8%;
+  align-items: center;
+  gap: 4px 4cqw;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__clock-icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__reward-clock > div {
+  position: static;
+  width: auto;
+  min-width: 0;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar [data-home-countdown-label] {
+  display: block;
+  color: #00d4ef;
+  font-size: clamp(9px, 4.3cqw, 18px);
+  line-height: 1.1;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__reward-countdown {
+  font-size: clamp(10px, 5cqw, 23px);
+  line-height: 1.2;
+  padding-top: 3px;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar progress {
+  position: static;
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 100%;
+  min-height: 4px;
+  background: #123849;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works {
+  display: flex;
+  flex-direction: column;
+  gap: 3cqh;
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works h3 {
+  margin: 0;
+  color: var(--bc-command);
+  font-size: clamp(12px, 7cqw, 28px);
+  line-height: 1;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works ol {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  gap: 2cqh;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works li {
+  display: flex;
+  align-items: center;
+  gap: 4cqw;
+  padding: 0;
+  border: 0;
+  font-size: clamp(10px, min(5.8cqw, 4.5cqh), 22px);
+  line-height: 1.15;
+}
+html[data-ui-device='psg1'] .psg1-round-sidebar .main-menu-web__how-it-works b {
+  display: grid;
+  place-items: center;
+  flex: 0 0 min(14cqw, 9cqh);
+  height: min(14cqw, 9cqh);
+  font-size: clamp(12px, 7cqw, 28px);
+  background: transparent;
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-columns {
+  display: grid;
+  position: absolute;
+  left: 1.55%;
+  top: 3%;
+  width: 96.9%;
+  height: 10%;
+  grid-template-columns: 9.7% 35.8% 27.8% 26.7%;
+  padding: 0;
+  align-items: center;
+  color: #00d4ef;
+  font-size: clamp(10px, 1.8cqw, 22px);
+  border-bottom: 1px solid #00bad7;
+}
+html[data-ui-device='psg1'] .main-menu-web__leaderboard-columns span { text-align: center; }
+
+/* The remaining home menu uses main-menu-web.css responsive tracks on PSG1.
    Other handheld screens retain their dedicated presentation below. */
 
 /* Desktop Shop composition even when the WebView reports <900 CSS pixels. */

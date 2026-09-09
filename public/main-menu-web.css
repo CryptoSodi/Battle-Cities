@@ -1368,13 +1368,13 @@ html[data-ui-platform='android']
 html[data-ui-platform='android']
   .main-menu-web__action[data-menu-action='start']
   .main-menu-web__action-image--inactive {
-  content: url('/assets/android-home-v2/start.png');
+  content: url('/assets/android-home-v2/start-v2.png');
 }
 
 html[data-ui-platform='android']
   .main-menu-web__action[data-menu-action='start']
   .main-menu-web__action-image--active {
-  content: url('/assets/android-home-v2/start-active.png');
+  content: url('/assets/android-home-v2/start-active-v2.png');
 }
 
 html[data-ui-platform='android']
@@ -1559,7 +1559,7 @@ html[data-ui-platform='android'] .main-menu-web__commands
   width: 100%;
   height: auto;
   min-height: 0;
-  aspect-ratio: 2000 / 338;
+  aspect-ratio: 1976 / 325;
   border: 0;
   /* Bridge the grid gap and overlap the banner's lower frame at every size.
      Negative margin also pulls the following menu rows up with the button. */
@@ -2060,6 +2060,7 @@ html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='headqu
   font-size: clamp(13px, 4.2cqw, 32px);
 }
 .android-home-level { display: none; }
+.main-menu-web__reward-clock--leaderboard { display: none; }
 html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='settings'] {
   top: calc(env(safe-area-inset-top, 0px) + var(--android-home-extra-gap, 0px) + 1.7cqw);
   height: max(40px, 10cqw);

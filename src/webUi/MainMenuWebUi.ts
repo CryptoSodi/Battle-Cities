@@ -85,6 +85,7 @@ export class MainMenuWebUi {
   private rewardsData: HomeRewardsResponse | null = null;
   private rewardsLoading = false;
   private rewardsTimer: number | null = null;
+  private psg1FooterTimer: number | null = null;
   private refreshTick = 0;
   private touchActionTimer: number | null = null;
   private homeLayoutObserver: ResizeObserver | null = null;
@@ -113,6 +114,33 @@ export class MainMenuWebUi {
     host.hidden = false;
     host.innerHTML = this.render();
 
+    // The PSG1 artwork reserves the first HUD compartment for Settings.
+    // Move the existing real button there instead of positioning it from the hero.
+    if (document.documentElement.dataset.uiDevice === 'psg1') {
+      const hud = host.querySelector<HTMLElement>('.main-menu-web__hud');
+      const settings = host.querySelector<HTMLButtonElement>("[data-menu-action='settings']");
+      if (hud && settings) hud.prepend(settings);
+      const headquarters = host.querySelector<HTMLButtonElement>("[data-menu-action='headquarters']");
+      const headquartersLabel = headquarters?.querySelector<HTMLElement>('.main-menu-web__action-label');
+      if (headquarters && headquartersLabel) {
+        headquarters.setAttribute('aria-label', 'Headquarters');
+        headquartersLabel.textContent = 'Quarters';
+      }
+      // A single sidebar belongs to the tab group, not to either tab panel.
+      // Moving these live nodes keeps the timer geometry/state identical.
+      const overview = host.querySelector<HTMLElement>('.main-menu-web__overview');
+      const clock = host.querySelector<HTMLElement>('#home-rewards-panel .main-menu-web__reward-clock');
+      const instructions = host.querySelector<HTMLElement>('.main-menu-web__how-it-works');
+      if (overview && clock && instructions) {
+        const sidebar = document.createElement('aside');
+        sidebar.className = 'psg1-round-sidebar';
+        sidebar.setAttribute('aria-label', 'Round timer and reward instructions');
+        sidebar.append(clock, instructions);
+        overview.append(sidebar);
+        host.querySelector('.main-menu-web__reward-clock--leaderboard')?.remove();
+      }
+    }
+
     this.hydrateHud();
     void this.refreshHudProgression(currentMountId);
     this.cherryChat.mount();
@@ -122,6 +150,15 @@ export class MainMenuWebUi {
     this.bindEventTicker();
     this.bindNotificationDialog();
     this.focusInitialAction();
+
+    const psg1FooterGuide = host.querySelector<HTMLElement>('[data-psg1-footer-guide]');
+    if (psg1FooterGuide) {
+      this.psg1FooterTimer = window.setTimeout(() => {
+        psg1FooterGuide.classList.add('main-menu-web__psg1-footer-guide--hidden');
+        psg1FooterGuide.closest('.main-menu-web__hazard')?.classList.add('main-menu-web__hazard--guide-dismissed');
+        this.psg1FooterTimer = null;
+      }, 10_000);
+    }
 
     this.refreshTick = 0;
     void this.loadPresence(currentMountId);
@@ -160,6 +197,10 @@ export class MainMenuWebUi {
     if (this.rewardsTimer !== null) {
       window.clearInterval(this.rewardsTimer);
       this.rewardsTimer = null;
+    }
+    if (this.psg1FooterTimer !== null) {
+      window.clearTimeout(this.psg1FooterTimer);
+      this.psg1FooterTimer = null;
     }
     this.actionButtons = [];
     this.rewardsData = null;
@@ -373,6 +414,11 @@ export class MainMenuWebUi {
                   <h2 id="home-leaderboard-title">Rewards Leaderboard</h2>
                   <p data-home-rewards-state>Loading current round</p>
                 </div>
+                <div class="main-menu-web__reward-clock main-menu-web__reward-clock--leaderboard" aria-label="Leaderboard round timer">
+                  <i class="main-menu-web__clock-icon" aria-hidden="true"></i>
+                  <div><span data-home-countdown-label>ROUND STATUS</span><output class="main-menu-web__reward-countdown" data-home-rewards-countdown>SYNCING</output></div>
+                  <progress data-home-round-progress max="100" value="0" aria-label="Time remaining in this round"></progress>
+                </div>
               </header>
               <div class="main-menu-web__leaderboard-columns" aria-hidden="true">
                 <span>#</span><span>Player</span><span>Score</span><span>Reward</span>
@@ -389,6 +435,7 @@ export class MainMenuWebUi {
         </section>
 
         <footer class="main-menu-web__hazard" aria-label="Live battlefield status">
+          <img class="main-menu-web__psg1-footer-guide" data-psg1-footer-guide src="/assets/psg1/footerpsg1.png" alt="" aria-hidden="true" width="2000" height="112">
           <div class="main-menu-web__ticker-window">
             <button type="button" class="main-menu-web__live-event" data-menu-event-ticker aria-label="Live events">
               <span class="main-menu-web__hazard-track">
@@ -423,7 +470,7 @@ export class MainMenuWebUi {
     if (!menu) return;
     menu.style.removeProperty('--android-home-fit-width');
     menu.style.removeProperty('--android-home-extra-gap');
-    if (document.documentElement.dataset.uiPlatform !== 'android') {
+    if (document.documentElement.dataset.uiPlatform !== 'android' || document.documentElement.dataset.uiDevice === 'psg1') {
       document.body.style.removeProperty('--home-menu-right');
       return;
     }
@@ -891,6 +938,7 @@ export class MainMenuWebUi {
       output.textContent = this.rewardsLoading
         ? 'SYNCING ROUND'
         : 'ROUND UNAVAILABLE';
+      this.setText('[data-home-rewards-countdown]', output.textContent);
       this.setText('[data-home-round]', output.textContent);
       return;
     }
@@ -901,9 +949,10 @@ export class MainMenuWebUi {
       .padStart(2, '0');
     const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
     output.textContent = `00:${minutes}:${remainingSeconds}`;
+    this.setText('[data-home-rewards-countdown]', output.textContent);
     this.setText('[data-home-countdown-label]', this.rewardsData?.enabled ? 'NEXT REWARD IN' : 'ROUND ENDS IN');
-    const progress = this.host.querySelector<HTMLProgressElement>('[data-home-round-progress]');
-    if (progress) progress.value = Math.min(100, Math.max(0, seconds / Math.max(1, (this.rewardsData?.rewardIntervalMinutes || 30) * 60) * 100));
+    const progressValue = Math.min(100, Math.max(0, seconds / Math.max(1, (this.rewardsData?.rewardIntervalMinutes || 30) * 60) * 100));
+    this.host.querySelectorAll<HTMLProgressElement>('[data-home-round-progress]').forEach((progress) => { progress.value = progressValue; });
     const started = this.rewardsData?.intervalStartedAt;
     const roundTime =
       started && Number.isFinite(Date.parse(started))
@@ -1068,10 +1117,7 @@ export class MainMenuWebUi {
   }
 
   private setText(selector: string, value: string): void {
-    const element = this.host?.querySelector(selector);
-    if (element !== null && element !== undefined) {
-      element.textContent = value;
-    }
+    this.host?.querySelectorAll(selector).forEach((element) => { element.textContent = value; });
   }
 
   private setEventTickerText(value: string): void {
