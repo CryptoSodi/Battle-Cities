@@ -3,6 +3,7 @@ import { InputManager, MenuInputContext } from '../input';
 import { apiFetch, getApiUrl } from '../network/api';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
 
 interface SocialTask {
   id: string;
@@ -198,6 +199,7 @@ export class SocialsWebUi {
     )}</section><p class="operations-web__status" aria-live="polite">${
       this.status
     }</p></section></main>`;
+    decoratePsg1Console(this.host);
     this.bind();
     const preferred =
       this.buttons.find(

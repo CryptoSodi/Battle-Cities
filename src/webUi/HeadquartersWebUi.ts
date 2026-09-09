@@ -2,6 +2,7 @@ import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
 
 export const HEADQUARTERS_ICON_NAMES = {
   treasury: 'treasury-safe',
@@ -115,6 +116,7 @@ export class HeadquartersWebUi {
           `<button class="operations-web__card" data-hq-key="entry-${index}" data-hq-entry="${index}" type="button"><h3>${entry[0]}</h3><span class="operations-web__mark operations-web__mark--illustration" aria-hidden="true"><img src="/assets/headquarters/${entry[2]}.png" alt=""></span><p>${entry[1]}</p><strong>OPEN</strong></button>`,
       )
       .join('')}</section></section></main>`;
+    decoratePsg1Console(this.host);
     this.bind();
   }
   private bind(): void {

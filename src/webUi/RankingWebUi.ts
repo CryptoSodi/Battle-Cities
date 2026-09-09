@@ -3,6 +3,7 @@ import { InputManager, MenuInputContext } from '../input';
 import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
 
 export class RankingWebUi {
   private readonly client = new RankingClient();
@@ -143,6 +144,7 @@ export class RankingWebUi {
             )
             .join('')
     }</section></section></main>`;
+    decoratePsg1Console(this.host);
     this.bind();
     const focusSelector =
       this.pendingFocusSelector || `[data-rank-key="${this.lastFocusKey}"]`;

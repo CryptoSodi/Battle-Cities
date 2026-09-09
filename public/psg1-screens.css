@@ -1,7 +1,7 @@
-/* PSG1 Settings + Shop. Shared, live CSS plates: no baked text or state swaps.
+/* PSG1 console screens. Shared, live CSS plates: no baked text or state swaps.
    Cyan hardware follows the supplied PSG1 concept; gold/green/red keep their
    command/supply/destructive roles. Other devices are intentionally untouched. */
-html[data-ui-device='psg1'] :is(.settings-web, .shop-web) {
+html[data-ui-device='psg1'] :is(.settings-web, .shop-web, .psg1-console) {
   --psg-edge: #258fa8;
   --bc-supply: var(--bc-ready);
   --psg-steel: #839da5;
@@ -35,7 +35,7 @@ html[data-ui-device='psg1'] :is(.settings-web, .shop-web) {
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web) {
+  :is(.settings-web, .shop-web, .psg1-console) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: var(--psg-gap);
@@ -48,7 +48,8 @@ html[data-ui-device='psg1']
   overflow: hidden;
   background: var(--bc-bg);
 }
-html[data-ui-device='psg1'] :is(.settings-web, .shop-web)::before {
+html[data-ui-device='psg1']
+  :is(.settings-web, .shop-web, .psg1-console)::before {
   display: none;
 }
 html[data-ui-device='psg1']
@@ -68,7 +69,7 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web)
+  :is(.settings-web, .shop-web, .psg1-console)
   [data-ui-nav]
   :is([data-ui-tab], [data-ui-back]) {
   grid-column: auto;
@@ -83,7 +84,7 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web)
+  :is(.settings-web, .shop-web, .psg1-console)
   [data-ui-nav]
   [data-ui-tab].is-active {
   background: var(--ui-active-plate);
@@ -94,7 +95,7 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web)
+  :is(.settings-web, .shop-web, .psg1-console)
   [data-ui-nav]
   .is-selected {
   border-color: var(--bc-command);
@@ -103,7 +104,7 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web)
+  :is(.settings-web, .shop-web, .psg1-console)
   [data-ui-nav]
   [data-ui-back].is-selected {
   background: var(--bc-danger-surface);
@@ -124,7 +125,7 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  :is(.settings-web, .shop-web)
+  :is(.settings-web, .shop-web, .psg1-console)
   [data-ui-nav]
   :is([data-ui-tab], [data-ui-back])::after {
   content: '';
@@ -136,7 +137,10 @@ html[data-ui-device='psg1']
     linear-gradient(#ffed6d, #ff7614 45%, #e93508 55%, #ffed6d) right center /
       3px 70% no-repeat;
 }
-html[data-ui-device='psg1'] :is(.settings-web, .shop-web) [data-ui-nav] img {
+html[data-ui-device='psg1']
+  :is(.settings-web, .shop-web, .psg1-console)
+  [data-ui-nav]
+  img {
   width: clamp(24px, 3.8vw, 48px);
   height: clamp(24px, 3.8vw, 48px);
   object-fit: contain;
@@ -147,7 +151,7 @@ html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
   :is(.settings-web__rows
-    article, .shop-web__desktop-side, .shop-web__desktop-content, .shop-web__card, .shop-web__loadout-slot) {
+    article, .shop-web__desktop-side, .shop-web__desktop-content, .shop-web__card, .shop-web__loadout-slot, .psg1-console-frame) {
   position: relative;
   border: 3px solid var(--psg-steel);
   border-radius: 0;
@@ -157,7 +161,7 @@ html[data-ui-device='psg1']
 }
 html[data-ui-device='psg1']
   :is(.settings-web__rows
-    article, .shop-web__desktop-side, .shop-web__desktop-content, .shop-web__card, .shop-web__loadout-slot)::before {
+    article, .shop-web__desktop-side, .shop-web__desktop-content, .shop-web__card, .shop-web__loadout-slot, .psg1-console-frame)::before {
   content: '';
   position: absolute;
   inset: 3px;
@@ -204,7 +208,7 @@ html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
   :is(.settings-web__rows
-    article.is-selected, .shop-web__card:has(.is-selected), .shop-web__loadout-slot.is-selected) {
+    article.is-selected, .shop-web__card:has(.is-selected), .shop-web__loadout-slot.is-selected, .psg1-console-frame.is-selected) {
   border-color: var(--bc-command);
   box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--bc-command);
 }
@@ -658,7 +662,7 @@ html[data-ui-device='psg1']
   line-height: 1.3;
 }
 @media (max-width: 700px) {
-  html[data-ui-device='psg1'] :is(.settings-web, .shop-web) {
+  html[data-ui-device='psg1'] :is(.settings-web, .shop-web, .psg1-console) {
     --ui-nav-font: 14px;
     --ui-nav-icon-gap: 4px;
   }
@@ -671,5 +675,421 @@ html[data-ui-device='psg1']
   }
   html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Quaters, Socials and Ranking share the same console hardware and controls. */
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page] {
+  padding: max(6px, env(safe-area-inset-top))
+    max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
+    max(6px, env(safe-area-inset-left));
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  [data-ui-nav] {
+  margin: 0;
+  grid-template-columns: 1fr 1fr 0.85fr;
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .headquarters-web.psg1-console[data-ui-page]
+  [data-ui-nav] {
+  grid-template-columns: 1.8fr 1fr;
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  [data-ui-nav]
+  > div[data-ui-tab].is-active {
+  max-width: none;
+  justify-content: center;
+  background: var(--psg-surface);
+  border-color: var(--psg-steel);
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] [data-ui-nav] h1 {
+  color: var(--bc-command);
+  font-size: var(--ui-nav-font);
+  letter-spacing: 0.04em;
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  :is(.operations-web__shell, .ranking-web__shell) {
+  display: grid;
+  gap: var(--psg-gap);
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: hidden;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .operations-web__shell {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page].socials-web
+  .operations-web__shell {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  :is(.operations-web__shell, .ranking-web__shell)::before,
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__section-title {
+  display: none;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .operations-web__intro {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 18px;
+  border: 1px solid var(--psg-edge);
+  background: var(--psg-surface);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__intro
+  h2 {
+  color: var(--bc-command);
+  font-size: clamp(18px, 2vw, 25px);
+  white-space: nowrap;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__intro
+  p {
+  margin: 0;
+  font-size: clamp(12px, 1.35vw, 17px);
+  text-align: left;
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  .operations-web__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: minmax(210px, 1fr);
+  align-content: stretch;
+  min-height: 0;
+  margin: 0;
+  gap: var(--psg-gap);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  .operations-web__grid--social {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  .operations-web__card {
+  grid-column: auto;
+  grid-template-rows: minmax(60px, 1fr) auto minmax(32px, auto) var(
+      --psg-control
+    );
+  align-items: stretch;
+  gap: 8px;
+  min-height: 0;
+  padding: 16px 12px 12px;
+  outline: none;
+  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.035em;
+  text-align: center;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card
+  h3 {
+  grid-row: 2;
+  margin: 0;
+  color: var(--bc-text);
+  font-size: clamp(20px, 2.1vw, 29px);
+  line-height: 1.15;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card
+  .operations-web__mark {
+  grid-row: 1;
+  align-self: center;
+  width: clamp(60px, 12dvh, 126px);
+  height: clamp(60px, 12dvh, 126px);
+  min-width: 0;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__mark
+  img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card
+  p {
+  align-self: center;
+  color: var(--bc-muted-light);
+  font-size: clamp(12px, 1.3vw, 17px);
+  line-height: 1.3;
+  margin: 0;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card
+  strong {
+  color: var(--bc-text);
+  border: 2px solid var(--bc-ready);
+  background: linear-gradient(var(--bc-ready-dark), #12281c);
+  font-size: var(--ui-nav-font);
+  line-height: 1;
+  padding: 4px 8px;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card.is-selected
+  strong {
+  color: var(--bc-active-ink);
+  background: var(--ui-active-plate);
+  border-color: var(--bc-command);
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  .operations-web__card:disabled {
+  opacity: 1;
+  cursor: default;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card:disabled
+  :is(img, h3) {
+  opacity: 0.55;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card:disabled
+  strong {
+  background: #15242b;
+  border-color: #566b75;
+  color: #a9b9c0;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__card.is-complete
+  strong {
+  color: var(--bc-ready);
+  border-color: var(--bc-ready);
+  background: #13271c;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .operations-web__status {
+  margin: 0;
+  padding: 10px 14px;
+  min-height: 36px;
+  font-size: clamp(12px, 1.4vw, 18px);
+  border-block: 1px solid var(--psg-edge);
+  background: var(--psg-surface);
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  .ranking-web__shell {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--psg-gap);
+  margin: 0;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__summary
+  > div {
+  display: grid;
+  gap: 8px;
+  padding: 18px 24px;
+  min-width: 0;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__summary
+  span {
+  color: var(--bc-muted-light);
+  font-size: clamp(15px, 1.8vw, 24px);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__summary
+  strong {
+  color: var(--bc-command);
+  font-size: clamp(22px, 2.7vw, 36px);
+  line-height: 1.1;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-picker {
+  width: min(50%, 440px);
+  margin: 0;
+  z-index: 4;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__season {
+  height: var(--psg-control);
+  padding: 0 18px;
+  border: 2px solid var(--psg-edge);
+  background: var(--psg-surface);
+  font-size: var(--ui-nav-font);
+  outline: none;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options {
+  background: #08141b;
+  border: 2px solid var(--psg-steel);
+  max-height: min(240px, 45dvh);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options
+  button {
+  min-height: 44px;
+  font-size: var(--ui-nav-font);
+  outline: none;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season.is-selected {
+  border-color: var(--bc-command);
+  color: var(--bc-command);
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .psg1-console[data-ui-page]
+  :is(.ranking-web__header, .ranking-web__row) {
+  display: grid;
+  grid-template-columns: 10% minmax(0, 1fr) 16% 22%;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  font: 700 clamp(18px, 2vw, 27px) / 1.1 'Battle Cities UI', 'Arial Narrow',
+    sans-serif;
+  letter-spacing: 0.035em;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__header {
+  min-height: var(--psg-control);
+  color: #00d4ed;
+  border: 2px solid var(--psg-edge);
+  background: #052333;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__rows {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 2px solid var(--psg-edge);
+  background: var(--psg-grid);
+  padding: 4px;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__row {
+  min-height: max(50px, 7dvh);
+  margin: 0 0 4px;
+  background: #071722bb;
+  border: 2px solid #194453;
+  color: var(--bc-text);
+  outline: none;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__row > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__row.is-selected {
+  border-color: var(--bc-command);
+  background: #30290f;
+  box-shadow: inset 4px 0 var(--bc-command);
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__empty {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  height: 100%;
+  margin: 0;
+  padding: 24px;
+  color: var(--bc-command);
+  font-size: clamp(18px, 2.2vw, 30px);
+  text-align: center;
+}
+@media (max-width: 900px) {
+  html[data-ui-device='psg1']
+    body.web-ui-active
+    [data-web-ui]
+    .psg1-console[data-ui-page]
+    .operations-web__grid--hq {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  html[data-ui-device='psg1']
+    .psg1-console[data-ui-page]
+    .operations-web__intro {
+    display: grid;
+    gap: 5px;
+    padding: 8px 12px;
+  }
+  html[data-ui-device='psg1']
+    .psg1-console[data-ui-page]
+    .operations-web__intro
+    h2 {
+    text-align: left;
+  }
+  html[data-ui-device='psg1']
+    .psg1-console[data-ui-page]
+    .ranking-web__summary
+    > div {
+    padding: 14px 16px;
+  }
+}
+@media (max-width: 700px) {
+  html[data-ui-device='psg1']
+    body.web-ui-active
+    [data-web-ui]
+    .psg1-console[data-ui-page]
+    .operations-web__grid--social {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  html[data-ui-device='psg1']
+    body.web-ui-active
+    [data-web-ui]
+    .psg1-console[data-ui-page]
+    :is(.ranking-web__header, .ranking-web__row) {
+    gap: 6px;
+    padding-inline: 8px;
+    font-size: 17px;
   }
 }
