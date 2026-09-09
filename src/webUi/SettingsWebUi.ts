@@ -10,6 +10,7 @@ import {
 } from '../notifications/NativeNotificationClient';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
+import { isPsg1Ui } from './deviceUi';
 
 export class SettingsWebUi {
   private readonly notificationClient = new NativeNotificationClient();
@@ -96,7 +97,11 @@ export class SettingsWebUi {
             enabled ? 'ON' : 'OFF'
           }</span><i></i></button></article>`,
       )
-      .join('')}<article><h2>ACCOUNT</h2><button type="button" class="settings-web__logout" data-setting="logout" ${this.signingOut ? 'disabled aria-busy="true"' : ''}>${this.signingOut ? 'SIGNING OUT…' : 'LOGOUT'}</button></article>${
+      .join(
+        '',
+      )}<article><h2>ACCOUNT</h2><button type="button" class="settings-web__logout" data-setting="logout" ${
+      this.signingOut ? 'disabled aria-busy="true"' : ''
+    }>${this.signingOut ? 'SIGNING OUT…' : 'LOGOUT'}</button></article>${
       this.supportsPhonePairing()
         ? '<section class="settings-web__pairing"><h2>PHONE CONTROLLER</h2><p>Scan with your phone to use it as a controller for this game.</p><div data-settings-pairing role="status">Preparing pairing code…</div><button type="button" data-setting="pairing" class="settings-web__pairing-retry" hidden>RETRY PAIRING</button></section>'
         : ''
@@ -105,6 +110,7 @@ export class SettingsWebUi {
     }</p><small>VERSION ${
       process.env.BATTLECITY_VERSION
     }</small></section></main>`;
+    if (isPsg1Ui()) this.decoratePsg1();
     this.bind();
     if (this.supportsPhonePairing()) void this.loadPairing(renderId);
     (
@@ -112,6 +118,48 @@ export class SettingsWebUi {
         `[data-setting="${this.lastFocusKey}"]`,
       ) || this.host.querySelector<HTMLButtonElement>('[data-settings-back]')
     )?.focus({ preventScroll: true });
+  }
+  private decoratePsg1(): void {
+    const paths: Record<string, string> = {
+      mute:
+        '<path d="M8 24h12L36 10v44L20 40H8z"/><path d="m44 23 14 18m0-18L44 41"/>',
+      scanline:
+        '<rect x="7" y="10" width="50" height="42" rx="3"/><path d="M15 20h34M15 28h34M15 36h34M15 44h34"/>',
+      notifications:
+        '<path d="M16 43V27a16 16 0 0 1 32 0v16l6 5H10zM26 55h12"/>',
+      logout:
+        '<path d="M9 19 46 8v12H9v34h47V20H9z"/><path d="M39 31h20v14H39z"/><circle cx="46" cy="38" r="2"/>',
+    };
+    const descriptions: Record<string, string> = {
+      mute: 'Game audio',
+      scanline: 'Retro screen effect',
+      notifications: 'Game notifications',
+    };
+    const player = this.playerIdentity.getPlayer();
+    descriptions.logout = player?.walletAddress
+      ? `${player.walletAddress.slice(0, 5)}...${player.walletAddress.slice(
+          -4,
+        )}`
+      : this.playerIdentity.getDisplayName();
+    this.host
+      .querySelectorAll<HTMLElement>('.settings-web__rows article')
+      .forEach((row) => {
+        const key = row.querySelector<HTMLElement>('[data-setting]')?.dataset
+          .setting;
+        if (!key || !paths[key]) return;
+        const icon = document.createElement('span');
+        icon.className = 'psg1-setting-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="bevel">${paths[key]}</svg>`;
+        row.prepend(icon);
+        const description = document.createElement('small');
+        description.textContent = descriptions[key];
+        row.querySelector('h2')?.append(description);
+      });
+    const gear = document.createElement('img');
+    gear.src = '/assets/android-home-v2/gear.png';
+    gear.alt = '';
+    this.host.querySelector('h1')?.prepend(gear);
   }
   private bind(): void {
     const signal = this.abortController.signal;

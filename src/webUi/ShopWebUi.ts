@@ -137,6 +137,14 @@ export class ShopWebUi {
   private refresh(status = '', restoreSelector = this.focusSelector()): void {
     if (!this.active || !this.host) return;
     this.host.innerHTML = this.render(status);
+    if (isPsg1Ui()) {
+      const nav = this.host.querySelector('[data-ui-nav]');
+      const loadout = nav?.querySelector('[data-shop-tab="loadout"]');
+      if (nav && loadout) nav.prepend(loadout);
+      this.host.querySelector<HTMLElement>(
+        '.shop-web',
+      ).dataset.shopView = this.tab;
+    }
     this.bind();
     if (!restoreSelector) return;
     const selected = this.host.querySelector(restoreSelector);
@@ -158,15 +166,20 @@ export class ShopWebUi {
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'swap',
       'SWAP',
-    )}${this.tabButton('loadout', 'LOADOUT')}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
+    )}${this.tabButton(
+      'loadout',
+      'LOADOUT',
+    )}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
         this.shop.isWalletConnected() ? ' is-connected' : ''
       }" data-shop-wallet type="button"${
-        this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
-      }>${
+      this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
+    }>${
       this.shop.isWalletConnected()
         ? '<i aria-hidden="true"></i>CONNECTED'
-        : this.shop.isVirtualEconomyAccount() ? 'GOOGLE ACCOUNT' : 'CONNECT'
+        : this.shop.isVirtualEconomyAccount()
+        ? 'GOOGLE ACCOUNT'
+        : 'CONNECT'
     }</button>${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),
@@ -203,7 +216,10 @@ export class ShopWebUi {
       )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
       'swap',
       'SWAP',
-    )}${this.tabButton('loadout', 'LOADOUT')}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
+    )}${this.tabButton(
+      'loadout',
+      'LOADOUT',
+    )}<span class="shop-web__tab-spacer" data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
       <section class="shop-web__desktop-shell${
         this.tab === 'swap' ? ' shop-web__desktop-shell--swap' : ''
       }"><aside class="shop-web__desktop-side">${this.desktopSidebar()}</aside>
@@ -253,7 +269,9 @@ export class ShopWebUi {
       .join('');
   }
   private desktopSidebar(): string {
-    const wallet = `<h2>${this.tab === 'swap' ? 'WALLET' : 'INVENTORY'}</h2><button class="shop-web__connect${
+    const wallet = `<h2>${
+      this.tab === 'swap' ? 'WALLET' : 'INVENTORY'
+    }</h2><button class="shop-web__connect${
       this.shop.isWalletConnected() ? ' is-connected' : ''
     }" data-shop-wallet type="button"${
       this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
@@ -283,7 +301,8 @@ export class ShopWebUi {
     const allocation = Number(activeStage?.allocationBatc || 0);
     const sold = Number(activeStage?.soldBatc || 0);
     const available = Math.max(0, allocation - sold);
-    const soldPercent = allocation > 0 ? Math.min(100, (sold / allocation) * 100) : 0;
+    const soldPercent =
+      allocation > 0 ? Math.min(100, (sold / allocation) * 100) : 0;
     const totalSold = stages.reduce(
       (total, stage) => total + Number(stage.soldBatc || 0),
       0,
@@ -304,9 +323,9 @@ export class ShopWebUi {
         }"><span>${stage.label}</span><span>${this.formatSwapNumber(
           Number(stage.priceSol || 0),
           9,
-        )} SOL</span><span>${this.formatSwapNumber(stageSold)}</span><span>${this.formatSwapNumber(
-          remaining,
-        )}</span></div>`;
+        )} SOL</span><span>${this.formatSwapNumber(
+          stageSold,
+        )}</span><span>${this.formatSwapNumber(remaining)}</span></div>`;
       })
       .join('');
     return `<section class="shop-web__presale-legend${
@@ -315,7 +334,9 @@ export class ShopWebUi {
       state ? this.formatSwapNumber(available) : '--'
     } BATC</strong><span>AVAILABLE IN THIS STAGE</span><small>${
       activeStage
-        ? `${activeStage.label} allocation: ${this.formatSwapNumber(allocation)} BATC`
+        ? `${activeStage.label} allocation: ${this.formatSwapNumber(
+            allocation,
+          )} BATC`
         : 'Loading stage allocation'
     }</small></div><div class="shop-web__presale-progress" style="--presale-progress:${soldPercent.toFixed(
       2,
@@ -424,11 +445,35 @@ export class ShopWebUi {
     const shortWallet = walletConnected
       ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-4)}`
       : 'WALLET NOT CONNECTED';
-    return `<section class="shop-web__swap" aria-label="BATC swap"><div class="shop-web__swap-body"><div class="shop-web__swap-method"><span aria-hidden="true">◎</span> PAY WITH SOL</div><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(receiveAmount)} <span>BATC</span></output></section><aside class="shop-web__swap-summary" aria-label="Live exchange details"><dl><div><dt>CURRENT RATE</dt><dd data-shop-swap-rate>${rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'}</dd></div><div><dt>PRICE PER TOKEN</dt><dd>${price > 0 ? `${this.formatSwapNumber(price, 9)} SOL` : 'LOADING'}</dd></div></dl><div class="shop-web__swap-wallet${walletConnected ? ' is-connected' : ''}"><i aria-hidden="true"></i><span>${shortWallet}</span></div><button class="shop-web__swap-review" data-shop-swap-review type="button"${canSwap ? '' : ' disabled'}>${walletConnected ? '▣ REVIEW PURCHASE' : 'CONNECT WALLET'}</button><p class="shop-web__swap-live">${state?.configured ? `LIVE ${network} DATA LOADED` : 'LOADING LIVE PRESALE DATA'}</p><p class="shop-web__swap-notice"><strong>⚠ ${network}:</strong> Your first BATC purchase also creates your token account and includes its one-time Solana rent. Review the wallet, amount, and network before confirming.</p></aside></div></section>`;
+    return `<section class="shop-web__swap" aria-label="BATC swap"><div class="shop-web__swap-body"><div class="shop-web__swap-method"><span aria-hidden="true">◎</span> PAY WITH SOL</div><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(
+      receiveAmount,
+    )} <span>BATC</span></output></section><aside class="shop-web__swap-summary" aria-label="Live exchange details"><dl><div><dt>CURRENT RATE</dt><dd data-shop-swap-rate>${
+      rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'
+    }</dd></div><div><dt>PRICE PER TOKEN</dt><dd>${
+      price > 0 ? `${this.formatSwapNumber(price, 9)} SOL` : 'LOADING'
+    }</dd></div></dl><div class="shop-web__swap-wallet${
+      walletConnected ? ' is-connected' : ''
+    }"><i aria-hidden="true"></i><span>${shortWallet}</span></div><button class="shop-web__swap-review" data-shop-swap-review type="button"${
+      canSwap ? '' : ' disabled'
+    }>${
+      walletConnected ? '▣ REVIEW PURCHASE' : 'CONNECT WALLET'
+    }</button><p class="shop-web__swap-live">${
+      state?.configured
+        ? `LIVE ${network} DATA LOADED`
+        : 'LOADING LIVE PRESALE DATA'
+    }</p><p class="shop-web__swap-notice"><strong>⚠ ${network}:</strong> Your first BATC purchase also creates your token account and includes its one-time Solana rent. Review the wallet, amount, and network before confirming.</p></aside></div></section>`;
   }
   private swapDialog(): string {
     const quote = this.presaleQuote;
-    return `<dialog class="shop-web__swap-dialog" data-shop-swap-dialog aria-labelledby="shop-swap-dialog-title"><p class="shop-web__swap-eyebrow">VERIFY TRANSACTION</p><h2 id="shop-swap-dialog-title">REVIEW SWAP</h2><dl><div><dt>YOU PAY</dt><dd>${quote ? `${quote.payAmount} SOL` : '--'}</dd></div><div><dt>YOU RECEIVE</dt><dd>${quote ? `${this.formatSwapNumber(Number(quote.batcAmount))} BATC` : '--'}</dd></div><div><dt>PRICE</dt><dd>${quote ? `${quote.tokenPriceSol} SOL` : '--'}</dd></div><div><dt>STAGE / NETWORK</dt><dd>${quote ? `${quote.stageLabel} · ${quote.network.toUpperCase()}` : '--'}</dd></div></dl><p>Confirm only after checking the amount and network in your wallet.</p><div class="shop-web__swap-dialog-actions"><button data-shop-swap-cancel type="button">CANCEL</button><button data-shop-swap-confirm type="button">CONFIRM IN WALLET</button></div></dialog>`;
+    return `<dialog class="shop-web__swap-dialog" data-shop-swap-dialog aria-labelledby="shop-swap-dialog-title"><p class="shop-web__swap-eyebrow">VERIFY TRANSACTION</p><h2 id="shop-swap-dialog-title">REVIEW SWAP</h2><dl><div><dt>YOU PAY</dt><dd>${
+      quote ? `${quote.payAmount} SOL` : '--'
+    }</dd></div><div><dt>YOU RECEIVE</dt><dd>${
+      quote ? `${this.formatSwapNumber(Number(quote.batcAmount))} BATC` : '--'
+    }</dd></div><div><dt>PRICE</dt><dd>${
+      quote ? `${quote.tokenPriceSol} SOL` : '--'
+    }</dd></div><div><dt>STAGE / NETWORK</dt><dd>${
+      quote ? `${quote.stageLabel} · ${quote.network.toUpperCase()}` : '--'
+    }</dd></div></dl><p>Confirm only after checking the amount and network in your wallet.</p><div class="shop-web__swap-dialog-actions"><button data-shop-swap-cancel type="button">CANCEL</button><button data-shop-swap-confirm type="button">CONFIRM IN WALLET</button></div></dialog>`;
   }
   private async loadPresaleState(status = ''): Promise<void> {
     try {
@@ -445,7 +490,9 @@ export class ShopWebUi {
     } catch (error) {
       if (!this.active || this.tab !== 'swap') return;
       this.refresh(
-        error instanceof Error ? error.message : 'LIVE PRESALE DATA IS UNAVAILABLE',
+        error instanceof Error
+          ? error.message
+          : 'LIVE PRESALE DATA IS UNAVAILABLE',
         '[data-shop-tab="swap"]',
       );
     }
@@ -458,7 +505,9 @@ export class ShopWebUi {
       '[data-shop-swap-receive]',
     );
     if (output) {
-      output.innerHTML = `${this.formatSwapNumber(receiveAmount)} <span>BATC</span>`;
+      output.innerHTML = `${this.formatSwapNumber(
+        receiveAmount,
+      )} <span>BATC</span>`;
     }
   }
   private async setSwapPreset(preset: string): Promise<void> {
@@ -475,12 +524,16 @@ export class ShopWebUi {
       } else {
         this.swapAmount = preset;
       }
-      const input = this.host.querySelector<HTMLInputElement>('[data-shop-swap-amount]');
+      const input = this.host.querySelector<HTMLInputElement>(
+        '[data-shop-swap-amount]',
+      );
       if (input) input.value = this.swapAmount;
       this.updateSwapPreview();
     } catch (error) {
       this.refresh(
-        error instanceof Error ? error.message : 'WALLET BALANCE IS UNAVAILABLE',
+        error instanceof Error
+          ? error.message
+          : 'WALLET BALANCE IS UNAVAILABLE',
         '[data-shop-swap-review]',
       );
     }
@@ -492,7 +545,9 @@ export class ShopWebUi {
     }
     if (!(Number(this.swapAmount) > 0)) {
       this.refresh('ENTER A SOL AMOUNT', '[data-shop-swap-review]');
-      this.host.querySelector<HTMLInputElement>('[data-shop-swap-amount]')?.focus();
+      this.host
+        .querySelector<HTMLInputElement>('[data-shop-swap-amount]')
+        ?.focus();
       return;
     }
     try {
@@ -500,7 +555,10 @@ export class ShopWebUi {
         this.swapAmount,
         this.presaleQuote?.quoteToken,
       );
-      this.refresh('REVIEW THE EXACT WALLET TRANSACTION', '[data-shop-swap-review]');
+      this.refresh(
+        'REVIEW THE EXACT WALLET TRANSACTION',
+        '[data-shop-swap-review]',
+      );
       const dialog = this.host.querySelector<HTMLDialogElement>(
         '[data-shop-swap-dialog]',
       );
