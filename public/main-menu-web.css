@@ -1708,7 +1708,7 @@ html[data-ui-platform='android'] .main-menu-web[data-reward-tab='rewards'] .main
   border: 0;
   clip-path: none;
   box-shadow: none;
-  background: url('/assets/android-home-v2/rewardlegend.png') center / contain no-repeat;
+  background: url('/assets/android-home-v2/rewardlegend-hangar-v2.png') center / contain no-repeat;
 }
 html[data-ui-platform='android'] .main-menu-web__reward-header {
   display: contents;
@@ -1768,8 +1768,11 @@ html[data-ui-platform='android'] .main-menu-web__reward-tiers {
   position: absolute;
   inset: 50% 3.8% auto;
   height: 18%;
+  /* Match the artwork bounds without the desktop podium's top padding. */
+  padding: 0;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr 1.12fr 1.03fr 1.12fr;
+  grid-template-columns: 344fr 388fr 358fr 389fr;
   gap: 2%;
   align-items: stretch;
 }
@@ -1789,12 +1792,23 @@ html[data-ui-platform='android'] .main-menu-web__reward-tier .main-menu-web__pod
   background: none;
   box-shadow: none;
   clip-path: none;
-  gap: 2px;
+  gap: clamp(2px, 0.5cqw, 4px);
 }
 html[data-ui-platform='android'] .main-menu-web__podium strong {
+  position: static;
+  margin: 0;
+  line-height: 1.15;
+  text-align: center;
   font-size: clamp(10px, 3.4cqw, 24px);
 }
+html[data-ui-platform='android'] .main-menu-web__reward-tier--1 .main-menu-web__podium strong {
+  font-size: clamp(13px, 4.3cqw, 30px);
+}
 html[data-ui-platform='android'] .main-menu-web__podium span {
+  margin: 0;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
   font-size: clamp(8px, 2.7cqw, 20px);
 }
 html[data-ui-platform='android'] .main-menu-web__podium small {
