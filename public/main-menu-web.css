@@ -1277,6 +1277,174 @@ body.game-running.web-ui-active .web-ui {
     font-size: 10px;
   }
 }
+
+/* Android home v2. Artwork is intentionally scoped to the native Android
+   profile (or ?ui=android) so every platform can own its assets independently. */
+html[data-ui-platform='android'] .main-menu-web {
+  --android-home-gutter: max(4px, env(safe-area-inset-left));
+  padding-left: var(--android-home-gutter);
+  padding-right: max(4px, env(safe-area-inset-right));
+}
+
+html[data-ui-platform='android'] .main-menu-web__hud {
+  aspect-ratio: 2000 / 272;
+  background: url('/assets/android-home-v2/header.png') center / 100% 100%
+    no-repeat;
+  container-type: inline-size;
+  flex: none;
+  width: 100%;
+}
+
+html[data-ui-platform='android'] .main-menu-web__stat {
+  background: none;
+  height: 100%;
+  top: 0;
+}
+
+html[data-ui-platform='android'] .main-menu-web__stat--player {
+  left: 4.5%;
+  width: 32.75%;
+}
+
+html[data-ui-platform='android'] .main-menu-web__stat--score {
+  left: 37.6%;
+  width: 24.4%;
+}
+
+html[data-ui-platform='android'] .main-menu-web__stat--highscore {
+  left: 62%;
+  width: 35.5%;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__stat--player
+  .main-menu-web__stat-value {
+  font-size: clamp(9px, 3.1cqw, 15px);
+  height: 31%;
+  left: 22%;
+  top: 52%;
+  width: 72%;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__stat--score
+  .main-menu-web__stat-value {
+  font-size: clamp(12px, 5.1cqw, 25px);
+  height: 29%;
+  left: 12%;
+  top: 51%;
+  width: 76%;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__stat--highscore
+  .main-menu-web__stat-value {
+  font-size: clamp(11px, 4.7cqw, 24px);
+  height: 29%;
+  left: 20%;
+  top: 51%;
+  width: 70%;
+}
+
+html[data-ui-platform='android'] .main-menu-web__overview-banner {
+  aspect-ratio: 1804 / 680;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  content: url('/assets/android-home-v2/banner.png');
+  object-fit: fill;
+  padding: 0;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='start'] {
+  aspect-ratio: 2000 / 332;
+  grid-column: 1 / -1;
+  padding: 0;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-image--inactive {
+  content: url('/assets/android-home-v2/start.png');
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-image--active {
+  content: url('/assets/android-home-v2/start-active.png');
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-label {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='settings'] {
+  aspect-ratio: 1;
+  background: transparent;
+  height: clamp(42px, 10.5cqw, 62px);
+  left: max(5px, env(safe-area-inset-left));
+  min-height: 42px;
+  padding: 0;
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + clamp(5px, 1.2cqw, 8px));
+  width: clamp(42px, 10.5cqw, 62px);
+  z-index: 8;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='settings']
+  .main-menu-web__action-image {
+  object-fit: contain;
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='settings']
+  .main-menu-web__action-image--inactive {
+  content: url('/assets/android-home-v2/gear.png');
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='settings']
+  .main-menu-web__action-image--active {
+  content: url('/assets/android-home-v2/gear-active.png');
+}
+
+html[data-ui-platform='android']
+  .main-menu-web__action[data-menu-action='settings']
+  .main-menu-web__action-label {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@media (max-width: 479px) {
+  html[data-ui-platform='android'] .main-menu-web__content {
+    gap: 6px;
+    padding: 4px 0 12px;
+  }
+
+  html[data-ui-platform='android'] .main-menu-web__commands {
+    gap: 5px;
+  }
+
+  html[data-ui-platform='android']
+    .main-menu-web__commands
+    .main-menu-web__action[data-menu-action='start'] {
+    min-height: 56px;
+  }
+}
 @media (min-width: 860px) and (max-width: 1099px) and (orientation: landscape) {
   .main-menu-web__hud {
     width: min(560px, 100%);
