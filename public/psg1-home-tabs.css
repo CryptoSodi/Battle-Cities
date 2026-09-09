@@ -1,0 +1,169 @@
+/* Live PSG1 tab labels and semantic icons; Android retains its own artwork. */
+.psg1-home-tab-content {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button {
+  --tab-edge: #8199a1;
+  --tab-inset: #258fa8;
+  border: 3px solid var(--tab-edge);
+  background: repeating-linear-gradient(
+      135deg,
+      #16303b44 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(#102633, #040d13);
+  clip-path: polygon(
+    12px 0,
+    calc(100% - 12px) 0,
+    100% 12px,
+    100% 100%,
+    0 100%,
+    0 12px
+  );
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--tab-inset);
+  color: #d8e0e4;
+  outline: none;
+  filter: none;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .android-home-tabs
+  button[aria-selected='true'] {
+  --tab-edge: #ffd044;
+  --tab-inset: #b17c0a;
+  color: #ffd044;
+  background: repeating-linear-gradient(
+      135deg,
+      #5d421622 0 1px,
+      transparent 1px 9px
+    ),
+    linear-gradient(#3b2b0d, #100c04);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .android-home-tabs
+  button:is(:focus-visible, .is-selected) {
+  --tab-edge: #ffe49a;
+  --tab-inset: #ffd044;
+  outline: none;
+  filter: none;
+}
+html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  background: radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #8199a1 5px,
+        transparent 6px
+      )
+      left bottom / 13px 13px no-repeat,
+    radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #8199a1 5px,
+        transparent 6px
+      )
+      right bottom / 13px 13px no-repeat;
+}
+html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button > img {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-home-tab-content {
+  position: absolute;
+  inset: 2px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.1vw, 20px);
+  pointer-events: none;
+  font: 700 clamp(20px, 3vw, 48px) / 1 'Battle Cities UI', 'Arial Narrow',
+    sans-serif;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-shadow: 0 2px 2px #000;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .android-home-tabs
+  .psg1-home-tab-content
+  img {
+  position: static;
+  content: normal;
+  flex: 0 0 auto;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: grayscale(1);
+  opacity: 1;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .android-home-tabs
+  [aria-selected='true']
+  .psg1-home-tab-content
+  img {
+  filter: none;
+}
+@media (hover: hover) {
+  html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button:hover {
+    --tab-edge: #e5bd55;
+  }
+}
+
+/* Same contained error treatment as Android, scaled for the PSG1 table region. */
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-message--error {
+  box-sizing: border-box;
+  align-self: center;
+  justify-self: center;
+  align-content: center;
+  justify-items: center;
+  width: min(88%, 480px);
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  padding: clamp(10px, 2cqw, 24px);
+  gap: clamp(6px, 1cqw, 12px);
+  background: var(--bc-panel);
+  border: 1px solid var(--bc-command-dim);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 45%);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-message--error::before {
+  display: none;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-message--error
+  strong {
+  font-size: clamp(16px, 2.5cqw, 26px);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-message--error
+  span {
+  max-width: none;
+  font-size: clamp(12px, 1.8cqw, 18px);
+  line-height: 1.3;
+  color: var(--bc-muted-light);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-message--error
+  button {
+  font-size: clamp(14px, 2cqw, 20px);
+  min-height: 44px;
+  padding: 8px 24px;
+}

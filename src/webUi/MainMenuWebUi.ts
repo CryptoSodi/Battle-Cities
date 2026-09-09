@@ -375,10 +375,12 @@ export class MainMenuWebUi {
               <button type="button" id="home-rewards-tab" role="tab" aria-selected="true" aria-controls="home-rewards-panel" data-reward-tab-button="rewards" aria-label="Rewards">
                 <img src="/assets/android-home-v2/rewards.png" alt="" class="android-home-tabs__idle">
                 <img src="/assets/android-home-v2/rewardsactive.png" alt="" class="android-home-tabs__active">
+                <span class="psg1-home-tab-content" aria-hidden="true"><img src="/assets/home-reward-trophy.png" alt=""><span>REWARDS</span></span>
               </button>
               <button type="button" id="home-leaderboard-tab" role="tab" aria-selected="false" aria-controls="home-leaderboard-panel" tabindex="-1" data-reward-tab-button="leaderboard" aria-label="Leaderboard">
                 <img src="/assets/android-home-v2/leaderboard.png" alt="" class="android-home-tabs__idle">
                 <img src="/assets/android-home-v2/leaderboard-active.png" alt="" class="android-home-tabs__active">
+                <span class="psg1-home-tab-content" aria-hidden="true"><img src="/assets/headquarters/campaigns-medal.png" alt=""><span>LEADERBOARD</span></span>
               </button>
             </div>
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
