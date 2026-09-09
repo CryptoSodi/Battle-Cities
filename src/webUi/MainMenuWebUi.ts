@@ -42,6 +42,7 @@ interface HomeRewardRow {
 }
 
 interface HomeRewardsResponse {
+  currentPlayer?: HomeRewardRow | null;
   enabled: boolean;
   intervalStartedAt?: string;
   nextRewardAt: string | null;
@@ -86,6 +87,8 @@ export class MainMenuWebUi {
   private rewardsTimer: number | null = null;
   private refreshTick = 0;
   private touchActionTimer: number | null = null;
+  private homeLayoutObserver: ResizeObserver | null = null;
+  private homeLayoutFrame: number | null = null;
 
   public constructor(options: MainMenuWebUiOptions) {
     this.options = options;
@@ -111,8 +114,11 @@ export class MainMenuWebUi {
     host.innerHTML = this.render();
 
     this.hydrateHud();
+    void this.refreshHudProgression(currentMountId);
     this.cherryChat.mount();
+    this.bindHomeChatPlacement();
     this.bindActions();
+    this.bindRewardTabs();
     this.bindEventTicker();
     this.bindNotificationDialog();
     this.focusInitialAction();
@@ -137,6 +143,12 @@ export class MainMenuWebUi {
     if (!this.active) return;
 
     this.active = false;
+    this.homeLayoutObserver?.disconnect();
+    this.homeLayoutObserver = null;
+    if (this.homeLayoutFrame !== null) window.cancelAnimationFrame(this.homeLayoutFrame);
+    this.homeLayoutFrame = null;
+    delete document.body.dataset.homeChatRaised;
+    document.body.style.removeProperty('--home-chat-bottom');
     this.mountId += 1;
     this.abortController?.abort();
     this.abortController = null;
@@ -169,6 +181,12 @@ export class MainMenuWebUi {
   public update(): void {
     if (!this.active) return;
     if (this.cherryChat.blocksMenuInput()) return;
+    // Tabs use native button activation and their own arrow-key handling.
+    // Do not also route Enter/Space to the menu's default Start action.
+    if (
+      document.activeElement instanceof HTMLButtonElement &&
+      document.activeElement.hasAttribute('data-reward-tab-button')
+    ) return;
 
     const inputMethod = this.options.inputManager.getActiveMethod();
     const openDialog = this.host.querySelector('dialog[open]');
@@ -277,16 +295,21 @@ export class MainMenuWebUi {
               ? `<img class="main-menu-web__action-image main-menu-web__action-image--inactive" src="/assets/menu-web/${sprites.inactive}" alt="" aria-hidden="true" draggable="false">
                  <img class="main-menu-web__action-image main-menu-web__action-image--active" src="/assets/menu-web/${sprites.active}" alt="" aria-hidden="true" draggable="false">`
               : '';
-          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}<span class="main-menu-web__action-label">${item.label}</span></button>`;
+          const iconName = ({ shop: 'shop', ranking: 'ranking', headquarters: 'headquater', socials: 'social' } as Record<string, string>)[item.action];
+          const icons = iconName
+            ? `<span class="android-home-button-icon" aria-hidden="true"><img class="android-home-button-icon__idle" src="/assets/android-home-v2/${iconName}.png" alt="" draggable="false"><img class="android-home-button-icon__active" src="/assets/android-home-v2/${iconName}a.png" alt="" draggable="false"></span>`
+            : '';
+          return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}${icons}<span class="main-menu-web__action-label">${item.label}</span></button>`;
         })
         .join('');
 
     return `
-      <main class="main-menu-web" aria-labelledby="main-menu-title">
+      <main class="main-menu-web" aria-labelledby="main-menu-title" data-reward-tab="rewards">
         <h1 id="main-menu-title" hidden>Battle Cities main menu</h1>
         <header class="main-menu-web__hud" aria-label="Player status">
           <section class="main-menu-web__stat main-menu-web__stat--player" aria-label="Player">
             <strong class="main-menu-web__stat-value" data-menu-player>PLAYER</strong>
+            <div class="android-home-level"><progress data-menu-level-progress max="100" value="0" aria-label="Progress to next level"></progress><span data-menu-level>LVL 1</span></div>
           </section>
           <section class="main-menu-web__stat main-menu-web__stat--score" aria-label="Last score">
             <strong class="main-menu-web__stat-value" data-menu-score>000000</strong>
@@ -306,8 +329,18 @@ export class MainMenuWebUi {
             ${developerActions.length > 0 ? renderActions('developer') : ''}
           </nav>
           <section class="main-menu-web__overview" aria-label="Battle Cities command overview">
+            <div class="android-home-tabs" role="tablist" aria-label="Round rewards">
+              <button type="button" id="home-rewards-tab" role="tab" aria-selected="true" aria-controls="home-rewards-panel" data-reward-tab-button="rewards" aria-label="Rewards">
+                <img src="/assets/android-home-v2/rewards.png" alt="" class="android-home-tabs__idle">
+                <img src="/assets/android-home-v2/rewardsactive.png" alt="" class="android-home-tabs__active">
+              </button>
+              <button type="button" id="home-leaderboard-tab" role="tab" aria-selected="false" aria-controls="home-leaderboard-panel" tabindex="-1" data-reward-tab-button="leaderboard" aria-label="Leaderboard">
+                <img src="/assets/android-home-v2/leaderboard.png" alt="" class="android-home-tabs__idle">
+                <img src="/assets/android-home-v2/leaderboard-active.png" alt="" class="android-home-tabs__active">
+              </button>
+            </div>
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
-            <section class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
+            <section id="home-rewards-panel" class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
               <header class="main-menu-web__reward-header">
                 <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
                 <div>
@@ -332,7 +365,7 @@ export class MainMenuWebUi {
                 </ol>
               </section>
             </section>
-            <section class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
+            <section id="home-leaderboard-panel" class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
               <header class="main-menu-web__leaderboard-header">
                 <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
                 <div>
@@ -384,7 +417,79 @@ export class MainMenuWebUi {
     `;
   }
 
+  private bindHomeChatPlacement(): void {
+    const schedule = (): void => {
+      if (this.homeLayoutFrame !== null) return;
+      this.homeLayoutFrame = window.requestAnimationFrame(() => {
+        this.homeLayoutFrame = null;
+        if (!this.active) return;
+        const hazard = this.host.querySelector<HTMLElement>('.main-menu-web__hazard');
+        const panels = Array.from(this.host.querySelectorAll<HTMLElement>('#home-rewards-panel, #home-leaderboard-panel'));
+        const panel = panels.find((item) => item.getClientRects().length > 0);
+        const launcher = this.cherryChat.getLauncher();
+        if (!hazard || !panel || !launcher) return;
+        const hazardTop = hazard.getBoundingClientRect().top;
+        const raised = document.documentElement.dataset.uiPlatform === 'android' &&
+          hazardTop - panel.getBoundingClientRect().bottom >= launcher.offsetHeight + 16;
+        document.body.dataset.homeChatRaised = String(raised);
+        if (raised) document.body.style.setProperty('--home-chat-bottom', `${window.innerHeight - hazardTop + 8}px`);
+        else document.body.style.removeProperty('--home-chat-bottom');
+      });
+    };
+    this.homeLayoutObserver = new ResizeObserver(schedule);
+    this.host.querySelectorAll('.main-menu-web, .main-menu-web__hazard, #home-rewards-panel, #home-leaderboard-panel').forEach((element) => this.homeLayoutObserver.observe(element));
+    window.addEventListener('resize', schedule, { signal: this.abortController.signal });
+    window.addEventListener('battlecities:ui-device', schedule, { signal: this.abortController.signal });
+    schedule();
+  }
+
+  private bindRewardTabs(): void {
+    const tabs = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-reward-tab-button]'));
+    const select = (tab: HTMLButtonElement): void => {
+      this.host.querySelector<HTMLElement>('.main-menu-web').dataset.rewardTab = tab.dataset.rewardTabButton;
+      tabs.forEach((candidate) => {
+        candidate.setAttribute('aria-selected', String(candidate === tab));
+        candidate.tabIndex = candidate === tab ? 0 : -1;
+      });
+    };
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => select(tab), { signal: this.abortController.signal });
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + 1) % tabs.length];
+        select(next);
+        next.focus({ preventScroll: true });
+      }, { signal: this.abortController.signal });
+    });
+  }
+
+  private async refreshHudProgression(mountId: number): Promise<void> {
+    try {
+      const response = await apiFetch('/api/player', { cache: 'no-store', signal: this.abortController.signal });
+      if (!response.ok) return;
+      const body = await response.json();
+      if (!this.active || mountId !== this.mountId) return;
+      const progression = body.player?.progression;
+      const progress = this.host.querySelector<HTMLProgressElement>('[data-menu-level-progress]');
+      if (!progression || !progress || !Number.isFinite(progression.level) || !Number.isFinite(progression.points) || !(progression.pointsRequired > 0)) return;
+      this.setText('[data-menu-level]', `LVL ${Math.max(1, Math.floor(progression.level))}`);
+      progress.max = progression.pointsRequired;
+      progress.value = Math.max(0, Math.min(progression.points, progression.pointsRequired));
+    } catch {
+      // Retain the last known level when the connection is unavailable.
+    }
+  }
+
   private hydrateHud(): void {
+    const progression = this.options.playerIdentity.getPlayer()?.progression;
+    const progress = this.host.querySelector<HTMLProgressElement>('[data-menu-level-progress]');
+    if (progression && progress) {
+      this.setText('[data-menu-level]', `LVL ${progression.level}`);
+      progress.max = progression.pointsRequired;
+      progress.value = progression.points;
+    }
     this.setText('[data-menu-player]', this.getSafePlayerName());
     this.setText(
       '[data-menu-score]',
@@ -531,15 +636,18 @@ export class MainMenuWebUi {
   }
 
   private focusRelativeAction(direction: -1 | 1): void {
-    if (this.actionButtons.length === 0) return;
+    const visibleButtons = this.actionButtons.filter(
+      (button) => button.getClientRects().length > 0,
+    );
+    if (visibleButtons.length === 0) return;
 
     const current = this.getFocusedAction();
     const currentIndex =
-      current === null ? 0 : this.actionButtons.indexOf(current);
+      current === null ? 0 : visibleButtons.indexOf(current);
     const nextIndex =
-      (currentIndex + direction + this.actionButtons.length) %
-      this.actionButtons.length;
-    const next = this.actionButtons[nextIndex];
+      (currentIndex + direction + visibleButtons.length) %
+      visibleButtons.length;
+    const next = visibleButtons[nextIndex];
     next.focus({ preventScroll: true });
     next.scrollIntoView({ block: 'nearest' });
   }
@@ -769,22 +877,30 @@ export class MainMenuWebUi {
     rows: HomeRewardRow[],
     tiers: HomeRewardTier[],
   ): string {
-    if (rows.length === 0) {
-      return `<div class="main-menu-web__leaderboard-message"><strong>NO SCORES THIS ROUND</strong><span>Play a battle to claim a place on the board.</span></div>`;
+    const player = this.options.playerIdentity.getPlayer();
+    const displayed = rows.slice(0, 10);
+    while (displayed.length < 10) displayed.push(null);
+    const ownRow = this.rewardsData?.currentPlayer;
+    if (ownRow && ownRow.rank > 10 && !displayed.some((row) => row?.playerId === ownRow.playerId)) displayed.push(ownRow);
+    else if (player && !displayed.some((row) => row?.playerId === player.id)) {
+      // No scored match this round: show an honest unranked self row.
+      displayed.push({ playerId: player.id, displayName: player.displayName, rank: 0, totalPoints: 0 });
     }
-
-    return rows
-      .slice(0, 10)
+    const slots = Array.from({ length: Math.max(10, displayed.length) }, (_, index) => displayed[index]);
+    return slots
       .map((row) => {
+        if (!row) return '<div class="main-menu-web__leaderboard-row main-menu-web__leaderboard-row--vacant" aria-label="Unfilled position"><strong>—</strong><span>—</span><b>—</b><em>—</em></div>';
         const reward = this.rewardForRank(row.rank, tiers);
+        const own = row.playerId === player?.id;
+        const crate = row.rank === 1 ? 1 : row.rank === 2 ? 3 : row.rank === 3 ? 2 : 4;
         return `<div class="main-menu-web__leaderboard-row main-menu-web__leaderboard-row--${Math.min(
           row.rank,
           4,
-        )}"><strong>${row.rank}</strong><span>${this.escapeMarkup(
+        )}${own ? ' main-menu-web__leaderboard-row--self' : ''}"><strong>${row.rank || '—'}</strong><span>${this.escapeMarkup(
           row.displayName,
-        )}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em>${
+        )}${own ? ' (YOU)' : ''}${row.rank === 0 ? ' · Unranked' : ''}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em><img class="android-leaderboard-crate" src="/assets/android-home-v2/crate${crate}.png" alt="${reward > 0 ? reward.toLocaleString() + ' BATC' : 'No reward'}"><span class="leaderboard-reward-amount">${
           reward > 0 ? `${reward.toLocaleString()} BATC` : '—'
-        }</em></div>`;
+        }</span></em></div>`;
       })
       .join('');
   }
@@ -810,7 +926,7 @@ export class MainMenuWebUi {
         }"><i class="main-menu-web__chest main-menu-web__chest--${Math.min(
           tier.fromRank,
           4,
-        )}" aria-hidden="true"></i><div class="main-menu-web__podium"><strong>${rank}</strong><span>${tier.amount.toLocaleString()} $BATC</span>${tier.fromRank === tier.toRank ? '' : '<small>(Each)</small>'}</div></article>`;
+        )}" aria-hidden="true"></i><div class="main-menu-web__podium"><strong>${rank}</strong><span>${tier.amount.toLocaleString()} $BATC</span></div></article>`;
       })
       .join('');
   }

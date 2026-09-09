@@ -16,11 +16,13 @@ let walletAddress = 'game-wallet';
 let requests = [];
 let connections = 0;
 let providerAvailable = true;
+let cachedPublicKey = null;
 class FakeCherryEmbed {
   constructor(config) { this.config = config; this.events = {}; instances.push(this); }
   async mount() {
     if (mountError) throw new Error('origin blocked');
     this.isReady = true;
+    this.events.authStateChange(true);
   }
   on(event, callback) { this.events[event] = callback; }
   destroy() { this.destroyed = true; }
@@ -46,6 +48,7 @@ vm.runInNewContext(compiled, {
     };
     if (id === '../wallet') return {
       getPhantomProvider: () => providerAvailable ? {
+        publicKey: cachedPublicKey,
         connect: async () => { connections++; return { publicKey: { toString: () => walletAddress } }; },
         signMessage: async () => ({ signature: new Uint8Array(64) }),
       } : null,
@@ -68,10 +71,8 @@ async function run() {
   const chat = instances[0];
   assert.equal(chat.config.roomId, 'ffd51288-710c-4558-83dc-d5fe9b04451d');
   assert.equal(chat.config.position, 'inline');
-  chat.events.authStateChange(true);
   assert(chat.signedOut, 'Do not inherit a previous wallet session');
-  click('[data-chat-connect]');
-  await flush();
+  assert.equal(connections, 1, 'Opening chat automatically connects the game wallet');
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, '/api/cherry-embed-token');
   assert.equal(JSON.parse(requests[0].init.body).walletAddress, player.walletAddress);
@@ -86,10 +87,10 @@ async function run() {
   assert(chat.destroyed);
   assert.equal(document.querySelector('.game-cherry'), null);
 
+  walletAddress = 'different-wallet';
   ui.mount();
   click('.game-cherry__launcher');
   await flush();
-  walletAddress = 'different-wallet';
   click('[data-chat-connect]');
   await flush();
   assert(status().includes('same wallet'));
@@ -110,6 +111,8 @@ async function run() {
   ui.unmount();
   player = { provider: 'wallet', walletAddress: 'game-wallet' };
   walletAddress = 'game-wallet';
+  cachedPublicKey = { toString: () => 'game-wallet' };
+  const beforeCachedConnect = connections;
   mountError = true;
   ui.mount();
   click('.game-cherry__launcher');
@@ -119,6 +122,8 @@ async function run() {
   click('[data-chat-retry]');
   await flush();
   assert(instances[instances.length - 1].isReady);
+  assert.equal(connections, beforeCachedConnect, 'Reuse the game wallet without another connect prompt');
+  assert.equal(instances[instances.length - 1].token, 'short-lived-token', 'Retry automatically authenticates');
   const last = instances[instances.length - 1];
   ui.unmount();
   await assert.rejects(() => last.config.signChallengeHandler(new Uint8Array([1])));

@@ -163,7 +163,9 @@ export class CherryChatWebUi {
     try {
       await chat.mount();
       if (this.generation !== generation || this.chat !== chat) return;
-      this.setStatus('Connect your game wallet to join the conversation.');
+      // Opening chat is enough to start authentication with the existing game
+      // wallet. Keep the button as a recovery path if approval is declined.
+      await this.connectWallet();
     } catch {
       if (this.generation !== generation || this.chat !== chat) return;
       chat.destroy();
@@ -207,7 +209,11 @@ export class CherryChatWebUi {
     button.disabled = true;
     this.setStatus('CONNECTING GAME WALLET...');
     try {
-      const connection = await provider.connect();
+      // Native MWA and injected wallets retain their connected public key.
+      // Avoid reopening the wallet chooser when the game already connected it.
+      const connection = provider.publicKey
+        ? { publicKey: provider.publicKey }
+        : await provider.connect();
       if (
         this.generation !== generation ||
         this.chat !== chat ||

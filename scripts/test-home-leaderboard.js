@@ -1,0 +1,51 @@
+const assert = require('assert').strict;
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const ts = require('typescript');
+const root = path.resolve(__dirname, '..');
+const read = (file) => ts.createSourceFile(file, fs.readFileSync(path.join(root, file), 'utf8'), ts.ScriptTarget.Latest, true);
+
+async function main() {
+  const store = read('api-server/src/stores/matchResultStore.js');
+  const fn = store.statements.find((node) => node.name?.text === 'getLeaderboardInWindow');
+  const totals = Array.from({ length: 14 }, (_, i) => ({ playerId: `player-${String(i).padStart(2, '0')}`, displayName: `Player ${i}`, totalPoints: 100 - Math.floor(i / 2) }));
+  const context = vm.createContext({ MAX_LEADERBOARD_LIMIT: 100, hasPersistentConfig: () => false, aggregateFileResultsInWindow: async () => totals.slice().reverse() });
+  vm.runInContext(fn.getText(store), context);
+  const result = await context.getLeaderboardInWindow('season', '2026-09-09T00:00:00Z', '2026-09-09T00:30:00Z', 10, 'player-12');
+  assert.equal(result.length, 11);
+  assert.equal(result[10].rank, 13);
+  assert.equal(result[10].playerId, 'player-12');
+  assert.equal(result[0].playerId, 'player-00');
+  const inside = await context.getLeaderboardInWindow('season', '2026-09-09T00:00:00Z', '2026-09-09T00:30:00Z', 10, 'player-02');
+  assert.equal(inside.length, 10);
+
+  const source = read('src/webUi/MainMenuWebUi.ts');
+  const cls = source.statements.find((node) => node.name?.text === 'MainMenuWebUi');
+  const names = ['rewardRowsMarkup', 'rewardForRank', 'escapeMarkup'];
+  const methods = cls.members.filter((node) => names.includes(node.name?.text)).map((node) => node.getText(source)).join('\n');
+  const code = ts.transpile(`class Harness { ${methods} }`, { target: ts.ScriptTarget.ES2020 });
+  const Harness = vm.runInNewContext(`${code}; Harness`);
+  const h = new Harness();
+  let id = 'player-02';
+  h.options = { playerIdentity: { getPlayer: () => ({ id, displayName: '<Me>' }) } };
+  h.rewardsData = { currentPlayer: null };
+  const count = (html) => (html.match(/class="main-menu-web__leaderboard-row /g) || []).length;
+  assert.equal(count(h.rewardRowsMarkup(inside, [])), 10);
+  id = 'player-12';
+  h.rewardsData.currentPlayer = result[10];
+  const outside = h.rewardRowsMarkup(result.slice(0, 10), []);
+  assert.equal(count(outside), 11);
+  assert.ok(outside.includes('<strong>13</strong>'));
+  assert.ok(outside.includes('crate1.png'));
+  assert.ok(outside.includes('crate3.png'));
+  assert.ok(outside.includes('crate2.png'));
+  assert.ok(outside.includes('crate4.png'));
+  h.rewardsData.currentPlayer = null;
+  const empty = h.rewardRowsMarkup([], []);
+  assert.equal(count(empty), 11);
+  assert.ok(empty.includes('Unranked'));
+  assert.ok(empty.includes('&lt;Me&gt;'));
+  console.log('Home leaderboard checks passed: top 10, self row, ties, empty slots, escaping, and crate mapping.');
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });

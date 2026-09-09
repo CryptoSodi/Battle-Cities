@@ -20,9 +20,17 @@ export function initializeDeviceUi(): void {
   );
   const preview = requestedPreview === 'psg1';
   const androidPreview = requestedPreview === 'android';
+  const compactViewport = window.matchMedia('(max-width: 899px)');
+  let deviceProfile = (window as Window & {
+    battleCitiesAndroidDevice?: AndroidDeviceProfile;
+  }).battleCitiesAndroidDevice;
   const update = (profile: AndroidDeviceProfile): void => {
+    deviceProfile = profile;
     const next = preview || isPlaySolanaPsg1(profile) ? 'psg1' : 'standard';
-    const platform = androidPreview || profile != null ? 'android' : 'web';
+    // uiPlatform selects presentation assets, not the runtime/input platform.
+    // Compact browser windows use the same home screen as Android phones.
+    const platform = androidPreview || profile != null ||
+      (!preview && compactViewport.matches) ? 'android' : 'web';
     const deviceChanged = document.documentElement.dataset.uiDevice !== next;
     const platformChanged =
       document.documentElement.dataset.uiPlatform !== platform;
@@ -37,5 +45,6 @@ export function initializeDeviceUi(): void {
       update(event.detail as AndroidDeviceProfile);
     },
   );
-  update((window as any).battleCitiesAndroidDevice);
+  compactViewport.addEventListener('change', () => update(deviceProfile));
+  update(deviceProfile);
 }

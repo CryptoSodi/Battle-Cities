@@ -1,6 +1,7 @@
 import { apiFetch } from '../network/api';
 
 export interface CurrentPlayer {
+  progression?: { level: number; points: number; pointsRequired: number };
   id: string;
   provider: 'wallet' | 'google';
   displayName: string;

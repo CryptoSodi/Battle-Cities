@@ -57,7 +57,8 @@ body.game-running.web-ui-active .web-ui {
   position: relative;
 }
 
-.main-menu-web::before {
+.main-menu-web::before,
+html[data-ui-platform='android'] .main-menu-web-active .web-ui::before {
   background: radial-gradient(
       ellipse 68% 52% at 8% 14%,
       var(--bc-blue-glow),
@@ -80,7 +81,8 @@ body.game-running.web-ui-active .web-ui {
   z-index: -2;
 }
 
-.main-menu-web::after {
+.main-menu-web::after,
+html[data-ui-platform='android'] .main-menu-web-active .web-ui::after {
   background-image: linear-gradient(var(--bc-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--bc-line) 1px, transparent 1px);
   background-size: 42px 42px;
@@ -1505,6 +1507,607 @@ html[data-ui-platform='android']
   .main-menu-web__leaderboard-preview {
     grid-area: 1 / 2 / 3 / 3;
   }
+}
+/* Keep the supplied artwork at its native proportions. The remaining viewport
+   below Start is reserved for the next Android home sections. On short screens,
+   cap the stack's width so the artwork and two button rows fit without scrolling. */
+html[data-ui-platform='android'] .main-menu-web {
+  container-type: inline-size;
+  width: 100%;
+  max-width: calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 152px) * 0.65);
+  margin-inline: auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: env(safe-area-inset-top, 0px) max(2px, env(safe-area-inset-right))
+    env(safe-area-inset-bottom, 0px) max(2px, env(safe-area-inset-left));
+  overflow: hidden;
+}
+html[data-ui-platform='android'] .main-menu-web__hud {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 1987 / 275;
+  background-size: contain;
+  width: 100%;
+}
+html[data-ui-platform='android'] .main-menu-web__content {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
+  gap: 4px;
+  padding: 0 0 44px;
+  margin: 0;
+  min-height: 0;
+  max-width: none;
+  overflow: hidden;
+}
+html[data-ui-platform='android'] .main-menu-web__overview,
+html[data-ui-platform='android'] .main-menu-web__commands {
+  display: contents;
+}
+html[data-ui-platform='android'] .main-menu-web__overview-banner {
+  grid-area: 1 / 1 / 2 / -1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 1810 / 679;
+  object-fit: contain;
+}
+html[data-ui-platform='android'] .main-menu-web__commands
+  .main-menu-web__action[data-menu-action='start'] {
+  grid-area: 2 / 1 / 3 / -1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 2000 / 338;
+  border: 0;
+  /* Bridge the grid gap and overlap the banner's lower frame at every size.
+     Negative margin also pulls the following menu rows up with the button. */
+  margin-top: calc(-4px - 3.5cqw);
+  position: relative;
+  z-index: 3;
+}
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-image { object-fit: contain; }
+/* Start is selected on menu entry; selection and input reveal gold artwork. */
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-image--active { opacity: 0; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']
+  .main-menu-web__action-image--inactive { opacity: 1; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']:is(:active, :focus-visible, .is-selected, .is-activating)
+  .main-menu-web__action-image--active { opacity: 1; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']:is(:active, :focus-visible, .is-selected, .is-activating)
+  .main-menu-web__action-image--inactive { opacity: 0; }
+@media (hover: hover) {
+  html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']:hover
+    .main-menu-web__action-image--active { opacity: 1; }
+  html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='start']:hover
+    .main-menu-web__action-image--inactive { opacity: 0; }
+}
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='settings'] {
+  position: absolute;
+  left: 5%;
+  top: calc(env(safe-area-inset-top, 0px) + 2cqw);
+  width: clamp(40px, 9cqw, 64px);
+  height: clamp(40px, 9cqw, 64px);
+  min-height: 40px;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--player .main-menu-web__stat-value {
+  top: 32%;
+  left: 28%;
+  width: 68%;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--highscore .main-menu-web__stat-value {
+  left: 32%;
+  width: 61%;
+}
+html[data-ui-platform='android'] .main-menu-web__commands
+  .main-menu-web__action:not([data-menu-action='start']):not([data-menu-action='settings']):not([data-menu-action='shop']):not([data-menu-action='ranking']):not([data-menu-action='headquarters']):not([data-menu-action='socials']),
+html[data-ui-platform='android'] .main-menu-web__reward-briefing,
+html[data-ui-platform='android'] .main-menu-web__leaderboard-preview,
+html[data-ui-platform='android'] .main-menu-web__hazard {
+  display: none;
+}
+html[data-ui-platform='android'] .main-menu-web__action:focus-visible {
+  /* The active artwork provides the visible focus state. */
+  outline: none;
+  filter: none;
+}
+/* Labels are live text; icon states follow the same state as the button plate. */
+html[data-ui-platform='android'] .main-menu-web__commands
+  .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  --android-button-active: 0;
+  --android-button-idle: 1;
+  display: flex;
+  aspect-ratio: 1946 / 566;
+  height: auto;
+  min-height: 40px;
+  min-width: 0;
+  border: 0;
+  padding: 0 8%;
+  color: var(--bc-text);
+  font-size: clamp(15px, 5cqw, 38px);
+  letter-spacing: 0;
+  text-shadow: none;
+  background: transparent;
+  transform: none;
+}
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='shop'] { grid-area: 3 / 1; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='ranking'] { grid-area: 3 / 2; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='headquarters'] { grid-area: 4 / 1; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='socials'] { grid-area: 4 / 2; }
+html[data-ui-platform='android'] .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--inactive {
+  content: url('/assets/android-home-v2/button.png');
+  object-fit: contain;
+  opacity: var(--android-button-idle);
+}
+html[data-ui-platform='android'] .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--active {
+  content: url('/assets/android-home-v2/button-active.png');
+  object-fit: contain;
+  opacity: var(--android-button-active);
+}
+html[data-ui-platform='android'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):is(:active, :focus-visible, .is-activating) {
+  --android-button-active: 1;
+  --android-button-idle: 0;
+  color: var(--bc-active-ink);
+}
+@media (hover: hover) {
+  html[data-ui-platform='android'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):hover {
+    --android-button-active: 1;
+    --android-button-idle: 0;
+    color: var(--bc-active-ink);
+  }
+}
+.android-home-tabs { display: none; }
+html[data-ui-platform='android'] .android-home-tabs {
+  display: grid;
+  grid-area: 5 / 1 / 6 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  /* Join the tab plates to either panel by covering its upper frame. */
+  position: relative;
+  z-index: 2;
+  margin-bottom: calc(-4px - 0.8cqw);
+}
+html[data-ui-platform='android'] .android-home-tabs button {
+  position: relative;
+  aspect-ratio: 1820 / 343;
+  min-height: 40px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.android-home-tabs img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.android-home-tabs__active { opacity: 0; }
+.android-home-tabs [aria-selected='true'] .android-home-tabs__active { opacity: 1; }
+.android-home-tabs [aria-selected='true'] .android-home-tabs__idle { opacity: 0; }
+.android-home-tabs button:focus-visible {
+  outline: none;
+  filter: brightness(1.15);
+}
+html[data-ui-platform='android'] .main-menu-web[data-reward-tab='rewards'] .main-menu-web__reward-briefing {
+  display: block;
+  grid-area: 6 / 1 / 7 / -1;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1700 / 926;
+  padding: 0;
+  border: 0;
+  clip-path: none;
+  box-shadow: none;
+  background: url('/assets/android-home-v2/rewardlegend.png') center / contain no-repeat;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-header {
+  display: contents;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-header > .main-menu-web__panel-icon,
+html[data-ui-platform='android'] .main-menu-web__reward-header > div:not(.main-menu-web__reward-clock),
+html[data-ui-platform='android'] .main-menu-web__clock-icon,
+html[data-ui-platform='android'] [data-home-countdown-label],
+html[data-ui-platform='android'] .main-menu-web__how-it-works,
+html[data-ui-platform='android'] .main-menu-web__reward-tier .main-menu-web__chest {
+  display: none;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-clock {
+  position: absolute;
+  inset: 10% 5.6% auto auto;
+  display: block;
+  width: 16%;
+  height: 13%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-countdown {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  font-size: clamp(7px, 2.5cqw, 18px);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-clock progress {
+  position: absolute;
+  width: 136%;
+  left: -36%;
+  top: 77%;
+  height: 19%;
+  margin: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-clock progress::-webkit-progress-bar { background: transparent; }
+html[data-ui-platform='android'] .main-menu-web__reward-clock progress::-webkit-progress-value { background: var(--bc-command); }
+html[data-ui-platform='android'] .main-menu-web__reward-tiers {
+  position: absolute;
+  inset: 50% 3.8% auto;
+  height: 18%;
+  display: grid;
+  grid-template-columns: 1fr 1.12fr 1.03fr 1.12fr;
+  gap: 2%;
+  align-items: stretch;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-tier,
+html[data-ui-platform='android'] .main-menu-web__reward-tier .main-menu-web__podium {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  gap: 2px;
+}
+html[data-ui-platform='android'] .main-menu-web__podium strong {
+  font-size: clamp(10px, 3.4cqw, 24px);
+}
+html[data-ui-platform='android'] .main-menu-web__podium span {
+  font-size: clamp(8px, 2.7cqw, 20px);
+}
+html[data-ui-platform='android'] .main-menu-web__podium small {
+  font-size: clamp(7px, 2cqw, 14px);
+  color: var(--bc-text);
+}
+html[data-ui-platform='android'] .main-menu-web[data-reward-tab='leaderboard'] .main-menu-web__leaderboard-preview {
+  display: grid;
+  grid-area: 6 / 1 / 7 / -1;
+  width: 100%;
+  aspect-ratio: 1700 / 926;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-header { padding: 4px 8px; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-header h2 { font-size: 12px; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-header p { font-size: 10px; margin: 0; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-header img,
+html[data-ui-platform='android'] .main-menu-web__leaderboard-footer { display: none; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-rows {
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row,
+html[data-ui-platform='android'] .main-menu-web__leaderboard-skeleton {
+  min-height: 0;
+  font-size: clamp(8px, 2.5cqw, 14px);
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row > strong { height: auto; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-message {
+  min-height: 0;
+  padding: 8px;
+  gap: 4px;
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-message::before { display: none; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-message--error {
+  align-self: center;
+  justify-self: center;
+  width: min(88%, 340px);
+  height: auto;
+  min-height: 0;
+  padding: clamp(10px, 2.5cqw, 20px);
+  gap: 8px;
+  background: var(--bc-panel);
+  border: 1px solid var(--bc-command-dim);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 45%);
+}
+html[data-ui-platform='android'] .main-menu-web__reward-header > div:not(.main-menu-web__reward-clock) {
+  display: block;
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  width: 60%;
+}
+html[data-ui-platform='android'] .main-menu-web__reward-header h2 { display: none; }
+html[data-ui-platform='android'] .main-menu-web__reward-header p {
+  margin: 0;
+  font-size: clamp(9px, 2.9cqw, 20px);
+  color: #00caff;
+}
+html[data-ui-platform='android'] .main-menu-web .main-menu-web__hazard {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  height: 40px;
+  padding: 4px 8px;
+  margin: 4px 0 0;
+  border: 1px solid var(--bc-line);
+  background: var(--bc-panel);
+}
+html[data-ui-platform='android'] .main-menu-web__round-status,
+html[data-ui-platform='android'] .main-menu-web__ticker-run[aria-hidden='true'] { display: none; }
+html[data-ui-platform='android'] .main-menu-web__ticker-window .main-menu-web__hazard-track {
+  width: 100%;
+  animation: none;
+  transform: none;
+}
+html[data-ui-platform='android'] .main-menu-web__hazard-track .main-menu-web__ticker-run {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  gap: 12px;
+  font-size: clamp(9px, 2.6cqw, 16px);
+}
+html[data-ui-platform='android'] .main-menu-web__ticker-run [data-menu-events-primary] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Keep a dedicated patrol lane above the events bar, clear of the panel. */
+html[data-ui-platform='android'] .main-menu-web__bottom-tank-scroller {
+  display: block;
+  bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-ui-platform='android'] .main-menu-web__bottom-tank-scroller {
+    animation-name: android-home-tank-patrol;
+  }
+}
+@keyframes android-home-tank-patrol {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100cqw + 44px)); }
+}
+html[data-ui-platform='android'] .main-menu-web-active .game-cherry {
+  display: block;
+  right: max(8px, env(safe-area-inset-right), calc((100vw - (100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 152px) * 0.65) / 2 + 4px));
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+html[data-ui-platform='android'] .main-menu-web-active .game-cherry__launcher {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+html[data-ui-platform='android'] .main-menu-web-active .game-cherry__launcher span { display: none; }
+html[data-ui-platform='android'] .main-menu-web .main-menu-web__hazard {
+  padding-right: 56px;
+}
+html[data-ui-platform='android'] .main-menu-web-active[data-home-chat-raised='true'] .game-cherry {
+  bottom: var(--home-chat-bottom);
+}
+html[data-ui-platform='android'] [data-home-chat-raised='true'] .main-menu-web .main-menu-web__hazard {
+  padding-right: 8px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-ui-platform='android'] .main-menu-web__ticker-window .main-menu-web__hazard-track {
+    width: max-content;
+    animation: main-menu-web-hazard-marquee 30s linear infinite;
+    will-change: transform;
+  }
+  html[data-ui-platform='android'] .main-menu-web__hazard-track .main-menu-web__ticker-run {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 100cqw;
+    padding: 0 40px 0 16px;
+  }
+  html[data-ui-platform='android'] .main-menu-web__ticker-run [data-menu-events-primary],
+  html[data-ui-platform='android'] .main-menu-web__ticker-run [data-menu-events-repeat] {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+}
+.android-leaderboard-crate { display: none; }
+html[data-ui-platform='android'] .main-menu-web[data-reward-tab='leaderboard'] .main-menu-web__leaderboard-preview {
+  display: block;
+  position: relative;
+  padding: 0;
+  border: 0;
+  clip-path: none;
+  box-shadow: none;
+  background: url('/assets/android-home-v2/grid.png') center / contain no-repeat;
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-header,
+html[data-ui-platform='android'] .main-menu-web__leaderboard-columns { display: none; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-rows {
+  position: absolute;
+  inset: 13.1% 2.7% 5.4%;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row,
+html[data-ui-platform='android'] .main-menu-web__leaderboard-skeleton {
+  grid-template-columns: 11.7% 44.4% 21.8% 22.1%;
+  gap: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--bc-line);
+  background: none;
+  box-shadow: none;
+  min-width: 0;
+  color: var(--bc-text);
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row > strong {
+  border: 0;
+  background: none;
+  clip-path: none;
+  color: inherit;
+}
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row > span { padding-left: 6%; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row > b { text-align: center; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row > em {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+html[data-ui-platform='android'] .android-leaderboard-crate {
+  display: block;
+  height: 90%;
+  width: 70%;
+  object-fit: contain;
+}
+html[data-ui-platform='android'] .leaderboard-reward-amount { display: none; }
+html[data-ui-platform='android'] .main-menu-web__leaderboard-row--self {
+  background: rgb(255 179 15 / 12%);
+  box-shadow: inset 0 0 0 1px var(--bc-command);
+  color: var(--bc-command);
+}
+html[data-ui-platform='android'] .main-menu-web::before,
+html[data-ui-platform='android'] .main-menu-web::after {
+  content: none;
+}
+.android-home-button-icon { display: none; }
+html[data-ui-platform='android'] .android-home-button-icon {
+  display: block;
+  position: absolute;
+  left: 6%;
+  top: 15%;
+  width: 22%;
+  height: 70%;
+  pointer-events: none;
+  z-index: 1;
+}
+.android-home-button-icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.android-home-button-icon__idle { opacity: var(--android-button-idle, 1); }
+.android-home-button-icon__active { opacity: var(--android-button-active, 0); }
+html[data-ui-platform='android'] .android-home-button-icon + .main-menu-web__action-label {
+  position: absolute;
+  left: 30%;
+  width: 65%;
+  text-align: center;
+  white-space: nowrap;
+}
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='headquarters'] .main-menu-web__action-label {
+  font-size: clamp(13px, 4.2cqw, 32px);
+}
+.android-home-level { display: none; }
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='settings'] {
+  top: calc(env(safe-area-inset-top, 0px) + 1.7cqw);
+  height: max(40px, 10cqw);
+  width: max(40px, 10cqw);
+  padding: 0;
+}
+html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image {
+  inset: 15%;
+  width: 70%;
+  height: 70%;
+  max-height: 7cqw;
+  object-fit: contain;
+}
+html[data-ui-platform='android'] .android-home-level {
+  --level-track: #163747;
+  --level-fill: #00aeef;
+  --level-label: #57c8ff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1cqw;
+  position: absolute;
+  left: 28%;
+  top: 62%;
+  width: 66%;
+  height: 19%;
+  border: 0;
+  background: transparent;
+}
+.android-home-level progress {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 65%;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--level-track);
+}
+.android-home-level progress::-webkit-progress-bar { background: var(--level-track); }
+.android-home-level progress::-webkit-progress-value { background: var(--level-fill); box-shadow: inset 0 1px rgb(255 255 255 / 25%); }
+.android-home-level progress::-moz-progress-bar { background: var(--level-fill); box-shadow: inset 0 1px rgb(255 255 255 / 25%); }
+.android-home-level span {
+  position: relative;
+  color: var(--level-label);
+  font: 700 clamp(7px, 1.9cqw, 13px)/1 'Battle Cities UI', sans-serif;
+  white-space: nowrap;
+  text-shadow: none;
+}
+/* Position HUD overlays against the same full-width artwork coordinate system.
+   This avoids mixing section-relative percentages for the name and level bar. */
+html[data-ui-platform='android'] .main-menu-web__hud .main-menu-web__stat {
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--player .main-menu-web__stat-value {
+  left: 17%;
+  width: 18%;
+  top: 27%;
+  height: 30%;
+  justify-content: flex-start;
+  font-size: clamp(10px, 3.1cqw, 27px);
+  letter-spacing: 0.025em;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--player .android-home-level {
+  left: 17%;
+  width: 18%;
+  top: 56%;
+  height: 16%;
+  gap: 0.8cqw;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--score .main-menu-web__stat-value {
+  left: 40.2%;
+  width: 19.8%;
+  top: 46%;
+  height: 32%;
+  justify-content: center;
+  font-size: clamp(13px, 4cqw, 32px);
+  letter-spacing: 0.04em;
+}
+html[data-ui-platform='android'] .main-menu-web__stat--highscore .main-menu-web__stat-value {
+  left: 74%;
+  width: 18%;
+  top: 46%;
+  height: 32%;
+  justify-content: center;
+  font-size: clamp(13px, 4cqw, 32px);
+  letter-spacing: 0.04em;
 }
 @media (prefers-reduced-motion: reduce) {
   .main-menu-web *,
