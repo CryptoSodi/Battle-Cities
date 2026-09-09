@@ -149,6 +149,7 @@ export class MainMenuWebUi {
     this.homeLayoutFrame = null;
     delete document.body.dataset.homeChatRaised;
     document.body.style.removeProperty('--home-chat-bottom');
+    document.body.style.removeProperty('--home-menu-right');
     this.mountId += 1;
     this.abortController?.abort();
     this.abortController = null;
@@ -417,12 +418,59 @@ export class MainMenuWebUi {
     `;
   }
 
+  private fitAndroidHome(): void {
+    const menu = this.host.querySelector<HTMLElement>('.main-menu-web');
+    if (!menu) return;
+    menu.style.removeProperty('--android-home-fit-width');
+    menu.style.removeProperty('--android-home-extra-gap');
+    if (document.documentElement.dataset.uiPlatform !== 'android') {
+      document.body.style.removeProperty('--home-menu-right');
+      return;
+    }
+    const content = menu.querySelector<HTMLElement>('.main-menu-web__content');
+    const hazard = menu.querySelector<HTMLElement>('.main-menu-web__hazard');
+    const panel = Array.from(menu.querySelectorAll<HTMLElement>('#home-rewards-panel, #home-leaderboard-panel'))
+      .find((item) => item.getClientRects().length > 0);
+    if (!content || !panel || !hazard) return;
+    // The hazard is the bottom boundary. The tank overlays the panels and
+    // must not consume fitting space. Use the full artwork height for either tab.
+    const fits = (): boolean => {
+      const bounds = panel.getBoundingClientRect();
+      return bounds.top + bounds.width * 926 / 1700 <=
+        Math.min(hazard.getBoundingClientRect().top, content.getBoundingClientRect().bottom);
+    };
+    if (!fits()) {
+      let low = 0;
+      let high = menu.getBoundingClientRect().width;
+      for (let step = 0; step < 12; step += 1) {
+        const width = (low + high) / 2;
+        menu.style.setProperty('--android-home-fit-width', `${width}px`);
+        if (fits()) low = width;
+        else high = width;
+      }
+      menu.style.setProperty('--android-home-fit-width', `${Math.floor(low)}px`);
+    }
+    // Preserve an empty tank/chat lane first; only distribute surplus beyond it.
+    // This does not reduce the fitted width when that lane cannot fit.
+    // Reset above before measuring so resize/tab changes cannot compound gaps.
+    const panelBounds = panel.getBoundingClientRect();
+    const bottomLimit = Math.min(hazard.getBoundingClientRect().top, content.getBoundingClientRect().bottom);
+    const spareHeight = Math.max(0, bottomLimit - panelBounds.bottom);
+    const tank = menu.querySelector<HTMLElement>('.main-menu-web__bottom-tank-scroller');
+    const launcher = this.cherryChat.getLauncher();
+    const clearLane = Math.max(tank?.offsetHeight || 44, launcher?.offsetHeight || 44) + 18;
+    const extraGap = Math.min(24, Math.floor(Math.max(0, spareHeight - clearLane) / 4));
+    menu.style.setProperty('--android-home-extra-gap', `${extraGap}px`);
+    document.body.style.setProperty('--home-menu-right', `${Math.max(0, window.innerWidth - menu.getBoundingClientRect().right) + 4}px`);
+  }
+
   private bindHomeChatPlacement(): void {
     const schedule = (): void => {
       if (this.homeLayoutFrame !== null) return;
       this.homeLayoutFrame = window.requestAnimationFrame(() => {
         this.homeLayoutFrame = null;
         if (!this.active) return;
+        this.fitAndroidHome();
         const hazard = this.host.querySelector<HTMLElement>('.main-menu-web__hazard');
         const panels = Array.from(this.host.querySelectorAll<HTMLElement>('#home-rewards-panel, #home-leaderboard-panel'));
         const panel = panels.find((item) => item.getClientRects().length > 0);
@@ -451,6 +499,7 @@ export class MainMenuWebUi {
         candidate.setAttribute('aria-selected', String(candidate === tab));
         candidate.tabIndex = candidate === tab ? 0 : -1;
       });
+      this.fitAndroidHome();
     };
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', () => select(tab), { signal: this.abortController.signal });

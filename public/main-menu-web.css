@@ -1508,17 +1508,16 @@ html[data-ui-platform='android']
     grid-area: 1 / 2 / 3 / 3;
   }
 }
-/* Keep the supplied artwork at its native proportions. The remaining viewport
-   below Start is reserved for the next Android home sections. On short screens,
-   cap the stack's width so the artwork and two button rows fit without scrolling. */
+/* Keep artwork proportions and prefer full width. The layout fit check supplies
+   a narrower width only when the actual stack exceeds the available height. */
 html[data-ui-platform='android'] .main-menu-web {
   container-type: inline-size;
   width: 100%;
-  max-width: calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 152px) * 0.65);
+  max-width: var(--android-home-fit-width, 100%);
   margin-inline: auto;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
-  padding: env(safe-area-inset-top, 0px) max(2px, env(safe-area-inset-right))
+  padding: calc(env(safe-area-inset-top, 0px) + var(--android-home-extra-gap, 0px)) max(2px, env(safe-area-inset-right))
     env(safe-area-inset-bottom, 0px) max(2px, env(safe-area-inset-left));
   overflow: hidden;
 }
@@ -1534,7 +1533,7 @@ html[data-ui-platform='android'] .main-menu-web__content {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
   gap: 4px;
-  padding: 0 0 44px;
+  padding: 0;
   margin: 0;
   min-height: 0;
   max-width: none;
@@ -1546,6 +1545,7 @@ html[data-ui-platform='android'] .main-menu-web__commands {
 }
 html[data-ui-platform='android'] .main-menu-web__overview-banner {
   grid-area: 1 / 1 / 2 / -1;
+  margin-top: var(--android-home-extra-gap, 0px);
   width: 100%;
   height: auto;
   min-height: 0;
@@ -1564,6 +1564,7 @@ html[data-ui-platform='android'] .main-menu-web__commands
   /* Bridge the grid gap and overlap the banner's lower frame at every size.
      Negative margin also pulls the following menu rows up with the button. */
   margin-top: calc(-4px - 3.5cqw);
+  margin-bottom: var(--android-home-extra-gap, 0px);
   position: relative;
   z-index: 3;
 }
@@ -1661,6 +1662,7 @@ html[data-ui-platform='android'] .main-menu-web__commands .main-menu-web__action
 .android-home-tabs { display: none; }
 html[data-ui-platform='android'] .android-home-tabs {
   display: grid;
+  margin-top: var(--android-home-extra-gap, 0px);
   grid-area: 5 / 1 / 6 / -1;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
@@ -1905,6 +1907,7 @@ html[data-ui-platform='android'] .main-menu-web__ticker-run [data-menu-events-pr
 html[data-ui-platform='android'] .main-menu-web__bottom-tank-scroller {
   display: block;
   bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
 }
 @media (prefers-reduced-motion: no-preference) {
   html[data-ui-platform='android'] .main-menu-web__bottom-tank-scroller {
@@ -1917,7 +1920,7 @@ html[data-ui-platform='android'] .main-menu-web__bottom-tank-scroller {
 }
 html[data-ui-platform='android'] .main-menu-web-active .game-cherry {
   display: block;
-  right: max(8px, env(safe-area-inset-right), calc((100vw - (100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 152px) * 0.65) / 2 + 4px));
+  right: max(8px, env(safe-area-inset-right), var(--home-menu-right, 0px));
   bottom: env(safe-area-inset-bottom, 0px);
 }
 html[data-ui-platform='android'] .main-menu-web-active .game-cherry__launcher {
@@ -1968,6 +1971,16 @@ html[data-ui-platform='android'] .main-menu-web[data-reward-tab='leaderboard'] .
 }
 html[data-ui-platform='android'] .main-menu-web__leaderboard-header,
 html[data-ui-platform='android'] .main-menu-web__leaderboard-columns { display: none; }
+/* Both tab panels occupy the same artwork-sized slot, never a stretched grid row. */
+html[data-ui-platform='android'] .main-menu-web[data-reward-tab] :is(.main-menu-web__reward-briefing, .main-menu-web__leaderboard-preview) {
+  align-self: start;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 1700 / 926;
+}
 html[data-ui-platform='android'] .main-menu-web__leaderboard-rows {
   position: absolute;
   inset: 13.1% 2.7% 5.4%;
@@ -2048,7 +2061,7 @@ html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='headqu
 }
 .android-home-level { display: none; }
 html[data-ui-platform='android'] .main-menu-web__action[data-menu-action='settings'] {
-  top: calc(env(safe-area-inset-top, 0px) + 1.7cqw);
+  top: calc(env(safe-area-inset-top, 0px) + var(--android-home-extra-gap, 0px) + 1.7cqw);
   height: max(40px, 10cqw);
   width: max(40px, 10cqw);
   padding: 0;
