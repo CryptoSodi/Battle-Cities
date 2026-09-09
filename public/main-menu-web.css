@@ -1290,7 +1290,7 @@ html[data-ui-platform='android'] .main-menu-web {
 
 html[data-ui-platform='android'] .main-menu-web__hud {
   aspect-ratio: 2000 / 272;
-  background: url('/assets/android-home-v2/header.png') center / 100% 100%
+  background: url('/assets/android-home-v2/header-47d5e8fb.png') center / 100% 100%
     no-repeat;
   container-type: inline-size;
   flex: none;
