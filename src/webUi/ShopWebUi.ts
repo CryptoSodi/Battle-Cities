@@ -158,7 +158,7 @@ export class ShopWebUi {
     }
   }
   private render(status: string): string {
-    if (isPsg1Ui() || window.matchMedia('(min-width: 900px)').matches) {
+    if (isPsg1Ui() || (document.documentElement.dataset.uiPlatform !== 'android' && window.matchMedia('(min-width: 900px)').matches)) {
       return this.renderDesktop(status);
     }
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
@@ -261,7 +261,7 @@ export class ShopWebUi {
       .join('');
   }
   private walletControl(): string {
-    if (isPsg1Ui() && this.shop.isWalletConnected()) {
+    if ((isPsg1Ui() || document.documentElement.dataset.uiPlatform === 'android') && this.shop.isWalletConnected()) {
       return '<div class="shop-web__connection-status" role="status"><i aria-hidden="true"></i><span>CONNECTED</span></div>';
     }
     return `<button class="shop-web__connect${
@@ -656,7 +656,7 @@ export class ShopWebUi {
         const connected = await this.shop.connectWallet();
         this.refresh(
           connected ? 'WALLET CONNECTED' : 'WALLET CONNECTION CANCELLED',
-          connected && isPsg1Ui()
+          connected && (isPsg1Ui() || document.documentElement.dataset.uiPlatform === 'android')
             ? `[data-shop-tab="${this.tab}"]`
             : '[data-shop-wallet]',
         );

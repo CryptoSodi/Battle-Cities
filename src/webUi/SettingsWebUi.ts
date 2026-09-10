@@ -112,7 +112,7 @@ export class SettingsWebUi {
     }</p><small>VERSION ${
       process.env.BATTLECITY_VERSION
     }</small></section></main>`;
-    if (isPsg1Ui()) this.decoratePsg1();
+    if (isPsg1Ui() || document.documentElement.dataset.uiPlatform === 'android') this.decoratePsg1();
     this.bind();
     if (this.supportsPhonePairing()) void this.loadPairing(renderId);
     (
