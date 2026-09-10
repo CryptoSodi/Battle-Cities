@@ -1,4 +1,12 @@
 /* Live PSG1 tab labels and semantic icons; Android retains its own artwork. */
+html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  container-type: inline-size;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__commands .android-home-button-icon + .main-menu-web__action-label {
+  font-size: clamp(12px, 17cqw, 34px);
+  bottom: 11%;
+  transform: none;
+}
 /* Size reward copy against each plaque, including its available height. */
 html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier {
   container-type: size;

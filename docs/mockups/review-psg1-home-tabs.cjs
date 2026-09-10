@@ -39,6 +39,8 @@ const server = http.createServer((req, res) => {
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})))});
    for(const platform of ['desktop','android']){
     await page.evaluate(p=>document.documentElement.dataset.uiPlatform=p,platform);
+    const labels=await page.evaluate(()=>[...document.querySelectorAll('.android-home-button-icon + .main-menu-web__action-label')].map(e=>{const b=e.closest('button').getBoundingClientRect(),r=e.getBoundingClientRect();return {fits:r.left>=b.left&&r.right<=b.right&&r.top>=b.top+b.height*0.69&&r.bottom<=b.bottom&&e.scrollWidth<=e.clientWidth+1,size:getComputedStyle(e).fontSize}}));
+    if(labels.some(l=>!l.fits)||new Set(labels.map(l=>l.size)).size!==1)errors.push('Hero labels clipped or inconsistent '+width+' '+platform);
     const metrics=[];
     for(const tab of ['rewards','leaderboard']){
      await page.locator('[data-reward-tab-button="'+tab+'"]').click();
