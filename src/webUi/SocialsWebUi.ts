@@ -4,6 +4,7 @@ import { apiFetch, getApiUrl } from '../network/api';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 interface SocialTask {
   id: string;
@@ -54,6 +55,7 @@ export class SocialsWebUi {
     this.active = true;
     this.host = host;
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     document.body.classList.add('web-ui-active', 'socials-web-active');
     host.hidden = false;
     this.render();

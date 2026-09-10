@@ -65,28 +65,26 @@ for (const [name, data, currentPlayer] of [
 fixtures.loading = menu.rewardRowsLoadingMarkup();
 const markup = menu.render();
 const tabNavigationCode = ts.transpileModule(fs.readFileSync(path.join(root, 'src/webUi/psg1TabNavigation.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const layoutCode = ts.transpileModule(fs.readFileSync(path.join(root, 'src/webUi/focusScroll.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const deviceCode = ts.transpileModule(fs.readFileSync(path.join(root, 'src/webUi/deviceUi.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const navigationFixture = `
 let pressed='';window.routes=[];
 const deps={isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',
+isPlaySolanaPsg1:profile=>profile?.model==='PSG1',
 MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
 EventClient:class {},TradingClient:class {},CherryChatWebUi:class {getLauncher(){return null}blocksMenuInput(){return false}},
 beginSinglePlayerReplaySession:()=>{},GameSceneType:{MainTankSelect:'tank-select'}};
 const require=()=>deps;
+(()=>{const exports={};${deviceCode};Object.assign(deps,exports)})();window.initializeLayout=deps.initializeDeviceUi;
 (()=>{const exports={};${tabNavigationCode};Object.assign(deps,exports)})();
+(()=>{const exports={};${layoutCode};Object.assign(deps,exports)})();
 const Menu=(()=>{const exports={};${compiled};return exports.MainMenuWebUi})();
 const ui=new Menu({inputManager:{getActiveMethod:()=>({isDownAny:key=>key===pressed})},navigator:{push:route=>window.routes.push(route)}});
-ui.host=document.querySelector('[data-web-ui]');ui.active=true;ui.abortController=new AbortController();ui.fitAndroidHome=()=>{};
-ui.bindActions();ui.bindRewardTabs();ui.focusInitialAction();window.menuUi=ui;
+ui.host=document.querySelector('[data-web-ui]');ui.active=true;ui.abortController=new AbortController();
+ui.syncDeviceLayout();deps.bindUiLayoutRefresh(ui.host,ui.abortController.signal,()=>ui.syncDeviceLayout());ui.bindActions();ui.bindRewardTabs();ui.focusInitialAction();window.menuUi=ui;
 window.press=key=>{pressed=key;ui.update();pressed=''};
 `;
-const setup = compiled
-  .slice(
-    compiled.indexOf(
-      "if (document.documentElement.dataset.uiDevice === 'psg1')",
-    ),
-    compiled.indexOf('this.hydrateHud();'),
-  )
-  .replaceAll('host.', 'document.querySelector("[data-web-ui]").');
+const setup = '';
 const styles = [
   'main.css',
   'main-menu-web.css',
@@ -316,6 +314,24 @@ const server = http.createServer((req, res) => {
         height,
         'populated, vacant, unranked, outside-top-10 and loading checked',
       );
+    }
+    await page.locator('[data-reward-tab-button="leaderboard"]').click();
+    await page.locator('[data-menu-action="start"]').focus();
+    await page.evaluate(()=>window.initializeLayout());
+    for(const width of [1440,1279,900,899,640,1024,1280,960]) {
+      await page.setViewportSize({width,height:800});
+      await page.waitForFunction(width=>document.documentElement.dataset.uiDevice===(width>=900&&width<1280?'psg1':'standard'),width);
+      const transition=await page.evaluate(()=>{
+        const medium=document.documentElement.dataset.uiResponsive==='true';
+        const sidebar=document.querySelectorAll('.psg1-round-sidebar');
+        const clock=document.querySelectorAll('.main-menu-web__reward-clock');
+        const settings=document.querySelector('[data-menu-action="settings"]');
+        const geometry=sidebar.length===(medium?1:0)&&clock.length===(medium?1:2)&&!!settings.closest('.main-menu-web__hud')===medium;
+        const hints=!medium||(getComputedStyle(document.querySelector('[data-psg1-footer-guide]')).display==='none'&&getComputedStyle(document.querySelector('.main-menu-web__ticker-window')).visibility==='visible'&&getComputedStyle(document.querySelector('.psg1-home-tab-content kbd')).visibility==='hidden');
+        return geometry&&hints&&document.querySelector('main').dataset.rewardTab==='leaderboard'&&document.activeElement.dataset.menuAction==='start';
+      });
+      if(!transition)errors.push('Home resize structure/focus/tab/controller hints '+width);
+      if(width===1024)await page.screenshot({path:path.join(__dirname,'responsive-medium-home.png')});
     }
     if (errors.length) throw Error(errors.join('\n'));
     console.log(

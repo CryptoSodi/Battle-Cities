@@ -11,6 +11,11 @@ export function isPsg1Ui(): boolean {
   );
 }
 
+/** Physical-console behavior is not implied by the medium browser layout. */
+export function isPsg1Controls(): boolean {
+  return isPsg1Ui() && document.documentElement.dataset.uiResponsive !== 'true';
+}
+
 export function initializeDeviceUi(): void {
   // Keep the explicit preview available in deployed builds so PSG1 layouts can
   // be tested without the physical device. Hardware detection still enables
@@ -21,12 +26,14 @@ export function initializeDeviceUi(): void {
   const preview = requestedPreview === 'psg1';
   const androidPreview = requestedPreview === 'android';
   const compactViewport = window.matchMedia('(max-width: 899px)');
+  const mediumViewport = window.matchMedia('(min-width: 900px) and (max-width: 1279px)');
   let deviceProfile = (window as Window & {
     battleCitiesAndroidDevice?: AndroidDeviceProfile;
   }).battleCitiesAndroidDevice;
   const update = (profile: AndroidDeviceProfile): void => {
     deviceProfile = profile;
-    const next = preview || isPlaySolanaPsg1(profile) ? 'psg1' : 'standard';
+    const responsive = !preview && !androidPreview && profile == null && mediumViewport.matches;
+    const next = preview || isPlaySolanaPsg1(profile) || responsive ? 'psg1' : 'standard';
     // uiPlatform selects presentation assets, not the runtime/input platform.
     // Compact browser windows use the same home screen as Android phones.
     const platform = androidPreview || profile != null ||
@@ -34,9 +41,11 @@ export function initializeDeviceUi(): void {
     const deviceChanged = document.documentElement.dataset.uiDevice !== next;
     const platformChanged =
       document.documentElement.dataset.uiPlatform !== platform;
-    if (!deviceChanged && !platformChanged) return;
+    const responsiveChanged = document.documentElement.dataset.uiResponsive !== String(responsive);
+    if (!deviceChanged && !platformChanged && !responsiveChanged) return;
     document.documentElement.dataset.uiDevice = next;
     document.documentElement.dataset.uiPlatform = platform;
+    document.documentElement.dataset.uiResponsive = String(responsive);
     window.dispatchEvent(new Event('battlecities:ui-device'));
   };
   window.addEventListener(
@@ -46,5 +55,6 @@ export function initializeDeviceUi(): void {
     },
   );
   compactViewport.addEventListener('change', () => update(deviceProfile));
+  mediumViewport.addEventListener('change', () => update(deviceProfile));
   update(deviceProfile);
 }

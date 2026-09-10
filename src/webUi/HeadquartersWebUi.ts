@@ -3,6 +3,7 @@ import { InputManager, MenuInputContext } from '../input';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 export const HEADQUARTERS_ICON_NAMES = {
   treasury: 'treasury-safe',
@@ -81,6 +82,7 @@ export class HeadquartersWebUi {
     this.active = true;
     this.host = host;
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     document.body.classList.add('web-ui-active', 'headquarters-web-active');
     host.hidden = false;
     this.render();

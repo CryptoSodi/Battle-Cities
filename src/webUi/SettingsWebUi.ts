@@ -10,8 +10,8 @@ import {
 } from '../notifications/NativeNotificationClient';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
-import { isPsg1Ui } from './deviceUi';
-import { bindPsg1FocusScroll } from './focusScroll';
+import { isPsg1Ui, isPsg1Controls } from './deviceUi';
+import { bindPsg1FocusScroll, bindUiLayoutRefresh } from './focusScroll';
 
 export class SettingsWebUi {
   private readonly notificationClient = new NativeNotificationClient();
@@ -45,6 +45,7 @@ export class SettingsWebUi {
     this.host = host;
     bindPsg1FocusScroll(host);
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     document.body.classList.add('web-ui-active', 'settings-web-active');
     host.hidden = false;
     this.render();
@@ -256,7 +257,7 @@ export class SettingsWebUi {
     }
   }
   private supportsPhonePairing(): boolean {
-    if (document.documentElement.dataset.uiPlatform === 'android' || isPsg1Ui()) return false;
+    if (document.documentElement.dataset.uiPlatform === 'android' || isPsg1Controls()) return false;
     return !isPlaySolanaPsg1(
       this.input.getNativeAndroidGamepad().getDeviceProfile(),
     );

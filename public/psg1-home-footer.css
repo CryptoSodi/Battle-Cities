@@ -1,4 +1,14 @@
 /* PSG1 owns one footer: legend/ticker on the left, optional chat on the right. */
+/* Medium browser windows reuse the art, not the physical-controller briefing. */
+html[data-ui-responsive='true'] .main-menu-web .main-menu-web__psg1-footer-guide {
+  display: none;
+}
+html[data-ui-responsive='true'] .main-menu-web .main-menu-web__hazard .main-menu-web__ticker-window {
+  visibility: visible;
+}
+html[data-ui-responsive='true'] .main-menu-web .psg1-home-tab-content kbd {
+  visibility: hidden;
+}
 html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard {
   --psg1-chat-width: clamp(170px, 16vw, 230px);
   --psg1-chat-slot: 0px;

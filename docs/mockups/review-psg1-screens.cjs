@@ -14,6 +14,7 @@ const fixture = `
 const process={env:{BATTLECITY_VERSION:'PREVIEW'}};
 let exports={}; const require=(name)=>deps;
 const deps={PowerupType:{}, isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',isPlaySolanaPsg1:()=>true,
+isPsg1Controls:()=>document.documentElement.dataset.uiDevice==='psg1'&&document.documentElement.dataset.uiResponsive!=='true',
 NativeNotificationClient:class{isAvailable(){return !!window.nativeNotifications}async getSettings(){return {supported:true,enabled:false,permission:'granted'}}},animateBackNavigation:()=>window.backUsed=true,
 MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
 moveFocus:(buttons,current,x,y)=>buttons[(buttons.indexOf(current)+(x||y)+buttons.length)%buttons.length].focus()};
@@ -201,11 +202,29 @@ const server=http.createServer((req,res)=>{
   if(await page.evaluate(()=>window.startCalls)!==1||!(await page.locator('.shop-web__status').innerText()).includes('NEED 1 FUEL'))errors.push('PSG1 fuel guard changed');
  }
  await page.setViewportSize({width:1280,height:800});
- await page.evaluate(()=>{document.documentElement.dataset.uiDevice='desktop';window.noFuel=false;window.startCalls=0;window.mountScreen('shop')});
+ await page.evaluate(()=>{document.documentElement.dataset.uiDevice='desktop';document.documentElement.dataset.uiPlatform='web';window.noFuel=false;window.startCalls=0;window.mountScreen('shop')});
  await page.locator('[data-shop-start]').click();
  if(!await page.locator('[data-shop-controls-dialog]').evaluate(e=>e.open)||await page.evaluate(()=>window.startCalls)!==0)errors.push('Desktop briefing skipped');
  await page.locator('[data-shop-controls-confirm]').click();
  if(await page.evaluate(()=>window.startCalls)!==1)errors.push('Desktop confirmation failed');
+ await page.evaluate(()=>{window.finishStart();window.battleSetup=false});
+ // The same live Shop survives browser layout changes, including an open briefing.
+ await page.evaluate(()=>window.mountScreen('shop'));
+ await page.locator('[data-shop-tab="swap"]').click();
+ await page.locator('[data-shop-swap-amount]').fill('0.75');
+ for(const [width,device,platform,responsive] of [[1024,'psg1','web','true'],[640,'standard','android','false'],[1440,'standard','web','false'],[960,'psg1','web','true']]){
+  await page.setViewportSize({width,height:800});
+  await page.evaluate(({device,platform,responsive})=>{Object.assign(document.documentElement.dataset,{uiDevice:device,uiPlatform:platform,uiResponsive:responsive});window.dispatchEvent(new Event('battlecities:ui-device'))},{device,platform,responsive});
+  if(await page.locator('[data-shop-swap-amount]').inputValue()!=='0.75'||await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab')!=='swap')errors.push('Resize lost Swap state '+width);
+  if(!await page.locator('[data-shop-swap-amount]').evaluate(e=>e===document.activeElement))errors.push('Resize lost Swap focus '+width);
+ }
+ await page.evaluate(()=>{window.battleSetup=true;window.startCalls=0;window.mountScreen('shop')});
+ await page.locator('[data-shop-start]').click();
+ if(!await page.locator('[data-shop-controls-dialog]').evaluate(e=>e.open)||await page.evaluate(()=>window.startCalls)!==0)errors.push('Medium browser skipped keyboard briefing');
+ await page.evaluate(()=>{window.openBriefing=document.querySelector('[data-shop-controls-dialog]');Object.assign(document.documentElement.dataset,{uiDevice:'standard',uiResponsive:'false'});window.dispatchEvent(new Event('battlecities:ui-device'))});
+ if(!await page.evaluate(()=>window.openBriefing===document.querySelector('[data-shop-controls-dialog]')&&window.openBriefing.open))errors.push('Resize replaced open briefing');
+ await page.locator('[data-shop-controls-confirm]').click();
+ if(await page.evaluate(()=>window.startCalls)!==1)errors.push('Medium browser confirmation failed');
  await page.evaluate(()=>{window.finishStart();window.battleSetup=false});
  // The new presentation must have zero computed-style effect on other devices.
  for(const [platform,width] of [['desktop',1280],['android',375]]){

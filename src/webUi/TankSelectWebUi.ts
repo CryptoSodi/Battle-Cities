@@ -6,6 +6,7 @@ import { GameSceneType } from '../scenes';
 import { TankTier } from '../tank';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 const tanks = [
   {
@@ -107,6 +108,7 @@ export class TankSelectWebUi {
     this.active = true;
     this.host = host;
     this.abort = new AbortController();
+    bindUiLayoutRefresh(host, this.abort.signal, () => this.render(this.host.querySelector('.tank-select-web__status')?.textContent || ''));
     document.body.classList.add('web-ui-active', 'tank-select-web-active');
     host.hidden = false;
     [

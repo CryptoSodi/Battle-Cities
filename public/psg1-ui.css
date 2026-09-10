@@ -1458,13 +1458,13 @@ html[data-ui-device='psg1'] .results-web__footer > div {
 }
 
 /* The PSG1 has physical controls, so gameplay owns the full display. */
-html[data-ui-device='psg1'] body.game-running.level-playing .game-stage {
+html[data-ui-device='psg1']:not([data-ui-responsive='true']) body.game-running.level-playing .game-stage {
   height: 100dvh;
 }
-html[data-ui-device='psg1'] body.game-running .mobile-touch-controller {
+html[data-ui-device='psg1']:not([data-ui-responsive='true']) body.game-running .mobile-touch-controller {
   display: none !important;
 }
-html[data-ui-device='psg1'] .mobile-gamepad-qr {
+html[data-ui-device='psg1']:not([data-ui-responsive='true']) .mobile-gamepad-qr {
   display: none !important;
 }
 

@@ -26,6 +26,7 @@ import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../wiki';
 import { HEADQUARTERS_ICON_NAMES, moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 interface LedgerEntry {
   currency: string;
@@ -152,6 +153,7 @@ export class HeadquartersPagesWebUi {
     this.sceneType = sceneType as PageScene;
     this.host = host;
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     this.error = '';
     this.status = '';
     document.body.classList.add(

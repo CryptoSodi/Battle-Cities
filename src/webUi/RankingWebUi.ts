@@ -6,6 +6,7 @@ import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
 import { isPsg1Ui } from './deviceUi';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 export class RankingWebUi {
   private readonly client = new RankingClient();
@@ -36,6 +37,7 @@ export class RankingWebUi {
     this.active = true;
     this.host = host;
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     document.body.classList.add('web-ui-active', 'ranking-web-active');
     host.hidden = false;
     this.render();

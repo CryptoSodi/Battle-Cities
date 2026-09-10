@@ -1,5 +1,6 @@
 import { InputManager, MenuInputContext } from '../input';
 import { decoratePsg1Console } from './psg1Console';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 export interface ResultsWebUiPlayer {
   bonus: number;
@@ -62,6 +63,7 @@ export class ResultsWebUi {
     this.active = true;
     this.host = host;
     this.abortController = new AbortController();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.render(this.options.getController().getResultsWebUiState()));
     document.body.classList.add('web-ui-active', 'results-web-active');
     host.hidden = false;
     this.render();

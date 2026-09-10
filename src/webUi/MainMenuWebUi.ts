@@ -12,6 +12,7 @@ import { TradingClient } from '../trading';
 import { CherryChatWebUi } from './CherryChatWebUi';
 import { isPsg1Ui } from './deviceUi';
 import { handlePsg1TabNavigation } from './psg1TabNavigation';
+import { bindUiLayoutRefresh } from './focusScroll';
 
 interface MainMenuWebUiOptions {
   inputManager: InputManager;
@@ -92,6 +93,7 @@ export class MainMenuWebUi {
   private touchActionTimer: number | null = null;
   private homeLayoutObserver: ResizeObserver | null = null;
   private homeLayoutFrame: number | null = null;
+  private restoreHomeLayout: (() => void) | null = null;
 
   public constructor(options: MainMenuWebUiOptions) {
     this.options = options;
@@ -116,40 +118,13 @@ export class MainMenuWebUi {
     host.hidden = false;
     host.innerHTML = this.render();
 
-    // The PSG1 artwork reserves the first HUD compartment for Settings.
-    // Move the existing real button there instead of positioning it from the hero.
-    if (document.documentElement.dataset.uiDevice === 'psg1') {
-      const hud = host.querySelector<HTMLElement>('.main-menu-web__hud');
-      const settings = host.querySelector<HTMLButtonElement>("[data-menu-action='settings']");
-      if (hud && settings) hud.prepend(settings);
-      const headquarters = host.querySelector<HTMLButtonElement>("[data-menu-action='headquarters']");
-      const headquartersLabel = headquarters?.querySelector<HTMLElement>('.main-menu-web__action-label');
-      if (headquarters && headquartersLabel) {
-        headquarters.setAttribute('aria-label', 'Headquarters');
-        headquartersLabel.textContent = 'Quarters';
-      }
-      // A single sidebar belongs to the tab group, not to either tab panel.
-      // Moving these live nodes keeps the timer geometry/state identical.
-      const overview = host.querySelector<HTMLElement>('.main-menu-web__overview');
-      const clock = host.querySelector<HTMLElement>('#home-rewards-panel .main-menu-web__reward-clock');
-      const instructions = host.querySelector<HTMLElement>('.main-menu-web__how-it-works');
-      if (overview && clock && instructions) {
-        const sidebar = document.createElement('aside');
-        sidebar.className = 'psg1-round-sidebar';
-        sidebar.setAttribute('aria-label', 'Round timer and reward instructions');
-        sidebar.append(clock, instructions);
-        overview.append(sidebar);
-        host.querySelector('.main-menu-web__reward-clock--leaderboard')?.remove();
-      }
-    }
+    this.syncDeviceLayout();
+    bindUiLayoutRefresh(host, this.abortController.signal, () => this.syncDeviceLayout());
 
     this.hydrateHud();
     void this.refreshHudProgression(currentMountId);
     this.cherryChat.mount();
-    if (document.documentElement.dataset.uiDevice === 'psg1') {
-      const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
-      if (chat) host.querySelector('.main-menu-web__hazard')?.append(chat);
-    }
+    this.syncDeviceLayout();
     this.bindHomeChatPlacement();
     this.bindActions();
     this.bindRewardTabs();
@@ -209,6 +184,8 @@ export class MainMenuWebUi {
       this.psg1FooterTimer = null;
     }
     this.actionButtons = [];
+    this.restoreHomeLayout?.();
+    this.restoreHomeLayout = null;
     this.rewardsData = null;
     this.rewardsLoading = false;
     this.cherryChat.unmount();
@@ -520,6 +497,55 @@ export class MainMenuWebUi {
     const extraGap = Math.min(24, Math.floor(Math.max(0, spareHeight - clearLane) / 4));
     menu.style.setProperty('--android-home-extra-gap', `${extraGap}px`);
     document.body.style.setProperty('--home-menu-right', `${Math.max(0, window.innerWidth - menu.getBoundingClientRect().right) + 4}px`);
+  }
+
+  private syncDeviceLayout(): void {
+    const host = this.host;
+    if (!isPsg1Ui()) {
+      this.restoreHomeLayout?.();
+      this.restoreHomeLayout = null;
+      const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
+      if (chat) host.append(chat);
+      this.fitAndroidHome();
+      return;
+    }
+    if (!this.restoreHomeLayout) {
+      const restore: Array<() => void> = [];
+      const quartersLabel = host.querySelector('[data-menu-action="headquarters"] .main-menu-web__action-label');
+      if (quartersLabel) {
+        const original = quartersLabel.textContent;
+        quartersLabel.textContent = 'Quarters';
+        restore.push(() => { quartersLabel.textContent = original; });
+      }
+      const remember = (node: Node): void => {
+        const anchor = document.createComment('home layout anchor');
+        node.parentNode.insertBefore(anchor, node);
+        restore.push(() => { anchor.parentNode?.insertBefore(node, anchor); anchor.remove(); });
+      };
+      const settings = host.querySelector('[data-menu-action="settings"]');
+      const hud = host.querySelector('.main-menu-web__hud');
+      if (settings && hud) { remember(settings); hud.prepend(settings); }
+      const overview = host.querySelector('.main-menu-web__overview');
+      const clock = host.querySelector('#home-rewards-panel .main-menu-web__reward-clock');
+      const instructions = host.querySelector('.main-menu-web__how-it-works');
+      if (overview && clock && instructions) {
+        remember(clock); remember(instructions);
+        const sidebar = document.createElement('aside');
+        sidebar.className = 'psg1-round-sidebar';
+        sidebar.setAttribute('aria-label', 'Round timer and reward instructions');
+        sidebar.append(clock, instructions); overview.append(sidebar);
+        restore.push(() => sidebar.remove());
+        const duplicate = host.querySelector('.main-menu-web__reward-clock--leaderboard');
+        if (duplicate) { remember(duplicate); duplicate.remove(); }
+      }
+      this.restoreHomeLayout = () => restore.forEach(undo => undo());
+    }
+    const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
+    if (chat) host.querySelector('.main-menu-web__hazard')?.append(chat);
+    if (document.documentElement.dataset.uiResponsive === 'true') {
+      host.querySelector('.main-menu-web__hazard')?.classList.add('main-menu-web__hazard--guide-dismissed');
+    }
+    this.fitAndroidHome();
   }
 
   private bindHomeChatPlacement(): void {

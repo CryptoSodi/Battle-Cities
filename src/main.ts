@@ -1,5 +1,5 @@
 import * as Stats from 'stats.js';
-import { initializeDeviceUi, isPsg1Ui } from './webUi/deviceUi';
+import { initializeDeviceUi, isPsg1Controls } from './webUi/deviceUi';
 
 import {
   AudioLoader,
@@ -171,7 +171,7 @@ function syncMobileCanvasCssSize(): void {
   const isPanelScreen = document.body.classList.contains('panel-screen-active');
   const stageWidth = Math.max(Math.floor(viewportWidth), 1);
   const stageHeight = Math.max(
-    Math.floor(viewportHeight * (isGameplay && !isPsg1Ui() ? 0.6 : 1)),
+    Math.floor(viewportHeight * (isGameplay && !isPsg1Controls() ? 0.6 : 1)),
     1,
   );
 
