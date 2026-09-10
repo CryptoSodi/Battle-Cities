@@ -628,11 +628,68 @@ html[data-ui-device='psg1'] .shop-web__start-battle {
   margin-top: 8px;
 }
 
-/* Swap keeps its existing live quote / review / wallet-confirmation flow. */
+/* Separate wallet and presale hardware, with the existing live purchase flow. */
+html[data-ui-device='psg1'] .shop-web .shop-web__wallet-panel {
+  flex: none;
+  padding: 14px;
+  margin-bottom: var(--psg-gap);
+}
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .shop-web__desktop-shell--swap
+  .shop-web__desktop-side {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  overflow-y: auto;
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-shell--swap
+  .shop-web__desktop-side::before {
+  content: none;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-side .shop-web__presale-legend {
+  flex: 1 0 auto;
+  margin: 0;
+  padding: 18px;
+  overflow: visible;
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-side
+  .shop-web__presale-legend
+  h3 {
+  font-size: clamp(18px, 2.2vw, 30px);
+  margin: 0;
+}
+html[data-ui-device='psg1'] .shop-web__presale-legend > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--psg-edge);
+}
+html[data-ui-device='psg1'] .shop-web__presale-legend > header > span {
+  font-size: clamp(14px, 1.6vw, 22px);
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-shell--swap
+  .shop-web__desktop-content {
+  padding: 14px;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  overflow: visible;
+}
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-body {
   padding: 2px;
-  gap: 12px;
-  grid-template-rows: var(--psg-control) auto auto;
+  gap: var(--psg-gap);
+  grid-template-rows: auto auto minmax(min-content, 1fr);
+  border: 0;
+  background: none;
+  box-shadow: none;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-method {
   height: var(--psg-control);
@@ -640,20 +697,45 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-method {
   border: 2px solid var(--bc-command);
   color: var(--ui-nav-ink);
   font-size: clamp(23px, 3.2vw, 42px);
+  clip-path: var(--psg-plate);
+  box-shadow: inset 0 0 0 2px #171006, inset 0 0 0 4px #ffe66d;
+  gap: 16px;
+}
+html[data-ui-device='psg1'] .shop-web__swap-method img {
+  width: clamp(32px, 5dvh, 58px);
+  height: clamp(32px, 5dvh, 58px);
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-form {
   gap: 7px;
 }
-html[data-ui-device='psg1'] .shop-web__swap-form label {
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  .shop-web__swap-form
+  > label {
   font-size: clamp(14px, 1.8vw, 22px);
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-input {
   min-height: var(--psg-control);
-  border: 2px solid var(--psg-edge);
+  border: 3px solid var(--psg-steel);
   background: var(--psg-surface);
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--psg-edge);
+  clip-path: var(--psg-plate);
+  font-size: clamp(28px, 3.6vw, 48px);
 }
-html[data-ui-device='psg1'] .shop-web__swap-input input {
-  font-size: clamp(23px, 3vw, 40px);
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  .shop-web__swap-input
+  input {
+  font-size: inherit;
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  .shop-web__swap-input
+  span {
+  font-size: clamp(20px, 2.5vw, 32px);
+  flex: none;
 }
 html[data-ui-device='psg1']
   .shop-web__desktop-content
@@ -661,16 +743,53 @@ html[data-ui-device='psg1']
   button {
   height: var(--psg-control);
   border: 2px solid var(--psg-edge);
+  font-size: clamp(18px, 2.3vw, 30px);
 }
 html[data-ui-device='psg1'] .shop-web__swap-arrow {
   line-height: 1;
-  font-size: 28px;
+  font-size: 40px;
+  height: 32px;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-summary {
   padding: 0;
+  gap: var(--psg-gap);
+  justify-content: space-between;
 }
 html[data-ui-device='psg1'] .shop-web__swap-summary dl {
   margin: 0;
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  .shop-web__swap-summary
+  dl
+  div {
+  border: 1px solid var(--psg-steel);
+  padding: 6px 12px;
+  min-height: clamp(32px, 4.5dvh, 52px);
+  gap: 8px;
+}
+html[data-ui-device='psg1'] .shop-web__swap-summary dl div + div {
+  border-top: 0;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-wallet {
+  border: 1px solid var(--psg-steel);
+  padding: 6px 14px;
+  min-height: 32px;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-review {
+  height: var(--psg-control);
+  flex: none;
+  font-size: clamp(22px, 2.8vw, 38px);
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  .shop-web__swap-summary
+  :is(.shop-web__swap-live, .shop-web__swap-notice) {
+  font-size: clamp(13px, 1.5vw, 20px) !important;
+  margin: 0 !important;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-notice {
+  padding-top: 8px;
 }
 html[data-ui-device='psg1'] .shop-web__swap-notice {
   font-size: clamp(12px, 1.3vw, 17px);
@@ -681,7 +800,10 @@ html[data-ui-device='psg1'] .shop-web__presale-legend {
   border-color: var(--psg-edge);
   padding: 10px 0;
 }
-html[data-ui-device='psg1'] .shop-web__presale-legend .shop-web__presale-row {
+html[data-ui-device='psg1']
+  .shop-web__desktop-side
+  .shop-web__presale-legend
+  .shop-web__presale-row {
   font-size: clamp(11px, 1.3vw, 17px);
 }
 html[data-ui-device='psg1']
@@ -691,7 +813,10 @@ html[data-ui-device='psg1']
   font-size: clamp(12px, 1.4vw, 18px);
   line-height: 1.3;
 }
-html[data-ui-device='psg1'] .shop-web__presale-available strong {
+html[data-ui-device='psg1']
+  .shop-web__desktop-side
+  .shop-web__presale-available
+  strong {
   font-size: clamp(24px, 3vw, 38px);
 }
 html[data-ui-device='psg1']

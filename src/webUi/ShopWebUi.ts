@@ -190,7 +190,7 @@ export class ShopWebUi {
       ${
         this.tab === 'swap'
           ? this.presaleLegend()
-          : `<section class="shop-web__owned"><h2>OWNED ITEMS</h2><div>${this.inventoryTiles()}</div></section>`
+          : `<section class="shop-web__owned"><h2>INVENTORY</h2><div>${this.inventoryTiles()}</div></section>`
       }
       <section class="shop-web__content">${content}</section><p class="shop-web__status" aria-live="polite">${status ||
       (this.tab === 'loadout'
@@ -269,9 +269,7 @@ export class ShopWebUi {
       .join('');
   }
   private desktopSidebar(): string {
-    const wallet = `<h2>${
-      this.tab === 'swap' ? 'WALLET' : 'INVENTORY'
-    }</h2><button class="shop-web__connect${
+    const wallet = `<h2>WALLET</h2><button class="shop-web__connect${
       this.shop.isWalletConnected() ? ' is-connected' : ''
     }" data-shop-wallet type="button"${
       this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
@@ -285,12 +283,17 @@ export class ShopWebUi {
       'BATC',
       this.shop.getTokenBalance().toString(),
     )}${this.resource('SOL', this.shop.getSolBalance().toFixed(3))}`;
+    const balances = `${wallet}${
+      this.tab === 'swap'
+        ? ''
+        : this.resource('FUEL', this.shop.getFuelBalance().toString())
+    }`;
+    const walletPanel = isPsg1Ui()
+      ? `<section class="shop-web__wallet-panel psg1-console-frame" aria-label="Wallet balances">${balances}</section>`
+      : balances;
     return this.tab === 'swap'
-      ? `${wallet}${this.presaleLegend(true)}`
-      : `${wallet}${this.resource(
-          'FUEL',
-          this.shop.getFuelBalance().toString(),
-        )}<h3>OWNED ITEMS</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div>`;
+      ? `${walletPanel}${this.presaleLegend(true)}`
+      : `${walletPanel}<h3>INVENTORY</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div>`;
   }
   private presaleLegend(desktop = false): string {
     const state = this.presaleState;
@@ -329,7 +332,11 @@ export class ShopWebUi {
       })
       .join('');
     return `<section class="shop-web__presale-legend${
-      desktop ? ' shop-web__presale-legend--desktop' : ''
+      desktop
+        ? ` shop-web__presale-legend--desktop${
+            isPsg1Ui() ? ' psg1-console-frame' : ''
+          }`
+        : ''
     }" aria-label="Live presale status"><header><h3>PRESALE LEGEND</h3><span>LIVE</span></header><div class="shop-web__presale-available"><strong>${
       state ? this.formatSwapNumber(available) : '--'
     } BATC</strong><span>AVAILABLE IN THIS STAGE</span><small>${
@@ -445,7 +452,11 @@ export class ShopWebUi {
     const shortWallet = walletConnected
       ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-4)}`
       : 'WALLET NOT CONNECTED';
-    return `<section class="shop-web__swap" aria-label="BATC swap"><div class="shop-web__swap-body"><div class="shop-web__swap-method"><span aria-hidden="true">◎</span> PAY WITH SOL</div><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(
+    return `<section class="shop-web__swap" aria-label="BATC swap"><div class="shop-web__swap-body"><div class="shop-web__swap-method">${
+      isPsg1Ui()
+        ? '<img src="/assets/headquarters/trading-arrows.png" alt="">'
+        : '<span aria-hidden="true">◎</span>'
+    } PAY WITH SOL</div><section class="shop-web__swap-form" aria-label="Swap amount"><label for="shop-swap-amount">YOU PAY</label><div class="shop-web__swap-input"><input id="shop-swap-amount" data-shop-swap-amount type="number" min="0" step="any" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${sanitizedAmount}"><span>SOL</span></div><div class="shop-web__swap-presets"><button data-shop-swap-preset="0.5" type="button">0.5 SOL</button><button data-shop-swap-preset="1" type="button">1 SOL</button><button data-shop-swap-preset="max" type="button">MAX</button></div><span class="shop-web__swap-arrow" aria-hidden="true">↓</span><label>YOU RECEIVE</label><output class="shop-web__swap-input shop-web__swap-output" data-shop-swap-receive>${this.formatSwapNumber(
       receiveAmount,
     )} <span>BATC</span></output></section><aside class="shop-web__swap-summary" aria-label="Live exchange details"><dl><div><dt>CURRENT RATE</dt><dd data-shop-swap-rate>${
       rate > 0 ? `1 SOL = ${this.formatSwapNumber(rate)} BATC` : 'LOADING'

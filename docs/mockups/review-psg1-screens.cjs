@@ -57,6 +57,7 @@ const server=http.createServer((req,res)=>{
    const bounds=await page.evaluate(()=>({scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],page:document.querySelector('main').getBoundingClientRect().toJSON(),nav:document.querySelector('[data-ui-nav]').getBoundingClientRect().toJSON()}));
    if(bounds.scroll[0]>width||bounds.scroll[1]>height)errors.push(screen+' page overflow '+width+'x'+height);
    if(screen==='bact'||screen==='sol') {
+    if(await page.locator('.shop-web__wallet-panel h2').innerText()!=='WALLET'||await page.locator('.shop-web__desktop-side > h3').innerText()!=='INVENTORY')errors.push(screen+' sidebar headings');
     const layout=await page.evaluate(()=>{
      const cards=[...document.querySelectorAll('.shop-web__desktop-content .shop-web__card')].every(card=>{
       const rect=e=>e.getBoundingClientRect();const c=rect(card),name=rect(card.querySelector('h2')),icon=rect(card.querySelector('.shop-web__card-icon')),desc=rect(card.querySelector('p')),buy=rect(card.querySelector('button'));
@@ -66,6 +67,14 @@ const server=http.createServer((req,res)=>{
      return {cards,owned};
     });
     if(!layout.cards||!layout.owned)errors.push(screen+' card order / owned footer alignment '+width+'x'+height+' '+JSON.stringify(layout));
+   }
+   if(screen==='swap') {
+    const frames=await page.evaluate(()=>{
+     const wallet=document.querySelector('.shop-web__wallet-panel'),presale=document.querySelector('.shop-web__presale-legend'),notice=document.querySelector('.shop-web__swap-notice');
+     return {separate:wallet.getBoundingClientRect().bottom<presale.getBoundingClientRect().top,framed:[wallet,presale].every(e=>getComputedStyle(e).borderTopWidth==='3px'&&getComputedStyle(e).borderBottomWidth==='3px'),noticeFont:parseFloat(getComputedStyle(notice).fontSize),noticeBottom:notice.getBoundingClientRect().bottom,contentBottom:document.querySelector('.shop-web__content').getBoundingClientRect().bottom,icon:!!document.querySelector('.shop-web__swap-method img')};
+    });
+    if(!frames.separate||!frames.framed||!frames.icon||frames.noticeFont<13)errors.push('Swap frames / readability '+JSON.stringify(frames));
+    if(width===1280&&height===800&&frames.noticeBottom>frames.contentBottom)errors.push('Swap notice clipped at target size');
    }
    if(width===1280&&height===800)await page.screenshot({path:path.join(__dirname,'psg1-'+screen+'.png')});
    console.log(width,height,screen,JSON.stringify(bounds.scroll));
