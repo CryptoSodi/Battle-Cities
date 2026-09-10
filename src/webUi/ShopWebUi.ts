@@ -291,9 +291,13 @@ export class ShopWebUi {
     const walletPanel = isPsg1Ui()
       ? `<section class="shop-web__wallet-panel psg1-console-frame" aria-label="Wallet balances">${balances}</section>`
       : balances;
+    const inventory = `<h3>INVENTORY</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div>`;
+    const inventoryPanel = isPsg1Ui()
+      ? `<section class="shop-web__inventory-panel psg1-console-frame" aria-label="Inventory">${inventory}</section>`
+      : inventory;
     return this.tab === 'swap'
       ? `${walletPanel}${this.presaleLegend(true)}`
-      : `${walletPanel}<h3>INVENTORY</h3><div class="shop-web__desktop-owned">${this.inventoryTiles()}</div>`;
+      : `${walletPanel}${inventoryPanel}`;
   }
   private presaleLegend(desktop = false): string {
     const state = this.presaleState;

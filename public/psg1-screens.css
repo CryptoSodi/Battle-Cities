@@ -628,7 +628,7 @@ html[data-ui-device='psg1'] .shop-web__start-battle {
   margin-top: 8px;
 }
 
-/* Separate wallet and presale hardware, with the existing live purchase flow. */
+/* All shop rails share separate hardware panels without changing track widths. */
 html[data-ui-device='psg1'] .shop-web .shop-web__wallet-panel {
   flex: none;
   padding: 14px;
@@ -637,7 +637,7 @@ html[data-ui-device='psg1'] .shop-web .shop-web__wallet-panel {
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
-  .shop-web__desktop-shell--swap
+  .shop-web__desktop-shell
   .shop-web__desktop-side {
   padding: 0;
   border: 0;
@@ -647,9 +647,29 @@ html[data-ui-device='psg1']
   overflow-y: auto;
 }
 html[data-ui-device='psg1']
-  .shop-web__desktop-shell--swap
+  .shop-web__desktop-shell
   .shop-web__desktop-side::before {
   content: none;
+}
+html[data-ui-device='psg1'] .shop-web__inventory-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 392px;
+  min-height: 392px;
+  padding: 12px;
+  min-width: 0;
+}
+html[data-ui-device='psg1'] .shop-web__inventory-panel > h3 {
+  flex: none;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--psg-edge);
+  margin: 4px 0 8px;
+}
+html[data-ui-device='psg1']
+  .shop-web__inventory-panel
+  .shop-web__desktop-owned {
+  min-height: 0;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
 }
 html[data-ui-device='psg1'] .shop-web__desktop-side .shop-web__presale-legend {
   flex: 1 0 auto;

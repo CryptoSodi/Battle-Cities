@@ -56,8 +56,17 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(async()=>{await Promise.all(Array.from(document.images).map(i=>i.decode().catch(()=>{})))});
    const bounds=await page.evaluate(()=>({scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],page:document.querySelector('main').getBoundingClientRect().toJSON(),nav:document.querySelector('[data-ui-nav]').getBoundingClientRect().toJSON()}));
    if(bounds.scroll[0]>width||bounds.scroll[1]>height)errors.push(screen+' page overflow '+width+'x'+height);
+   if(['loadout','bact','sol'].includes(screen)) {
+    const rail=await page.evaluate(()=>{
+     const side=document.querySelector('.shop-web__desktop-side'),shell=document.querySelector('.shop-web__desktop-shell'),wallet=document.querySelector('.shop-web__wallet-panel'),inventory=document.querySelector('.shop-web__inventory-panel');
+     const r=side.getBoundingClientRect(),w=wallet.getBoundingClientRect(),i=inventory.getBoundingClientRect();
+     return {width:r.width,expected:innerWidth<=700?150:Math.max(170,shell.getBoundingClientRect().width*.25),separate:w.bottom<i.top,framed:[wallet,inventory].every(e=>getComputedStyle(e).borderTopWidth==='3px'),aligned:Math.abs(w.left-i.left)<1&&Math.abs(w.width-i.width)<1,bottom:i.bottom,sideBottom:r.bottom};
+    });
+    if(Math.abs(rail.width-rail.expected)>1||!rail.separate||!rail.framed||!rail.aligned)errors.push(screen+' sidebar frame / width regression '+JSON.stringify(rail));
+    if(width===1280&&height>=800&&rail.bottom>rail.sideBottom+1)errors.push(screen+' inventory panel clipped');
+   }
    if(screen==='bact'||screen==='sol') {
-    if(await page.locator('.shop-web__wallet-panel h2').innerText()!=='WALLET'||await page.locator('.shop-web__desktop-side > h3').innerText()!=='INVENTORY')errors.push(screen+' sidebar headings');
+    if(await page.locator('.shop-web__wallet-panel h2').innerText()!=='WALLET'||await page.locator('.shop-web__inventory-panel > h3').innerText()!=='INVENTORY')errors.push(screen+' sidebar headings');
     const layout=await page.evaluate(()=>{
      const cards=[...document.querySelectorAll('.shop-web__desktop-content .shop-web__card')].every(card=>{
       const rect=e=>e.getBoundingClientRect();const c=rect(card),name=rect(card.querySelector('h2')),icon=rect(card.querySelector('.shop-web__card-icon')),desc=rect(card.querySelector('p')),buy=rect(card.querySelector('button'));
