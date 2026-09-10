@@ -251,6 +251,17 @@ const server = http.createServer((req, res) => {
           b.height>=48 && c.bottom-b.bottom<=14 && (!icon || icon.getBoundingClientRect().width>=32) && card.scrollWidth<=card.clientWidth+1;
       })), 'Android enlarged art / bottom fuel bar at ' + width);
       if(device === 'android' && width === 390) await page.screenshot({path:path.join(__dirname,'android-tank-select-two-columns.png')});
+      if(device === 'android') {
+        await page.locator('[data-tank="3"]').click();
+        assert(await page.locator('.tank-select-web__fuel').evaluate(panel => {
+          const box = panel.getBoundingClientRect();
+          return [...panel.querySelectorAll('span,small,b,strong,img')].every(element => {
+            const r = element.getBoundingClientRect();
+            return r.left >= box.left && r.right <= box.right && r.top >= box.top && r.bottom <= box.bottom && element.scrollWidth <= element.clientWidth+1;
+          }) && [...panel.querySelectorAll('span,small')].every(element => parseFloat(getComputedStyle(element).fontSize)>=14) &&
+            parseFloat(getComputedStyle(panel.querySelector('b')).fontSize)>=16;
+        }), 'Android readable fuel briefing / longest tank name at ' + width);
+      }
       assert(
         await page.evaluate(() => {
           const sheet = [...document.styleSheets].find((s) =>
