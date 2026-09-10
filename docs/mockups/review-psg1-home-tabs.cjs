@@ -14,12 +14,13 @@ const menu = new context.exports.MainMenuWebUi({ isDev: false });
 const markup = menu.render();
 const bindTabs = 'function ' + menu.bindRewardTabs.toString();
 const errorRender = 'function ' + menu.renderHomeRewardsError.toString();
+const countdownSync = 'function ' + menu.syncHomeRewardsCountdown.toString();
 const setup = compiled.slice(compiled.indexOf("if (document.documentElement.dataset.uiDevice === 'psg1')"), compiled.indexOf('this.hydrateHud();'));
 const styles = ['main.css', 'main-menu-web.css', 'cherry-chat-web.css', 'psg1-ui.css', 'home-rewards.css', 'home-chrome.css', 'psg1-home-tabs.css'];
 const server = http.createServer((req, res) => {
   if (req.url === '/') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(`<!DOCTYPE html><html data-ui-device="psg1"><head>${styles.map(s => `<link rel="stylesheet" href="/${s}">`).join('')}</head><body class="web-ui-active main-menu-web-active"><div class="web-ui" data-web-ui>${markup}</div><script>${setup.replaceAll('host.', 'document.querySelector("[data-web-ui]").')};document.querySelector('[data-menu-action="start"]').classList.add('is-selected');document.querySelector('[data-psg1-footer-guide]').classList.add('main-menu-web__psg1-footer-guide--hidden');document.querySelector('.main-menu-web__hazard').classList.add('main-menu-web__hazard--guide-dismissed');document.querySelectorAll('[data-home-rewards-countdown]').forEach(e=>e.textContent='00:12:34');document.querySelectorAll('[data-home-round-progress]').forEach(e=>e.value=42);document.querySelector('[data-menu-player]').textContent='7P5T XYUM';document.querySelector('[data-menu-level-progress]').value=55;document.querySelectorAll('[data-reward-tab-button]').forEach(b=>b.onclick=()=>{document.querySelector('main').dataset.rewardTab=b.dataset.rewardTabButton;document.querySelectorAll('[data-reward-tab-button]').forEach(c=>c.setAttribute('aria-selected',c===b));});window.retryCount=0;window.fixtureUi={host:document.querySelector('[data-web-ui]'),abortController:new AbortController(),fitAndroidHome:()=>{},setText:(s,t)=>document.querySelectorAll(s).forEach(e=>e.textContent=t),loadHomeRewards:()=>window.retryCount++};(${bindTabs}).call(window.fixtureUi);(${errorRender}).call(window.fixtureUi,1);</script></body></html>`);
+    res.end(`<!DOCTYPE html><html data-ui-device="psg1"><head>${styles.map(s => `<link rel="stylesheet" href="/${s}">`).join('')}</head><body class="web-ui-active main-menu-web-active"><div class="web-ui" data-web-ui>${markup}</div><script>${setup.replaceAll('host.', 'document.querySelector("[data-web-ui]").')};document.querySelector('[data-menu-action="start"]').classList.add('is-selected');document.querySelector('[data-psg1-footer-guide]').classList.add('main-menu-web__psg1-footer-guide--hidden');document.querySelector('.main-menu-web__hazard').classList.add('main-menu-web__hazard--guide-dismissed');document.querySelectorAll('[data-home-rewards-countdown]').forEach(e=>e.textContent='00:12:34');document.querySelectorAll('[data-home-round-progress]').forEach(e=>e.value=42);document.querySelector('[data-menu-player]').textContent='7P5T XYUM';document.querySelector('[data-menu-level-progress]').value=55;document.querySelectorAll('[data-reward-tab-button]').forEach(b=>b.onclick=()=>{document.querySelector('main').dataset.rewardTab=b.dataset.rewardTabButton;document.querySelectorAll('[data-reward-tab-button]').forEach(c=>c.setAttribute('aria-selected',c===b));});window.retryCount=0;window.fixtureUi={host:document.querySelector('[data-web-ui]'),abortController:new AbortController(),fitAndroidHome:()=>{},setText:(s,t)=>document.querySelectorAll(s).forEach(e=>e.textContent=t),loadHomeRewards:()=>window.retryCount++};(${bindTabs}).call(window.fixtureUi);(${errorRender}).call(window.fixtureUi,1);window.syncCountdown=${countdownSync};</script></body></html>`);
     return;
   }
   const file = path.join(root, 'public', decodeURIComponent(req.url.split('?')[0]));
@@ -76,6 +77,12 @@ const server = http.createServer((req, res) => {
     await page.locator('[data-reward-tab-button="leaderboard"]').focus();
     await page.keyboard.press('ArrowLeft');
     if(await page.locator('[data-reward-tab-button="rewards"]').getAttribute('aria-selected')!=='true')errors.push('Arrow navigation failed');
+    for(const state of ['syncing','unavailable','live']) {
+     await page.evaluate(state=>{window.fixtureUi.rewardsLoading=state==='syncing';window.fixtureUi.rewardsData=state==='live'?{nextRewardAt:new Date(Date.now()+15*60*1000).toISOString(),enabled:true,rewardIntervalMinutes:30}:null;window.syncCountdown.call(window.fixtureUi)},state);
+     const fit=await page.evaluate(()=>{const clock=document.querySelector('.psg1-round-sidebar .main-menu-web__reward-clock'),box=clock.getBoundingClientRect();const pieces=[...clock.querySelectorAll('i, [data-home-countdown-label], output, progress')];return pieces.every(e=>{const r=e.getBoundingClientRect();return r.left>=box.left&&r.right<=box.right&&r.top>=box.top&&r.bottom<=box.bottom&&e.scrollWidth<=e.clientWidth+1})});
+     if(!fit)errors.push('Timer content clipped '+state+' '+width+' '+platform);
+     if(width===1280&&height===800&&platform==='android')await page.locator('.psg1-round-sidebar .main-menu-web__reward-clock').screenshot({path:path.join(__dirname,'psg1-timer-'+state+'.png')});
+    }
     console.log(width,height,platform,'checked');
    }
   }

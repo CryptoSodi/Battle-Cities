@@ -1,4 +1,53 @@
 /* Live PSG1 tab labels and semantic icons; Android retains its own artwork. */
+/* The shared timer uses its full width for the readout, not a narrow side column. */
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock {
+  container-type: size;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr) 9%;
+  gap: 4px 10px;
+  padding: clamp(8px, 3cqw, 14px);
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock > div { display: contents; }
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon {
+  grid-area: 1 / 1;
+  width: min(15cqw, 34cqh, 54px);
+  height: min(15cqw, 34cqh, 54px);
+  border-width: 3px;
+  justify-self: center;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon::before {
+  left: 44%; top: 16%; width: 10%; height: 36%;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon::after {
+  left: 48%; top: 47%; width: 32%; height: 10%;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar [data-home-countdown-label] {
+  grid-area: 1 / 2;
+  font-size: min(7.8cqw, 29cqh, 28px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-countdown {
+  grid-area: 2 / 1 / 3 / -1;
+  justify-self: center;
+  align-self: center;
+  padding: 0;
+  font-size: min(10.5cqw, 35cqh, 38px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  text-align: center;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-countdown[data-countdown-state='live'] {
+  font-size: min(16cqw, 47cqh, 60px);
+  letter-spacing: 0.05em;
+}
+html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock progress {
+  grid-area: 3 / 1 / 4 / -1;
+}
 html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
   container-type: inline-size;
 }

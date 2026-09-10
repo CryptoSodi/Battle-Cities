@@ -926,6 +926,9 @@ export class MainMenuWebUi {
     rows.innerHTML = `<div class="main-menu-web__leaderboard-message main-menu-web__leaderboard-message--error"><strong>COULDN'T LOAD LIVE SCORES</strong><span>Check your connection and try again.</span><button type="button" data-home-rewards-retry>RETRY</button></div>`;
     this.setText('[data-home-rewards-state]', 'Live board unavailable');
     this.setText('[data-home-rewards-countdown]', 'ROUND UNAVAILABLE');
+    this.setText('[data-home-countdown-label]', 'ROUND STATUS');
+    this.host.querySelectorAll<HTMLProgressElement>('[data-home-round-progress]').forEach((progress) => { progress.value = 0; });
+    this.host.querySelectorAll<HTMLElement>('[data-home-rewards-countdown]').forEach((output) => { output.dataset.countdownState = 'unavailable'; });
     rows
       .querySelector<HTMLButtonElement>('[data-home-rewards-retry]')
       ?.addEventListener('click', () => void this.loadHomeRewards(mountId), {
@@ -941,7 +944,11 @@ export class MainMenuWebUi {
 
     const nextRewardAt = this.rewardsData?.nextRewardAt;
     const target = nextRewardAt ? Date.parse(nextRewardAt) : Number.NaN;
+    const countdownState = Number.isFinite(target) ? 'live' : this.rewardsLoading ? 'syncing' : 'unavailable';
+    this.host.querySelectorAll<HTMLElement>('[data-home-rewards-countdown]').forEach((item) => { item.dataset.countdownState = countdownState; });
     if (!Number.isFinite(target)) {
+      this.setText('[data-home-countdown-label]', 'ROUND STATUS');
+      this.host.querySelectorAll<HTMLProgressElement>('[data-home-round-progress]').forEach((progress) => { progress.value = 0; });
       output.textContent = this.rewardsLoading
         ? 'SYNCING ROUND'
         : 'ROUND UNAVAILABLE';
