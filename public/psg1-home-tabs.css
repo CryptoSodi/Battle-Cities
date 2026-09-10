@@ -1,4 +1,23 @@
 /* Live PSG1 tab labels and semantic icons; Android retains its own artwork. */
+/* Size reward copy against each plaque, including its available height. */
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier {
+  container-type: size;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier .main-menu-web__podium {
+  gap: min(4px, 4cqh);
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__podium strong {
+  font-size: min(19cqw, 44cqh);
+  line-height: 1;
+  white-space: nowrap;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__podium span {
+  font-size: min(14cqw, 32cqh);
+  line-height: 1;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier--1 .main-menu-web__podium strong {
+  font-size: min(22cqw, 48cqh);
+}
 .psg1-home-tab-content {
   display: none;
 }

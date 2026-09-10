@@ -42,6 +42,13 @@ const server = http.createServer((req, res) => {
     const metrics=[];
     for(const tab of ['rewards','leaderboard']){
      await page.locator('[data-reward-tab-button="'+tab+'"]').click();
+     if(tab==='rewards') {
+      const fits=await page.evaluate(()=>[...document.querySelectorAll('.main-menu-web__podium')].every(p=>{
+       const box=p.getBoundingClientRect();
+       return [...p.querySelectorAll('strong, span')].every(e=>{const r=e.getBoundingClientRect();return r.left>=box.left&&r.right<=box.right&&r.top>=box.top&&r.bottom<=box.bottom&&e.scrollWidth<=e.clientWidth+1});
+      }));
+      if(!fits)errors.push('Reward text exceeds plaque '+width+' '+platform);
+     }
      metrics.push(await page.evaluate(()=>{
       const rect=e=>e.getBoundingClientRect().toJSON();
       const tabs=[...document.querySelectorAll('[data-reward-tab-button]')].map(b=>({bounds:rect(b),icon:rect(b.querySelector('.psg1-home-tab-content img')),label:rect(b.querySelector('.psg1-home-tab-content span')),fit:getComputedStyle(b.querySelector('.psg1-home-tab-content img')).objectFit,legacy:[...b.querySelectorAll(':scope > img')].map(i=>getComputedStyle(i).display)}));
@@ -85,4 +92,3 @@ const server = http.createServer((req, res) => {
   console.log('PASS: matched icons, stable tab geometry, contained errors, Retry, keyboard tabs, non-PSG isolation.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close()});
-
