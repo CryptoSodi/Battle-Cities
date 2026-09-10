@@ -188,7 +188,7 @@ html[data-ui-device='psg1'] .main-menu-web__overview-banner {
   margin: 0;
   padding: 0;
   border: 0;
-  object-fit: cover;
+  object-fit: fill;
   object-position: center;
 }
 html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action[data-menu-action='start'] {
@@ -239,7 +239,8 @@ html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([
   border: 0;
   background: transparent;
   color: var(--bc-text);
-  font-family: 'Arial Black', 'Battle Cities UI', Impact, sans-serif;
+  container-type: inline-size;
+  font-family: 'Battle Cities UI', Impact, 'Arial Narrow', sans-serif;
   font-weight: 900;
   font-size: clamp(13px, 1.8vw, 28px);
   letter-spacing: 0.015em;
@@ -291,10 +292,11 @@ html[data-ui-device='psg1'] .android-home-button-icon + .main-menu-web__action-l
   line-height: 1;
   text-align: center;
   white-space: nowrap;
+  font-size: clamp(12px, 14cqw, 28px);
   transform: translateY(-2%);
 }
 html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='headquarters'] .main-menu-web__action-label {
-  font-size: clamp(13px, 1.8vw, 28px);
+  font-size: clamp(12px, 14cqw, 28px);
 }
 html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:not([data-menu-action='start']):not([data-menu-action='settings']):not([data-menu-action='shop']):not([data-menu-action='ranking']):not([data-menu-action='headquarters']):not([data-menu-action='socials']) {
   display: none;
@@ -302,13 +304,16 @@ html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:not(
 html[data-ui-device='psg1'] .main-menu-web__bottom-tank-scroller {
   display: none;
 }
-html[data-ui-device='psg1'] .main-menu-web__hazard {
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard {
   display: block;
   height: clamp(44px, 5.6vw, 112px);
   min-height: clamp(44px, 5.6vw, 112px);
   max-height: clamp(44px, 5.6vw, 112px);
   padding: 0;
   overflow: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web__hazard-track .main-menu-web__ticker-run span {
+  font-size: inherit;
 }
 html[data-ui-device='psg1'] .main-menu-web__hazard--guide-dismissed .main-menu-web__round-status {
   display: none;
@@ -370,8 +375,8 @@ html[data-ui-device='psg1'] .main-menu-web__psg1-footer-guide--hidden {
   }
 }
 
-/* PSG1 rewards tabs follow the Android tab contract: two image layers remain
-   mounted and aria-selected chooses the visible active plate. */
+/* Keep the Android tab interaction contract, but use a single PSG1 plate per
+   tab. The separately painted idle images have different icon/text geometry. */
 html[data-ui-device='psg1'] .android-home-tabs {
   display: grid;
   grid-area: 3 / 1 / 4 / -1;
@@ -396,14 +401,8 @@ html[data-ui-device='psg1'] .android-home-tabs button {
   background: transparent;
   cursor: pointer;
 }
-html[data-ui-device='psg1'] .android-home-tabs button:first-child .android-home-tabs__idle {
-  content: url('/assets/psg1/rewardstabpsg1.png');
-}
 html[data-ui-device='psg1'] .android-home-tabs button:first-child .android-home-tabs__active {
   content: url('/assets/psg1/rewardsactivetabpsg1.png');
-}
-html[data-ui-device='psg1'] .android-home-tabs button:last-child .android-home-tabs__idle {
-  content: url('/assets/psg1/leadertabpsg1.png');
 }
 html[data-ui-device='psg1'] .android-home-tabs button:last-child .android-home-tabs__active {
   content: url('/assets/psg1/leaderactivetabpsg1.png');
@@ -414,6 +413,27 @@ html[data-ui-device='psg1'] .android-home-tabs img {
   width: 100%;
   height: 100%;
   object-fit: fill;
+}
+html[data-ui-device='psg1'] .android-home-tabs .android-home-tabs__idle {
+  display: none;
+}
+html[data-ui-device='psg1'] .android-home-tabs .android-home-tabs__active {
+  opacity: 1;
+  /* Silver and gold share exactly the same pixels and framing. */
+  filter: grayscale(1) brightness(0.82) contrast(1.08);
+}
+html[data-ui-device='psg1'] .android-home-tabs [aria-selected='true'] .android-home-tabs__active {
+  filter: none;
+}
+html[data-ui-device='psg1'] .android-home-tabs button:focus-visible {
+  outline: 2px solid var(--bc-text);
+  outline-offset: -3px;
+  filter: none;
+}
+@media (hover: hover) {
+  html[data-ui-device='psg1'] .android-home-tabs button[aria-selected='false']:hover .android-home-tabs__active {
+    filter: grayscale(1) brightness(0.94) contrast(1.08);
+  }
 }
 html[data-ui-device='psg1'] .main-menu-web__reward-briefing,
 html[data-ui-device='psg1'] .main-menu-web__leaderboard-preview {
