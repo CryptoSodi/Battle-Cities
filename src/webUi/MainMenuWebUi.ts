@@ -144,6 +144,10 @@ export class MainMenuWebUi {
     this.hydrateHud();
     void this.refreshHudProgression(currentMountId);
     this.cherryChat.mount();
+    if (document.documentElement.dataset.uiDevice === 'psg1') {
+      const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
+      if (chat) host.querySelector('.main-menu-web__hazard')?.append(chat);
+    }
     this.bindHomeChatPlacement();
     this.bindActions();
     this.bindRewardTabs();
@@ -526,7 +530,8 @@ export class MainMenuWebUi {
         const launcher = this.cherryChat.getLauncher();
         if (!hazard || !panel || !launcher) return;
         const hazardTop = hazard.getBoundingClientRect().top;
-        const raised = document.documentElement.dataset.uiPlatform === 'android' &&
+        const raised = document.documentElement.dataset.uiDevice !== 'psg1' &&
+          document.documentElement.dataset.uiPlatform === 'android' &&
           hazardTop - panel.getBoundingClientRect().bottom >= launcher.offsetHeight + 16;
         document.body.dataset.homeChatRaised = String(raised);
         if (raised) document.body.style.setProperty('--home-chat-bottom', `${window.innerHeight - hazardTop + 8}px`);

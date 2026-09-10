@@ -1,0 +1,55 @@
+/* PSG1 owns one footer: legend/ticker on the left, optional chat on the right. */
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard {
+  --psg1-chat-width: clamp(170px, 16vw, 230px);
+  --psg1-chat-slot: 0px;
+  position: relative;
+  padding: 0;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard:has(.game-cherry) {
+  --psg1-chat-slot: calc(var(--psg1-chat-width) + 8px);
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__round-status {
+  display: none;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard .main-menu-web__ticker-window,
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard .main-menu-web__psg1-footer-guide {
+  width: calc(100% - var(--psg1-chat-slot));
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__psg1-footer-guide {
+  object-fit: contain;
+  object-position: left center;
+  transition: none;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard:not(.main-menu-web__hazard--guide-dismissed) .main-menu-web__ticker-window {
+  visibility: hidden;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard .game-cherry {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: var(--psg1-chat-width);
+  height: 100%;
+  display: block;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard .game-cherry__launcher {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  justify-content: center;
+  padding: 0 10px;
+  gap: 8px;
+  font-size: clamp(14px, 1.25vw, 20px);
+}
+html[data-ui-device='psg1'] .main-menu-web .game-cherry__launcher span { display: inline; }
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard--guide-dismissed .main-menu-web__hazard-track .main-menu-web__ticker-run {
+  font-size: clamp(22px, 2.05vw, 36px);
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard-track .main-menu-web__ticker-run :is(span, b) {
+  font-size: inherit;
+}
+@media (max-width: 800px) {
+  html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard { --psg1-chat-width: 48px; }
+  html[data-ui-device='psg1'] .main-menu-web .game-cherry__launcher span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui-device='psg1'] .main-menu-web .main-menu-web__hazard-track { animation: none; transform: none; }
+}
