@@ -242,6 +242,14 @@ const server = http.createServer((req, res) => {
             return Math.abs(l.top-v.top)<2 && l.right+3<=v.left && l.left>=r.left-1 && v.right<=r.right+1;
           }) && document.documentElement.scrollWidth <= innerWidth;
       }), device + ' two columns / aligned stat rows at ' + width);
+      if(device === 'android') assert(await page.evaluate(() => [...document.querySelectorAll('[data-tank]')].every(card => {
+        const art = card.querySelector('.tank-select-web__tank-sprite,.tank-select-web__lock'), bar = card.querySelector(':scope > strong');
+        const a = art.getBoundingClientRect(), b = bar.getBoundingClientRect(), c = card.getBoundingClientRect(), stats = card.querySelector('dl').getBoundingClientRect();
+        const icon = bar.querySelector('img');
+        return getComputedStyle(card.querySelector('.tank-select-web__card-index')).display === 'none' && a.width >= 88 &&
+          Math.abs((a.left+a.right)-(c.left+c.right))<2 && a.bottom<=stats.top && stats.bottom<=b.top &&
+          b.height>=48 && c.bottom-b.bottom<=14 && (!icon || icon.getBoundingClientRect().width>=32) && card.scrollWidth<=card.clientWidth+1;
+      })), 'Android enlarged art / bottom fuel bar at ' + width);
       if(device === 'android' && width === 390) await page.screenshot({path:path.join(__dirname,'android-tank-select-two-columns.png')});
       assert(
         await page.evaluate(() => {
