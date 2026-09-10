@@ -360,6 +360,28 @@ html[data-ui-device='psg1'] .shop-web__desktop-side .shop-web__connect {
   font-size: 14px;
   margin-bottom: 4px;
 }
+html[data-ui-device='psg1'] .shop-web__connection-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  margin-bottom: 4px;
+  padding: 4px 10px;
+  border-left: 3px solid var(--bc-ready);
+  border-bottom: 1px solid var(--psg-edge);
+  background: rgb(71 222 23 / 5%);
+  color: var(--bc-text);
+  font: 700 clamp(16px, 1.6vw, 22px) / 1.1 'Battle Cities UI', sans-serif;
+  letter-spacing: 0.04em;
+  cursor: default;
+}
+html[data-ui-device='psg1'] .shop-web__connection-status i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--bc-ready);
+  box-shadow: 0 0 6px rgb(71 222 23 / 40%);
+}
 html[data-ui-device='psg1'] .shop-web__desktop-side .shop-web__resource {
   flex: none;
   min-height: 0;

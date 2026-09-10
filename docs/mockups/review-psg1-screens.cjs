@@ -21,7 +21,8 @@ Object.assign(deps,exports); exports={};
 (()=>{const exports={};${focusScrollCode};Object.assign(deps,exports)})();
 class FakeShop {
  canStartRun(){return !window.noFuel}
- constructor(){this.equipped={}} isWalletConnected(){return true} isVirtualEconomyAccount(){return false}
+ constructor(){this.equipped={}} isWalletConnected(){return !window.walletDisconnected} isVirtualEconomyAccount(){return false}
+ async connectWallet(){window.connectCalls=(window.connectCalls||0)+1;window.walletDisconnected=false;return true}
  getTokenBalance(){return 1500} getSolBalance(){return 1.25} getFuelBalance(){return 12} getInventoryCount(){return 2}
  getWalletAddress(){return '7P5T123456789XYUM'} getEquipped(slot){return this.equipped[slot]||null}
  equipNext(slot){return this.equipped[slot]=this.equipped[slot]?null:'shield'}
@@ -59,6 +60,14 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(async()=>{await Promise.all(Array.from(document.images).map(i=>i.decode().catch(()=>{})))});
    const bounds=await page.evaluate(()=>({scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],page:document.querySelector('main').getBoundingClientRect().toJSON(),nav:document.querySelector('[data-ui-nav]').getBoundingClientRect().toJSON()}));
    if(bounds.scroll[0]>width||bounds.scroll[1]>height)errors.push(screen+' page overflow '+width+'x'+height);
+   if(screen!=='settings') {
+    const statusValid=await page.locator('.shop-web__connection-status').evaluate(e=>{
+     const box=e.getBoundingClientRect();
+     e.focus();
+     return e.tagName==='DIV'&&e.getAttribute('role')==='status'&&e.tabIndex===-1&&document.activeElement!==e&&!window.screenUi.buttons.includes(e)&&!document.querySelector('[data-shop-wallet]')&&[...e.children].every(child=>{const r=child.getBoundingClientRect();return r.left>=box.left&&r.right<=box.right&&r.top>=box.top&&r.bottom<=box.bottom});
+    });
+    if(!statusValid)errors.push('Connected status selectable or clipped '+screen+' '+width);
+   }
    if(screen==='loadout') {
     const slotLayout=()=>page.locator('[data-shop-slot]').evaluateAll(slots=>slots.map(slot=>{
      const r=e=>e.getBoundingClientRect(),box=r(slot),index=r(slot.querySelector('.shop-web__slot-index')),art=r(slot.querySelector('.shop-web__slot-art')),label=r(slot.querySelector('.shop-web__slot-item b')),action=r(slot.querySelector('.shop-web__slot-action'));
@@ -139,6 +148,13 @@ const server=http.createServer((req,res)=>{
  await page.locator('[data-setting="scanline"]').click();
  if(await page.locator('[data-setting="scanline"]').getAttribute('aria-checked')!=='true')errors.push('Scanline did not change');
  await page.evaluate(()=>window.press('back'));if(!await page.evaluate(()=>window.backUsed))errors.push('Settings Back failed');
+ await page.evaluate(()=>window.mountScreen('shop'));
+ await page.locator('.shop-web__connection-status').click();
+ if(await page.evaluate(()=>window.connectCalls||0))errors.push('Status click invoked wallet');
+ await page.evaluate(()=>{window.walletDisconnected=true;window.mountScreen('shop')});
+ await page.locator('[data-shop-wallet]').click();
+ await page.locator('.shop-web__connection-status').waitFor();
+ if(await page.evaluate(()=>window.connectCalls)!==1||!await page.locator('[data-shop-tab].is-active').evaluate(e=>document.activeElement===e))errors.push('Wallet connect or focus restoration failed');
  await page.evaluate(()=>window.mountScreen('shop'));
  await page.evaluate(()=>window.press('right'));
  if(await page.evaluate(()=>document.activeElement.dataset.shopTab)!=='bact')errors.push('Gamepad tab navigation order failed');

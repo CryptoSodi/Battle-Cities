@@ -172,17 +172,7 @@ export class ShopWebUi {
       'loadout',
       'LOADOUT',
     )}<button class="shop-web__back" data-ui-back data-shop-back type="button">◀ BACK</button></nav>
-      <section class="shop-web__shell"><section class="shop-web__summary"><button class="shop-web__connect${
-        this.shop.isWalletConnected() ? ' is-connected' : ''
-      }" data-shop-wallet type="button"${
-      this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
-    }>${
-      this.shop.isWalletConnected()
-        ? '<i aria-hidden="true"></i>CONNECTED'
-        : this.shop.isVirtualEconomyAccount()
-        ? 'GOOGLE ACCOUNT'
-        : 'CONNECT'
-    }</button>${this.resource(
+      <section class="shop-web__shell"><section class="shop-web__summary">${this.walletControl()}${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),
     )}${this.resource(
@@ -268,8 +258,11 @@ export class ShopWebUi {
       )
       .join('');
   }
-  private desktopSidebar(): string {
-    const wallet = `<h2>WALLET</h2><button class="shop-web__connect${
+  private walletControl(): string {
+    if (isPsg1Ui() && this.shop.isWalletConnected()) {
+      return '<div class="shop-web__connection-status" role="status"><i aria-hidden="true"></i><span>CONNECTED</span></div>';
+    }
+    return `<button class="shop-web__connect${
       this.shop.isWalletConnected() ? ' is-connected' : ''
     }" data-shop-wallet type="button"${
       this.shop.isVirtualEconomyAccount() ? ' disabled' : ''
@@ -279,7 +272,10 @@ export class ShopWebUi {
         : this.shop.isVirtualEconomyAccount()
         ? 'GOOGLE ACCOUNT'
         : 'CONNECT'
-    }</button>${this.resource(
+    }</button>`;
+  }
+  private desktopSidebar(): string {
+    const wallet = `<h2>WALLET</h2>${this.walletControl()}${this.resource(
       'BATC',
       this.shop.getTokenBalance().toString(),
     )}${this.resource('SOL', this.shop.getSolBalance().toFixed(3))}`;
@@ -658,7 +654,9 @@ export class ShopWebUi {
         const connected = await this.shop.connectWallet();
         this.refresh(
           connected ? 'WALLET CONNECTED' : 'WALLET CONNECTION CANCELLED',
-          '[data-shop-wallet]',
+          connected && isPsg1Ui()
+            ? `[data-shop-tab="${this.tab}"]`
+            : '[data-shop-wallet]',
         );
       },
       { signal },
