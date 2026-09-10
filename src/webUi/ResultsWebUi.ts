@@ -179,6 +179,7 @@ export class ResultsWebUi {
   }
 
   private playerRow(player: ResultsWebUiPlayer): string {
+    const android = document.documentElement.dataset.uiPlatform === 'android' && document.documentElement.dataset.uiDevice !== 'psg1';
     return `<article class="results-web__player ${
       player.isPrimary ? 'is-primary' : ''
     }"><strong class="results-web__rank">#${
@@ -190,15 +191,15 @@ export class ResultsWebUi {
     }</div>${player.kills
       .map(
         (kills, index) =>
-          `<div class="results-web__tier"><i class="results-web__tank-icon results-web__tank-icon--${index}" aria-hidden="true"></i><small>TIER ${TIER_LABELS[index]}</small><strong>${kills}</strong></div>`,
+          `<div class="results-web__tier"><i class="results-web__tank-icon results-web__tank-icon--${index}" aria-hidden="true"></i><small>${android ? ['BASIC', 'FAST', 'POWER', 'ARMOR'][index] : `TIER ${TIER_LABELS[index]}`}</small><strong>${kills}</strong>${android ? '<small class="results-web__kill-label">DESTROYED</small>' : ''}</div>`,
       )
       .join('')}<div class="results-web__bonus"><small>${
-      player.bonus > 0 ? 'STAGE LEADER' : 'TOTAL KILLS'
+      !android && player.bonus > 0 ? 'STAGE LEADER' : 'TOTAL KILLS'
     }</small><strong>${
-      player.bonus > 0 ? `+${player.bonus}` : player.totalKills
-    }</strong></div><strong class="results-web__points">${
+      !android && player.bonus > 0 ? `+${player.bonus}` : player.totalKills
+    }</strong>${android && player.bonus > 0 ? `<small>LEADER BONUS +${player.bonus} PTS</small>` : ''}</div><strong class="results-web__points">${
       player.totalPoints
-    }<small>PTS</small></strong></article>`;
+    }<small>${android ? 'TOTAL POINTS' : 'PTS'}</small></strong></article>`;
   }
 
   private bind(): void {

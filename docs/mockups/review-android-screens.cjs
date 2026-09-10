@@ -53,6 +53,11 @@ const groups={
       if(metrics.doc[0]>width||metrics.doc[1]>height||metrics.root[2]>width+1||metrics.root[3]>height+1||metrics.bad.length)errors.push(group+'/'+screen+' '+width+': '+JSON.stringify(metrics));
       const contentErrors=await page.evaluate(()=>{
        const failures=[];
+       for(const tier of document.querySelectorAll('.results-web__tier')){
+        const icon=tier.querySelector('i').getBoundingClientRect();
+        if(icon.width<50||icon.height<50)failures.push('Result tank icon too small');
+        if(getComputedStyle(tier.querySelector('small')).display==='none'||!tier.textContent.includes('DESTROYED'))failures.push('Result kill label missing');
+       }
        const cards=[...document.querySelectorAll('.shop-web__card')];
        for(let i=3;i<cards.length;i++)if(cards[i].getBoundingClientRect().top<cards[i-3].getBoundingClientRect().bottom+4)failures.push('Shop rows overlap');
        const matches=document.querySelector('.player-profile-web__matches');
