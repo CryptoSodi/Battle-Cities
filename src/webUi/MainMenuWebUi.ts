@@ -10,6 +10,8 @@ import { beginSinglePlayerReplaySession } from '../replay';
 import { GameSceneType } from '../scenes';
 import { TradingClient } from '../trading';
 import { CherryChatWebUi } from './CherryChatWebUi';
+import { isPsg1Ui } from './deviceUi';
+import { handlePsg1TabNavigation } from './psg1TabNavigation';
 
 interface MainMenuWebUiOptions {
   inputManager: InputManager;
@@ -227,9 +229,10 @@ export class MainMenuWebUi {
   public update(): void {
     if (!this.active) return;
     if (this.cherryChat.blocksMenuInput()) return;
-    // Tabs use native button activation and their own arrow-key handling.
+    // Non-PSG tabs use native activation and their own arrow-key handling.
     // Do not also route Enter/Space to the menu's default Start action.
     if (
+      !isPsg1Ui() &&
       document.activeElement instanceof HTMLButtonElement &&
       document.activeElement.hasAttribute('data-reward-tab-button')
     ) return;
@@ -269,6 +272,7 @@ export class MainMenuWebUi {
       return;
     }
 
+    if (handlePsg1TabNavigation(this.host, inputMethod, true)) return;
     if (
       inputMethod.isDownAny(MenuInputContext.VerticalPrev) ||
       inputMethod.isDownAny(MenuInputContext.HorizontalPrev)
@@ -287,13 +291,14 @@ export class MainMenuWebUi {
       const focused = document.activeElement;
       if (
         focused instanceof HTMLButtonElement &&
-        focused.hasAttribute('data-home-rewards-retry')
+        (focused.hasAttribute('data-home-rewards-retry') ||
+          (isPsg1Ui() && focused.hasAttribute('data-reward-tab-button')))
       ) {
         focused.click();
         return;
       }
       const activeButton = this.getFocusedAction();
-      (activeButton || this.actionButtons[0])?.click();
+      (activeButton || this.initialAction())?.click();
     }
   }
 
@@ -379,12 +384,12 @@ export class MainMenuWebUi {
               <button type="button" id="home-rewards-tab" role="tab" aria-selected="true" aria-controls="home-rewards-panel" data-reward-tab-button="rewards" aria-label="Rewards">
                 <img src="/assets/android-home-v2/rewards.png" alt="" class="android-home-tabs__idle">
                 <img src="/assets/android-home-v2/rewardsactive.png" alt="" class="android-home-tabs__active">
-                <span class="psg1-home-tab-content" aria-hidden="true"><img src="/assets/home-reward-trophy.png" alt=""><span>REWARDS</span></span>
+                <span class="psg1-home-tab-content" aria-hidden="true"><kbd>L</kbd><img src="/assets/home-reward-trophy.png" alt=""><span>REWARDS</span></span>
               </button>
               <button type="button" id="home-leaderboard-tab" role="tab" aria-selected="false" aria-controls="home-leaderboard-panel" tabindex="-1" data-reward-tab-button="leaderboard" aria-label="Leaderboard">
                 <img src="/assets/android-home-v2/leaderboard.png" alt="" class="android-home-tabs__idle">
                 <img src="/assets/android-home-v2/leaderboard-active.png" alt="" class="android-home-tabs__active">
-                <span class="psg1-home-tab-content" aria-hidden="true"><img src="/assets/headquarters/campaigns-medal.png" alt=""><span>LEADERBOARD</span></span>
+                <span class="psg1-home-tab-content" aria-hidden="true"><kbd>R</kbd><img src="/assets/headquarters/campaigns-medal.png" alt=""><span>LEADERBOARD</span></span>
               </button>
             </div>
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
@@ -557,7 +562,16 @@ export class MainMenuWebUi {
     };
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', () => select(tab), { signal: this.abortController.signal });
+      tab.addEventListener('focus', () => {
+        if (!isPsg1Ui()) return;
+        this.navigationButtons().forEach(candidate => candidate.classList.toggle('is-selected', candidate === tab));
+      }, { signal: this.abortController.signal });
       tab.addEventListener('keydown', (event) => {
+        // PSG1 routes arrows through the same queue as its physical D-pad.
+        if (isPsg1Ui()) {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) event.preventDefault();
+          return;
+        }
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
         event.stopPropagation();
@@ -610,7 +624,7 @@ export class MainMenuWebUi {
     this.actionButtons = Array.from(
       this.host.querySelectorAll<HTMLButtonElement>('[data-menu-action]'),
     );
-    this.actionButtons[0]?.classList.add('is-selected');
+    this.initialAction()?.classList.add('is-selected');
     const signal = this.abortController.signal;
 
     this.actionButtons.forEach((button) => {
@@ -649,7 +663,7 @@ export class MainMenuWebUi {
       button.addEventListener(
         'focus',
         () => {
-          this.actionButtons.forEach((candidate) =>
+          this.navigationButtons().forEach((candidate) =>
             candidate.classList.toggle('is-selected', candidate === button),
           );
           button.classList.add('is-focused');
@@ -679,7 +693,7 @@ export class MainMenuWebUi {
     launcher.addEventListener(
       'focus',
       () => {
-        this.actionButtons.forEach((button) =>
+        this.navigationButtons().forEach((button) =>
           button.classList.toggle('is-selected', button === launcher),
         );
       },
@@ -735,11 +749,27 @@ export class MainMenuWebUi {
   }
 
   private focusInitialAction(): void {
-    this.actionButtons[0]?.focus({ preventScroll: true });
+    this.initialAction()?.focus({ preventScroll: true });
+  }
+
+  private initialAction(): HTMLButtonElement | undefined {
+    return (
+      (isPsg1Ui()
+        ? this.actionButtons.find(button => button.dataset.menuAction === 'start')
+        : null) || this.actionButtons[0]
+    );
+  }
+
+  private navigationButtons(): HTMLButtonElement[] {
+    if (!isPsg1Ui()) return this.actionButtons;
+    return [
+      ...this.actionButtons,
+      ...Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-reward-tab-button]')),
+    ];
   }
 
   private focusRelativeAction(direction: -1 | 1): void {
-    const visibleButtons = this.actionButtons.filter(
+    const visibleButtons = this.navigationButtons().filter(
       (button) => button.getClientRects().length > 0,
     );
     if (visibleButtons.length === 0) return;
@@ -758,7 +788,7 @@ export class MainMenuWebUi {
   private getFocusedAction(): HTMLButtonElement | null {
     const activeElement = document.activeElement;
     return activeElement instanceof HTMLButtonElement &&
-      this.actionButtons.includes(activeElement)
+      this.navigationButtons().includes(activeElement)
       ? activeElement
       : null;
   }

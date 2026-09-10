@@ -1,5 +1,6 @@
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
+import { handlePsg1TabNavigation } from './psg1TabNavigation';
 import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
@@ -52,6 +53,7 @@ export class RankingWebUi {
   public update(): void {
     if (!this.active) return;
     const input = this.inputManager.getActiveMethod();
+    if (handlePsg1TabNavigation(this.host, input)) return;
     if (this.seasonMenuOpen && input.isDownAny(MenuInputContext.VerticalPrev))
       this.moveSeasonFocus(-1);
     else if (

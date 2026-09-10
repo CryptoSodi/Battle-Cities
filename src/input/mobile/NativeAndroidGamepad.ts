@@ -189,6 +189,8 @@ export class NativeAndroidGamepad {
       this.isButtonPressed('start') || this.isButtonPressed('menu'),
     );
     const psg1 = isPlaySolanaPsg1(this.deviceProfile);
+    this.setMappedControl(InputControl.PreviousTab, psg1 && this.isButtonPressed('l1'));
+    this.setMappedControl(InputControl.NextTab, psg1 && this.isButtonPressed('r1'));
     const rightStickHorizontal =
       Math.abs(this.axes.rightX) >= Math.abs(this.axes.rightY);
     this.setMappedControl(

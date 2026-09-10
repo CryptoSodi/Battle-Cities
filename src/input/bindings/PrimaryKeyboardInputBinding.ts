@@ -20,5 +20,7 @@ export class PrimaryKeyboardInputBinding extends InputBinding {
     this.setDefault(InputControl.PowerFour, KeyboardButtonCode.Num4);
     this.setDefault(InputControl.Rewind, KeyboardButtonCode.A);
     this.setDefault(InputControl.FastForward, KeyboardButtonCode.S);
+    this.setDefault(InputControl.PreviousTab, KeyboardButtonCode.L);
+    this.setDefault(InputControl.NextTab, KeyboardButtonCode.R);
   }
 }

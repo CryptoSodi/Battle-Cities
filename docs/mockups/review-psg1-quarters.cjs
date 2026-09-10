@@ -7,6 +7,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 const modules = [
   'src/webUi/focusScroll.ts',
+  'src/webUi/psg1TabNavigation.ts',
   'src/wiki/WikiData.ts',
   'src/webUi/psg1Console.ts',
   'src/webUi/HeadquartersWebUi.ts',
@@ -41,7 +42,7 @@ const rows=Array.from({length:24},(_,i)=>({rank:i+1,displayName:'COMMANDER '+(i+
 const event={slug:'operation-one',name:'OPERATION IRON FRONT',description:'Play battles and complete objectives for campaign rewards.',status:'active',prizePool:'25,000 BATC'};
 const deps={
 isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',
-MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back'},
+MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
 GameSceneType:new Proxy({},{get:(_,key)=>key}),animateBackNavigation:()=>window.calls.push(['back']),
 apiFetch:async url=>({ok:true,json:async()=>url.endsWith('account')?ready({authenticated:true,account:{tokenBalance:12500,solBalance:1.25,fuelBalance:20,inventory:{shield:2,'base-defence':3,freeze:4,speed:5,upgrade:1,'zoom-out':2,wipeout:3,'extra-life':1}}},{authenticated:false}):ready({entries:rows.map(r=>({currency:'BATC',amount:150,reason:'CAMPAIGN REWARD',createdAt:'2026-09-10T00:00:00Z'}))},{entries:[]})}),
 StakingClient:class {
@@ -248,6 +249,11 @@ const server = http.createServer((req, res) => {
         }
       }
     await mount('MainTreasury');
+    await page.locator('[data-page-tab="treasury-holdings"]').focus();
+    await page.evaluate(() => window.press('r'));
+    if (await page.locator('[data-page-tab="treasury-history"]').getAttribute('aria-current') !== 'page') errors.push('Treasury R shortcut');
+    await page.evaluate(() => window.press('l'));
+    if (await page.locator('[data-page-tab="treasury-holdings"]').getAttribute('aria-current') !== 'page') errors.push('Treasury L shortcut');
     await page.locator('[data-page-tab="treasury-history"]').click();
     await page.evaluate(() => window.press('left'));
     if (

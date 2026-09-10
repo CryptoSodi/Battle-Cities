@@ -8,17 +8,19 @@ const root = path.resolve(__dirname, '../..');
 const compile = file => ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const code = ['src/shop/ShopTypes.ts','src/webUi/SettingsWebUi.ts','src/webUi/ShopWebUi.ts'].map(compile);
 const focusScrollCode = compile('src/webUi/focusScroll.ts');
+const tabNavigationCode = compile('src/webUi/psg1TabNavigation.ts');
 const styles = ['main.css','main-menu-web.css','shop-web.css','operations-web.css','standard-pages-web.css','shop-ui-contract.css','psg1-ui.css','psg1-screens.css'];
 const fixture = `
 const process={env:{BATTLECITY_VERSION:'PREVIEW'}};
 let exports={}; const require=(name)=>deps;
 const deps={PowerupType:{}, isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',isPlaySolanaPsg1:()=>true,
 NativeNotificationClient:class{isAvailable(){return !!window.nativeNotifications}async getSettings(){return {supported:true,enabled:false,permission:'granted'}}},animateBackNavigation:()=>window.backUsed=true,
-MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back'},
+MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
 moveFocus:(buttons,current,x,y)=>buttons[(buttons.indexOf(current)+(x||y)+buttons.length)%buttons.length].focus()};
 ${code[0]}
 Object.assign(deps,exports); exports={};
 (()=>{const exports={};${focusScrollCode};Object.assign(deps,exports)})();
+(()=>{const exports={};${tabNavigationCode};Object.assign(deps,exports)})();
 class FakeShop {
  canStartRun(){return !window.noFuel}
  constructor(){this.equipped={}} isWalletConnected(){return !window.walletDisconnected} isVirtualEconomyAccount(){return false}
@@ -161,6 +163,17 @@ const server=http.createServer((req,res)=>{
  await page.locator('[data-shop-tab="loadout"]').click();
  await page.locator('[data-shop-slot]').first().click();if(!await page.locator('.shop-web__slot-item').first().innerText().then(t=>t.includes('SHIELD')))errors.push('Equip did not update');
  await page.locator('[data-shop-tab="bact"]').click();await page.locator('[data-shop-filter="fuel"]').click();if(await page.locator('[data-shop-buy]').count()!==3)errors.push('Fuel filter failed');
+ await page.evaluate(()=>window.press('r'));
+ if(await page.locator('[data-shop-filter].is-active').getAttribute('data-shop-filter')!=='powerups')errors.push('R did not switch the focused filter row');
+ await page.evaluate(()=>window.press('l'));
+ if(await page.locator('[data-shop-filter].is-active').getAttribute('data-shop-filter')!=='fuel')errors.push('L did not restore filter');
+ await page.locator('[data-shop-tab="bact"]').focus();await page.evaluate(()=>window.press('r'));
+ if(await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab')!=='sol')errors.push('R did not switch shop tab');
+ await page.locator('[data-shop-tab="loadout"]').focus();await page.evaluate(()=>window.press('l'));
+ if(await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab')!=='swap')errors.push('L did not wrap tabs past Back');
+ await page.locator('[data-shop-swap-amount]').focus();await page.evaluate(()=>window.press('r'));
+ if(await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab')!=='swap')errors.push('Shoulder changed tabs while editing amount');
+ await page.locator('[data-shop-tab="bact"]').click();
  await page.locator('[data-shop-filter="all"]').click();
  await page.locator('[data-shop-buy]').last().focus();
  const visibleBuy=()=>page.locator('[data-shop-buy]').last().evaluate(e=>{
@@ -200,6 +213,11 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(p=>{document.documentElement.dataset.uiDevice=p;document.documentElement.dataset.uiPlatform=p},platform);
   for(const screen of ['settings','shop']){
    await page.evaluate(s=>window.mountScreen(s),screen);
+   if(screen==='shop') {
+    const before=await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab');
+    await page.evaluate(()=>window.press('r'));
+    if(await page.locator('[data-shop-tab].is-active').getAttribute('data-shop-tab')!==before)errors.push('Shoulder changed non-PSG shop tab');
+   }
    const metrics=()=>page.evaluate(()=>Array.from(document.querySelectorAll('main,main button')).map(e=>{const s=getComputedStyle(e);return [e.getBoundingClientRect().toJSON(),s.background,s.color,s.fontSize]}));
    const before=await metrics();await page.evaluate(()=>document.querySelector('link[href="/psg1-screens.css"]').disabled=true);
    if(JSON.stringify(before)!==JSON.stringify(await metrics()))errors.push(platform+' '+screen+' changed outside PSG1');

@@ -1,6 +1,7 @@
 import { SceneNavigator } from '../core';
 import { GameStorage } from '../game';
 import { InputManager, MenuInputContext } from '../input';
+import { handlePsg1TabNavigation } from './psg1TabNavigation';
 import {
   ShopCatalogItem,
   ShopCurrency,
@@ -125,6 +126,7 @@ export class ShopWebUi {
       }
       return;
     }
+    if (handlePsg1TabNavigation(this.host, input)) return;
     if (input.isDownAny(MenuInputContext.HorizontalPrev)) this.moveFocus(-1, 0);
     else if (input.isDownAny(MenuInputContext.HorizontalNext))
       this.moveFocus(1, 0);

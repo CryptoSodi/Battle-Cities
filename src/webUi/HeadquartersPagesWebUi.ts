@@ -1,5 +1,6 @@
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
+import { handlePsg1TabNavigation } from './psg1TabNavigation';
 import { apiFetch } from '../network/api';
 import { GameSceneType } from '../scenes';
 import {
@@ -181,6 +182,7 @@ export class HeadquartersPagesWebUi {
   public update(): void {
     if (!this.active) return;
     const method = this.input.getActiveMethod();
+    if (handlePsg1TabNavigation(this.host, method)) return;
     if (method.isDownAny(MenuInputContext.HorizontalPrev)) this.move(-1, 0);
     else if (method.isDownAny(MenuInputContext.HorizontalNext)) this.move(1, 0);
     else if (method.isDownAny(MenuInputContext.VerticalPrev)) this.move(0, -1);

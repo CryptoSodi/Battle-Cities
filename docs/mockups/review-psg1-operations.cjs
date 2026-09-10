@@ -7,6 +7,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 const files = [
   'focusScroll',
+  'psg1TabNavigation',
   'psg1Console',
   'HeadquartersWebUi',
   'SocialsWebUi',
@@ -42,7 +43,7 @@ window.open=(...args)=>{window.calls.push(['open',...args]);return {opener:null}
 const input={getActiveMethod:()=>({isDownAny:key=>key===pressed})};
 const navigator={push:(...args)=>window.calls.push(['push',...args])};
 const deps={isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',
-MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back'},
+MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
 GameSceneType:new Proxy({},{get:(_,key)=>key}),animateBackNavigation:()=>window.calls.push(['back']),getApiUrl:url=>url,
 apiFetch:async url=>{window.calls.push(['api',url]);if(window.socialState==='error')throw Error('fixture unavailable');return {ok:true,json:async()=>url.includes('/x/')?(window.socialState==='locked'?{}:{connected:true,follows:true,repostTask:{id:'repost',postId:'123',rewardFuel:2,claimed:true},commentTask:{id:'comment',postId:'123',rewardFuel:3,claimed:false}}):{authenticated:true,verified:true,rewardClaimed:true}}},
 RankingClient:class {async getRankings(scope,season){window.calls.push(['rank',scope,season]);if(window.rankState==='loading')return new Promise(()=>{});if(window.rankState==='error')return null;return {currentSeason:{number:7},seasons:[{id:'s6',name:'Season 6'},{id:'s5',name:'Season 5'}],me:{rank:12,totalPoints:93750},rows:window.rankState==='empty'?[]:Array.from({length:30},(_,i)=>({playerId:'p'+i,rank:i+1,displayName:i===0?'COMMANDER LONG PLAYER NAME':'PLAYER '+(i+1),perks:[],totalPoints:Math.max(0,98000-i*1000)}))}}}};
@@ -269,6 +270,11 @@ const server = http.createServer((req, res) => {
     await page.locator('[data-social-refresh]').click();
     await page.getByText('SOCIAL VERIFICATION UNAVAILABLE').waitFor();
     await mount('RankingWebUi');
+    await page.locator('[data-rank-scope="gaming"]').focus();
+    await page.evaluate(() => window.press('r'));
+    if (!(await page.locator('[data-rank-scope="trading"]').evaluate(e => e.classList.contains('is-active') && document.activeElement === e))) errors.push('Ranking R shortcut/focus');
+    await page.evaluate(() => window.press('l'));
+    if (!(await page.locator('[data-rank-scope="gaming"]').evaluate(e => e.classList.contains('is-active')))) errors.push('Ranking L shortcut');
     await page.locator('[data-rank-scope="trading"]').click();
     if (
       !(await page.evaluate(() =>

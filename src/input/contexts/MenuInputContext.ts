@@ -10,4 +10,6 @@ export const MenuInputContext: InputContext = {
   Select: [InputControl.PrimaryAction, InputControl.Select],
   // PSG1 standard: physical A confirms and physical B goes back.
   Back: [InputControl.SecondaryAction],
+  PreviousTab: [InputControl.PreviousTab],
+  NextTab: [InputControl.NextTab],
 };

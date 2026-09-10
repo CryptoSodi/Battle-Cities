@@ -136,3 +136,24 @@ test('maps PSG1 right-stick directions to equipped power slots', (t) => {
     t.true(changes.some(([changed, pressed]) => changed === control && pressed)),
   );
 });
+
+test('maps PSG1 shoulder presses, releases and reset to tab controls only', (t) => {
+  const changes: Array<[InputControl, boolean]> = [];
+  const gamepad = new NativeAndroidGamepad((control, pressed) => changes.push([control, pressed]));
+  (gamepad as any).deviceProfile = profile({ model: 'PSG1' });
+  const send = (control: string, pressed: boolean) => (gamepad as any).handleNativeEvent({ detail: { type: 'button', control, pressed } });
+  send('button_l1', true);
+  send('button_l1', false);
+  send('r1', true);
+  (gamepad as any).handleNativeEvent({ detail: { type: 'reset' } });
+  for (const control of [InputControl.PreviousTab, InputControl.NextTab]) {
+    t.true(changes.some(([key, pressed]) => key === control && pressed));
+    t.false(changes.filter(([key]) => key === control).pop()[1]);
+  }
+  t.false(changes.some(([key, pressed]) => pressed && [InputControl.PrimaryAction, InputControl.SecondaryAction].includes(key)));
+  changes.length = 0;
+  (gamepad as any).deviceProfile = profile({ model: 'Seeker' });
+  send('l1', true);
+  send('r1', true);
+  t.false(changes.some(([, pressed]) => pressed));
+});

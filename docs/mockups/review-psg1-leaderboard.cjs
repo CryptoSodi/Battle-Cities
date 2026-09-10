@@ -64,6 +64,21 @@ for (const [name, data, currentPlayer] of [
 }
 fixtures.loading = menu.rewardRowsLoadingMarkup();
 const markup = menu.render();
+const tabNavigationCode = ts.transpileModule(fs.readFileSync(path.join(root, 'src/webUi/psg1TabNavigation.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const navigationFixture = `
+let pressed='';window.routes=[];
+const deps={isPsg1Ui:()=>document.documentElement.dataset.uiDevice==='psg1',
+MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up',VerticalNext:'down',Select:'select',Back:'back',PreviousTab:'l',NextTab:'r'},
+EventClient:class {},TradingClient:class {},CherryChatWebUi:class {getLauncher(){return null}blocksMenuInput(){return false}},
+beginSinglePlayerReplaySession:()=>{},GameSceneType:{MainTankSelect:'tank-select'}};
+const require=()=>deps;
+(()=>{const exports={};${tabNavigationCode};Object.assign(deps,exports)})();
+const Menu=(()=>{const exports={};${compiled};return exports.MainMenuWebUi})();
+const ui=new Menu({inputManager:{getActiveMethod:()=>({isDownAny:key=>key===pressed})},navigator:{push:route=>window.routes.push(route)}});
+ui.host=document.querySelector('[data-web-ui]');ui.active=true;ui.abortController=new AbortController();ui.fitAndroidHome=()=>{};
+ui.bindActions();ui.bindRewardTabs();ui.focusInitialAction();window.menuUi=ui;
+window.press=key=>{pressed=key;ui.update();pressed=''};
+`;
 const setup = compiled
   .slice(
     compiled.indexOf(
@@ -92,7 +107,7 @@ const server = http.createServer((req, res) => {
           '',
         )}</head><body class="web-ui-active main-menu-web-active"><div class="web-ui" data-web-ui>${markup}</div><script>${setup};document.querySelector('main').dataset.rewardTab='leaderboard';const fixtures=${JSON.stringify(
         fixtures,
-      )};window.fill=name=>{const rows=document.querySelector('[data-home-rewards-rows]');rows.innerHTML=fixtures[name];rows.scrollTop=0};window.fill('full');</script></body></html>`,
+      )};window.fill=name=>{const rows=document.querySelector('[data-home-rewards-rows]');rows.innerHTML=fixtures[name];rows.scrollTop=0};window.fill('full');${navigationFixture}</script></body></html>`,
     );
   }
   const file = path.join(
@@ -125,6 +140,39 @@ const server = http.createServer((req, res) => {
       await page.setViewportSize({ width, height });
       await page.goto('http://127.0.0.1:' + server.address().port);
       await page.evaluate(() => document.fonts.ready);
+      if (await page.locator(':focus').getAttribute('data-menu-action') !== 'start') errors.push('START not selected initially');
+      if (await page.locator('[data-menu-action].is-selected').count() !== 1 || await page.locator('[data-menu-action].is-selected').getAttribute('data-menu-action') !== 'start') errors.push('Initial selection highlight is not START');
+      await page.locator('[data-reward-tab-button="rewards"]').click();
+      await page.locator('[data-menu-action="start"]').focus();
+      await page.evaluate(() => window.press('r'));
+      if (await page.locator('main').getAttribute('data-reward-tab') !== 'leaderboard' || await page.locator(':focus').getAttribute('data-menu-action') !== 'start') errors.push('Home R shortcut lost START focus');
+      await page.evaluate(() => window.press('l'));
+      if (await page.locator('main').getAttribute('data-reward-tab') !== 'rewards') errors.push('Home L shortcut failed');
+      const reachable = await page.evaluate(() => {
+        for(let i=0;i<20;i++){window.press('down');if(document.activeElement.hasAttribute('data-reward-tab-button'))return true}return false;
+      });
+      if (!reachable) errors.push('Home tabs absent from D-pad queue');
+      await page.locator('[data-reward-tab-button="leaderboard"]').focus();
+      await page.evaluate(() => window.press('select'));
+      if (await page.locator('main').getAttribute('data-reward-tab') !== 'leaderboard' || await page.evaluate(() => window.routes.length)) errors.push('Tab Select launched a menu action');
+      await page.evaluate(() => window.press('down'));
+      if (await page.locator(':focus').getAttribute('data-reward-tab-button')) errors.push('Home tab focus trapped');
+      const hintsFit = await page.locator('.psg1-home-tab-content').evaluateAll(nodes => nodes.every(node => {
+        const box=node.closest('button').getBoundingClientRect();return [...node.children].every(child=>{const r=child.getBoundingClientRect();return r.left>=box.left&&r.right<=box.right&&r.top>=box.top&&r.bottom<=box.bottom});
+      }));
+      if (!hintsFit) errors.push('Home L/R hints or labels clipped '+width);
+      await page.locator('[data-menu-action="start"]').focus();
+      if (width === 1280 && height === 800) await page.screenshot({path:path.join(__dirname, 'psg1-home-navigation.png')});
+      const protectedState = await page.evaluate(() => {
+        const main=document.querySelector('main'),before=main.dataset.rewardTab;
+        const dialog=document.createElement('dialog');dialog.open=true;window.menuUi.host.append(dialog);window.press('r');dialog.remove();
+        if(main.dataset.rewardTab!==before)return false;
+        window.menuUi.cherryChat.blocksMenuInput=()=>true;window.press('r');window.menuUi.cherryChat.blocksMenuInput=()=>false;
+        if(main.dataset.rewardTab!==before)return false;
+        document.documentElement.dataset.uiDevice='desktop';window.press('r');document.documentElement.dataset.uiDevice='psg1';
+        return main.dataset.rewardTab===before;
+      });
+      if (!protectedState) errors.push('Shoulders bypassed modal/chat/device guard');
       for (const platform of ['desktop', 'android'])
         for (const name of Object.keys(fixtures)) {
           await page.evaluate(

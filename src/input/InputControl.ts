@@ -12,4 +12,6 @@ export enum InputControl {
   PowerTwo,
   PowerThree,
   PowerFour,
+  PreviousTab,
+  NextTab,
 }
