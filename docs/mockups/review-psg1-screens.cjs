@@ -56,6 +56,17 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(async()=>{await Promise.all(Array.from(document.images).map(i=>i.decode().catch(()=>{})))});
    const bounds=await page.evaluate(()=>({scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],page:document.querySelector('main').getBoundingClientRect().toJSON(),nav:document.querySelector('[data-ui-nav]').getBoundingClientRect().toJSON()}));
    if(bounds.scroll[0]>width||bounds.scroll[1]>height)errors.push(screen+' page overflow '+width+'x'+height);
+   if(screen==='bact'||screen==='sol') {
+    const layout=await page.evaluate(()=>{
+     const cards=[...document.querySelectorAll('.shop-web__desktop-content .shop-web__card')].every(card=>{
+      const rect=e=>e.getBoundingClientRect();const c=rect(card),name=rect(card.querySelector('h2')),icon=rect(card.querySelector('.shop-web__card-icon')),desc=rect(card.querySelector('p')),buy=rect(card.querySelector('button'));
+      return name.bottom<=icon.top+1&&icon.bottom<=desc.top+1&&desc.bottom<=buy.top+1&&buy.bottom<=c.bottom&&Math.abs((icon.left+icon.right)-(c.left+c.right))<2;
+     });
+     const owned=[...document.querySelectorAll('.shop-web__desktop-owned .shop-web__owned-tile')].every(tile=>{const t=tile.getBoundingClientRect(),img=tile.querySelector('img').getBoundingClientRect(),count=tile.querySelector('strong'),r=count.getBoundingClientRect(),s=getComputedStyle(count);return img.bottom<r.top&&Math.abs(r.bottom-(t.bottom-2))<2&&r.width>=t.width-5&&s.borderTopWidth==='2px'&&count.scrollWidth<=count.clientWidth+1});
+     return {cards,owned};
+    });
+    if(!layout.cards||!layout.owned)errors.push(screen+' card order / owned footer alignment '+width+'x'+height+' '+JSON.stringify(layout));
+   }
    if(width===1280&&height===800)await page.screenshot({path:path.join(__dirname,'psg1-'+screen+'.png')});
    console.log(width,height,screen,JSON.stringify(bounds.scroll));
   }
