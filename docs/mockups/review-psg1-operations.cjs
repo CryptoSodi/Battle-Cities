@@ -112,6 +112,14 @@ const server = http.createServer((req, res) => {
       for (const screen of screens) {
         await mount(screen);
         if (screen === 'RankingWebUi') {
+          const readableRows = await page.locator('.ranking-web__row').evaluateAll(rows => rows.every(row => {
+            const box = row.getBoundingClientRect();
+            return [...row.children].every(cell => {
+              const style = getComputedStyle(cell), bounds = cell.getBoundingClientRect();
+              return parseFloat(style.fontSize) >= 24 && bounds.top >= box.top && bounds.bottom <= box.bottom && bounds.left >= box.left && bounds.right <= box.right;
+            });
+          }));
+          if (!readableRows) errors.push('Ranking data too small or outside its row ' + width);
           const closed = await page
             .locator('[data-rank-season-toggle]')
             .evaluate((e) => {
@@ -300,6 +308,7 @@ const server = http.createServer((req, res) => {
         errors.push('Missing ranking ' + state);
     }
     // Non-PSG devices: the new sheet must not alter any of these screens.
+    await page.evaluate(() => (window.rankState = 'ready'));
     for (const [device, width, height] of [
       ['desktop', 1280, 800],
       ['android', 375, 812],

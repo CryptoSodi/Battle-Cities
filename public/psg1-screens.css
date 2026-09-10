@@ -1449,10 +1449,19 @@ html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__row {
   outline: none;
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__row > * {
+  /* Legacy cell font sizes override the row font; size the data itself. */
+  font: 700 clamp(24px, 3vw, 42px) / 1.1 'Battle Cities UI', 'Arial Narrow',
+    sans-serif;
+  letter-spacing: 0.025em;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__perks {
+  /* Match the data cells despite the legacy perks !important override. */
+  font-size: clamp(24px, 3vw, 42px) !important;
 }
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
