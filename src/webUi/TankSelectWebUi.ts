@@ -5,6 +5,7 @@ import { ShopManager } from '../shop';
 import { GameSceneType } from '../scenes';
 import { TankTier } from '../tank';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
 
 const tanks = [
   {
@@ -183,6 +184,7 @@ export class TankSelectWebUi {
       .join(
         '',
       )}</section><div class="tank-select-web__actions"><button class="tank-select-web__continue" data-tank-continue>CONTINUE</button><p class="tank-select-web__status">${status}</p></div></section></main>`;
+    decoratePsg1Console(this.host);
     this.bind();
   }
 
@@ -196,8 +198,11 @@ export class TankSelectWebUi {
           this.buttons.forEach((candidate) =>
             candidate.classList.toggle('is-selected', candidate === button),
           );
-          if (button.dataset.tank !== undefined)
+          if (button.dataset.tank !== undefined) {
             this.lastTankFocus = Number(button.dataset.tank);
+            if (this.host.querySelector('.psg1-console'))
+              button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
         },
         { signal },
       ),
@@ -242,6 +247,10 @@ export class TankSelectWebUi {
     const tank = tanks[this.selected];
     if (!this.shop.canStartRun(tank.fuel)) {
       this.render(`NEED ${tank.fuel} FUEL - VISIT THE SHOP`);
+      if (this.host.querySelector('.psg1-console'))
+        this.host
+          .querySelector<HTMLButtonElement>('[data-tank-continue]')
+          ?.focus({ preventScroll: true });
       return;
     }
     const params = this.getParams();
@@ -272,6 +281,34 @@ export class TankSelectWebUi {
         (button) => button.dataset.tank === String(this.selected),
       );
     if (!current) return;
+    // Console cards may be taller than the visible roster. Navigate their grid
+    // positions rather than comparing off-screen cards with the fixed footer.
+    if (
+      this.host.querySelector('.psg1-console') &&
+      current.dataset.tank !== undefined
+    ) {
+      const index = Number(current.dataset.tank);
+      const grid = this.host.querySelector('.tank-select-web__grid');
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ')
+        .length;
+      const next = index + (horizontal || vertical * columns);
+      const sameRow =
+        !horizontal ||
+        Math.floor(next / columns) === Math.floor(index / columns);
+      const target =
+        sameRow &&
+        this.buttons.find(
+          (button) => !button.disabled && button.dataset.tank === String(next),
+        );
+      if (target) target.focus({ preventScroll: true });
+      else if (vertical)
+        this.host
+          .querySelector<HTMLButtonElement>(
+            vertical < 0 ? '[data-tank-back]' : '[data-tank-continue]',
+          )
+          ?.focus({ preventScroll: true });
+      return;
+    }
     const focusedTank = this.buttons.find(
       (button) => button.dataset.tank === String(this.lastTankFocus),
     );
