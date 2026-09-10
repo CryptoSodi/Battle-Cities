@@ -1,0 +1,204 @@
+/* PSG1 commander record: shared hardware frames and a single scroll region. */
+html[data-ui-device='psg1'] .player-profile-web.psg1-console {
+  --profile-copy: clamp(18px, 1.9vw, 26px);
+  --profile-title: clamp(26px, 3vw, 42px);
+  --profile-number: clamp(30px, 3.5vw, 48px);
+  font-family: 'Battle Cities UI', 'Arial Narrow', sans-serif;
+}
+html[data-ui-device='psg1'] body.web-ui-active [data-web-ui] .player-profile-web.psg1-console[data-ui-page] [data-ui-nav] {
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console[data-ui-page] [data-ui-nav] h1 {
+  color: var(--bc-active-ink);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__shell {
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--psg-gap);
+}
+html[data-ui-device='psg1'] .player-profile-web__shell::before { content: none; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__content {
+  padding: 0 4px 4px 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--bc-command) #06131b;
+  scrollbar-gutter: stable;
+  outline: none;
+}
+html[data-ui-device='psg1'] .player-profile-web__content:focus {
+  box-shadow: inset 0 0 0 2px var(--bc-command);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console button:focus-visible { outline: none; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__hero {
+  grid-template-columns: clamp(76px, 9vw, 126px) minmax(0, 1fr) minmax(140px, 22%);
+  gap: clamp(10px, 1.5vw, 22px);
+  padding: clamp(14px, 1.8vw, 26px);
+  min-height: 150px;
+}
+html[data-ui-device='psg1'] .player-profile-web__hero::after { content: none; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__avatar {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  font-size: var(--profile-title);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__identity h2 {
+  font-size: var(--profile-title);
+  margin: 8px 0;
+  color: var(--bc-text);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__identity > :is(p, small, span) {
+  font-size: var(--profile-copy);
+  line-height: 1.2;
+  margin-top: 6px;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__identity small {
+  font-size: clamp(16px, 1.65vw, 22px);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__share, .player-profile-web__pages button, .player-profile-web__error button) {
+  min-height: var(--psg-control);
+  padding: 10px 12px;
+  font: 700 var(--profile-copy) / 1.1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.035em;
+  background: var(--psg-surface);
+  border: 3px solid var(--psg-steel);
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--psg-edge);
+  color: var(--bc-text);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__share, .player-profile-web__pages button, .player-profile-web__error button).is-selected {
+  background: var(--ui-active-plate);
+  border-color: var(--bc-command);
+  color: var(--bc-active-ink);
+  box-shadow: inset 0 0 0 2px #3b2603;
+}
+html[data-ui-device='psg1'] .player-profile-web__share > span { color: inherit; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--psg-gap);
+  margin-top: var(--psg-gap);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stat {
+  min-width: 0;
+  min-height: 136px;
+  padding: 18px 14px;
+  gap: 10px;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stat :is(span, small) {
+  font-size: var(--profile-copy);
+  line-height: 1.1;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stat strong {
+  font-size: var(--profile-number);
+  line-height: 1.1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stat small {
+  font-size: clamp(15px, 1.55vw, 21px);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__battles {
+  margin-top: var(--psg-gap);
+  padding: clamp(12px, 1.4vw, 20px);
+}
+html[data-ui-device='psg1'] .player-profile-web__battles > header {
+  gap: 12px;
+  border-color: var(--psg-edge);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__battles h2 {
+  font-size: var(--profile-title);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__battles > header :is(span, strong) {
+  font-size: var(--profile-copy);
+}
+html[data-ui-device='psg1'] .player-profile-web__match-header { display: none; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__matches {
+  display: grid;
+  gap: var(--psg-gap);
+  margin-top: 12px;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: 12px;
+  padding: 14px 18px;
+  min-height: 124px;
+  font: 700 clamp(24px, 2.6vw, 36px) / 1.1 'Battle Cities UI', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.035em;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match > strong {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match em {
+  grid-column: 3 / 5;
+  grid-row: 1;
+  font-size: var(--profile-copy);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match > :is(span, b) {
+  display: flex;
+  grid-row: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match small {
+  display: block;
+  color: var(--psg-steel);
+  font-size: clamp(16px, 1.65vw, 22px);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__match:disabled {
+  opacity: 1;
+  cursor: default;
+}
+html[data-ui-device='psg1'] body.web-ui-active [data-web-ui] .player-profile-web__match.is-selected {
+  border-color: var(--bc-command);
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--bc-command);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__pages {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__pages span {
+  font-size: var(--profile-copy);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__empty, .player-profile-web__error) {
+  min-height: 240px;
+  gap: 12px;
+  padding: 24px;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__empty, .player-profile-web__error) :is(strong, h2) {
+  font-size: var(--profile-title);
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__empty, .player-profile-web__error) :is(span, p) {
+  font-size: var(--profile-copy);
+  line-height: 1.3;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__loading { padding: 20px; }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console :is(.player-profile-web__loading, .player-profile-web__error) {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__loading > p { font-size: var(--profile-copy); }
+html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__status {
+  min-height: 40px;
+  padding: 10px 16px;
+  font-size: clamp(16px, 1.7vw, 24px);
+  line-height: 1.2;
+}
+@media (max-width: 700px) {
+  html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__hero {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__share { grid-column: 1 / -1; }
+  html[data-ui-device='psg1'] .player-profile-web.psg1-console .player-profile-web__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

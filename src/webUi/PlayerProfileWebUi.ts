@@ -6,6 +6,8 @@ import {
   PublicProfile,
 } from '../playerProfile';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
+import { isPsg1Ui } from './deviceUi';
 
 export class PlayerProfileWebUi {
   private readonly client = new PlayerProfileClient();
@@ -18,6 +20,7 @@ export class PlayerProfileWebUi {
   private error = '';
   private status = '';
   private page = 1;
+  private lastFocusKey = 'back';
 
   public constructor(
     private readonly navigator: SceneNavigator,
@@ -106,7 +109,30 @@ export class PlayerProfileWebUi {
         ? this.content(this.profile)
         : `<section class="player-profile-web__error"><span>CONNECTION ERROR</span><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN.</p><button data-profile-retry type="button">RETRY CONNECTION</button></section>`;
     this.host.innerHTML = `<main class="player-profile-web" data-ui-page><header class="shop-web__tabs player-profile-web__header" data-ui-nav style="--ui-tab-count:1" aria-label="Player profile commands"><span class="shop-web__tab is-active" data-ui-tab aria-current="page"><h1>PLAYER PROFILE</h1></span><span data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-profile-back type="button">◀ BACK</button></header><section class="player-profile-web__shell" aria-busy="${this.loading}"><div class="player-profile-web__content">${content}</div><p class="player-profile-web__status" data-profile-status role="status" aria-live="polite">${this.escape(this.status)}</p></section></main>`;
+    decoratePsg1Console(this.host);
+    if (isPsg1Ui()) {
+      const contentRegion = this.host.querySelector<HTMLElement>('.player-profile-web__content');
+      contentRegion.tabIndex = 0;
+      contentRegion.setAttribute('role', 'region');
+      contentRegion.setAttribute('aria-label', 'Player record. Up and down scroll; left and right select actions.');
+      contentRegion.addEventListener('focus', () => this.buttons.forEach(button => button.classList.remove('is-selected')), { signal: this.abortController.signal });
+      this.host.querySelectorAll('.player-profile-web__hero, .player-profile-web__stat, .player-profile-web__battles, .player-profile-web__error, .player-profile-web__loading, .player-profile-web__status, .player-profile-web__match')
+        .forEach(element => element.classList.add('psg1-console-frame'));
+      this.host.querySelectorAll<HTMLButtonElement>('button').forEach(button => {
+        button.dataset.profileKey = button.hasAttribute('data-profile-back') ? 'back'
+          : button.hasAttribute('data-profile-share') ? 'share'
+          : button.hasAttribute('data-profile-retry') ? 'retry'
+          : button.hasAttribute('data-profile-match') ? `match-${button.dataset.profileMatch}`
+          : Number(button.dataset.profilePage) > this.page ? 'next' : 'previous';
+      });
+    }
     this.bind();
+    if (isPsg1Ui() && !this.loading) {
+      const target = this.buttons.find(button => button.dataset.profileKey === this.lastFocusKey)
+        || (['next', 'previous'].includes(this.lastFocusKey) ? this.buttons.find(button => button.hasAttribute('data-profile-page')) : null)
+        || this.buttons[0];
+      target?.focus({ preventScroll: true });
+    }
   }
 
   private content(profile: PublicProfile): string {
@@ -127,6 +153,7 @@ export class PlayerProfileWebUi {
     const signal = this.abortController.signal;
     this.buttons = Array.from(this.host.querySelectorAll('button:not(:disabled)'));
     this.buttons.forEach((button) => button.addEventListener('focus', () => {
+      if (isPsg1Ui()) this.lastFocusKey = button.dataset.profileKey || 'back';
       this.buttons.forEach((candidate) => candidate.classList.toggle('is-selected', candidate === button));
     }, { signal }));
     this.host.querySelector('[data-profile-back]')?.addEventListener('click', () => animateBackNavigation(this.host, this.navigator), { signal });
@@ -174,6 +201,27 @@ export class PlayerProfileWebUi {
   private escape(value: string): string { return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
   private focused(): HTMLButtonElement | null { return document.activeElement instanceof HTMLButtonElement && this.buttons.includes(document.activeElement) ? document.activeElement : null; }
   private moveFocus(horizontal: number, vertical: number): void {
+    if (isPsg1Ui()) {
+      const content = this.host.querySelector<HTMLElement>('.player-profile-web__content');
+      if (document.activeElement === content) {
+        if (vertical && ((vertical < 0 && content.scrollTop > 0) || (vertical > 0 && content.scrollTop + content.clientHeight < content.scrollHeight - 1))) {
+          content.scrollTop += vertical * Math.max(80, content.clientHeight * 0.65);
+          return;
+        }
+        const bounds = content.getBoundingClientRect();
+        const visible = this.buttons.filter(button => {
+          const rect = button.getBoundingClientRect();
+          return content.contains(button) && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+        });
+        (horizontal > 0 ? visible[0] : horizontal < 0 ? visible[visible.length - 1] : null)?.focus({ preventScroll: true });
+        if (vertical || !visible.length) this.buttons[0]?.focus({ preventScroll: true });
+        return;
+      }
+      if (vertical > 0 && this.focused()?.hasAttribute('data-profile-share')) {
+        content.focus({ preventScroll: true });
+        return;
+      }
+    }
     const current = this.focused() || this.buttons[0];
     if (!current) return;
     const rect = current.getBoundingClientRect();
