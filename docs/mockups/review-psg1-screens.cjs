@@ -48,7 +48,7 @@ const server=http.createServer((req,res)=>{
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage();const errors=[];
  page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
- for(const [width,height] of [[1280,800],[1280,720],[960,540],[640,480],[1024,900]]){
+ for(const [width,height] of [[1280,1100],[1280,800],[1280,720],[960,540],[640,480],[1024,900]]){
   await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:'+server.address().port);await page.evaluate(()=>document.fonts.ready);
   for(const screen of ['settings','loadout','bact','sol','swap']){
    if(screen==='settings')await page.evaluate(()=>window.mountScreen('settings'));
@@ -74,8 +74,13 @@ const server=http.createServer((req,res)=>{
      return {separate:wallet.getBoundingClientRect().bottom<presale.getBoundingClientRect().top,framed:[wallet,presale].every(e=>getComputedStyle(e).borderTopWidth==='3px'&&getComputedStyle(e).borderBottomWidth==='3px'),noticeFont:parseFloat(getComputedStyle(notice).fontSize),noticeBottom:notice.getBoundingClientRect().bottom,contentBottom:document.querySelector('.shop-web__content').getBoundingClientRect().bottom,icon:!!document.querySelector('.shop-web__swap-method img')};
     });
     if(!frames.separate||!frames.framed||!frames.icon||frames.noticeFont<13)errors.push('Swap frames / readability '+JSON.stringify(frames));
-    if(width===1280&&height===800&&frames.noticeBottom>frames.contentBottom)errors.push('Swap notice clipped at target size');
+    if(width===1280&&height>=800&&frames.noticeBottom>frames.contentBottom)errors.push('Swap notice clipped at target size');
+    if(width===1280&&height===1100) {
+     const rates=await page.locator('.shop-web__swap-summary dt').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
+     if(rates<28||frames.noticeFont<25||frames.contentBottom-frames.noticeBottom>90)errors.push('Tall PSG1 Swap did not use space for readable text');
+    }
    }
+   if(width===1280&&height===1100&&screen==='swap')await page.screenshot({path:path.join(__dirname,'psg1-swap-tall.png')});
    if(width===1280&&height===800)await page.screenshot({path:path.join(__dirname,'psg1-'+screen+'.png')});
    console.log(width,height,screen,JSON.stringify(bounds.scroll));
   }

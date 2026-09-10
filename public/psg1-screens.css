@@ -677,6 +677,8 @@ html[data-ui-device='psg1']
   padding: 14px;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
+  --swap-gap: clamp(8px, 1.2dvh, 16px);
+  --swap-text: clamp(18px, 2.6dvh, 30px);
   border: 0;
   background: none;
   box-shadow: none;
@@ -685,7 +687,8 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-body {
   padding: 2px;
-  gap: var(--psg-gap);
+  gap: var(--swap-gap);
+  min-height: 100%;
   grid-template-rows: auto auto minmax(min-content, 1fr);
   border: 0;
   background: none;
@@ -696,7 +699,7 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-method {
   background: var(--ui-active-plate);
   border: 2px solid var(--bc-command);
   color: var(--ui-nav-ink);
-  font-size: clamp(23px, 3.2vw, 42px);
+  font-size: clamp(26px, max(3.2vw, 4.4dvh), 50px);
   clip-path: var(--psg-plate);
   box-shadow: inset 0 0 0 2px #171006, inset 0 0 0 4px #ffe66d;
   gap: 16px;
@@ -708,13 +711,13 @@ html[data-ui-device='psg1'] .shop-web__swap-method img {
   image-rendering: pixelated;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-form {
-  gap: 7px;
+  gap: clamp(7px, 1dvh, 12px);
 }
 html[data-ui-device='psg1']
   .shop-web__desktop-content
   .shop-web__swap-form
   > label {
-  font-size: clamp(14px, 1.8vw, 22px);
+  font-size: var(--swap-text);
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-input {
   min-height: var(--psg-control);
@@ -722,7 +725,7 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-input {
   background: var(--psg-surface);
   box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--psg-edge);
   clip-path: var(--psg-plate);
-  font-size: clamp(28px, 3.6vw, 48px);
+  font-size: clamp(32px, max(3.6vw, 5.2dvh), 60px);
 }
 html[data-ui-device='psg1']
   .shop-web__desktop-content
@@ -734,7 +737,7 @@ html[data-ui-device='psg1']
   .shop-web__desktop-content
   .shop-web__swap-input
   span {
-  font-size: clamp(20px, 2.5vw, 32px);
+  font-size: clamp(24px, 3.4dvh, 40px);
   flex: none;
 }
 html[data-ui-device='psg1']
@@ -743,7 +746,7 @@ html[data-ui-device='psg1']
   button {
   height: var(--psg-control);
   border: 2px solid var(--psg-edge);
-  font-size: clamp(18px, 2.3vw, 30px);
+  font-size: clamp(22px, 3.4dvh, 38px);
 }
 html[data-ui-device='psg1'] .shop-web__swap-arrow {
   line-height: 1;
@@ -752,7 +755,7 @@ html[data-ui-device='psg1'] .shop-web__swap-arrow {
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-summary {
   padding: 0;
-  gap: var(--psg-gap);
+  gap: var(--swap-gap);
   justify-content: space-between;
 }
 html[data-ui-device='psg1'] .shop-web__swap-summary dl {
@@ -765,7 +768,7 @@ html[data-ui-device='psg1']
   div {
   border: 1px solid var(--psg-steel);
   padding: 6px 12px;
-  min-height: clamp(32px, 4.5dvh, 52px);
+  min-height: clamp(36px, 5.4dvh, 64px);
   gap: 8px;
 }
 html[data-ui-device='psg1'] .shop-web__swap-summary dl div + div {
@@ -774,22 +777,41 @@ html[data-ui-device='psg1'] .shop-web__swap-summary dl div + div {
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-wallet {
   border: 1px solid var(--psg-steel);
   padding: 6px 14px;
-  min-height: 32px;
+  min-height: clamp(36px, 4.8dvh, 56px);
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-review {
   height: var(--psg-control);
   flex: none;
-  font-size: clamp(22px, 2.8vw, 38px);
+  font-size: clamp(26px, 4dvh, 46px);
 }
 html[data-ui-device='psg1']
   .shop-web__desktop-content
   .shop-web__swap-summary
   :is(.shop-web__swap-live, .shop-web__swap-notice) {
-  font-size: clamp(13px, 1.5vw, 20px) !important;
+  font-size: clamp(18px, 2.3dvh, 27px) !important;
   margin: 0 !important;
 }
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-notice {
   padding-top: 8px;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-shell--swap .shop-web__status {
+  font-size: clamp(16px, 2.2dvh, 26px);
+}
+html[data-ui-device='psg1'] .shop-web__swap-summary :is(dt, dd) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-ui-device='psg1'] .shop-web__swap-summary dd {
+  max-width: 60%;
+}
+/* Short viewports keep the same readable type, but use tighter spacing. */
+@media (max-height: 850px) {
+  html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap {
+    --swap-gap: 6px;
+  }
+  html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__swap-form {
+    gap: 6px;
+  }
 }
 html[data-ui-device='psg1'] .shop-web__swap-notice {
   font-size: clamp(12px, 1.3vw, 17px);
@@ -810,7 +832,7 @@ html[data-ui-device='psg1']
   .shop-web__desktop-content
   .shop-web__swap-summary
   :is(dt, dd, .shop-web__swap-live, .shop-web__swap-notice, .shop-web__swap-wallet) {
-  font-size: clamp(12px, 1.4vw, 18px);
+  font-size: var(--swap-text);
   line-height: 1.3;
 }
 html[data-ui-device='psg1']
