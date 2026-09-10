@@ -38,6 +38,8 @@ const server = http.createServer((req, res) => {
   for(const [width,height] of [[1280,800],[1280,720],[1920,1080],[960,540],[640,480]]) {
    await page.setViewportSize({width,height}); await page.goto('http://127.0.0.1:'+server.address().port);
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})))});
+   const gear=await page.locator('.main-menu-web__hud [data-menu-action="settings"]').evaluate(e=>{const s=getComputedStyle(e);return [s.marginLeft,s.marginTop]});
+   if(gear[0]!=='10px'||gear[1]!=='8px')errors.push('PSG1 gear offsets missing '+width);
    for(const platform of ['desktop','android']){
     await page.evaluate(p=>document.documentElement.dataset.uiPlatform=p,platform);
     const labels=await page.evaluate(()=>[...document.querySelectorAll('.android-home-button-icon + .main-menu-web__action-label')].map(e=>{const b=e.closest('button').getBoundingClientRect(),r=e.getBoundingClientRect();return {fits:r.left>=b.left&&r.right<=b.right&&r.top>=b.top+b.height*0.69&&r.bottom<=b.bottom&&e.scrollWidth<=e.clientWidth+1,size:getComputedStyle(e).fontSize}}));
@@ -96,6 +98,14 @@ const server = http.createServer((req, res) => {
     return before===after&&[...document.querySelectorAll('.psg1-home-tab-content')].every(e=>getComputedStyle(e).display==='none');
    });
    if(!same)errors.push('Non-PSG style leak '+device);
+   const gearIsolated=await page.evaluate(()=>{
+    const gear=document.querySelector('[data-menu-action="settings"]');
+    const rule=[...document.styleSheets].flatMap(s=>[...s.cssRules]).find(r=>r.selectorText==="html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__action[data-menu-action='settings']"||r.selectorText==='html[data-ui-device="psg1"] .main-menu-web__hud .main-menu-web__action[data-menu-action="settings"]');
+    const snapshot=()=>[getComputedStyle(gear).marginLeft,getComputedStyle(gear).marginTop].join('|');
+    const before=snapshot(),saved=rule.style.cssText;rule.style.cssText='';const after=snapshot();rule.style.cssText=saved;
+    return before===after;
+   });
+   if(!gearIsolated)errors.push('Gear margin leaked outside PSG1 '+device);
   }
   if(errors.length)throw Error(errors.join('\n'));
   console.log('PASS: matched icons, stable tab geometry, contained errors, Retry, keyboard tabs, non-PSG isolation.');

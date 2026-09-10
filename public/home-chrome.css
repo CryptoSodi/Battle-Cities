@@ -1,3 +1,9 @@
+/* User-calibrated gear offset: PSG1 home header only. */
+html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__action[data-menu-action='settings'] {
+  margin-left: 10px;
+  margin-top: 8px;
+}
+
 /* Fixed status plate overlays the scrolling live-event track. */
 .main-menu-web-active { --home-round-width: clamp(174px, 20vw, 286px); --home-hazard-height: 44px; }
 .main-menu-web__hazard { display: flex; align-items: stretch; height: calc(var(--home-hazard-height) + env(safe-area-inset-bottom,0px)); min-height: 44px; padding: 3px 0 calc(3px + env(safe-area-inset-bottom,0px)); overflow: hidden; }
