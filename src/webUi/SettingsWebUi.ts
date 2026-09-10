@@ -256,6 +256,7 @@ export class SettingsWebUi {
     }
   }
   private supportsPhonePairing(): boolean {
+    if (document.documentElement.dataset.uiPlatform === 'android' || isPsg1Ui()) return false;
     return !isPlaySolanaPsg1(
       this.input.getNativeAndroidGamepad().getDeviceProfile(),
     );

@@ -31,7 +31,7 @@ const groups={
      html=html.replace('<link rel="stylesheet" href="/android-screens.css">','').replace('</head>','<link rel="stylesheet" href="/android-screens.css"></head>');
      await route.fulfill({response,body:html});
     });
-    for(const [width,height] of [[390,844],[360,740],[768,1024],[844,390]]){
+    for(const [width,height] of [[390,844],[360,740],[630,1000],[768,1024],[844,390]]){
      await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:'+server.address().port);
      for(const screen of screens){
       await page.evaluate(({group,screen})=>{
@@ -53,6 +53,15 @@ const groups={
       if(metrics.doc[0]>width||metrics.doc[1]>height||metrics.root[2]>width+1||metrics.root[3]>height+1||metrics.bad.length)errors.push(group+'/'+screen+' '+width+': '+JSON.stringify(metrics));
       const contentErrors=await page.evaluate(()=>{
        const failures=[];
+       const cards=[...document.querySelectorAll('.shop-web__card')];
+       for(let i=3;i<cards.length;i++)if(cards[i].getBoundingClientRect().top<cards[i-3].getBoundingClientRect().bottom+4)failures.push('Shop rows overlap');
+       const matches=document.querySelector('.player-profile-web__matches');
+       if(matches&&matches.clientHeight<60)failures.push('Battle list has no usable scroll area');
+       const pages=document.querySelector('.player-profile-web__pages');
+       if(pages&&!pages.closest('.player-profile-web__battles > header'))failures.push('Pagination outside list header');
+       if(document.querySelector('.settings-web__pairing'))failures.push('Android phone pairing visible');
+       const refresh=document.querySelector('[data-social-refresh]');
+       if(refresh&&Math.abs(refresh.getBoundingClientRect().top-document.querySelector('.socials-web [data-ui-tab]').getBoundingClientRect().top)>2)failures.push('Social header wraps');
        for(const card of document.querySelectorAll('.settings-web__rows article,.tank-select-web__card,.shop-web__card')){
         const bounds=card.getBoundingClientRect();
         for(const child of card.children){
@@ -74,6 +83,7 @@ const groups={
       });
       errors.push(...contentErrors.map(e=>group+'/'+screen+' '+width+': '+e));
       if(width===390)await page.screenshot({path:path.join(__dirname,'android-'+group+'-'+screen+'.png')});
+      if(width===844&&group==='profile'&&screen==='ready')await page.screenshot({path:path.join(__dirname,'android-profile-landscape.png')});
      }
      console.log(group,width,height,'rendered');
     }

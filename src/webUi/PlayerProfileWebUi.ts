@@ -110,6 +110,10 @@ export class PlayerProfileWebUi {
         : `<section class="player-profile-web__error"><span>CONNECTION ERROR</span><h2>${this.error || 'PROFILE UNAVAILABLE'}</h2><p>CHECK YOUR CONNECTION, THEN TRY AGAIN.</p><button data-profile-retry type="button">RETRY CONNECTION</button></section>`;
     this.host.innerHTML = `<main class="player-profile-web" data-ui-page><header class="shop-web__tabs player-profile-web__header" data-ui-nav style="--ui-tab-count:1" aria-label="Player profile commands"><span class="shop-web__tab is-active" data-ui-tab aria-current="page"><h1>PLAYER PROFILE</h1></span><span data-ui-spacer aria-hidden="true"></span><button class="shop-web__back" data-ui-back data-profile-back type="button">◀ BACK</button></header><section class="player-profile-web__shell" aria-busy="${this.loading}"><div class="player-profile-web__content">${content}</div><p class="player-profile-web__status" data-profile-status role="status" aria-live="polite">${this.escape(this.status)}</p></section></main>`;
     decoratePsg1Console(this.host);
+    if (document.documentElement.dataset.uiPlatform === 'android' && !isPsg1Ui()) {
+      const pages = this.host.querySelector('.player-profile-web__pages');
+      if (pages) this.host.querySelector('.player-profile-web__battles > header')?.append(pages);
+    }
     if (isPsg1Ui()) {
       const contentRegion = this.host.querySelector<HTMLElement>('.player-profile-web__content');
       contentRegion.tabIndex = 0;

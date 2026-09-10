@@ -147,3 +147,47 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .hq-page-web__item { display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:7px;padding:12px 8px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .hq-page-web__item img { position:static;width:40px;height:40px;object-fit:contain; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .hq-page-web__item h3 { min-width:0;font-size:14px;line-height:1.2;overflow-wrap:anywhere;margin:0; }
+/* Android card and list containment; navigation stays outside scroll regions. */
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .shop-web__cards { grid-auto-rows:max-content;gap:10px;padding:10px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .shop-web__card { box-sizing:border-box;width:100%;min-width:0;min-height:180px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] :is(.shop-web__cards,.tank-select-web__grid) { border:2px solid var(--mobile-steel);background:var(--mobile-surface);box-shadow:var(--mobile-bevel); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .shop-web__card:has(button:is(.is-selected,:focus-visible,:active)) { border-color:var(--bc-command);box-shadow:inset 0 0 0 2px var(--bc-command-dim);background:linear-gradient(#ffb30f18,#ffb30f08),var(--mobile-surface); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .socials-web [data-ui-nav] { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .socials-web [data-ui-nav] [data-ui-back] { grid-column:3;grid-row:1; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .socials-web [data-social-refresh] { grid-column:2;grid-row:1; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .socials-web .operations-web__mark--social { width:76px;height:76px;align-self:center; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .socials-web .operations-web__mark--social img { width:100%;height:100%;max-width:none;max-height:none;object-fit:contain; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__grid { padding:10px;gap:10px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card { align-items:center; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__tank-sprite { align-self:center;flex:none; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card > strong { width:100%;min-height:34px;display:flex;justify-content:center;align-items:center;gap:5px;font-size:20px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__content:has(.player-profile-web__battles) { display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden;gap:8px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles { display:flex;flex-direction:column;min-height:0;margin:0;overflow:hidden; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles > header { flex:none;flex-wrap:wrap;gap:6px;padding-bottom:6px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__matches { min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-color:var(--bc-command) #06131b; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__pages { width:100%;margin:0;gap:6px;justify-content:space-between; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__pages button { min-height:32px;padding:0 10px;font-size:12px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stats { margin:0; }
+@media (max-height: 550px) {
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__hero { min-height:0;padding:6px;grid-template-columns:40px minmax(0,1fr) 110px;gap:6px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__avatar { width:40px;height:40px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__share { grid-column:auto;min-height:32px;font-size:12px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__identity h2 { font-size:18px;margin:2px 0; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__identity > :is(span,p,small) { font-size:9px;line-height:1.1;margin:1px 0; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stats { grid-template-columns:repeat(4,minmax(0,1fr));gap:4px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stat { min-height:0;padding:5px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stat strong { font-size:20px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stat :is(span,small) { font-size:10px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles > header { display:grid;grid-template-columns:auto auto minmax(0,1fr); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__pages { width:auto; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles h2 { font-size:15px; }
+}
+@media (max-height: 550px) {
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__content:has(.player-profile-web__battles) { grid-template-columns:minmax(0,0.85fr) minmax(0,1.3fr);grid-template-rows:auto minmax(0,1fr); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__hero { grid-column:1;grid-row:1;grid-template-columns:40px minmax(0,1fr); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__share { grid-column:1 / -1; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__stats { grid-column:1;grid-row:2;grid-template-columns:repeat(2,minmax(0,1fr)); }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles { grid-column:2;grid-row:1 / 3;padding:7px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles > header { display:flex; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__pages { width:100%; }
+}
