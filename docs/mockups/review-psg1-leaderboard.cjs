@@ -173,6 +173,26 @@ const server = http.createServer((req, res) => {
         return main.dataset.rewardTab===before;
       });
       if (!protectedState) errors.push('Shoulders bypassed modal/chat/device guard');
+      const hintsFollowLegend = await page.evaluate(() => {
+        const footer=document.querySelector('.main-menu-web__hazard');
+        const guide=document.querySelector('[data-psg1-footer-guide]');
+        const hints=[...document.querySelectorAll('.psg1-home-tab-content kbd')];
+        const labels=[...document.querySelectorAll('.psg1-home-tab-content > span')];
+        const layout=()=>JSON.stringify(labels.map(e=>e.getBoundingClientRect().toJSON()));
+        const before=layout();
+        if(!hints.every(e=>getComputedStyle(e).visibility==='visible'))return false;
+        guide.classList.add('main-menu-web__psg1-footer-guide--hidden');
+        footer.classList.add('main-menu-web__hazard--guide-dismissed');
+        const hidden=getComputedStyle(guide).visibility==='hidden'&&hints.every(e=>getComputedStyle(e).visibility==='hidden')&&layout()===before;
+        const tab=document.querySelector('main').dataset.rewardTab;
+        window.press('r');
+        const shortcutWorks=document.querySelector('main').dataset.rewardTab!==tab;
+        window.press('l');
+        guide.classList.remove('main-menu-web__psg1-footer-guide--hidden');
+        footer.classList.remove('main-menu-web__hazard--guide-dismissed');
+        return hidden&&shortcutWorks&&hints.every(e=>getComputedStyle(e).visibility==='visible')&&layout()===before;
+      });
+      if (!hintsFollowLegend) errors.push('L/R hints did not follow legend visibility without shifting labels');
       for (const platform of ['desktop', 'android'])
         for (const name of Object.keys(fixtures)) {
           await page.evaluate(

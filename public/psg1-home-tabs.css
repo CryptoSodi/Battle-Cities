@@ -232,6 +232,12 @@ html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button.is-selected
   --tab-edge: #ffe195;
   box-shadow: inset 0 0 0 3px #ffe195, 0 0 8px rgb(255 179 15 / 45%);
 }
+/* Share the footer legend's dismissal state without shifting tab labels. */
+html[data-ui-device='psg1']
+  .main-menu-web:has(.main-menu-web__hazard--guide-dismissed)
+  .psg1-home-tab-content kbd {
+  visibility: hidden;
+}
 html[data-ui-device='psg1']
   .main-menu-web
   .android-home-tabs
