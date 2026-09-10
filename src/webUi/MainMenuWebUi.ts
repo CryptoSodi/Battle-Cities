@@ -1010,7 +1010,7 @@ export class MainMenuWebUi {
           4,
         )}${own ? ' main-menu-web__leaderboard-row--self' : ''}"><strong>${row.rank || '—'}</strong><span>${this.escapeMarkup(
           row.displayName,
-        )}${own ? ' (YOU)' : ''}${row.rank === 0 ? ' · Unranked' : ''}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em><img class="android-leaderboard-crate" src="/assets/android-home-v2/crate${crate}.png" alt="${reward > 0 ? reward.toLocaleString() + ' BATC' : 'No reward'}"><span class="leaderboard-reward-amount">${
+        )}${own ? ' (YOU)' : ''}${row.rank === 0 ? ' · Unranked' : ''}</span><b>${Math.max(0, row.totalPoints).toLocaleString()}</b><em data-reward-amount="${reward}"><img class="android-leaderboard-crate" src="/assets/android-home-v2/crate${crate}.png" alt="${reward > 0 ? reward.toLocaleString() + ' BATC' : 'No reward'}"><span class="leaderboard-reward-amount">${
           reward > 0 ? `${reward.toLocaleString()} BATC` : '—'
         }</span></em></div>`;
       })

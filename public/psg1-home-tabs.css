@@ -1,27 +1,54 @@
 /* Live PSG1 tab labels and semantic icons; Android retains its own artwork. */
 /* The shared timer uses its full width for the readout, not a narrow side column. */
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__reward-clock {
   container-type: size;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr) 9%;
   gap: 4px 10px;
   padding: clamp(8px, 3cqw, 14px);
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock > div { display: contents; }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__reward-clock
+  > div {
+  display: contents;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__clock-icon {
   grid-area: 1 / 1;
   width: min(15cqw, 34cqh, 54px);
   height: min(15cqw, 34cqh, 54px);
   border-width: 3px;
   justify-self: center;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon::before {
-  left: 44%; top: 16%; width: 10%; height: 36%;
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__clock-icon::before {
+  left: 44%;
+  top: 16%;
+  width: 10%;
+  height: 36%;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__clock-icon::after {
-  left: 48%; top: 47%; width: 32%; height: 10%;
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__clock-icon::after {
+  left: 48%;
+  top: 47%;
+  width: 32%;
+  height: 10%;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar [data-home-countdown-label] {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  [data-home-countdown-label] {
   grid-area: 1 / 2;
   font-size: min(7.8cqw, 29cqh, 28px);
   font-weight: 700;
@@ -29,7 +56,10 @@ html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar [data-home-countd
   line-height: 1;
   white-space: nowrap;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-countdown {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__reward-countdown {
   grid-area: 2 / 1 / 3 / -1;
   justify-self: center;
   align-self: center;
@@ -41,17 +71,30 @@ html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__r
   line-height: 1;
   text-align: center;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-countdown[data-countdown-state='live'] {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__reward-countdown[data-countdown-state='live'] {
   font-size: min(16cqw, 47cqh, 60px);
   letter-spacing: 0.05em;
 }
-html[data-ui-device='psg1'] .main-menu-web .psg1-round-sidebar .main-menu-web__reward-clock progress {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .psg1-round-sidebar
+  .main-menu-web__reward-clock
+  progress {
   grid-area: 3 / 1 / 4 / -1;
 }
-html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+html[data-ui-device='psg1']
+  .main-menu-web__commands
+  .main-menu-web__action:is([data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
   container-type: inline-size;
 }
-html[data-ui-device='psg1'] .main-menu-web .main-menu-web__commands .android-home-button-icon + .main-menu-web__action-label {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__commands
+  .android-home-button-icon
+  + .main-menu-web__action-label {
   font-size: clamp(12px, 17cqw, 34px);
   bottom: 11%;
   transform: none;
@@ -60,7 +103,10 @@ html[data-ui-device='psg1'] .main-menu-web .main-menu-web__commands .android-hom
 html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier {
   container-type: size;
 }
-html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier .main-menu-web__podium {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__reward-tier
+  .main-menu-web__podium {
   gap: min(4px, 4cqh);
 }
 html[data-ui-device='psg1'] .main-menu-web .main-menu-web__podium strong {
@@ -72,7 +118,11 @@ html[data-ui-device='psg1'] .main-menu-web .main-menu-web__podium span {
   font-size: min(14cqw, 32cqh);
   line-height: 1;
 }
-html[data-ui-device='psg1'] .main-menu-web .main-menu-web__reward-tier--1 .main-menu-web__podium strong {
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__reward-tier--1
+  .main-menu-web__podium
+  strong {
   font-size: min(22cqw, 48cqh);
 }
 .psg1-home-tab-content {
@@ -193,6 +243,90 @@ html[data-ui-device='psg1']
   html[data-ui-device='psg1'] .main-menu-web .android-home-tabs button:hover {
     --tab-edge: #e5bd55;
   }
+}
+
+/* A readable live table: icons must not determine the height of fractional rows. */
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__leaderboard-preview {
+  --leaderboard-columns: 9.7% 35.8% 27.8% 26.7%;
+  --leaderboard-row-height: clamp(40px, 5cqw, 56px);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  :is(.main-menu-web__leaderboard-columns, .main-menu-web__leaderboard-row, .main-menu-web__leaderboard-skeleton) {
+  grid-template-columns: var(--leaderboard-columns);
+  gap: 0;
+  box-sizing: border-box;
+  align-items: center;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-rows:has(.main-menu-web__leaderboard-row, .main-menu-web__leaderboard-skeleton) {
+  grid-auto-rows: minmax(var(--leaderboard-row-height), 1fr);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__leaderboard-columns {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  font-size: clamp(16px, 2cqw, 24px);
+  font-weight: 700;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__leaderboard-row {
+  min-height: var(--leaderboard-row-height);
+  font-size: clamp(16px, 1.9cqw, 24px);
+  line-height: 1.15;
+}
+html[data-ui-device='psg1'] .main-menu-web .main-menu-web__leaderboard-row > * {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  grid-row: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-row
+  > span {
+  display: block;
+  align-self: center;
+  padding: 0 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  .main-menu-web__leaderboard-row
+  > em {
+  height: auto;
+  gap: 6px;
+  padding: 4px;
+}
+html[data-ui-device='psg1'] .main-menu-web .android-leaderboard-crate {
+  flex: 0 0 auto;
+  width: clamp(22px, 3cqw, 32px);
+  height: clamp(22px, 3cqw, 32px);
+  max-width: 32px;
+  max-height: 32px;
+  object-fit: contain;
+}
+html[data-ui-device='psg1'] .main-menu-web .leaderboard-reward-amount {
+  display: block;
+  white-space: nowrap;
+  font-size: clamp(14px, 1.65cqw, 21px);
+}
+html[data-ui-device='psg1']
+  .main-menu-web
+  [data-reward-amount='0']
+  .android-leaderboard-crate {
+  display: none;
 }
 
 /* Same contained error treatment as Android, scaled for the PSG1 table region. */
