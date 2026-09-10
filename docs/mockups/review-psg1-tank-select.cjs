@@ -247,7 +247,7 @@ const server = http.createServer((req, res) => {
         const a = art.getBoundingClientRect(), b = bar.getBoundingClientRect(), c = card.getBoundingClientRect(), stats = card.querySelector('dl').getBoundingClientRect();
         const icon = bar.querySelector('img');
         return getComputedStyle(card.querySelector('.tank-select-web__card-index')).display === 'none' && a.width >= 88 &&
-          Math.abs((a.left+a.right)-(c.left+c.right))<2 && a.bottom<=stats.top && stats.bottom<=b.top &&
+          Math.abs((a.left+a.right)-(c.left+c.right))<2 && a.bottom<=stats.top && stats.bottom<=b.top && b.top-stats.bottom<=11 &&
           b.height>=48 && c.bottom-b.bottom<=14 && (!icon || icon.getBoundingClientRect().width>=32) && card.scrollWidth<=card.clientWidth+1;
       })), 'Android enlarged art / bottom fuel bar at ' + width);
       if(device === 'android' && width === 390) await page.screenshot({path:path.join(__dirname,'android-tank-select-two-columns.png')});
