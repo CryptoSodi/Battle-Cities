@@ -93,6 +93,8 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web .psg1-setting-icon { color:var(--mobile-steel);width:44px;height:44px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web .psg1-setting-icon svg { width:100%;height:100%; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web [data-ui-nav] h1 img { width:24px;height:24px;object-fit:contain;margin-right:6px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] [data-ui-nav] .ui-page-heading { gap:6px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] [data-ui-nav] .ui-page-heading-icon { width:24px;height:24px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web__rows button { min-height:48px;font-size:18px;padding:8px; }
 
 /* Quaters, Socials and all seven operations pages. */

@@ -58,6 +58,14 @@ const groups={
        const failures=[];
        const page=document.querySelector('main'),bounds=page.getBoundingClientRect(),style=getComputedStyle(page);
        if(Math.abs(bounds.top)>1||Math.abs(bounds.bottom-innerHeight)>1||parseFloat(style.paddingTop)!==0||parseFloat(style.paddingBottom)!==0)failures.push('Native screen has outer top/bottom gaps');
+       if(page.matches('.headquarters-web,.socials-web,.ranking-web')){
+        const icons=[...page.querySelectorAll('[data-ui-nav] .ui-page-heading-icon')];
+        if(icons.length!==(page.matches('.ranking-web')?2:1))failures.push('Missing page title icon');
+        for(const icon of icons){
+         const heading=icon.parentElement,frame=icon.closest('[data-ui-tab]').getBoundingClientRect(),h=heading.getBoundingClientRect(),i=icon.getBoundingClientRect();
+         if(!icon.naturalWidth||i.width!==24||i.height!==24||h.left<frame.left||h.right>frame.right||heading.scrollWidth>heading.clientWidth+1)failures.push('Page title icon/label clips');
+        }
+       }
        for(const tier of document.querySelectorAll('.results-web__tier')){
         const icon=tier.querySelector('i').getBoundingClientRect();
         if(icon.width<50||icon.height<50)failures.push('Result tank icon too small');

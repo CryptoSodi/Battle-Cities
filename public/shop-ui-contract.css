@@ -92,6 +92,20 @@ body.web-ui-active [data-web-ui] [data-ui-page] [data-ui-nav] h1 {
   text-shadow: inherit;
 }
 
+body.web-ui-active [data-web-ui] [data-ui-page] [data-ui-nav] .ui-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-nav-icon-gap);
+}
+body.web-ui-active [data-web-ui] [data-ui-page] [data-ui-nav] .ui-page-heading-icon {
+  display: block;
+  width: clamp(24px, 3vw, 40px);
+  height: clamp(24px, 3vw, 40px);
+  flex: none;
+  object-fit: contain;
+}
+
 body.web-ui-active
   [data-web-ui]
   [data-ui-page]
