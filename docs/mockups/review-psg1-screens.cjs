@@ -66,6 +66,11 @@ const server=http.createServer((req,res)=>{
     if(width===1280&&height>=800&&rail.bottom>rail.sideBottom+1)errors.push(screen+' inventory panel clipped');
    }
    if(screen==='bact'||screen==='sol') {
+    const prices=await page.locator('.shop-web__card > button').evaluateAll(buttons=>buttons.every(button=>{
+     const b=button.getBoundingClientRect(),label=button.querySelector('span').getBoundingClientRect(),icon=button.querySelector('img').getBoundingClientRect(),style=getComputedStyle(button);
+     return label.right<b.right-3&&icon.left>b.left+3&&icon.bottom<b.bottom&&label.bottom<b.bottom&&icon.right<label.left&&Math.abs((icon.left+label.right)-(b.left+b.right))<2&&Math.abs(b.height-Math.min(72,Math.max(40,innerHeight*.07)))<1;
+    }));
+    if(!prices)errors.push(screen+' price text/icon overflow or button size changed');
     if(await page.locator('.shop-web__wallet-panel h2').innerText()!=='WALLET'||await page.locator('.shop-web__inventory-panel > h3').innerText()!=='INVENTORY')errors.push(screen+' sidebar headings');
     const layout=await page.evaluate(()=>{
      const cards=[...document.querySelectorAll('.shop-web__desktop-content .shop-web__card')].every(card=>{
