@@ -66,6 +66,17 @@ const server=http.createServer((req,res)=>{
     if(width===1280&&height>=800&&rail.bottom>rail.sideBottom+1)errors.push(screen+' inventory panel clipped');
    }
    if(screen==='bact'||screen==='sol') {
+    const scrolling=await page.evaluate(()=>{
+     const grid=document.querySelector('.shop-web__cards'),content=document.querySelector('.shop-web__desktop-content .shop-web__content'),fixed=[document.querySelector('.shop-web__filters'),document.querySelector('.shop-web__label'),document.querySelector('.shop-web__status')];
+     const before=fixed.map(e=>e.getBoundingClientRect().top),first=grid.firstElementChild.getBoundingClientRect().top;
+     grid.scrollTop=grid.scrollHeight;
+     const result=grid.scrollTop>0&&grid.firstElementChild.getBoundingClientRect().top<first&&fixed.every((e,i)=>Math.abs(e.getBoundingClientRect().top-before[i])<1)&&content.scrollTop===0;
+     grid.querySelector('button').scrollIntoView({block:'nearest'});
+     const focusSafe=content.scrollTop===0&&fixed.every((e,i)=>Math.abs(e.getBoundingClientRect().top-before[i])<1);
+     grid.scrollTop=0;
+     return result&&focusSafe;
+    });
+    if(!scrolling)errors.push(screen+' item-only scrolling / fixed filters regression');
     const prices=await page.locator('.shop-web__card > button').evaluateAll(buttons=>buttons.every(button=>{
      const b=button.getBoundingClientRect(),label=button.querySelector('span').getBoundingClientRect(),icon=button.querySelector('img').getBoundingClientRect(),style=getComputedStyle(button);
      return label.right<b.right-3&&icon.left>b.left+3&&icon.bottom<b.bottom&&label.bottom<b.bottom&&icon.right<label.left&&Math.abs((icon.left+label.right)-(b.left+b.right))<2&&Math.abs(b.height-Math.min(72,Math.max(40,innerHeight*.07)))<1;

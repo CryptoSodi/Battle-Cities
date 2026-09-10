@@ -462,6 +462,30 @@ html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__cards {
   gap: var(--psg-gap);
   padding: 0;
 }
+/* Catalog controls stay fixed; only the item grid owns the scroll position. */
+html[data-ui-device='psg1']
+  .shop-web:is([data-shop-view='bact'], [data-shop-view='sol'])
+  .shop-web__desktop-content
+  .shop-web__content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+html[data-ui-device='psg1']
+  .shop-web__desktop-content
+  :is(.shop-web__filters, .shop-web__label) {
+  flex: none;
+}
+html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__cards {
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bc-command) #07141c;
+  overscroll-behavior: contain;
+}
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__card {
   container-type: inline-size;
   display: grid;
