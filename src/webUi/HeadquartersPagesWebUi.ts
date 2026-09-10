@@ -24,6 +24,7 @@ import {
 import { WIKI_CATEGORIES, WIKI_ENTRIES, WikiCategory } from '../wiki';
 import { HEADQUARTERS_ICON_NAMES, moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
+import { decoratePsg1Console } from './psg1Console';
 
 interface LedgerEntry {
   currency: string;
@@ -249,6 +250,7 @@ export class HeadquartersPagesWebUi {
     this.host.innerHTML = `<main class="hq-page-web" data-ui-page>${this.renderTabs()}<section class="hq-page-web__shell"><div class="hq-page-web__content">${content}</div><p class="hq-page-web__status" role="status" aria-live="polite">${this.escape(
       this.status,
     )}</p></section></main>`;
+    decoratePsg1Console(this.host);
     this.bind();
   }
 
