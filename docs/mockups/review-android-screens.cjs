@@ -22,6 +22,8 @@ const groups={
    const server=fixtureServer(group);await new Promise(r=>server.listen(0,'127.0.0.1',r));
    try{
     const page=await browser.newPage({hasTouch:true,reducedMotion:'reduce'});
+    const cdp=await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:28,bottom:24,left:0,right:0}});
     page.on('pageerror',e=>errors.push(group+': '+e.message));
     await page.route('**/*',async route=>{
      if(route.request().resourceType()!=='document')return route.continue();
@@ -36,6 +38,7 @@ const groups={
      for(const screen of screens){
       await page.evaluate(({group,screen})=>{
        document.documentElement.dataset.uiPlatform='android';
+       document.documentElement.dataset.uiNative='true';
        if(group==='screens')window.mountScreen(screen==='settings'?'settings':'shop');
        else if(group==='operations')window.mountScreen(screen);
        else if(group==='quarters')window.mountPage(screen);
@@ -53,6 +56,8 @@ const groups={
       if(metrics.doc[0]>width||metrics.doc[1]>height||metrics.root[2]>width+1||metrics.root[3]>height+1||metrics.bad.length)errors.push(group+'/'+screen+' '+width+': '+JSON.stringify(metrics));
       const contentErrors=await page.evaluate(()=>{
        const failures=[];
+       const page=document.querySelector('main'),bounds=page.getBoundingClientRect(),style=getComputedStyle(page);
+       if(Math.abs(bounds.top)>1||Math.abs(bounds.bottom-innerHeight)>1||parseFloat(style.paddingTop)!==0||parseFloat(style.paddingBottom)!==0)failures.push('Native screen has outer top/bottom gaps');
        for(const tier of document.querySelectorAll('.results-web__tier')){
         const icon=tier.querySelector('i').getBoundingClientRect();
         if(icon.width<50||icon.height<50)failures.push('Result tank icon too small');
@@ -103,9 +108,20 @@ const groups={
     document.documentElement.dataset.uiDevice='standard';document.documentElement.dataset.uiPlatform='android';await document.fonts.ready;
     const snapshot=()=>[...document.querySelectorAll('.main-menu-web,.main-menu-web *')].map(e=>{const s=getComputedStyle(e);return [s.display,s.width,s.height,s.fontSize,s.padding,s.color,s.background,s.border].join('|')}).join('\n');
     const before=snapshot(),link=document.createElement('link');link.rel='stylesheet';link.href='/android-screens.css';document.head.append(link);await new Promise(r=>link.onload=r);return before===snapshot();
-   });if(!unchanged)errors.push('ANDROID MAIN PAGE CHANGED');await page.close();
+   });if(!unchanged)errors.push('ANDROID MAIN PAGE CHANGED');
+   const cdp=await page.context().newCDPSession(page);
+   await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{top:28,bottom:24,left:0,right:0}});
+   for(const native of [true,false])for(const [width,height] of [[390,844],[630,1000],[844,390]]){
+    await page.setViewportSize({width,height});
+    for(const tab of ['rewards','leaderboard']){
+     await page.evaluate(({native,tab})=>{document.documentElement.dataset.uiNative=String(native);window.dispatchEvent(new Event('battlecities:ui-device'));document.querySelector('[data-reward-tab-button="'+tab+'"]').click();window.menuUi.fitAndroidHome()},{native,tab});
+     const edge=await page.evaluate(()=>{const menu=document.querySelector('.main-menu-web'),bar=document.querySelector('.main-menu-web__hazard'),hud=document.querySelector('.main-menu-web__hud'),native=document.documentElement.dataset.uiNative==='true';return {bottom:bar.getBoundingClientRect().bottom,top:hud.getBoundingClientRect().top,padding:parseFloat(getComputedStyle(menu).paddingBottom),native}});
+     if(Math.abs(edge.bottom-height)>1||edge.padding!==0||Math.abs(edge.top-(native?0:28))>1)errors.push('Home viewport edges '+width+' '+tab+' '+JSON.stringify(edge));
+    }
+   }
+   await page.close();
   }finally{server.close()}
   if(errors.length)throw Error(errors.join('\n'));
-  console.log('PASS: all Android subpages fit portrait/tablet/landscape; main page unchanged.');
+  console.log('PASS: all Android subpages fit portrait/tablet/landscape without duplicate native insets; home hazard stays flush with the viewport bottom.');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

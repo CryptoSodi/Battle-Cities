@@ -42,10 +42,13 @@ export function initializeDeviceUi(): void {
     const platformChanged =
       document.documentElement.dataset.uiPlatform !== platform;
     const responsiveChanged = document.documentElement.dataset.uiResponsive !== String(responsive);
-    if (!deviceChanged && !platformChanged && !responsiveChanged) return;
+    const native = profile != null;
+    const nativeChanged = document.documentElement.dataset.uiNative !== String(native);
+    if (!deviceChanged && !platformChanged && !responsiveChanged && !nativeChanged) return;
     document.documentElement.dataset.uiDevice = next;
     document.documentElement.dataset.uiPlatform = platform;
     document.documentElement.dataset.uiResponsive = String(responsive);
+    document.documentElement.dataset.uiNative = String(native);
     window.dispatchEvent(new Event('battlecities:ui-device'));
   };
   window.addEventListener(

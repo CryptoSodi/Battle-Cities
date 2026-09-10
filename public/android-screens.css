@@ -11,7 +11,8 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
   width: 100%;
   max-width: none;
   height: 100dvh;
-  padding: max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  margin-block: 0;
+  padding: var(--android-ui-safe-top, 0px) max(6px,env(safe-area-inset-right)) var(--android-ui-safe-bottom, 0px) max(6px,env(safe-area-inset-left));
   overflow: hidden;
   background: var(--bc-bg);
   color: var(--bc-text);

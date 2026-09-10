@@ -25,6 +25,7 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
     const expected=pinned||(width<900?'android':width<1280?'medium':'web');
     await page.waitForFunction(expected=>{const d=document.documentElement.dataset;return expected==='medium'?d.uiDevice==='psg1'&&d.uiResponsive==='true':expected==='psg1'?d.uiDevice==='psg1'&&d.uiResponsive==='false':d.uiDevice==='standard'&&d.uiPlatform===expected},expected);
     if(await page.evaluate(()=>window.controls())!==(expected==='psg1'))errors.push('Physical control behavior leaked '+query+' '+width);
+    if(await page.evaluate(()=>document.documentElement.dataset.uiNative)!==String(query.includes('native=')))errors.push('Native inset ownership incorrect '+query+' '+width);
    }
   }
   await page.setViewportSize({width:1440,height:800});await page.goto(url);

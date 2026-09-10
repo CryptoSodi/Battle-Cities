@@ -2151,6 +2151,35 @@ html[data-ui-platform='android'] .main-menu-web__stat--highscore .main-menu-web_
   font-size: clamp(13px, 4cqw, 32px);
   letter-spacing: 0.04em;
 }
+/* The native Android WebView already sits inside the system-bar insets.
+   Apply browser safe areas once, never as another outer native letterbox. */
+html[data-ui-platform='android']:not([data-ui-device='psg1']) {
+  --android-ui-safe-top: env(safe-area-inset-top, 0px);
+  --android-ui-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html[data-ui-platform='android'][data-ui-native='true']:not([data-ui-device='psg1']) {
+  --android-ui-safe-top: 0px;
+  --android-ui-safe-bottom: 0px;
+}
+html[data-ui-platform='android']:not([data-ui-device='psg1']) .main-menu-web {
+  padding-top: var(--android-ui-safe-top);
+  padding-bottom: 0;
+}
+html[data-ui-platform='android']:not([data-ui-device='psg1']) .main-menu-web__action[data-menu-action='settings'] {
+  top: calc(var(--android-ui-safe-top) + 1.7cqw);
+}
+html[data-ui-platform='android']:not([data-ui-device='psg1']) .main-menu-web .main-menu-web__hazard {
+  height: calc(40px + var(--android-ui-safe-bottom));
+  min-height: calc(40px + var(--android-ui-safe-bottom));
+  padding-bottom: calc(4px + var(--android-ui-safe-bottom));
+  margin-bottom: 0;
+}
+html[data-ui-platform='android']:not([data-ui-device='psg1']) .main-menu-web__bottom-tank-scroller {
+  bottom: calc(44px + var(--android-ui-safe-bottom));
+}
+html[data-ui-platform='android']:not([data-ui-device='psg1']) .main-menu-web-active:not([data-home-chat-raised='true']) .game-cherry {
+  bottom: var(--android-ui-safe-bottom);
+}
 @media (prefers-reduced-motion: reduce) {
   .main-menu-web *,
   .web-ui-screen--entering,
