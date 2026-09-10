@@ -685,8 +685,8 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
     if (this.isBattleSetup()) {
       this.addViewTab(originX + 12, tabY, 'LOADOUT', ShopView.Loadout);
     } else {
-      this.addMarketTab(originX + 12, tabY, 'TOKEN SHOP', ShopMarket.Token);
-      this.addMarketTab(originX + 230, tabY, 'SOL SHOP', ShopMarket.Sol);
+      this.addMarketTab(originX + 12, tabY, 'BATC', ShopMarket.Token);
+      this.addMarketTab(originX + 230, tabY, 'SOLANA', ShopMarket.Sol);
       this.addViewTab(originX + 448, tabY, 'LOADOUT', ShopView.Loadout);
     }
 
@@ -764,7 +764,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
         MOBILE_TOP_Y,
         190,
         MOBILE_TAB_HEIGHT,
-        'TOKEN SHOP',
+        'BATC',
         { key: `market:${ShopMarket.Token}`, kind: 'market', market: ShopMarket.Token },
         this.view === ShopView.Shop && this.market === ShopMarket.Token,
         'shop.tab.token',
@@ -774,7 +774,7 @@ export class MainShopScene extends GameScene<ShopLocationParams> {
         MOBILE_TOP_Y,
         170,
         MOBILE_TAB_HEIGHT,
-        'SOL SHOP',
+        'SOLANA',
         { key: `market:${ShopMarket.Sol}`, kind: 'market', market: ShopMarket.Sol },
         this.view === ShopView.Shop && this.market === ShopMarket.Sol,
         'shop.tab.solana',

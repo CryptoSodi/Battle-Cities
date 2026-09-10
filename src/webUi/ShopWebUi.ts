@@ -162,8 +162,8 @@ export class ShopWebUi {
     return `<main class="shop-container shop-web" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
-        'TOKEN SHOP',
-      )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
+        'BATC',
+      )}${this.tabButton('sol', 'SOLANA')}${this.tabButton(
       'swap',
       'SWAP',
     )}${this.tabButton(
@@ -212,8 +212,8 @@ export class ShopWebUi {
     return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
-        'TOKEN SHOP',
-      )}${this.tabButton('sol', 'SOL SHOP')}${this.tabButton(
+        'BATC',
+      )}${this.tabButton('sol', 'SOLANA')}${this.tabButton(
       'swap',
       'SWAP',
     )}${this.tabButton(
