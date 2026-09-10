@@ -1153,6 +1153,41 @@ html[data-ui-device='psg1']
   background: var(--ui-active-plate);
   border-color: var(--bc-command);
 }
+/* Quaters follows the catalog hierarchy: name, artwork, details, action. */
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .headquarters-web.psg1-console[data-ui-page]
+  .operations-web__card {
+  grid-template-rows: auto minmax(60px, 1fr) minmax(32px, auto) var(
+      --psg-control
+    );
+}
+html[data-ui-device='psg1']
+  .headquarters-web.psg1-console[data-ui-page]
+  .operations-web__card
+  h3 {
+  grid-row: 1;
+}
+html[data-ui-device='psg1']
+  .headquarters-web.psg1-console[data-ui-page]
+  .operations-web__card
+  .operations-web__mark {
+  grid-row: 2;
+  justify-self: center;
+}
+html[data-ui-device='psg1']
+  .headquarters-web.psg1-console[data-ui-page]
+  .operations-web__card
+  p {
+  grid-row: 3;
+}
+html[data-ui-device='psg1']
+  .headquarters-web.psg1-console[data-ui-page]
+  .operations-web__card
+  strong {
+  grid-row: 4;
+}
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]

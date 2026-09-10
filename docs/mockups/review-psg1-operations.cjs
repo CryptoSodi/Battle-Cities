@@ -110,6 +110,30 @@ const server = http.createServer((req, res) => {
       await page.goto('http://127.0.0.1:' + server.address().port);
       for (const screen of screens) {
         await mount(screen);
+        if (screen === 'HeadquartersWebUi') {
+          const ordered = await page
+            .locator('.operations-web__card')
+            .evaluateAll((cards) =>
+              cards.every((card) => {
+                const rect = (selector) =>
+                  card.querySelector(selector).getBoundingClientRect();
+                const name = rect('h3'),
+                  icon = rect('.operations-web__mark'),
+                  detail = rect('p'),
+                  action = rect('strong'),
+                  box = card.getBoundingClientRect();
+                return (
+                  name.bottom <= icon.top + 1 &&
+                  icon.bottom <= detail.top + 1 &&
+                  detail.bottom <= action.top + 1 &&
+                  action.bottom < box.bottom &&
+                  Math.abs(icon.left + icon.right - box.left - box.right) < 2
+                );
+              }),
+            );
+          if (!ordered)
+            errors.push('Quaters name/icon/details ordering at ' + width);
+        }
         const bounds = await page.evaluate(() => ({
           scroll: [
             document.documentElement.scrollWidth,
