@@ -6,6 +6,7 @@ const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 const modules = [
+  'src/webUi/focusScroll.ts',
   'src/wiki/WikiData.ts',
   'src/webUi/psg1Console.ts',
   'src/webUi/HeadquartersWebUi.ts',

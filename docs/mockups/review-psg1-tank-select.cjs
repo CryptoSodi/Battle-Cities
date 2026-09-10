@@ -5,7 +5,7 @@ const http = require('http');
 const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
-const code = ['src/webUi/psg1Console.ts', 'src/webUi/TankSelectWebUi.ts'].map(
+const code = ['src/webUi/focusScroll.ts', 'src/webUi/psg1Console.ts', 'src/webUi/TankSelectWebUi.ts'].map(
   (file) =>
     ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), {
       compilerOptions: {

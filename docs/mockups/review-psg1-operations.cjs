@@ -6,6 +6,7 @@ const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 const files = [
+  'focusScroll',
   'psg1Console',
   'HeadquartersWebUi',
   'SocialsWebUi',
@@ -129,6 +130,20 @@ const server = http.createServer((req, res) => {
             });
           if (!closed) errors.push('Season trigger content clipped ' + width);
           await page.locator('[data-rank-season-toggle]').click();
+          // Focus beyond the visible options, then restore that active option
+          // after closing/reopening. Both paths previously used preventScroll.
+          await page.evaluate(() => {
+            window.screenUi.data.seasons = Array.from({length: 18}, (_, i) => ({id: 'long-' + i, name: 'Season ' + i}));
+            window.screenUi.seasonId = 'long-17';
+            window.screenUi.pendingFocusSelector = '[data-rank-season-option].is-active';
+            window.screenUi.render();
+          });
+          const revealed = await page.locator('[data-rank-season-option].is-active').evaluate(e => {
+            const box=e.parentElement.getBoundingClientRect(),r=e.getBoundingClientRect();
+            return e.parentElement.scrollTop>0 && r.top>=box.top && r.bottom<=box.bottom;
+          });
+          if (!revealed) errors.push('Offscreen season focus not revealed ' + width);
+          await page.evaluate(() => {window.screenUi.seasonId=null;window.screenUi.data.seasons=[{id:'s6',name:'Season 6'},{id:'s5',name:'Season 5'}];window.screenUi.pendingFocusSelector='[data-rank-season-option].is-active';window.screenUi.render()});
           const open = await page
             .locator('.ranking-web__season-options')
             .evaluate((e) => {

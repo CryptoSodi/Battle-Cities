@@ -11,6 +11,7 @@ import {
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
 import { isPsg1Ui } from './deviceUi';
+import { bindPsg1FocusScroll } from './focusScroll';
 
 export class SettingsWebUi {
   private readonly notificationClient = new NativeNotificationClient();
@@ -42,6 +43,7 @@ export class SettingsWebUi {
       throw new Error('Settings web UI host is missing.');
     this.active = true;
     this.host = host;
+    bindPsg1FocusScroll(host);
     this.abortController = new AbortController();
     document.body.classList.add('web-ui-active', 'settings-web-active');
     host.hidden = false;

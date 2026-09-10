@@ -14,6 +14,7 @@ import {
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 import { isPsg1Ui } from './deviceUi';
+import { bindPsg1FocusScroll } from './focusScroll';
 
 interface ShopWebUiOptions {
   getBattleFuelCost: () => number;
@@ -70,6 +71,7 @@ export class ShopWebUi {
     if (this.options.isBattleSetup()) this.tab = 'loadout';
     this.abortController = new AbortController();
     this.host = host;
+    bindPsg1FocusScroll(host);
     document.body.classList.add('web-ui-active', 'shop-web-active');
     host.hidden = false;
     window.addEventListener('battlecities:ui-device', () => this.refresh(), {

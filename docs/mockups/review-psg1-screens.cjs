@@ -7,6 +7,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '../..');
 const compile = file => ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const code = ['src/shop/ShopTypes.ts','src/webUi/SettingsWebUi.ts','src/webUi/ShopWebUi.ts'].map(compile);
+const focusScrollCode = compile('src/webUi/focusScroll.ts');
 const styles = ['main.css','main-menu-web.css','shop-web.css','operations-web.css','standard-pages-web.css','shop-ui-contract.css','psg1-ui.css','psg1-screens.css'];
 const fixture = `
 const process={env:{BATTLECITY_VERSION:'PREVIEW'}};
@@ -17,6 +18,7 @@ MenuInputContext:{HorizontalPrev:'left',HorizontalNext:'right',VerticalPrev:'up'
 moveFocus:(buttons,current,x,y)=>buttons[(buttons.indexOf(current)+(x||y)+buttons.length)%buttons.length].focus()};
 ${code[0]}
 Object.assign(deps,exports); exports={};
+(()=>{const exports={};${focusScrollCode};Object.assign(deps,exports)})();
 class FakeShop {
  canStartRun(){return !window.noFuel}
  constructor(){this.equipped={}} isWalletConnected(){return true} isVirtualEconomyAccount(){return false}
@@ -143,6 +145,16 @@ const server=http.createServer((req,res)=>{
  await page.locator('[data-shop-tab="loadout"]').click();
  await page.locator('[data-shop-slot]').first().click();if(!await page.locator('.shop-web__slot-item').first().innerText().then(t=>t.includes('SHIELD')))errors.push('Equip did not update');
  await page.locator('[data-shop-tab="bact"]').click();await page.locator('[data-shop-filter="fuel"]').click();if(await page.locator('[data-shop-buy]').count()!==3)errors.push('Fuel filter failed');
+ await page.locator('[data-shop-filter="all"]').click();
+ await page.locator('[data-shop-buy]').last().focus();
+ const visibleBuy=()=>page.locator('[data-shop-buy]').last().evaluate(e=>{
+  const r=e.getBoundingClientRect(),box=e.closest('.shop-web__cards').getBoundingClientRect();
+  return r.top>=box.top&&r.bottom<=box.bottom;
+ });
+ if(!await visibleBuy())errors.push('Focused catalog item hidden');
+ await page.locator('[data-shop-buy]').last().click();
+ if(!await visibleBuy())errors.push('Catalog focus hidden after purchase rerender');
+ await page.locator('[data-shop-filter="fuel"]').click();
  await page.locator('[data-shop-buy]').first().click();if(!(await page.locator('.shop-web__status').innerText()).includes('TEST PURCHASE DECLINED'))errors.push('Purchase status failed');
  await page.locator('[data-shop-tab="swap"]').click();await page.locator('[data-shop-swap-amount]').fill('0.5');if(!(await page.locator('[data-shop-swap-receive]').innerText()).includes('500'))errors.push('Swap preview failed');
  await page.evaluate(()=>{window.nativeNotifications=true;window.mountScreen('settings')});
