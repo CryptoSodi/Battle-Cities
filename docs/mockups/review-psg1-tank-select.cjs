@@ -23,6 +23,7 @@ const styles = [
   'psg1-ui.css',
   'psg1-screens.css',
   'psg1-tank-select.css',
+  'android-screens.css',
 ];
 const fixture = `
 window.fuel=12;window.calls=[];let pressed='';
@@ -124,6 +125,7 @@ const server = http.createServer((req, res) => {
           );
         const style = getComputedStyle(cards[0]);
         return {
+          columns,
           stable,
           fits: fits && separateRows,
           card: {
@@ -142,7 +144,7 @@ const server = http.createServer((req, res) => {
         };
       });
       assert(
-        layout.stable && layout.fits && !layout.overflow && layout.frames,
+        layout.columns === (width <= 1000 ? 2 : 4) && layout.stable && layout.fits && !layout.overflow && layout.frames,
         'Layout ' + width + ' ' + JSON.stringify(layout),
       );
       assert(
@@ -219,13 +221,28 @@ const server = http.createServer((req, res) => {
     }
     for (const [device, width] of [
       ['desktop', 1280],
+      ['android', 320],
+      ['android', 375],
       ['android', 390],
+      ['android', 640],
+      ['android', 899],
     ]) {
       await page.setViewportSize({ width, height: 800 });
       await page.evaluate((device) => {
         document.documentElement.dataset.uiDevice = device;
+        document.documentElement.dataset.uiPlatform = device === 'android' ? 'android' : 'web';
         window.mount();
       }, device);
+      assert(await page.evaluate(() => {
+        const grid = document.querySelector('.tank-select-web__grid');
+        return getComputedStyle(grid).gridTemplateColumns.split(' ').length === (document.documentElement.dataset.uiPlatform === 'android' ? 2 : 4) &&
+          [...grid.querySelectorAll('dl div')].every(row => {
+            const label = row.querySelector('dt'), value = row.querySelector('dd');
+            const l = label.getBoundingClientRect(), v = value.getBoundingClientRect(), r = row.getBoundingClientRect();
+            return Math.abs(l.top-v.top)<2 && l.right+3<=v.left && l.left>=r.left-1 && v.right<=r.right+1;
+          }) && document.documentElement.scrollWidth <= innerWidth;
+      }), device + ' two columns / aligned stat rows at ' + width);
+      if(device === 'android' && width === 390) await page.screenshot({path:path.join(__dirname,'android-tank-select-two-columns.png')});
       assert(
         await page.evaluate(() => {
           const sheet = [...document.styleSheets].find((s) =>

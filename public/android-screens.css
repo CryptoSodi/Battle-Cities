@@ -116,10 +116,10 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .ranking-web__empty { font-size:18px;padding:20px; }
 
 /* Tank roster, result report and player record retain their mobile composition. */
-html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__grid { grid-auto-rows:max-content;align-content:start; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__grid { grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card { display:flex;flex-direction:column;gap:5px;min-height:300px;height:auto;padding:10px 7px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dl { width:100%;margin:4px 0; }
-html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dl div { display:flex;flex-direction:column;align-items:center;gap:2px;min-height:35px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dl div { display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;gap:6px;min-height:24px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dl :is(dt,dd) { margin:0;max-width:100%;overflow-wrap:anywhere; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .results-web__players { grid-auto-rows:max-content; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .results-web__player { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto 70px auto;gap:6px;min-height:190px; }
@@ -132,6 +132,9 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card h2 { font-size:clamp(16px,4vw,24px); }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card :is(p,dt) { font-size:12px;line-height:1.2; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card :is(dd,strong) { font-size:16px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dl :is(dt,dd) { font-size:clamp(12px,2.4vw,18px);line-height:1.2;white-space:nowrap;overflow-wrap:normal; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dt { color:var(--bc-text);text-align:left; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card dd { color:var(--bc-command);text-align:right; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .results-web__player { padding:12px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .results-web__player :is(strong,b) { font-size:22px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .results-web__player :is(span,small) { font-size:12px; }
