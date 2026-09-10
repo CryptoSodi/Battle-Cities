@@ -4,6 +4,7 @@ import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
+import { isPsg1Ui } from './deviceUi';
 
 export class RankingWebUi {
   private readonly client = new RankingClient();
@@ -158,15 +159,17 @@ export class RankingWebUi {
   ): string {
     const selected =
       seasons.find((season) => season.id === this.seasonId) || seasons[0];
+    const label = isPsg1Ui()
+      ? `<span class="ranking-web__season-label"><small>SEASON</small><strong>${selected.label}</strong></span>`
+      : `<span>SEASON: ${selected.label}</span>`;
+    const indicator = isPsg1Ui() ? '' : '⌄';
     return `<div class="ranking-web__season-picker ${
       this.seasonMenuOpen ? 'is-open' : ''
     }"><button class="ranking-web__season" data-rank-key="season-toggle" data-rank-season-toggle aria-expanded="${
       this.seasonMenuOpen
-    }" type="button"><span>SEASON: ${
-      selected.label
-    }</span><i aria-hidden="true">⌄</i></button>${
+    }" aria-haspopup="listbox" aria-controls="ranking-season-options" type="button">${label}<i aria-hidden="true">${indicator}</i></button>${
       this.seasonMenuOpen
-        ? `<div class="ranking-web__season-options" role="listbox">${seasons
+        ? `<div id="ranking-season-options" class="ranking-web__season-options" role="listbox" aria-label="Season">${seasons
             .map(
               (season) =>
                 `<button data-rank-key="season-${season.id ??

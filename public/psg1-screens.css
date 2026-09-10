@@ -1268,38 +1268,149 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
   .ranking-web__season-picker {
-  width: min(50%, 440px);
+  width: min(100%, 480px);
   margin: 0;
   z-index: 4;
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__season {
-  height: var(--psg-control);
-  padding: 0 18px;
-  border: 2px solid var(--psg-edge);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  height: max(92px, var(--psg-control));
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
+  border: 3px solid var(--psg-steel);
   background: var(--psg-surface);
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--psg-edge);
   font-size: var(--ui-nav-font);
   outline: none;
 }
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
+  .ranking-web__season-label {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 22px;
+  text-align: left;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-label
+  small {
+  font-size: clamp(14px, 1.4vw, 18px);
+  color: #00c9e5;
+  letter-spacing: 0.1em;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-label
+  strong {
+  color: var(--bc-text);
+  font-size: clamp(22px, 2.6vw, 34px);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__season i {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  align-self: stretch;
+  border-left: 2px solid var(--psg-edge);
+  background: #0a2733;
+  font-size: 0;
+  transform: none;
+  transition: none;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season
+  i::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-right: 3px solid var(--bc-command);
+  border-bottom: 3px solid var(--bc-command);
+  transform: translateY(-3px) rotate(45deg);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .is-open
+  .ranking-web__season
+  i::after {
+  transform: translateY(3px) rotate(225deg);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
   .ranking-web__season-options {
-  background: #08141b;
-  border: 2px solid var(--psg-steel);
-  max-height: min(240px, 45dvh);
+  background: var(--psg-surface);
+  border: 3px solid var(--psg-steel);
+  box-shadow: inset 0 0 0 2px #010609, 0 8px 20px #000b;
+  padding: 6px;
+  gap: 4px;
+  max-height: min(260px, 30dvh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bc-command) #08141b;
 }
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
   .ranking-web__season-options
   button {
-  min-height: 44px;
+  position: relative;
+  min-height: 52px;
+  padding: 10px 42px 10px 16px;
+  border: 2px solid transparent;
+  background: #06131b;
+  color: var(--bc-text);
   font-size: var(--ui-nav-font);
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
   outline: none;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options
+  button.is-active {
+  background: var(--ui-active-plate);
+  color: var(--ui-nav-ink);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options
+  button.is-active::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: calc(50% - 8px);
+  width: 7px;
+  height: 13px;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: rotate(45deg);
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options
+  button:is(.is-selected, :hover) {
+  border-color: var(--bc-command);
+  box-shadow: inset 0 0 0 1px #171006;
+}
+html[data-ui-device='psg1']
+  .psg1-console[data-ui-page]
+  .ranking-web__season-options
+  button.is-selected:not(.is-active) {
+  background: #173440;
+  color: var(--bc-text);
 }
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
   .ranking-web__season.is-selected {
   border-color: var(--bc-command);
-  color: var(--bc-command);
+  box-shadow: inset 0 0 0 2px #171006, inset 0 0 0 4px var(--bc-command);
 }
 html[data-ui-device='psg1']
   body.web-ui-active

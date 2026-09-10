@@ -110,6 +110,46 @@ const server = http.createServer((req, res) => {
       await page.goto('http://127.0.0.1:' + server.address().port);
       for (const screen of screens) {
         await mount(screen);
+        if (screen === 'RankingWebUi') {
+          const closed = await page
+            .locator('[data-rank-season-toggle]')
+            .evaluate((e) => {
+              const box = e.getBoundingClientRect();
+              return [...e.querySelectorAll('small, strong, i')].every(
+                (child) => {
+                  const r = child.getBoundingClientRect();
+                  return (
+                    r.top >= box.top &&
+                    r.bottom <= box.bottom &&
+                    r.left >= box.left &&
+                    r.right <= box.right
+                  );
+                },
+              );
+            });
+          if (!closed) errors.push('Season trigger content clipped ' + width);
+          await page.locator('[data-rank-season-toggle]').click();
+          const open = await page
+            .locator('.ranking-web__season-options')
+            .evaluate((e) => {
+              const r = e.getBoundingClientRect();
+              const option = e.querySelector('.is-active');
+              return (
+                r.left >= 0 &&
+                r.right <= innerWidth &&
+                r.bottom <= innerHeight &&
+                option &&
+                getComputedStyle(option).color === 'rgb(23, 16, 6)'
+              );
+            });
+          if (!open)
+            errors.push('Season menu clipped or active ink incorrect ' + width);
+          if (width === 1280 && height === 800)
+            await page.screenshot({
+              path: path.join(__dirname, 'psg1-ranking-dropdown.png'),
+            });
+          await page.evaluate(() => window.press('back'));
+        }
         if (screen === 'HeadquartersWebUi') {
           const ordered = await page
             .locator('.operations-web__card')
