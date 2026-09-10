@@ -56,6 +56,18 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(async()=>{await Promise.all(Array.from(document.images).map(i=>i.decode().catch(()=>{})))});
    const bounds=await page.evaluate(()=>({scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],page:document.querySelector('main').getBoundingClientRect().toJSON(),nav:document.querySelector('[data-ui-nav]').getBoundingClientRect().toJSON()}));
    if(bounds.scroll[0]>width||bounds.scroll[1]>height)errors.push(screen+' page overflow '+width+'x'+height);
+   if(screen==='loadout') {
+    const slotLayout=()=>page.locator('[data-shop-slot]').evaluateAll(slots=>slots.map(slot=>{
+     const r=e=>e.getBoundingClientRect(),box=r(slot),index=r(slot.querySelector('.shop-web__slot-index')),art=r(slot.querySelector('.shop-web__slot-art')),label=r(slot.querySelector('.shop-web__slot-item b')),action=r(slot.querySelector('.shop-web__slot-action'));
+     return {bounds:box.toJSON(),fits:index.bottom<=art.top+1&&art.bottom<=label.top+1&&label.bottom<=action.top+1&&action.bottom<box.bottom&&action.top-label.bottom<=9&&Math.abs((art.left+art.right)-(box.left+box.right))<2&&art.width>=box.height*.38,background:getComputedStyle(slot).backgroundImage};
+    }));
+    const before=await slotLayout();
+    await page.locator('[data-shop-slot]').first().focus();
+    const after=await slotLayout();
+    if(before.some(s=>!s.fits)||after.some(s=>!s.fits)||JSON.stringify(before.map(s=>s.bounds))!==JSON.stringify(after.map(s=>s.bounds)))errors.push('Loadout socket geometry or label grouping '+width+'x'+height);
+    const selected=await page.locator('[data-shop-slot]').first().evaluate(e=>e.classList.contains('is-selected')&&getComputedStyle(e).borderTopColor==='rgb(255, 179, 15)');
+    if(!selected)errors.push('Loadout gold selection frame missing');
+   }
    if(['loadout','bact','sol'].includes(screen)) {
     const rail=await page.evaluate(()=>{
      const side=document.querySelector('.shop-web__desktop-side'),shell=document.querySelector('.shop-web__desktop-shell'),wallet=document.querySelector('.shop-web__wallet-panel'),inventory=document.querySelector('.shop-web__inventory-panel');

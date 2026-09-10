@@ -427,11 +427,15 @@ export class ShopWebUi {
     return `<section class="shop-web__loadout"><h2>EQUIPPED SLOTS</h2><p>SELECT A SLOT TO CYCLE OWNED ITEMS</p><div>${slots
       .map((slot, index) => {
         const item = this.shop.getEquipped(slot);
+        const itemImage = item
+          ? `<img src="${icons[item]}" alt="">`
+          : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt="">';
+        const itemLabel = item ? this.name(item) : 'EMPTY';
         return `<button class="shop-web__loadout-slot" data-shop-slot="${slot}" type="button"><span class="shop-web__slot-index">SLOT 0${index +
           1}</span><strong class="shop-web__slot-item">${
-          item
-            ? `<img src="${icons[item]}" alt="">${this.name(item)}`
-            : '<img class="shop-web__empty-slot" src="/data/graphics/shop/icons/empty-slot.png" alt=""><b>EMPTY</b>'
+          isPsg1Ui()
+            ? `<span class="shop-web__slot-art">${itemImage}</span><b>${itemLabel}</b>`
+            : `${itemImage}${item ? itemLabel : '<b>EMPTY</b>'}`
         }</strong><em class="shop-web__slot-action">CHANGE</em></button>`;
       })
       .join('')}</div>${battleAction}</section>`;

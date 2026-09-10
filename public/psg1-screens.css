@@ -603,7 +603,7 @@ html[data-ui-device='psg1']
   flex: 1;
   min-height: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(150px, 1fr));
+  grid-template-rows: repeat(2, minmax(220px, 1fr));
   gap: var(--psg-gap);
 }
 html[data-ui-device='psg1']
@@ -616,48 +616,81 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   body.web-ui-active
   [data-web-ui]
+  .shop-web__desktop-content
   .shop-web__loadout-slot {
   background: var(--psg-grid);
 }
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  .shop-web__desktop-content
+  .shop-web__loadout-slot.is-selected {
+  background: radial-gradient(ellipse at center, #ffb30f18, transparent 70%),
+    var(--psg-grid);
+  border-color: var(--bc-command);
+  box-shadow: inset 0 0 0 2px #171006, inset 0 0 0 5px var(--bc-command),
+    inset 0 0 24px #ffb30f24;
+}
 html[data-ui-device='psg1'] .shop-web__desktop-content .shop-web__loadout-slot {
+  container-type: size;
   height: auto;
   padding: 14px;
   background: var(--psg-grid);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: 4px;
 }
 html[data-ui-device='psg1'] .shop-web__slot-index {
   align-self: start;
-  font-size: clamp(14px, 1.7vw, 23px);
+  justify-self: start;
+  font-size: clamp(16px, 6cqw, 30px);
+  line-height: 1;
 }
 html[data-ui-device='psg1'] .shop-web__slot-item {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  align-self: stretch;
+  justify-content: end;
   align-items: center;
-  gap: 5px;
-  font-size: clamp(20px, 2.7vw, 36px);
+  gap: 4px;
+  font-size: clamp(24px, 9cqw, 46px);
+  line-height: 1.05;
+}
+html[data-ui-device='psg1'] .shop-web__slot-art {
+  display: grid;
+  place-items: center;
+  width: min(62cqw, 56cqh);
+  height: min(62cqw, 56cqh);
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 html[data-ui-device='psg1']
   .shop-web__desktop-content
   .shop-web__slot-item
   img {
-  width: clamp(70px, 13dvh, 145px);
-  height: clamp(70px, 13dvh, 145px);
-  max-width: 80%;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
   max-height: none;
   object-fit: contain;
+}
+/* Trim the empty socket asset's transparent padding without changing its file. */
+html[data-ui-device='psg1'] .shop-web__slot-art .shop-web__empty-slot {
+  transform: scale(1.32);
 }
 html[data-ui-device='psg1'] .shop-web__slot-item b {
   font-size: inherit;
   color: var(--bc-text);
+  flex: none;
 }
 html[data-ui-device='psg1'] .shop-web__slot-action {
-  font-size: clamp(17px, 2.1vw, 28px);
+  font-size: clamp(20px, 7.5cqw, 38px);
+  line-height: 1.05;
   color: var(--bc-command);
   font-style: normal;
 }
