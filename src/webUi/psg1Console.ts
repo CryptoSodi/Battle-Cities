@@ -8,7 +8,7 @@ export function decoratePsg1Console(host: HTMLElement): void {
   root.classList.add('psg1-console');
   root
     .querySelectorAll(
-      '.operations-web__card, .ranking-web__summary > div, .hq-page-web__heading, .hq-page-web__stat, .hq-page-web__item, .hq-page-web__card, .hq-page-web__manual-card, .hq-page-web__table, .hq-page-web__empty, .tank-select-web__fuel, .tank-select-web__card',
+      '.operations-web__card, .ranking-web__summary > div, .hq-page-web__heading, .hq-page-web__stat, .hq-page-web__item, .hq-page-web__card, .hq-page-web__manual-card, .hq-page-web__table, .hq-page-web__empty, .tank-select-web__fuel, .tank-select-web__card, .results-web__title, .results-web__headline-stats, .results-web__status-strip, .results-web__player, .results-web__footer, .results-web--loading > p',
     )
     .forEach((panel) => panel.classList.add('psg1-console-frame'));
   if (root.classList.contains('hq-page-web')) {

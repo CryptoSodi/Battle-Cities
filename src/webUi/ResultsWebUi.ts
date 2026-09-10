@@ -1,4 +1,5 @@
 import { InputManager, MenuInputContext } from '../input';
+import { decoratePsg1Console } from './psg1Console';
 
 export interface ResultsWebUiPlayer {
   bonus: number;
@@ -108,6 +109,7 @@ export class ResultsWebUi {
     if (!this.host) return;
     if (state === null) {
       this.host.innerHTML = `<main class="results-web results-web--loading"><p>PROCESSING BATTLE REPORT...</p></main>`;
+      decoratePsg1Console(this.host);
       return;
     }
 
@@ -147,6 +149,26 @@ export class ResultsWebUi {
     }</strong></div></footer><div class="results-web__actions"><p data-results-status aria-live="polite">${
       state.status
     }</p><button class="results-web__share" data-results-key="share" data-results-share type="button">SHARE RESULTS</button></div></section></main>`;
+    decoratePsg1Console(this.host);
+    if (this.host.querySelector('.psg1-console')) {
+      const players = this.host.querySelector<HTMLElement>(
+        '.results-web__players',
+      );
+      players.tabIndex = 0;
+      players.setAttribute(
+        'aria-label',
+        'Player results. Use up and down to scroll.',
+      );
+      players.addEventListener(
+        'focus',
+        () => {
+          this.buttons.forEach((button) =>
+            button.classList.remove('is-selected'),
+          );
+        },
+        { signal: this.abortController.signal },
+      );
+    }
     this.rendered = true;
     this.bind();
     (
@@ -245,6 +267,50 @@ export class ResultsWebUi {
   }
 
   private moveFocus(horizontal: -1 | 0 | 1, vertical: -1 | 0 | 1): void {
+    if (this.host.querySelector('.psg1-console')) {
+      const players = this.host.querySelector<HTMLElement>(
+        '.results-web__players',
+      );
+      const active = document.activeElement;
+      if (players && vertical) {
+        if (active === players) {
+          const atEdge =
+            vertical < 0
+              ? players.scrollTop <= 1
+              : players.scrollTop + players.clientHeight >=
+                players.scrollHeight - 1;
+          if (atEdge)
+            this.host
+              .querySelector<HTMLButtonElement>(
+                vertical < 0
+                  ? '[data-results-continue]'
+                  : '[data-results-share]',
+              )
+              ?.focus({ preventScroll: true });
+          else
+            players.scrollBy({
+              top: vertical * players.clientHeight * 0.8,
+              behavior: 'instant' as ScrollBehavior,
+            });
+          return;
+        }
+        if (
+          (vertical > 0 && active?.hasAttribute('data-results-continue')) ||
+          (vertical < 0 && active?.hasAttribute('data-results-share'))
+        ) {
+          players.focus({ preventScroll: true });
+          return;
+        }
+      }
+      if (players === active && horizontal) {
+        this.host
+          .querySelector<HTMLButtonElement>(
+            horizontal < 0 ? '[data-results-continue]' : '[data-results-share]',
+          )
+          ?.focus({ preventScroll: true });
+        return;
+      }
+    }
     const current = this.focused() || this.buttons[0];
     if (current === undefined) return;
     const currentRect = current.getBoundingClientRect();
