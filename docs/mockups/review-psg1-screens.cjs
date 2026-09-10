@@ -22,7 +22,7 @@ class FakeShop {
  getTokenBalance(){return 1500} getSolBalance(){return 1.25} getFuelBalance(){return 12} getInventoryCount(){return 2}
  getWalletAddress(){return '7P5T123456789XYUM'} getEquipped(slot){return this.equipped[slot]||null}
  equipNext(slot){return this.equipped[slot]=this.equipped[slot]?null:'shield'}
- getCatalog(){return [...[1,5,20].map((n,i)=>({id:['fuel-one','fuel-five','fuel-twenty'][i],name:'FUEL X'+n,price:[150,600,1800][i],solPrice:0.01,reward:{fuel:n}})),...Object.values(deps.ShopInventoryItemId).map((id,i)=>({id,name:id.replaceAll('-',' ').toUpperCase(),price:300+i*75,solPrice:0.02,reward:{inventory:{[id]:1}}}))]}
+ getCatalog(){return [...[1,5,20].map((n,i)=>({id:['fuel-one','fuel-five','fuel-twenty'][i],name:'FUEL X'+n,price:[150,600,1800][i],solPrice:0.01,reward:{fuel:n}})),...Object.values(deps.ShopInventoryItemId).map((id,i)=>({id,name:id.replaceAll('-',' ').toUpperCase(),price:300+i*75,solPrice:0.025,reward:{inventory:{[id]:1}}})),{id:deps.ShopItemId.StarterPack,name:'STARTER PACK',price:1200,solPrice:0.08,reward:{fuel:5,inventory:{shield:1,'base-defence':1}}}]}
  async purchaseItem(){return {ok:false,statusText:'TEST PURCHASE DECLINED'}}
  async getPresaleState(){return {configured:true,ended:false,currentPriceSol:'0.001',network:'devnet',stages:[],participants:0}}
 }
@@ -66,6 +66,11 @@ const server=http.createServer((req,res)=>{
     if(width===1280&&height>=800&&rail.bottom>rail.sideBottom+1)errors.push(screen+' inventory panel clipped');
    }
    if(screen==='bact'||screen==='sol') {
+    const cardText=await page.locator('.shop-web__card').evaluateAll(cards=>cards.every(card=>{
+     const name=card.querySelector('h2'),detail=card.querySelector('p'),fits=[name,detail].every(e=>e.scrollWidth<=e.clientWidth+1&&e.scrollHeight<=e.clientHeight+1);
+     return fits&&(innerWidth!==1280||(parseFloat(getComputedStyle(name).fontSize)>=38&&parseFloat(getComputedStyle(detail).fontSize)>=32));
+    }));
+    if(!cardText)errors.push(screen+' enlarged names/details clipped or undersized');
     const scrolling=await page.evaluate(()=>{
      const grid=document.querySelector('.shop-web__cards'),content=document.querySelector('.shop-web__desktop-content .shop-web__content'),fixed=[document.querySelector('.shop-web__filters'),document.querySelector('.shop-web__label'),document.querySelector('.shop-web__status')];
      const before=fixed.map(e=>e.getBoundingClientRect().top),first=grid.firstElementChild.getBoundingClientRect().top;
