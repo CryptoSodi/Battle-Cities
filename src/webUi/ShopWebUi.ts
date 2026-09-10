@@ -204,11 +204,9 @@ export class ShopWebUi {
       ? 'CHOOSE UP TO FOUR POWERS FOR YOUR LOADOUT'
       : 'USE 1-4 IN GAME TO CONSUME EQUIPPED POWERS';
     const currency = this.tab === 'sol' ? ShopCurrency.Sol : ShopCurrency.Token;
-    const controlsDialog = `<dialog class="shop-web__controls-dialog" data-shop-controls-dialog aria-labelledby="shop-controls-title"><h2 id="shop-controls-title">BATTLE CONTROLS</h2>${
-      isPsg1Ui()
-        ? '<dl><div><dt>MOVE</dt><dd>LEFT D-PAD / STICK</dd></div><div><dt>FIRE</dt><dd>A</dd></div><div><dt>RAPID FIRE / BACK</dt><dd>B</dd></div><div><dt>POWER 1</dt><dd>RIGHT STICK &rarr;</dd></div><div><dt>POWER 2</dt><dd>RIGHT STICK &uarr;</dd></div><div><dt>POWER 3</dt><dd>RIGHT STICK &darr;</dd></div><div><dt>POWER 4</dt><dd>RIGHT STICK &larr;</dd></div><div><dt>PAUSE</dt><dd>START</dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">A: START BATTLE</button>'
-        : '<dl><div><dt>MOVE</dt><dd><kbd>ARROW KEYS</kbd></dd></div><div><dt>FIRE</dt><dd><kbd>Z</kbd></dd></div><div><dt>RAPID FIRE</dt><dd><kbd>X</kbd></dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">CONFIRM / START BATTLE</button>'
-    }</dialog>`;
+    const controlsDialog = isPsg1Ui()
+      ? ''
+      : '<dialog class="shop-web__controls-dialog" data-shop-controls-dialog aria-labelledby="shop-controls-title"><h2 id="shop-controls-title">BATTLE CONTROLS</h2><dl><div><dt>MOVE</dt><dd><kbd>ARROW KEYS</kbd></dd></div><div><dt>FIRE</dt><dd><kbd>Z</kbd></dd></div><div><dt>RAPID FIRE</dt><dd><kbd>X</kbd></dd></div></dl><button class="shop-web__controls-confirm" data-shop-controls-confirm type="button">CONFIRM / START BATTLE</button></dialog>';
     return `<main class="shop-container shop-web shop-web--desktop" data-ui-page aria-labelledby="shop-title"><h1 id="shop-title" hidden>Battle Cities shop</h1>
       <nav class="shop-web__tabs" data-ui-nav aria-label="Shop views">${this.tabButton(
         'bact',
@@ -809,7 +807,8 @@ export class ShopWebUi {
       );
   }
   private shouldShowControlsBriefing(): boolean {
-    return isPsg1Ui() || window.matchMedia('(min-width: 900px)').matches;
+    // PSG1 already presents its controls in the main-menu footer.
+    return !isPsg1Ui() && window.matchMedia('(min-width: 900px)').matches;
   }
   private openControlsDialog(): void {
     const dialog = this.host.querySelector('[data-shop-controls-dialog]');

@@ -18,6 +18,7 @@ moveFocus:(buttons,current,x,y)=>buttons[(buttons.indexOf(current)+(x||y)+button
 ${code[0]}
 Object.assign(deps,exports); exports={};
 class FakeShop {
+ canStartRun(){return !window.noFuel}
  constructor(){this.equipped={}} isWalletConnected(){return true} isVirtualEconomyAccount(){return false}
  getTokenBalance(){return 1500} getSolBalance(){return 1.25} getFuelBalance(){return 12} getInventoryCount(){return 2}
  getWalletAddress(){return '7P5T123456789XYUM'} getEquipped(slot){return this.equipped[slot]||null}
@@ -35,7 +36,7 @@ window.press=key=>{pressed=key;window.screenUi.update();pressed=''};
 const storage={getBoolean:k=>!!saved[k],setBoolean:(k,v)=>saved[k]=v,save:()=>{}};
 window.mountScreen=screen=>{
  window.screenUi?.unmount();
- window.screenUi=screen==='settings'?new window.Settings({},input,{isGlobalMuted:()=>muted,setGlobalMuted:v=>muted=v,saveSettings:()=>{}},storage,{getPlayer:()=>({walletAddress:'7P5T123456789XYUM'}),getDisplayName:()=> 'PLAYER'}):new window.Shop({isBattleSetup:()=>false,gameStorage:storage,inputManager:input,navigator:{},getBattleFuelCost:()=>1});
+ window.screenUi=screen==='settings'?new window.Settings({},input,{isGlobalMuted:()=>muted,setGlobalMuted:v=>muted=v,saveSettings:()=>{}},storage,{getPlayer:()=>({walletAddress:'7P5T123456789XYUM'}),getDisplayName:()=> 'PLAYER'}):new window.Shop({isBattleSetup:()=>!!window.battleSetup,gameStorage:storage,inputManager:input,navigator:{},getBattleFuelCost:()=>1,startBattle:()=>{window.startCalls=(window.startCalls||0)+1;return new Promise(resolve=>window.finishStart=resolve)}});
  window.screenUi.mount();
 };
 window.mountScreen('settings');`;
@@ -146,6 +147,25 @@ const server=http.createServer((req,res)=>{
  await page.locator('[data-shop-tab="swap"]').click();await page.locator('[data-shop-swap-amount]').fill('0.5');if(!(await page.locator('[data-shop-swap-receive]').innerText()).includes('500'))errors.push('Swap preview failed');
  await page.evaluate(()=>{window.nativeNotifications=true;window.mountScreen('settings')});
  if(await page.locator('[data-setting="notifications"]').count()!==1)errors.push('Native notifications missing');
+ // PSG1 starts immediately; fuel checks and duplicate-start protection remain.
+ for(const width of [1280,640]){
+  await page.setViewportSize({width,height:800});
+  await page.evaluate(()=>{window.battleSetup=true;window.noFuel=false;window.startCalls=0;document.documentElement.dataset.uiDevice='psg1';window.mountScreen('shop')});
+  if(await page.locator('[data-shop-controls-dialog]').count())errors.push('PSG1 controls dialog still rendered');
+  await page.locator('[data-shop-start]').focus();await page.evaluate(()=>window.press('select'));
+  await page.locator('[data-shop-start]').click();
+  if(await page.evaluate(()=>window.startCalls)!==1)errors.push('PSG1 start was blocked or duplicated');
+  await page.evaluate(()=>window.finishStart());
+  await page.evaluate(()=>{window.noFuel=true;window.mountScreen('shop')});await page.locator('[data-shop-start]').click();
+  if(await page.evaluate(()=>window.startCalls)!==1||!(await page.locator('.shop-web__status').innerText()).includes('NEED 1 FUEL'))errors.push('PSG1 fuel guard changed');
+ }
+ await page.setViewportSize({width:1280,height:800});
+ await page.evaluate(()=>{document.documentElement.dataset.uiDevice='desktop';window.noFuel=false;window.startCalls=0;window.mountScreen('shop')});
+ await page.locator('[data-shop-start]').click();
+ if(!await page.locator('[data-shop-controls-dialog]').evaluate(e=>e.open)||await page.evaluate(()=>window.startCalls)!==0)errors.push('Desktop briefing skipped');
+ await page.locator('[data-shop-controls-confirm]').click();
+ if(await page.evaluate(()=>window.startCalls)!==1)errors.push('Desktop confirmation failed');
+ await page.evaluate(()=>{window.finishStart();window.battleSetup=false});
  // The new presentation must have zero computed-style effect on other devices.
  for(const [platform,width] of [['desktop',1280],['android',375]]){
   await page.setViewportSize({width,height:800});
