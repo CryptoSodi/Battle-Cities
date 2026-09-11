@@ -114,6 +114,20 @@ const server = http.createServer((req, res) => {
       for (const screen of screens) {
         await mount(screen);
         if (screen === 'RankingWebUi') {
+          const summaryLine = await page
+            .locator('.ranking-web__summary > div, .ranking-web__season-picker')
+            .evaluateAll((items) => {
+              const boxes = items.map((item) => item.getBoundingClientRect());
+              return (
+                boxes.length === 3 &&
+                boxes.every((box) => Math.abs(box.top - boxes[0].top) <= 1) &&
+                boxes[0].right <= boxes[1].left &&
+                boxes[1].right <= boxes[2].left &&
+                boxes[2].right <= innerWidth
+              );
+            });
+          if (!summaryLine)
+            errors.push('Ranking summary and season picker are not one row ' + width);
           const readableRows = await page.locator('.ranking-web__row').evaluateAll(rows => rows.every(row => {
             const box = row.getBoundingClientRect();
             return [...row.children].every(cell => {

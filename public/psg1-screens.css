@@ -1255,10 +1255,13 @@ html[data-ui-device='psg1']
   [data-web-ui]
   .psg1-console[data-ui-page]
   .ranking-web__shell {
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.85fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__summary {
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--psg-gap);
   margin: 0;
@@ -1290,14 +1293,21 @@ html[data-ui-device='psg1']
 html[data-ui-device='psg1']
   .psg1-console[data-ui-page]
   .ranking-web__season-picker {
-  width: min(100%, 480px);
+  align-self: stretch;
+  grid-column: 2;
+  grid-row: 1;
+  height: 100%;
+  justify-self: stretch;
+  max-width: none;
+  width: 100%;
   margin: 0;
   z-index: 4;
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__season {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 56px;
-  height: max(92px, var(--psg-control));
+  height: 100%;
+  min-height: max(92px, var(--psg-control));
   grid-template-rows: minmax(0, 1fr);
   padding: 0;
   border: 3px solid var(--psg-steel);
@@ -1449,12 +1459,16 @@ html[data-ui-device='psg1']
   letter-spacing: 0.035em;
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__header {
+  grid-column: 1 / -1;
+  grid-row: 2;
   min-height: var(--psg-control);
   color: #00d4ed;
   border: 2px solid var(--psg-edge);
   background: #052333;
 }
 html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__rows {
+  grid-column: 1 / -1;
+  grid-row: 3;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1532,6 +1546,19 @@ html[data-ui-device='psg1'] .psg1-console[data-ui-page] .ranking-web__empty {
   }
 }
 @media (max-width: 700px) {
+  html[data-ui-device='psg1']
+    body.web-ui-active
+    [data-web-ui]
+    .psg1-console[data-ui-page]
+    .ranking-web__shell {
+    grid-template-columns: minmax(0, 2fr) minmax(205px, 0.8fr);
+  }
+  html[data-ui-device='psg1']
+    .psg1-console[data-ui-page]
+    .ranking-web__summary
+    > div {
+    padding-inline: 10px;
+  }
   html[data-ui-device='psg1']
     body.web-ui-active
     [data-web-ui]
