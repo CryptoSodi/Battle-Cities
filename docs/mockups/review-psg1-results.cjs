@@ -24,6 +24,7 @@ const styles = [
   'psg1-ui.css',
   'psg1-screens.css',
   'psg1-results.css',
+  'psg1-backgrounds.css',
 ];
 const fixture = `
 window.calls=[];let pressed='';window.state=null;
@@ -135,6 +136,16 @@ const server = http.createServer((req, res) => {
               frames: rows.every(
                 (e) => getComputedStyle(e).borderTopWidth === '3px',
               ),
+              shellSurface: (() => {
+                const shell = document.querySelector('.results-web__shell');
+                const style = getComputedStyle(shell);
+                return (
+                  style.borderTopWidth === '3px' &&
+                  style.backgroundImage !== 'none' &&
+                  style.boxShadow.includes('rgb(37, 143, 168)') &&
+                  getComputedStyle(shell, '::before').content !== 'none'
+                );
+              })(),
               color: getComputedStyle(
                 document.querySelector('.results-web__status-strip strong'),
               ).color,
@@ -146,6 +157,7 @@ const server = http.createServer((req, res) => {
               !layout.overflow &&
               layout.buttons &&
               layout.frames &&
+              layout.shellSurface &&
               layout.listHeight > 40,
             `${width}x${height} ${result}/${count}: ${JSON.stringify(layout)}`,
           );
@@ -164,6 +176,17 @@ const server = http.createServer((req, res) => {
         (await page.locator('.results-web--loading.psg1-console').count()) ===
           1,
         'Loading frame',
+      );
+      assert(
+        await page.locator('.results-web--loading.psg1-console').evaluate((e) => {
+          const style = getComputedStyle(e);
+          return (
+            style.borderTopWidth === '3px' &&
+            style.backgroundImage !== 'none' &&
+            getComputedStyle(e, '::before').content !== 'none'
+          );
+        }),
+        'Loading background',
       );
       await page.evaluate(() => window.mount('clear', 8));
       await page.evaluate(() => window.press('down'));

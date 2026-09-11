@@ -7,7 +7,9 @@ html[data-ui-device='psg1']
     .socials-web.psg1-console[data-ui-page] .operations-web__shell,
     .ranking-web.psg1-console[data-ui-page] .ranking-web__shell,
     .hq-page-web.psg1-console[data-ui-page] .hq-page-web__shell,
-    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell
+    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell,
+    .results-web.psg1-console .results-web__shell,
+    .results-web.psg1-console.results-web--loading
   ) {
   background: var(--psg-surface);
   border: 3px solid var(--psg-steel);
@@ -26,7 +28,9 @@ html[data-ui-device='psg1']
     .socials-web.psg1-console[data-ui-page] .operations-web__shell,
     .ranking-web.psg1-console[data-ui-page] .ranking-web__shell,
     .hq-page-web.psg1-console[data-ui-page] .hq-page-web__shell,
-    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell
+    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell,
+    .results-web.psg1-console .results-web__shell,
+    .results-web.psg1-console.results-web--loading
   )::before {
   background: radial-gradient(
         circle,
