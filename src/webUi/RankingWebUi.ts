@@ -163,10 +163,12 @@ export class RankingWebUi {
   ): string {
     const selected =
       seasons.find((season) => season.id === this.seasonId) || seasons[0];
-    const label = isPsg1Ui()
+    const useConsolePicker =
+      isPsg1Ui() || document.documentElement.dataset.uiPlatform === 'android';
+    const label = useConsolePicker
       ? `<span class="ranking-web__season-label"><small>SEASON</small><strong>${selected.label}</strong></span>`
       : `<span>SEASON: ${selected.label}</span>`;
-    const indicator = isPsg1Ui() ? '' : '⌄';
+    const indicator = useConsolePicker ? '' : '⌄';
     return `<div class="ranking-web__season-picker ${
       this.seasonMenuOpen ? 'is-open' : ''
     }"><button class="ranking-web__season" data-rank-key="season-toggle" data-rank-season-toggle aria-expanded="${

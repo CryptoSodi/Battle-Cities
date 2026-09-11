@@ -78,6 +78,12 @@ const groups={
        const pages=document.querySelector('.player-profile-web__pages');
        if(pages&&!pages.closest('.player-profile-web__battles > header'))failures.push('Pagination outside list header');
        if(document.querySelector('.settings-web__pairing'))failures.push('Android phone pairing visible');
+       const ranking=document.querySelector('.ranking-web');
+       if(ranking){
+        const picker=ranking.querySelector('.ranking-web__season'),label=picker.querySelector('.ranking-web__season-label'),header=ranking.querySelector('.ranking-web__header'),rows=ranking.querySelector('.ranking-web__rows'),firstRow=ranking.querySelector('.ranking-web__row');
+        const rowCells=firstRow?[...firstRow.children]:[];
+        if(!label||!label.querySelector('small')||!label.querySelector('strong')||picker.getBoundingClientRect().height<60||getComputedStyle(picker).gridTemplateColumns.split(' ').length!==2||getComputedStyle(header).color!=='rgb(0, 212, 237)'||getComputedStyle(rows).borderTopWidth!=='2px'||rowCells.some(cell=>parseFloat(getComputedStyle(cell).fontSize)<18))failures.push('Android ranking does not match the PSG1 picker/results treatment');
+       }
        const swap=document.querySelector('.shop-web__swap');
        if(swap){
         const content=swap.closest('.shop-web__content'),bodyElement=swap.querySelector('.shop-web__swap-body'),panel=swap.getBoundingClientRect(),body=bodyElement.getBoundingClientRect(),style=getComputedStyle(swap),contentStyle=getComputedStyle(content);
@@ -106,6 +112,13 @@ const groups={
        return failures;
       });
       errors.push(...contentErrors.map(e=>group+'/'+screen+' '+width+': '+e));
+      if(group==='operations'&&screen==='RankingWebUi'){
+       await page.locator('[data-rank-season-toggle]').tap();
+       const menuMatches=await page.evaluate(()=>{const menu=document.querySelector('.ranking-web__season-options'),active=menu?.querySelector('.is-active'),buttons=[...(menu?.querySelectorAll('button')||[])];return !!menu&&!!active&&buttons.length>=2&&buttons.every(button=>button.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(button).fontSize)>=16)&&getComputedStyle(active,'::after').content!=='none'});
+       if(!menuMatches)errors.push(group+'/'+screen+' '+width+': Android season menu does not match PSG1');
+       if(width===390)await page.screenshot({path:path.join(__dirname,'android-ranking-dropdown.png')});
+       await page.locator('[data-rank-season-toggle]').tap();
+      }
       if(width===390)await page.screenshot({path:path.join(__dirname,'android-'+group+'-'+screen+'.png')});
       if(width===844&&group==='profile'&&screen==='ready')await page.screenshot({path:path.join(__dirname,'android-profile-landscape.png')});
      }
