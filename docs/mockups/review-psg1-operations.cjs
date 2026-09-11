@@ -175,6 +175,17 @@ const server = http.createServer((req, res) => {
           await page.evaluate(() => window.press('back'));
         }
         if (screen === 'HeadquartersWebUi') {
+          const availability = await page
+            .locator('.operations-web__card')
+            .evaluateAll((cards) => cards.map((card) => ({
+              name: card.querySelector('h3').textContent.trim(),
+              state: card.dataset.hqAvailability,
+              disabled: card.disabled,
+              action: card.querySelector('strong').textContent.trim(),
+            })));
+          const expectedNames = ['TREASURY', 'FIELD MANUAL', 'CAMPAIGNS', 'STAKING', 'TRADING', 'BOOSTS', 'AIRDROP'];
+          if (availability.some((card, index) => card.name !== expectedNames[index]) || availability.slice(0, 2).some((card) => card.state !== 'active' || card.disabled || card.action !== 'OPEN') || availability.slice(2).some((card) => card.state !== 'locked' || !card.disabled || card.action !== 'LOCKED'))
+            errors.push('Quaters active/locked ordering at ' + width);
           const ordered = await page
             .locator('.operations-web__card')
             .evaluateAll((cards) =>
@@ -239,12 +250,16 @@ const server = http.createServer((req, res) => {
     await page.evaluate(() => window.press('select'));
     if (
       !(await page.evaluate(() =>
-        window.calls.some((c) => c[0] === 'push' && c[1] === 'MainEvents'),
+        window.calls.some((c) => c[0] === 'push' && c[1] === 'MainWiki'),
       ))
     )
       errors.push('Quaters navigation');
-    for (let i = 0; i < 7; i++)
+    for (let i = 0; i < 2; i++)
       await page.locator('[data-hq-entry="' + i + '"]').click();
+    const pushesBeforeLockedClick = await page.evaluate(() => window.calls.filter((c) => c[0] === 'push').length);
+    await page.evaluate(() => document.querySelector('[data-hq-entry="2"]').click());
+    if ((await page.evaluate(() => window.calls.filter((c) => c[0] === 'push').length)) !== pushesBeforeLockedClick)
+      errors.push('Locked Quaters card navigated');
     await page.evaluate(() => window.press('back'));
     if (!(await page.evaluate(() => window.calls.some((c) => c[0] === 'back'))))
       errors.push('Back action');

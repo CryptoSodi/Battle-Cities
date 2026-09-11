@@ -312,6 +312,24 @@ body.web-ui-active [data-web-ui] [data-ui-page] .operations-web__card:disabled {
 body.web-ui-active
   [data-web-ui]
   [data-ui-page]
+  .operations-web__card:disabled
+  :is(h3, p) {
+  color: var(--bc-muted);
+}
+
+body.web-ui-active
+  [data-web-ui]
+  [data-ui-page]
+  .operations-web__card:disabled
+  .operations-web__mark
+  img {
+  filter: grayscale(0.8);
+  opacity: 0.55;
+}
+
+body.web-ui-active
+  [data-web-ui]
+  [data-ui-page]
   :is(.operations-web__card > strong, .hq-page-web__card > button) {
   background: linear-gradient(180deg, rgb(91 255 51 / 11%), transparent 45%),
     linear-gradient(180deg, #12680c, #063705);

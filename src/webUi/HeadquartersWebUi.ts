@@ -21,42 +21,49 @@ const entries = [
     'BALANCES, ITEMS AND HISTORY',
     HEADQUARTERS_ICON_NAMES.treasury,
     GameSceneType.MainTreasury,
-  ],
-  [
-    'CAMPAIGNS',
-    'EVENTS, OPERATIONS AND REWARDS',
-    HEADQUARTERS_ICON_NAMES.campaigns,
-    GameSceneType.MainEvents,
-  ],
-  [
-    'STAKING',
-    'LOCK BATC, EARN SP AND PERKS',
-    HEADQUARTERS_ICON_NAMES.staking,
-    GameSceneType.MainStaking,
-  ],
-  [
-    'TRADING',
-    'RAYDIUM SWAPS AND MARKET BOOSTS',
-    HEADQUARTERS_ICON_NAMES.trading,
-    GameSceneType.MainTrading,
-  ],
-  [
-    'BOOSTS',
-    'ACTIVE TRAIT BOOSTS AND PERKS',
-    HEADQUARTERS_ICON_NAMES.boosts,
-    GameSceneType.MainBoost,
-  ],
-  [
-    'AIRDROP',
-    'TRACK BATC ALLOCATION AND CLAIM STATUS',
-    HEADQUARTERS_ICON_NAMES.airdrop,
-    GameSceneType.MainAirdrop,
+    true,
   ],
   [
     'FIELD MANUAL',
     'TANKS, WEAPONS, POWERUPS AND ENEMY INTELLIGENCE',
     HEADQUARTERS_ICON_NAMES.manual,
     GameSceneType.MainWiki,
+    true,
+  ],
+  [
+    'CAMPAIGNS',
+    'EVENTS, OPERATIONS AND REWARDS',
+    HEADQUARTERS_ICON_NAMES.campaigns,
+    GameSceneType.MainEvents,
+    false,
+  ],
+  [
+    'STAKING',
+    'LOCK BATC, EARN SP AND PERKS',
+    HEADQUARTERS_ICON_NAMES.staking,
+    GameSceneType.MainStaking,
+    false,
+  ],
+  [
+    'TRADING',
+    'RAYDIUM SWAPS AND MARKET BOOSTS',
+    HEADQUARTERS_ICON_NAMES.trading,
+    GameSceneType.MainTrading,
+    false,
+  ],
+  [
+    'BOOSTS',
+    'ACTIVE TRAIT BOOSTS AND PERKS',
+    HEADQUARTERS_ICON_NAMES.boosts,
+    GameSceneType.MainBoost,
+    false,
+  ],
+  [
+    'AIRDROP',
+    'TRACK BATC ALLOCATION AND CLAIM STATUS',
+    HEADQUARTERS_ICON_NAMES.airdrop,
+    GameSceneType.MainAirdrop,
+    false,
   ],
 ] as const;
 
@@ -115,7 +122,13 @@ export class HeadquartersWebUi {
     this.host.innerHTML = `<main class="operations-web headquarters-web" data-ui-page><header class="operations-web__header" data-ui-nav style="--ui-tab-count:1"><div data-ui-tab class="is-active"><h1>HEADQUARTERS</h1></div><span data-ui-spacer aria-hidden="true"></span><button data-ui-back class="operations-web__back" data-hq-key="back" data-hq-back type="button">◀ BACK</button></header><section class="operations-web__shell"><section class="operations-web__intro"><h2>COMMAND CENTER</h2><p>MANAGE YOUR ASSETS, OPERATIONS, REWARDS AND BATTLE INTELLIGENCE.</p></section><h2 class="operations-web__section-title">OPERATIONS</h2><section class="operations-web__grid operations-web__grid--hq">${entries
       .map(
         (entry, index) =>
-          `<button class="operations-web__card" data-hq-key="entry-${index}" data-hq-entry="${index}" type="button"><h3>${entry[0]}</h3><span class="operations-web__mark operations-web__mark--illustration" aria-hidden="true"><img src="/assets/headquarters/${entry[2]}.png" alt=""></span><p>${entry[1]}</p><strong>OPEN</strong></button>`,
+          `<button class="operations-web__card" data-hq-key="entry-${index}" data-hq-entry="${index}" data-hq-availability="${
+            entry[4] ? 'active' : 'locked'
+          }" type="button" ${
+            entry[4] ? '' : 'disabled aria-disabled="true"'
+          }><h3>${entry[0]}</h3><span class="operations-web__mark operations-web__mark--illustration" aria-hidden="true"><img src="/assets/headquarters/${entry[2]}.png" alt=""></span><p>${entry[1]}</p><strong>${
+            entry[4] ? 'OPEN' : 'LOCKED'
+          }</strong></button>`,
       )
       .join('')}</section></section></main>`;
     decoratePsg1Console(this.host);
@@ -149,7 +162,7 @@ export class HeadquartersWebUi {
         { signal },
       );
     this.host
-      .querySelectorAll<HTMLButtonElement>('[data-hq-entry]')
+      .querySelectorAll<HTMLButtonElement>('[data-hq-entry]:not(:disabled)')
       .forEach((button) =>
         button.addEventListener(
           'click',

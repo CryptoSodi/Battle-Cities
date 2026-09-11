@@ -88,6 +88,11 @@ const groups={
         const shellStyle=getComputedStyle(headquartersShell);
         if(shellStyle.borderTopWidth!=='2px'||!shellStyle.boxShadow.includes('rgb(37, 143, 168)'))failures.push('Headquarters page is missing the Shop-style outer container');
        }
+       const headquartersCards=[...document.querySelectorAll('.headquarters-web .operations-web__card')];
+       if(headquartersCards.length&&(
+        headquartersCards.slice(0,2).some(card=>card.dataset.hqAvailability!=='active'||card.disabled||card.querySelector('strong').textContent.trim()!=='OPEN')||
+        headquartersCards.slice(2).some(card=>card.dataset.hqAvailability!=='locked'||!card.disabled||card.querySelector('strong').textContent.trim()!=='LOCKED')
+       ))failures.push('Headquarters active cards are not ordered before locked cards');
        const swap=document.querySelector('.shop-web__swap');
        if(swap){
         const content=swap.closest('.shop-web__content'),bodyElement=swap.querySelector('.shop-web__swap-body'),panel=swap.getBoundingClientRect(),body=bodyElement.getBoundingClientRect(),style=getComputedStyle(swap),contentStyle=getComputedStyle(content);
