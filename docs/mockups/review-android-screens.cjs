@@ -118,6 +118,14 @@ const groups={
        if(!menuMatches)errors.push(group+'/'+screen+' '+width+': Android season menu does not match PSG1');
        if(width===390)await page.screenshot({path:path.join(__dirname,'android-ranking-dropdown.png')});
        await page.locator('[data-rank-season-toggle]').tap();
+       await page.evaluate(()=>{window.rankState='error';window.mountScreen('RankingWebUi')});
+       await page.locator('.ranking-web__error').waitFor({state:'visible'});
+       const errorMatches=await page.evaluate(()=>{const panel=document.querySelector('.ranking-web__error'),title=panel?.querySelector('strong'),message=panel?.querySelector('span'),retry=panel?.querySelector('[data-rank-retry]');return panel?.getAttribute('role')==='alert'&&title?.textContent==='RANKINGS UNAVAILABLE'&&message?.textContent==='CHECK YOUR CONNECTION, THEN TRY AGAIN'&&!!retry&&retry.getBoundingClientRect().height>=44&&parseFloat(getComputedStyle(title).fontSize)>=22});
+       if(!errorMatches)errors.push(group+'/'+screen+' '+width+': Android ranking error does not match PSG1');
+       if(width===390)await page.screenshot({path:path.join(__dirname,'android-ranking-error.png')});
+       await page.evaluate(()=>window.rankState='ready');
+       await page.locator('[data-rank-retry]').tap();
+       await page.locator('.ranking-web__row').first().waitFor({state:'visible'});
       }
       if(width===390)await page.screenshot({path:path.join(__dirname,'android-'+group+'-'+screen+'.png')});
       if(width===844&&group==='profile'&&screen==='ready')await page.screenshot({path:path.join(__dirname,'android-profile-landscape.png')});

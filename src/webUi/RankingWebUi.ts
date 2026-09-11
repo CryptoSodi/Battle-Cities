@@ -13,6 +13,7 @@ export class RankingWebUi {
   private abortController: AbortController = null;
   private active = false;
   private data: RankingResponse = null;
+  private loadFailed = false;
   private host: HTMLElement = null;
   private loading = false;
   private lastFocusKey = 'scope-gaming';
@@ -40,6 +41,7 @@ export class RankingWebUi {
     bindUiLayoutRefresh(host, this.abortController.signal, () => this.render());
     document.body.classList.add('web-ui-active', 'ranking-web-active');
     host.hidden = false;
+    this.loading = true;
     this.render();
     void this.load();
   }
@@ -84,10 +86,12 @@ export class RankingWebUi {
   }
   private async load(): Promise<void> {
     this.loading = true;
+    this.loadFailed = false;
     this.render();
     const data = await this.client.getRankings(this.scope, this.seasonId);
     if (!this.active) return;
     this.data = data;
+    this.loadFailed = data === null;
     this.loading = false;
     this.render();
   }
@@ -125,8 +129,10 @@ export class RankingWebUi {
     )}<div class="ranking-web__header"><span>RANK</span><span>PLAYER</span><span>PERKS</span><span>POINTS</span></div><section class="ranking-web__rows">${
       this.loading
         ? '<p class="ranking-web__empty">LOADING RANKINGS...</p>'
+        : this.loadFailed
+        ? '<div class="ranking-web__empty ranking-web__error" role="alert"><strong>RANKINGS UNAVAILABLE</strong><span>CHECK YOUR CONNECTION, THEN TRY AGAIN</span><button type="button" data-rank-key="retry" data-rank-retry>RETRY</button></div>'
         : this.data === null
-        ? '<p class="ranking-web__empty">RANKINGS UNAVAILABLE. TRY AGAIN.</p>'
+        ? '<p class="ranking-web__empty">LOADING RANKINGS...</p>'
         : this.data.rows.length === 0
         ? '<p class="ranking-web__empty">NO RESULTS YET — PLAY A MATCH TO CLAIM A RANK.</p>'
         : this.data.rows
@@ -269,6 +275,16 @@ export class RankingWebUi {
             }),
           { signal },
         ),
+      );
+    this.host
+      .querySelector<HTMLButtonElement>('[data-rank-retry]')
+      ?.addEventListener(
+        'click',
+        () => {
+          this.pendingFocusSelector = `[data-rank-key="scope-${this.scope}"]`;
+          void this.load();
+        },
+        { signal },
       );
   }
   private focused(): HTMLButtonElement | null {
