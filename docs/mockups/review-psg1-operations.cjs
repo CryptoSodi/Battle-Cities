@@ -36,6 +36,7 @@ const styles = [
   'shop-ui-contract.css',
   'psg1-ui.css',
   'psg1-screens.css',
+  'psg1-backgrounds.css',
 ];
 const fixture = `
 let pressed=''; window.calls=[]; window.rankState='ready'; window.socialState='locked';
@@ -209,6 +210,24 @@ const server = http.createServer((req, res) => {
           if (!ordered)
             errors.push('Quaters name/icon/details ordering at ' + width);
         }
+        const shellSurface = await page
+          .locator('.operations-web__shell,.ranking-web__shell')
+          .evaluate((shell) => {
+            const style = getComputedStyle(shell);
+            const hardware = getComputedStyle(shell, '::before');
+            return {
+              matches: style.borderTopWidth === '3px' &&
+                style.backgroundImage !== 'none' &&
+                style.boxShadow.includes('rgb(37, 143, 168)') &&
+                hardware.content !== 'none',
+              border: style.borderTopWidth,
+              background: style.backgroundImage,
+              shadow: style.boxShadow,
+              hardware: hardware.content,
+            };
+          });
+        if (!shellSurface.matches)
+          errors.push(screen + ' missing PSG1 content background at ' + width + ' ' + JSON.stringify(shellSurface));
         const bounds = await page.evaluate(() => ({
           scroll: [
             document.documentElement.scrollWidth,

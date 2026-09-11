@@ -1,0 +1,74 @@
+/* Shared PSG1 content bay for every console screen that sits outside Shop. */
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  :is(
+    .headquarters-web.psg1-console[data-ui-page] .operations-web__shell,
+    .socials-web.psg1-console[data-ui-page] .operations-web__shell,
+    .ranking-web.psg1-console[data-ui-page] .ranking-web__shell,
+    .hq-page-web.psg1-console[data-ui-page] .hq-page-web__shell,
+    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell
+  ) {
+  background: var(--psg-surface);
+  border: 3px solid var(--psg-steel);
+  box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 4px var(--psg-edge),
+    inset 0 0 28px rgb(0 0 0 / 72%);
+  box-sizing: border-box;
+  clip-path: var(--psg-plate);
+  position: relative;
+}
+
+html[data-ui-device='psg1']
+  body.web-ui-active
+  [data-web-ui]
+  :is(
+    .headquarters-web.psg1-console[data-ui-page] .operations-web__shell,
+    .socials-web.psg1-console[data-ui-page] .operations-web__shell,
+    .ranking-web.psg1-console[data-ui-page] .ranking-web__shell,
+    .hq-page-web.psg1-console[data-ui-page] .hq-page-web__shell,
+    .tank-select-web.psg1-console[data-ui-page] .tank-select-web__shell
+  )::before {
+  background: radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #9caeb4 5px,
+        transparent 6px
+      )
+      0 0 / 13px 13px no-repeat,
+    radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #9caeb4 5px,
+        transparent 6px
+      )
+      100% 0 / 13px 13px no-repeat,
+    radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #9caeb4 5px,
+        transparent 6px
+      )
+      0 100% / 13px 13px no-repeat,
+    radial-gradient(
+        circle,
+        #ffb30f 0 2px,
+        #020709 3px 4px,
+        #9caeb4 5px,
+        transparent 6px
+      )
+      100% 100% / 13px 13px no-repeat;
+  content: '';
+  display: block;
+  height: auto;
+  inset: 3px;
+  margin: 0;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  transform: none;
+  width: auto;
+  z-index: 2;
+}

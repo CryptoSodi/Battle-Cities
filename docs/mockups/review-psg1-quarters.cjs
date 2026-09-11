@@ -31,6 +31,7 @@ const styles = [
   'psg1-ui.css',
   'psg1-screens.css',
   'psg1-quarters.css',
+  'psg1-backgrounds.css',
 ];
 const fixture = `
 let pressed='';window.calls=[];window.fixtureState='ready';
@@ -169,6 +170,14 @@ const server = http.createServer((req, res) => {
               '.hq-page-web__stat,.hq-page-web__card,.hq-page-web__item,.hq-page-web__manual-card,.hq-page-web__empty',
             ),
           ].every((e) => getComputedStyle(e).borderTopWidth === '3px'),
+          shellSurface: (() => {
+            const shell = root.querySelector('.hq-page-web__shell');
+            const style = getComputedStyle(shell);
+            return style.borderTopWidth === '3px' &&
+              style.backgroundImage !== 'none' &&
+              style.boxShadow.includes('rgb(37, 143, 168)') &&
+              getComputedStyle(shell, '::before').content !== 'none';
+          })(),
           nav: controls.every((e) => {
             const r = e.getBoundingClientRect();
             return (
@@ -188,6 +197,7 @@ const server = http.createServer((req, res) => {
         !result.stable ||
         !result.skin ||
         !result.frames ||
+        !result.shellSurface ||
         !result.nav ||
         !result.contentBounds
       )

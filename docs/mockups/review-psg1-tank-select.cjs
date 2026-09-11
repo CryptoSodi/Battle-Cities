@@ -23,6 +23,7 @@ const styles = [
   'psg1-ui.css',
   'psg1-screens.css',
   'psg1-tank-select.css',
+  'psg1-backgrounds.css',
   'android-screens.css',
 ];
 const fixture = `
@@ -145,12 +146,20 @@ const server = http.createServer((req, res) => {
           frames: cards.every(
             (e) => getComputedStyle(e).borderTopWidth === '3px',
           ),
+          shellSurface: (() => {
+            const shell = document.querySelector('.tank-select-web__shell');
+            const shellStyle = getComputedStyle(shell);
+            return shellStyle.borderTopWidth === '3px' &&
+              shellStyle.backgroundImage !== 'none' &&
+              shellStyle.boxShadow.includes('rgb(37, 143, 168)') &&
+              getComputedStyle(shell, '::before').content !== 'none';
+          })(),
           headingIcon: headingIcon.complete && headingIcon.naturalWidth === 128 &&
             iconBounds.width >= 24 && iconBounds.left >= headingBounds.left && iconBounds.right <= headingBounds.right,
         };
       });
       assert(
-        layout.columns === (width <= 1000 ? 2 : 4) && layout.stable && layout.fits && !layout.overflow && layout.frames && layout.headingIcon,
+        layout.columns === (width <= 1000 ? 2 : 4) && layout.stable && layout.fits && !layout.overflow && layout.frames && layout.shellSurface && layout.headingIcon,
         'Layout ' + width + ' ' + JSON.stringify(layout),
       );
       assert(
