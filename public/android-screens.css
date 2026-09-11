@@ -180,6 +180,8 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card { align-items:center; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__tank-sprite { align-self:center;flex:none; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__card > strong { width:100%;min-height:34px;display:flex;justify-content:center;align-items:center;gap:5px;font-size:20px; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__status { margin:6px 0 0; }
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .tank-select-web__status:empty { display:none; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__content:has(.player-profile-web__battles) { display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden;gap:8px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles { display:flex;flex-direction:column;min-height:0;margin:0;overflow:hidden; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .player-profile-web__battles > header { flex:none;flex-wrap:wrap;gap:6px;padding-bottom:6px; }

@@ -260,6 +260,12 @@ const server = http.createServer((req, res) => {
           Math.abs((a.left+a.right)-(c.left+c.right))<2 && a.bottom<=stats.top && stats.bottom<=b.top && b.top-stats.bottom<=11 &&
           b.height>=48 && c.bottom-b.bottom<=14 && (!icon || icon.getBoundingClientRect().width>=32) && card.scrollWidth<=card.clientWidth+1;
       })), 'Android enlarged art / bottom fuel bar at ' + width);
+      if(device === 'android') assert(await page.evaluate(() => {
+        const shell = document.querySelector('.tank-select-web__shell').getBoundingClientRect();
+        const button = document.querySelector('.tank-select-web__continue').getBoundingClientRect();
+        const status = document.querySelector('.tank-select-web__status');
+        return getComputedStyle(status).display === 'none' && button.height >= 44 && shell.bottom-button.bottom <= 16;
+      }), 'Android compact empty footer at ' + width);
       if(device === 'android' && width === 390) await page.screenshot({path:path.join(__dirname,'android-tank-select-two-columns.png')});
       if(device === 'android') {
         await page.locator('[data-tank="3"]').click();
