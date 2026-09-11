@@ -124,6 +124,10 @@ const server = http.createServer((req, res) => {
               cards[index].getBoundingClientRect().bottom,
           );
         const style = getComputedStyle(cards[0]);
+        const heading = document.querySelector('.tank-select-web__header [data-ui-tab]');
+        const headingIcon = heading.querySelector('.ui-page-heading-icon');
+        const iconBounds = headingIcon.getBoundingClientRect();
+        const headingBounds = heading.getBoundingClientRect();
         return {
           columns,
           stable,
@@ -141,10 +145,12 @@ const server = http.createServer((req, res) => {
           frames: cards.every(
             (e) => getComputedStyle(e).borderTopWidth === '3px',
           ),
+          headingIcon: headingIcon.complete && headingIcon.naturalWidth === 128 &&
+            iconBounds.width >= 24 && iconBounds.left >= headingBounds.left && iconBounds.right <= headingBounds.right,
         };
       });
       assert(
-        layout.columns === (width <= 1000 ? 2 : 4) && layout.stable && layout.fits && !layout.overflow && layout.frames,
+        layout.columns === (width <= 1000 ? 2 : 4) && layout.stable && layout.fits && !layout.overflow && layout.frames && layout.headingIcon,
         'Layout ' + width + ' ' + JSON.stringify(layout),
       );
       assert(
@@ -233,6 +239,10 @@ const server = http.createServer((req, res) => {
         document.documentElement.dataset.uiPlatform = device === 'android' ? 'android' : 'web';
         window.mount();
       }, device);
+      assert(await page.locator('.tank-select-web__header .ui-page-heading-icon').evaluate(icon => {
+        const bounds=icon.getBoundingClientRect(),heading=icon.closest('[data-ui-tab]').getBoundingClientRect();
+        return icon.complete&&icon.naturalWidth===128&&bounds.width>=24&&bounds.left>=heading.left&&bounds.right<=heading.right;
+      }), device + ' header tank icon at ' + width);
       assert(await page.evaluate(() => {
         const grid = document.querySelector('.tank-select-web__grid');
         return getComputedStyle(grid).gridTemplateColumns.split(' ').length === (document.documentElement.dataset.uiPlatform === 'android' ? 2 : 4) &&
