@@ -247,6 +247,52 @@ const server = http.createServer((req, res) => {
       console.log(width, height, 'all seven destinations and tabs checked');
     }
     await page.setViewportSize({ width: 1280, height: 800 });
+    await mount('MainWiki');
+    const manualFocusTargets = await page
+      .locator('[data-wiki-entry]')
+      .evaluateAll((cards) => cards.every((card) => card.tabIndex === 0));
+    if (!manualFocusTargets) errors.push('Field Manual cards are not focusable');
+    await page.locator('[data-page-tab="wiki-tanks"]').focus();
+    await page.evaluate(() => window.press('down'));
+    if (
+      (await page.locator(':focus').getAttribute('data-wiki-entry')) !==
+        'vanguard' ||
+      !(await page.locator('[data-wiki-entry="vanguard"]').evaluate((card) =>
+        card.classList.contains('is-selected'),
+      ))
+    )
+      errors.push('Field Manual did not enter the first item');
+    await page.evaluate(() => window.press('right'));
+    if (
+      (await page.locator(':focus').getAttribute('data-wiki-entry')) !==
+      'vanguard-mk2'
+    )
+      errors.push('Field Manual horizontal navigation failed');
+    await page.locator('[data-wiki-entry="vanguard"]').focus();
+    await page.evaluate(() => window.press('up'));
+    if (
+      (await page.locator(':focus').getAttribute('data-page-tab')) !==
+      'wiki-tanks'
+    )
+      errors.push('Field Manual did not return to the active category');
+    await page.locator('[data-page-tab="wiki-powerups"]').click();
+    await page.evaluate(() => window.press('down'));
+    await page.evaluate(() => window.press('down'));
+    await page.evaluate(() => window.press('down'));
+    const revealedManualItem = await page.evaluate(() => {
+      const content = document.querySelector('.hq-page-web__content');
+      const focused = document.activeElement;
+      const viewport = content.getBoundingClientRect();
+      const item = focused.getBoundingClientRect();
+      return (
+        focused.dataset.wikiEntry === 'wipeout' &&
+        content.scrollTop > 0 &&
+        item.top >= viewport.top &&
+        item.bottom <= viewport.bottom
+      );
+    });
+    if (!revealedManualItem)
+      errors.push('Field Manual did not reveal an offscreen focused item');
     for (const scene of scenes.filter((s) => s !== 'MainWiki'))
       for (const state of ['empty', 'error', 'loading']) {
         await mount(scene, state);
@@ -300,6 +346,13 @@ const server = http.createServer((req, res) => {
       );
       for (const scene of scenes) {
         await mount(scene);
+        if (
+          scene === 'MainWiki' &&
+          (await page
+            .locator('[data-wiki-entry]')
+            .evaluateAll((cards) => cards.some((card) => card.tabIndex >= 0)))
+        )
+          errors.push(device + ' Field Manual focus target leakage');
         const same = await page.evaluate(() => {
           const sheet = [...document.styleSheets].find((s) =>
             s.href?.endsWith('psg1-quarters.css'),
@@ -329,7 +382,7 @@ const server = http.createServer((req, res) => {
     }
     if (errors.length) throw Error(errors.join('\n'));
     console.log(
-      'PASS: Quaters layouts, tabs, loading/empty/error/retry states, gamepad, mock action, focus restoration and device isolation.',
+      'PASS: Quaters layouts, tabs, Field Manual keypad navigation/scroll, loading/empty/error/retry states, gamepad, mock action, focus restoration and device isolation.',
     );
   } finally {
     await browser.close();

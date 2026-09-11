@@ -182,16 +182,20 @@ export class HeadquartersWebUi {
   }
 }
 
-export function moveFocus(
-  buttons: HTMLButtonElement[],
-  current: HTMLButtonElement,
+export function moveFocus<T extends HTMLElement>(
+  buttons: T[],
+  current: T,
   x: number,
   y: number,
 ): void {
   if (!current) return;
   const origin = current.getBoundingClientRect();
   const next = buttons
-    .filter((button) => button !== current && !button.disabled)
+    .filter(
+      (button) =>
+        button !== current &&
+        (!(button instanceof HTMLButtonElement) || !button.disabled),
+    )
     .map((button) => ({ button, rect: button.getBoundingClientRect() }))
     .filter(({ rect }) =>
       x < 0

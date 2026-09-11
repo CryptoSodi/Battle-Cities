@@ -109,7 +109,7 @@ export class HeadquartersPagesWebUi {
   private readonly airdropClient = new AirdropClient();
   private abortController: AbortController = null;
   private active = false;
-  private buttons: HTMLButtonElement[] = [];
+  private buttons: HTMLElement[] = [];
   private host: HTMLElement = null;
   private sceneType: PageScene = null;
   private loading = false;
@@ -682,7 +682,9 @@ export class HeadquartersPagesWebUi {
     )}<section class="hq-page-web__manual-grid">${entries
       .map((entry) => {
         const art = WIKI_ART[this.wikiCategory]?.[entry.slug];
-        return `<article class="hq-page-web__manual-card"><h3>${this.escape(
+        return `<article class="hq-page-web__manual-card" data-wiki-entry="${this.escape(
+          entry.slug,
+        )}"><h3>${this.escape(
           entry.name,
         )}</h3>${
           art?.includes('/TANKS/')
@@ -708,7 +710,9 @@ export class HeadquartersPagesWebUi {
   private bind(): void {
     const signal = this.abortController.signal;
     this.buttons = Array.from(
-      this.host.querySelectorAll('button:not(:disabled)'),
+      this.host.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), .psg1-console .hq-page-web__manual-card[data-wiki-entry][tabindex="0"]',
+      ),
     );
     this.buttons.forEach((button) => {
       button.addEventListener(
@@ -1010,7 +1014,7 @@ export class HeadquartersPagesWebUi {
       ? HEADQUARTERS_ICON_NAMES.airdrop
       : HEADQUARTERS_ICON_NAMES.manual;
   }
-  private key(button: HTMLButtonElement): string {
+  private key(button: HTMLElement): string {
     return button.dataset.pageTab
       ? `tab:${button.dataset.pageTab}`
       : button.dataset.pageBack !== undefined
@@ -1029,17 +1033,44 @@ export class HeadquartersPagesWebUi {
       ? 'airdrop:claim'
       : button.dataset.pageRetry !== undefined
       ? 'retry'
+      : button.dataset.wikiEntry
+      ? `wiki:${button.dataset.wikiEntry}`
       : button.textContent || '';
   }
-  private focused(): HTMLButtonElement | null {
-    return document.activeElement instanceof HTMLButtonElement &&
+  private focused(): HTMLElement | null {
+    return document.activeElement instanceof HTMLElement &&
       this.buttons.includes(document.activeElement)
       ? document.activeElement
       : null;
   }
   private move(x: number, y: number): void {
     const current = this.focused() || this.buttons[0];
-    if (current) moveFocus(this.buttons, current, x, y);
+    if (!current) return;
+    if (this.sceneType === GameSceneType.MainWiki) {
+      const entries = this.buttons.filter((control) => control.dataset.wikiEntry);
+      if (y > 0 && current.dataset.pageTab && entries[0]) {
+        entries[0].focus({ preventScroll: true });
+        entries[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        return;
+      }
+      if (y < 0 && current.dataset.wikiEntry && entries.length) {
+        const firstRowTop = Math.min(
+          ...entries.map((entry) => entry.getBoundingClientRect().top),
+        );
+        if (current.getBoundingClientRect().top <= firstRowTop + 2) {
+          const activeTab = this.buttons.find(
+            (control) =>
+              control.dataset.pageTab && control.classList.contains('is-active'),
+          );
+          if (activeTab) {
+            activeTab.focus({ preventScroll: true });
+            activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            return;
+          }
+        }
+      }
+    }
+    moveFocus(this.buttons, current, x, y);
   }
   private signed(value: number): string {
     return `${value > 0 ? '+' : ''}${this.number(value)}`;
