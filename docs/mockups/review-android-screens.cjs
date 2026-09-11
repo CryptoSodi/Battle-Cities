@@ -78,6 +78,12 @@ const groups={
        const pages=document.querySelector('.player-profile-web__pages');
        if(pages&&!pages.closest('.player-profile-web__battles > header'))failures.push('Pagination outside list header');
        if(document.querySelector('.settings-web__pairing'))failures.push('Android phone pairing visible');
+       const swap=document.querySelector('.shop-web__swap');
+       if(swap){
+        const content=swap.closest('.shop-web__content'),bodyElement=swap.querySelector('.shop-web__swap-body'),panel=swap.getBoundingClientRect(),body=bodyElement.getBoundingClientRect(),style=getComputedStyle(swap),contentStyle=getComputedStyle(content);
+        const childrenFit=[...bodyElement.children].every(child=>{const box=child.getBoundingClientRect();return box.top>=body.top-1&&box.bottom<=body.bottom+1&&box.left>=body.left-1&&box.right<=body.right+1});
+        if(/auto|scroll/.test(contentStyle.overflowY)||content.scrollHeight>content.clientHeight+1||body.bottom>panel.bottom+1||!childrenFit||style.borderTopWidth!=='2px'||!style.boxShadow.includes('rgb(37, 143, 168)'))failures.push('Swap panel is not fixed and framed: '+JSON.stringify({overflow:contentStyle.overflowY,scroll:[content.scrollHeight,content.clientHeight],panel:[panel.top,panel.bottom],body:[body.top,body.bottom],childrenFit,border:style.borderTopWidth,shadow:style.boxShadow}));
+       }
        const refresh=document.querySelector('[data-social-refresh]');
        if(refresh&&Math.abs(refresh.getBoundingClientRect().top-document.querySelector('.socials-web [data-ui-tab]').getBoundingClientRect().top)>2)failures.push('Social header wraps');
        for(const card of document.querySelectorAll('.settings-web__rows article,.tank-select-web__card,.shop-web__card')){
