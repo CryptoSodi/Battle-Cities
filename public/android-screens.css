@@ -133,6 +133,13 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web__rows button { min-height:48px;font-size:18px;padding:8px; }
 
 /* Quaters, Socials and all seven operations pages. */
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .headquarters-web .operations-web__shell {
+  background:var(--mobile-surface);
+  border:2px solid var(--mobile-steel);
+  box-shadow:var(--mobile-bevel),inset 0 0 24px rgb(0 0 0 / 62%);
+  box-sizing:border-box;
+  position:relative;
+}
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .operations-web__card { display:grid;grid-template-rows:auto minmax(54px,1fr) auto 38px;gap:6px;min-height:220px;padding:10px 7px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .operations-web__card h3 { grid-row:1;font-size:clamp(15px,3.8vw,22px);margin:0; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .operations-web__mark { grid-row:2;justify-self:center; }

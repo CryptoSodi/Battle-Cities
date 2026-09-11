@@ -84,6 +84,11 @@ const groups={
         const rowCells=firstRow?[...firstRow.children]:[];
         if(!label||!label.querySelector('small')||!label.querySelector('strong')||picker.getBoundingClientRect().height<60||getComputedStyle(picker).gridTemplateColumns.split(' ').length!==2||getComputedStyle(header).color!=='rgb(0, 212, 237)'||getComputedStyle(rows).borderTopWidth!=='2px'||rowCells.some(cell=>parseFloat(getComputedStyle(cell).fontSize)<18))failures.push('Android ranking does not match the PSG1 picker/results treatment');
        }
+       const headquartersShell=document.querySelector('.headquarters-web .operations-web__shell');
+       if(headquartersShell){
+        const shellStyle=getComputedStyle(headquartersShell);
+        if(shellStyle.borderTopWidth!=='2px'||!shellStyle.boxShadow.includes('rgb(37, 143, 168)'))failures.push('Headquarters is missing the Shop-style outer container');
+       }
        const swap=document.querySelector('.shop-web__swap');
        if(swap){
         const content=swap.closest('.shop-web__content'),bodyElement=swap.querySelector('.shop-web__swap-body'),panel=swap.getBoundingClientRect(),body=bodyElement.getBoundingClientRect(),style=getComputedStyle(swap),contentStyle=getComputedStyle(content);
