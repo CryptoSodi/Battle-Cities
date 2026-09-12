@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import {
@@ -7,7 +8,7 @@ import {
 } from '../playerProfile';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
-import { isPsg1Ui } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 import { bindUiLayoutRefresh } from './focusScroll';
 
 export class PlayerProfileWebUi {
@@ -35,7 +36,7 @@ export class PlayerProfileWebUi {
 
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement)) {
       throw new Error('Player profile web UI host is missing.');
     }

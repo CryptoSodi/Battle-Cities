@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import * as config from '../config';
 import { PlayerIdentity } from '../auth';
 import { apiFetch } from '../network/api';
@@ -10,7 +11,8 @@ import {
 } from '../notifications/NativeNotificationClient';
 import { moveFocus } from './HeadquartersWebUi';
 import { animateBackNavigation } from './navigationAnimation';
-import { isPsg1Ui, isPsg1Controls } from './deviceUi';
+import { isPsg1Controls } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 import { bindPsg1FocusScroll, bindUiLayoutRefresh } from './focusScroll';
 
 export class SettingsWebUi {
@@ -38,7 +40,7 @@ export class SettingsWebUi {
   }
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Settings web UI host is missing.');
     this.active = true;

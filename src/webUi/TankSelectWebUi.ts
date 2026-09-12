@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { GameStorage } from '../game';
 import { InputManager, MenuInputContext } from '../input';
@@ -102,7 +103,7 @@ export class TankSelectWebUi {
 
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Tank select web UI host is missing.');
     this.active = true;

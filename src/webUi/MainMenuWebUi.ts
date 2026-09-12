@@ -11,6 +11,7 @@ import { GameSceneType } from '../scenes';
 import { TradingClient } from '../trading';
 import { CherryChatWebUi } from './CherryChatWebUi';
 import { isPsg1Ui } from './deviceUi';
+import { isDesktopConsole } from './webUiHost';
 import { handlePsg1TabNavigation } from './psg1TabNavigation';
 import { bindUiLayoutRefresh } from './focusScroll';
 
@@ -200,7 +201,46 @@ export class MainMenuWebUi {
       this.host.hidden = true;
     }
     this.host = null;
+    document.body.classList.remove('web-monitor-active');
     document.body.classList.remove('web-ui-active', 'main-menu-web-active');
+  }
+
+  /** Keep the live outer console intact while the scene router owns the page. */
+  public setMonitorPage(sceneType: GameSceneType | null): void {
+    if (!this.host) return;
+    const screen = this.host.querySelector<HTMLElement>('.web-home-screen');
+    if (!screen) return;
+    let page = screen.querySelector<HTMLElement>('[data-monitor-page]');
+    if (sceneType) {
+      if (!page) {
+        page = document.createElement('div');
+        page.dataset.monitorPage = '';
+        page.className = 'web-monitor-page';
+        screen.append(page);
+      }
+      page.hidden = false;
+    } else {
+      page?.remove();
+    }
+    screen.classList.toggle('web-home-screen--page', !!sceneType);
+    document.body.classList.toggle('web-monitor-active', !!sceneType);
+    document.body.classList.add('web-ui-active', 'main-menu-web-active');
+    const section = sceneType === GameSceneType.MainShop ? 'shop'
+      : sceneType === GameSceneType.MainRanking ? 'ranking'
+      : sceneType === GameSceneType.MainSocials ? 'socials'
+      : [GameSceneType.MainMore, GameSceneType.MainTreasury, GameSceneType.MainWiki,
+        GameSceneType.MainEvents, GameSceneType.MainStaking, GameSceneType.MainTrading,
+        GameSceneType.MainBoost, GameSceneType.MainAirdrop].includes(sceneType as GameSceneType)
+      ? 'headquarters' : 'start';
+    this.host.querySelectorAll<HTMLElement>('.main-menu-web__commands [data-menu-action]').forEach(button => {
+      if (button.dataset.menuAction === section) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    if (!sceneType) this.focusInitialAction();
+  }
+
+  public blocksScreenInput(): boolean {
+    return this.active && (this.cherryChat.blocksMenuInput() || !!this.host?.querySelector('[data-menu-notification-dialog][open]'));
   }
 
   public update(): void {
@@ -712,7 +752,7 @@ export class MainMenuWebUi {
         'click',
         () => {
           if (this.touchActionTimer === null) {
-            this.activateAction(button.dataset.menuAction || '');
+            this.activateAction(isDesktopConsole() && button.dataset.menuAction === 'start' && button.closest('.main-menu-web__commands') ? 'home' : button.dataset.menuAction || '');
           }
         },
         { signal },
@@ -720,7 +760,7 @@ export class MainMenuWebUi {
       button.addEventListener(
         'pointerup',
         (event) => {
-          if (event.pointerType !== 'touch' || this.touchActionTimer !== null) {
+          if (isDesktopConsole() || event.pointerType !== 'touch' || this.touchActionTimer !== null) {
             return;
           }
 
@@ -760,6 +800,7 @@ export class MainMenuWebUi {
     this.host.addEventListener(
       'keydown',
       (event) => {
+        if (event.target instanceof Element && event.target.closest('[data-monitor-page]')) return;
         if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           event.preventDefault();
         }
@@ -874,6 +915,10 @@ export class MainMenuWebUi {
   }
 
   private activateAction(action: string): void {
+    if (action === 'home') {
+      this.options.navigator.push(GameSceneType.MainMenu);
+      return;
+    }
     switch (action) {
       case 'start':
         beginSinglePlayerReplaySession();

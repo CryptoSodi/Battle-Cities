@@ -1,4 +1,4 @@
-import { isPsg1Ui } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 import { bindPsg1FocusScroll } from './focusScroll';
 
 /** Skin the existing live controls without changing their actions or focus order. */
@@ -36,7 +36,7 @@ export function decoratePsg1Console(host: HTMLElement): void {
     '.headquarters-web__header h1, .operations-web__header h1',
   );
   if (title && root.classList.contains('headquarters-web'))
-    title.textContent = 'QUATERS';
+    title.textContent = 'QUARTERS';
   decoratePageHeadingIcons(root);
 }
 

@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { GameSceneType } from '../scenes';
@@ -83,7 +84,7 @@ export class HeadquartersWebUi {
   }
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Headquarters web UI host is missing.');
     this.active = true;

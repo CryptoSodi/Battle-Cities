@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { handlePsg1TabNavigation } from './psg1TabNavigation';
@@ -5,7 +6,7 @@ import { RankingClient, RankingResponse, RankingScope } from '../ranking';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
 import { decoratePsg1Console } from './psg1Console';
-import { isPsg1Ui } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 import { bindUiLayoutRefresh } from './focusScroll';
 
 export class RankingWebUi {
@@ -32,7 +33,7 @@ export class RankingWebUi {
   }
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Ranking web UI host is missing.');
     this.active = true;

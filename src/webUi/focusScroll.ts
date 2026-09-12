@@ -1,4 +1,4 @@
-import { isPsg1Ui } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 
 const boundHosts = new WeakSet<HTMLElement>();
 const cardSelector =
@@ -53,7 +53,7 @@ export function bindUiLayoutRefresh(host: HTMLElement, signal: AbortSignal, rend
 /** Reveal a focused control without scrolling fixed/overflow-hidden UI shells. */
 export function revealFocusedControl(control: HTMLElement): void {
   const card = control.closest<HTMLElement>(cardSelector);
-  const host = control.closest('[data-web-ui]');
+  const host = control.closest('[data-monitor-page], [data-web-ui]');
   for (
     let parent = control.parentElement;
     parent && parent !== host;

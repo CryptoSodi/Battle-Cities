@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { InputManager, MenuInputContext } from '../input';
 import { handlePsg1TabNavigation } from './psg1TabNavigation';
@@ -146,7 +147,7 @@ export class HeadquartersPagesWebUi {
 
   public mount(sceneType: GameSceneType): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Headquarters page web UI host is missing.');
     this.active = true;

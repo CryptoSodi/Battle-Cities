@@ -35,7 +35,7 @@ html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__comman
   opacity: var(--android-button-active);
   object-fit: contain;
 }
-html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):is(:hover, :active, :focus-visible, .is-focused, .is-selected, .is-activating) {
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):is([aria-current='page'], :hover, :active, :focus-visible, .is-focused, .is-selected, .is-activating) {
   --android-button-idle: 0;
   --android-button-active: 1;
   color: var(--bc-active-ink);

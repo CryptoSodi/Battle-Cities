@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { SceneNavigator } from '../core';
 import { GameStorage } from '../game';
 import { InputManager, MenuInputContext } from '../input';
@@ -14,7 +15,8 @@ import {
 } from '../shop';
 import { GameSceneType } from '../scenes';
 import { animateBackNavigation } from './navigationAnimation';
-import { isPsg1Ui, isPsg1Controls } from './deviceUi';
+import { isPsg1Controls } from './deviceUi';
+import { isConsoleScreenUi as isPsg1Ui } from './webUiHost';
 import { bindPsg1FocusScroll, bindUiLayoutRefresh } from './focusScroll';
 
 interface ShopWebUiOptions {
@@ -65,7 +67,7 @@ export class ShopWebUi {
   }
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement))
       throw new Error('Shop web UI host is missing.');
     this.active = true;

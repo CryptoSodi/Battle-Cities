@@ -1,3 +1,4 @@
+import { getWebUiHost } from './webUiHost';
 import { InputManager, MenuInputContext } from '../input';
 import { decoratePsg1Console } from './psg1Console';
 import { bindUiLayoutRefresh } from './focusScroll';
@@ -56,7 +57,7 @@ export class ResultsWebUi {
 
   public mount(): void {
     if (this.active) return;
-    const host = document.querySelector('[data-web-ui]');
+    const host = getWebUiHost();
     if (!(host instanceof HTMLElement)) {
       throw new Error('Results web UI host is missing.');
     }

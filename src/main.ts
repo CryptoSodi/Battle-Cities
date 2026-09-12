@@ -49,6 +49,8 @@ import {
   readMultiplayerRuntime,
 } from './network/multiplayerRuntime';
 import { MainMenuWebUi } from './webUi/MainMenuWebUi';
+import { getWebUiHost, isDesktopConsole } from './webUi/webUiHost';
+import { installMonitorStyles } from './webUi/monitorStyles';
 import { applyScreenTransition } from './webUi/navigationAnimation';
 import { HeadquartersWebUi } from './webUi/HeadquartersWebUi';
 import { HeadquartersPagesWebUi } from './webUi/HeadquartersPagesWebUi';
@@ -1026,8 +1028,15 @@ function loadReplayMap(levelNumber: number): Promise<MapConfig | null> {
     mapLoader.loadAsync(levelNumber);
   });
 }
-sceneRouter.transitionStarted.addListener(() => {
-  mainMenuWebUi.unmount();
+const monitorScenes = new Set([
+  GameSceneType.MainMenu, GameSceneType.MainShop, GameSceneType.MainRanking,
+  GameSceneType.LevelScore, GameSceneType.MainTankSelect, GameSceneType.MainPlayerProfile,
+  GameSceneType.MainMore, GameSceneType.MainTreasury, GameSceneType.MainEvents,
+  GameSceneType.MainStaking, GameSceneType.MainTrading, GameSceneType.MainBoost,
+  GameSceneType.MainAirdrop, GameSceneType.MainWiki, GameSceneType.MainSocials,
+  GameSceneType.SettingsMenu,
+]);
+function unmountSubpages(): void {
   shopWebUi.unmount();
   rankingWebUi.unmount();
   resultsWebUi.unmount();
@@ -1037,10 +1046,24 @@ sceneRouter.transitionStarted.addListener(() => {
   headquartersPagesWebUi.unmount();
   socialsWebUi.unmount();
   settingsWebUi.unmount();
+}
+sceneRouter.transitionStarted.addListener(() => {
+  unmountSubpages();
+  if (!isDesktopConsole()) mainMenuWebUi.unmount();
   collisionSystem.reset();
   document.body.classList.remove('level-playing');
 });
-sceneRouter.transitionCompleted.addListener((sceneType) => {
+function mountSceneWebUi(sceneType: GameSceneType): void {
+  const embedded = isDesktopConsole() && monitorScenes.has(sceneType);
+  if (embedded) {
+    installMonitorStyles();
+    mainMenuWebUi.mount();
+    mainMenuWebUi.setMonitorPage(sceneType === GameSceneType.MainMenu ? null : sceneType);
+  } else {
+    mainMenuWebUi.setMonitorPage(null);
+    mainMenuWebUi.unmount();
+    document.body.classList.remove('web-monitor-active');
+  }
   if (sceneType === GameSceneType.MainMenu) {
     mainMenuWebUi.mount();
   }
@@ -1066,14 +1089,39 @@ sceneRouter.transitionCompleted.addListener((sceneType) => {
     headquartersPagesWebUi.mount(sceneType);
   if (sceneType === GameSceneType.MainSocials) socialsWebUi.mount();
   if (sceneType === GameSceneType.SettingsMenu) settingsWebUi.mount();
-  const webUiHost = document.querySelector('[data-web-ui]');
+  const webUiHost = getWebUiHost();
   if (webUiHost instanceof HTMLElement) applyScreenTransition(webUiHost);
+}
+sceneRouter.transitionCompleted.addListener((sceneType) => {
+  mountSceneWebUi(sceneType as GameSceneType);
   if (
     presenceTrackingStarted &&
     isPresenceInGame() !== lastReportedPresenceInGame
   ) {
     void sendPresenceHeartbeat();
   }
+});
+
+let desktopConsoleLayout = isDesktopConsole();
+window.addEventListener('battlecities:ui-device', () => {
+  const next = isDesktopConsole();
+  if (next === desktopConsoleLayout) return;
+  desktopConsoleLayout = next;
+  // Run after each mounted page's layout listener has preserved its local state.
+  queueMicrotask(() => {
+    const sceneType = sceneRouter.getCurrentType() as GameSceneType;
+    if (!monitorScenes.has(sceneType)) return;
+    const refresh = (): void => {
+      const currentType = sceneRouter.getCurrentType() as GameSceneType;
+      if (!monitorScenes.has(currentType)) return;
+      unmountSubpages();
+      mainMenuWebUi.unmount();
+      mountSceneWebUi(currentType);
+    };
+    const dialog = document.querySelector('dialog[open]');
+    if (dialog) dialog.addEventListener('close', refresh, { once: true });
+    else refresh();
+  });
 });
 
 const debugInspector = new DebugInspector(gameRenderer.getDomElement());
@@ -1504,7 +1552,12 @@ gameLoop.update.addListener((event) => {
   // Dispatch input only to the screen that owned this simulation step. A
   // navigation action can mount another web UI synchronously; that new screen
   // must not consume the same key-down later in this step.
-  switch (sceneType) {
+  if (document.body.classList.contains('web-monitor-active') &&
+    (mainMenuWebUi.blocksScreenInput() ||
+      (document.activeElement instanceof Element &&
+        !document.activeElement.closest('[data-monitor-page]')))) {
+    mainMenuWebUi.update();
+  } else switch (sceneType) {
     case GameSceneType.MainMenu:
       mainMenuWebUi.update();
       break;
