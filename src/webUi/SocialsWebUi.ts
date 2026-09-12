@@ -201,6 +201,10 @@ export class SocialsWebUi {
     )}</section><p class="operations-web__status" aria-live="polite">${
       this.status
     }</p></section></main>`;
+    const grid = this.host.querySelector('.operations-web__grid--social');
+    grid?.querySelectorAll('.operations-web__card:disabled').forEach((card) => {
+      grid.append(card);
+    });
     decoratePsg1Console(this.host);
     this.bind();
     const preferred =
