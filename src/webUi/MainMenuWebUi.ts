@@ -369,6 +369,7 @@ export class MainMenuWebUi {
             <div class="web-home-center">
             <div class="web-home-screen">
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
+            <div class="home-banner-logo"><img src="/assets/battle-cities-menu-logo.png" alt="Battle Cities — Build. Defend. Conquer." draggable="false"></div>
             <button class="web-home-start" type="button" data-menu-action="start" aria-label="Start Battle"><img src="/assets/android-home-v2/start-active-v2.png" alt="" draggable="false"></button>
             <section id="home-rewards-panel" class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
               <header class="main-menu-web__reward-header">
@@ -383,8 +384,11 @@ export class MainMenuWebUi {
                   <progress data-home-round-progress max="100" value="0" aria-label="Time remaining in this round"></progress>
                 </div>
               </header>
+              <div class="home-rewards-foreground">
+              <div class="home-rewards-crates" aria-hidden="true"></div>
               <div class="main-menu-web__reward-tiers" data-home-reward-tiers aria-label="BATC reward tiers">
                 ${this.rewardTiersMarkup(HOME_REWARD_TIERS)}
+              </div>
               </div>
               <section class="main-menu-web__how-it-works" aria-labelledby="home-rewards-how-title">
                 <h3 id="home-rewards-how-title">How it works</h3>

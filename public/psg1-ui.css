@@ -178,7 +178,7 @@ html[data-ui-device='psg1'] :is(.main-menu-web__commands, .main-menu-web__overvi
   display: contents;
 }
 html[data-ui-device='psg1'] .main-menu-web__overview-banner {
-  content: url('/assets/psg1/bannerpsg1-v2.png');
+  content: url('/assets/battlefield-banner-no-logo-v1.png');
   grid-area: 1 / 1 / 3 / 2;
   align-self: stretch;
   width: 100%;
@@ -187,8 +187,13 @@ html[data-ui-device='psg1'] .main-menu-web__overview-banner {
   max-height: none;
   margin: 0;
   padding: 0;
-  border: 0;
-  object-fit: fill;
+  /* Keep the original PSG1 artwork's metal rim; replace only its center. */
+  border: clamp(7px, 0.9vw, 12px) solid transparent;
+  border-image-source: url('/assets/psg1/bannerpsg1-v2.png');
+  border-image-slice: 48;
+  border-image-width: 1;
+  border-image-repeat: stretch;
+  object-fit: cover;
   object-position: center;
 }
 html[data-ui-device='psg1'] .main-menu-web__commands .main-menu-web__action[data-menu-action='start'] {
@@ -460,7 +465,19 @@ html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='leaderboard'] .main-
 }
 html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='rewards'] .main-menu-web__reward-briefing {
   aspect-ratio: auto;
-  background: url('/assets/psg1/rewardspsg1-v2.png') center / 100% 100% no-repeat;
+  border: clamp(7px, 0.9vw, 12px) solid transparent;
+  border-image: url('/assets/psg1/rewardspsg1-v2.png') 32 / 1 / 0 stretch;
+  /* Crop the 32px baked rim from the 1942x809 background; render it once,
+     separately as a nine-slice border with undistorted corners. */
+  background: url('/assets/psg1/rewardspsg1-v2.png') center / 103.408% 108.591% no-repeat;
+  background-origin: padding-box;
+  background-clip: padding-box;
+}
+html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='rewards'] .main-menu-web__reward-tiers {
+  left: 4%;
+  top: 66.3%;
+  width: 91.5%;
+  height: 20.6%;
 }
 html[data-ui-device='psg1'] .main-menu-web[data-reward-tab='leaderboard'] .main-menu-web__leaderboard-preview {
   aspect-ratio: auto;
