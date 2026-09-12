@@ -1,5 +1,5 @@
 /* Desktop ranking: beveled metal housing around the live content. */
-html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leaderboard-preview {
+html[data-ui-platform='web']:not([data-ui-device='psg1']) :is(.main-menu-web__leaderboard-preview, .web-home-how) {
   --ranking-edge: #258fa8;
   --ranking-steel: #839da5;
   position: relative;
@@ -12,21 +12,17 @@ html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leader
   box-shadow: inset 0 0 0 2px #010609, inset 0 0 0 3px var(--ranking-edge), inset 0 0 0 5px #162e38, inset 0 0 28px rgb(0 0 0 / 72%);
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
 }
-html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leaderboard-preview::before {
+html[data-ui-platform='web']:not([data-ui-device='psg1']) :is(.main-menu-web__leaderboard-preview, .web-home-how)::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
   background:
-    radial-gradient(circle, #10191f 0 2px, #82979f 3px, #050a0d 4px 6px, #657d86 7px 8px, #15232b 9px 12px, transparent 13px) 0 0 / 26px 26px no-repeat,
-    radial-gradient(circle, #10191f 0 2px, #82979f 3px, #050a0d 4px 6px, #657d86 7px 8px, #15232b 9px 12px, transparent 13px) 100% 0 / 26px 26px no-repeat,
-    radial-gradient(circle, #10191f 0 2px, #82979f 3px, #050a0d 4px 6px, #657d86 7px 8px, #15232b 9px 12px, transparent 13px) 0 100% / 26px 26px no-repeat,
-    radial-gradient(circle, #10191f 0 2px, #82979f 3px, #050a0d 4px 6px, #657d86 7px 8px, #15232b 9px 12px, transparent 13px) 100% 100% / 26px 26px no-repeat,
     repeating-linear-gradient(0deg, transparent 0 65px, #02070a 66px 69px, #7f959e 70px, transparent 72px 130px) left center / 7px 100% no-repeat,
     repeating-linear-gradient(0deg, transparent 0 65px, #02070a 66px 69px, #7f959e 70px, transparent 72px 130px) right center / 7px 100% no-repeat;
 }
-html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leaderboard-preview::after {
+html[data-ui-platform='web']:not([data-ui-device='psg1']) :is(.main-menu-web__leaderboard-preview, .web-home-how)::after {
   content: '';
   position: absolute;
   top: 0;

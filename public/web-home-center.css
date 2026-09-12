@@ -54,8 +54,7 @@ html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start {
   cursor: pointer;
 }
 html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start:is(:hover, :focus-visible, .is-selected) {
-  outline: 3px solid var(--bc-command);
-  outline-offset: -7px;
+  outline: none;
   filter: brightness(1.15);
 }
 html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-briefing {

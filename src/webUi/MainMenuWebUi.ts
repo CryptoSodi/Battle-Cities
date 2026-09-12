@@ -393,14 +393,22 @@ export class MainMenuWebUi {
               <section class="main-menu-web__how-it-works" aria-labelledby="home-rewards-how-title">
                 <h3 id="home-rewards-how-title">How it works</h3>
                 <ol>
-                  <li><b>1</b><span>Play battles and earn points</span></li>
-                  <li><b>2</b><span>Reach the top 10 before the round closes</span></li>
-                  <li><b>3</b><span>Eligible rewards go to your linked wallet</span></li>
+                  <li><img class="home-how-icon home-how-icon--tank" src="/assets/web-play-tank-active-v2.png" alt=""><span>Play battles and earn points</span></li>
+                  <li><img class="home-how-icon" src="/assets/android-home-v2/rankinga.png" alt=""><span>Reach the top 10 before the round closes</span></li>
+                  <li><img class="home-how-icon" src="/assets/android-home-v2/crate1.png" alt=""><span>Eligible rewards go to your linked wallet</span></li>
                 </ol>
               </section>
             </section>
             </div>
             </div>
+            <section class="web-home-how" aria-labelledby="web-home-how-title">
+              <h3 id="web-home-how-title">How it works</h3>
+              <ol>
+                <li><img class="home-how-icon--tank" src="/assets/web-play-tank-active-v2.png" alt="" aria-hidden="true"><span>Play battles and earn points</span></li>
+                <li><img src="/assets/android-home-v2/rankinga.png" alt="" aria-hidden="true"><span>Reach the top 10 before the round closes</span></li>
+                <li><img src="/assets/android-home-v2/crate1.png" alt="" aria-hidden="true"><span>Eligible rewards go to your linked wallet</span></li>
+              </ol>
+            </section>
             <section id="home-leaderboard-panel" class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
               <header class="main-menu-web__leaderboard-header">
                 <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
@@ -577,6 +585,21 @@ export class MainMenuWebUi {
     this.fitAndroidHome();
   }
 
+  private fitBannerLogo(): void {
+    const logo = this.host.querySelector<HTMLElement>('.home-banner-logo');
+    const banner = this.host.querySelector<HTMLElement>('.main-menu-web__overview-banner');
+    const start = this.host.querySelector<HTMLElement>(isPsg1Ui()
+      ? '.main-menu-web__commands [data-menu-action="start"]'
+      : '.web-home-start');
+    if (!logo || !banner || !start || !logo.getClientRects().length) return;
+    const art = banner.getBoundingClientRect();
+    const button = start.getBoundingClientRect();
+    if (art.height <= 0 || button.height <= 0) return;
+    // Reserve the real button footprint, not a viewport-height estimate.
+    const available = Math.max(0, Math.min(art.bottom, button.top) - art.top - 4);
+    logo.style.setProperty('--banner-logo-height', `${available}px`);
+  }
+
   private bindHomeChatPlacement(): void {
     const schedule = (): void => {
       if (this.homeLayoutFrame !== null) return;
@@ -584,6 +607,7 @@ export class MainMenuWebUi {
         this.homeLayoutFrame = null;
         if (!this.active) return;
         this.fitAndroidHome();
+        this.fitBannerLogo();
         const hazard = this.host.querySelector<HTMLElement>('.main-menu-web__hazard');
         const panels = Array.from(this.host.querySelectorAll<HTMLElement>('#home-rewards-panel, #home-leaderboard-panel'));
         const panel = panels.find((item) => item.getClientRects().length > 0);
@@ -599,7 +623,8 @@ export class MainMenuWebUi {
       });
     };
     this.homeLayoutObserver = new ResizeObserver(schedule);
-    this.host.querySelectorAll('.main-menu-web, .main-menu-web__hazard, #home-rewards-panel, #home-leaderboard-panel').forEach((element) => this.homeLayoutObserver.observe(element));
+    this.host.querySelectorAll('.main-menu-web, .main-menu-web__hazard, #home-rewards-panel, #home-leaderboard-panel, .main-menu-web__overview-banner, .web-home-start, .main-menu-web__commands [data-menu-action="start"]').forEach((element) => this.homeLayoutObserver.observe(element));
+    this.host.querySelectorAll('.home-banner-logo img, .web-home-start img').forEach((image) => image.addEventListener('load', schedule, { signal: this.abortController.signal }));
     window.addEventListener('resize', schedule, { signal: this.abortController.signal });
     window.addEventListener('battlecities:ui-device', schedule, { signal: this.abortController.signal });
     schedule();
