@@ -132,8 +132,8 @@ html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] [data-ui-nav] .ui-page-heading-icon { width:24px;height:24px; }
 html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] .settings-web__rows button { min-height:48px;font-size:18px;padding:8px; }
 
-/* Quaters, Socials and all seven operations pages. */
-html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] :is(.headquarters-web .operations-web__shell,.socials-web .operations-web__shell,.hq-page-web__shell) {
+/* Shared outer container for Android content pages. */
+html[data-ui-platform='android']:not([data-ui-device='psg1']) body.web-ui-active [data-web-ui] :is(.shop-web__shell,.ranking-web__shell,.tank-select-web__shell,.headquarters-web .operations-web__shell,.socials-web .operations-web__shell,.hq-page-web__shell) {
   background:var(--mobile-surface);
   border:2px solid var(--mobile-steel);
   box-shadow:var(--mobile-bevel),inset 0 0 24px rgb(0 0 0 / 62%);
