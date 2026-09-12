@@ -165,3 +165,42 @@ html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-how ol {
   background: linear-gradient(#258fa810 1px, transparent 1px) 0 0 / 20px 20px,
     linear-gradient(90deg, #258fa810 1px, transparent 1px) 0 0 / 20px 20px;
 }
+
+/* One shared grid aligns the command stack with the TV and lets the
+   instruction panel span both columns without a floating empty row. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__content {
+  grid-template-columns: clamp(100px, 16dvh, 190px) minmax(0, 1fr) clamp(260px, 23vw, 400px);
+  grid-template-rows: minmax(0, 1fr) clamp(112px, 16dvh, 200px);
+  gap: 12px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__overview {
+  display: contents;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands {
+  grid-area: 1 / 1;
+  height: 100%;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  align-content: stretch;
+  padding: 0;
+  margin: 0;
+  gap: 6px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  justify-self: center;
+  align-self: stretch;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center {
+  grid-area: 1 / 2;
+  height: 100%;
+  aspect-ratio: auto;
+  align-self: stretch;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-how {
+  grid-area: 2 / 1 / 3 / 3;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leaderboard-preview {
+  grid-area: 1 / 3 / 3 / 4;
+}
