@@ -1,3 +1,10 @@
+/* Desktop keeps the shared HUD compact: about 9% of the viewport height,
+   centered above the wider content without stretching the source artwork. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__hud {
+  width: min(100%, 1120px, 130dvh);
+  margin-inline: auto;
+}
+
 /* User-calibrated gear offset: PSG1 home header only. */
 html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__action[data-menu-action='settings'] {
   margin-left: 10px;

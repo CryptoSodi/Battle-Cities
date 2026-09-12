@@ -1,0 +1,64 @@
+/* Desktop command center fits the viewport; only live ranking rows scroll. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__content {
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+  padding-bottom: 8px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__overview {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center {
+  grid-area: 1 / 1;
+  min-height: 0;
+  padding: clamp(8px, 1.2dvh, 16px);
+  gap: 8px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-screen {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  padding: 6px;
+  gap: 6px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__overview-banner {
+  min-height: 0;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  object-position: center 30%;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start {
+  width: min(88%, 62dvh);
+  min-height: 0;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-briefing {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 6px;
+  gap: 4px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-header { padding: 0 0 4px; gap: 8px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-header .main-menu-web__panel-icon { width: 28px; height: 28px; flex-basis: 28px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-header h2 { font-size: clamp(16px, 2.4dvh, 26px); }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-header p { font-size: 11px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-tiers { min-height: 0; gap: 6px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__chest { width: auto; height: clamp(30px, 6dvh, 85px); max-width: 100%; margin: 0 auto -6px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__podium { min-height: 0; padding: 8px 2px 4px; gap: 4px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__podium strong { font-size: clamp(14px, 2dvh, 24px); }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__podium span { font-size: clamp(12px, 1.7dvh, 20px); }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__leaderboard-preview {
+  grid-area: 1 / 2;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto 28px minmax(0, 1fr) auto;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands {
+  min-height: 0;
+  max-height: 100%;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action { max-height: 100%; }

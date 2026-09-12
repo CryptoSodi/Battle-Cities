@@ -1,0 +1,101 @@
+/* Desktop sidebar reuses the PSG1 square command artwork and icon treatment. */
+.web-home-play-icon { display: none; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  --android-button-idle: 1;
+  --android-button-active: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1226 / 1192;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--bc-text);
+  container-type: inline-size;
+  font-family: 'Battle Cities UI', Impact, 'Arial Narrow', sans-serif;
+  font-weight: 900;
+  font-size: clamp(13px, 1.8vw, 28px);
+  letter-spacing: 0.015em;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 72%);
+  transform: none;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--inactive {
+  content: url('/assets/psg1/buttonpsg1.png');
+  opacity: var(--android-button-idle);
+  object-fit: contain;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) .main-menu-web__action-image--active {
+  content: url('/assets/psg1/buttonactivepsg1.png');
+  opacity: var(--android-button-active);
+  object-fit: contain;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']):is(:hover, :active, :focus-visible, .is-focused, .is-selected, .is-activating) {
+  --android-button-idle: 0;
+  --android-button-active: 1;
+  color: var(--bc-active-ink);
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .android-home-button-icon {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  left: 18%;
+  top: 13%;
+  width: 64%;
+  height: 51%;
+  pointer-events: none;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .android-home-button-icon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .android-home-button-icon + .main-menu-web__action-label {
+  position: absolute;
+  z-index: 2;
+  left: 7%;
+  bottom: 8%;
+  width: 86%;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  font-size: clamp(12px, 14cqw, 28px);
+  transform: translateY(-2%);
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__action[data-menu-action='headquarters'] .main-menu-web__action-label {
+  font-size: clamp(12px, 14cqw, 28px);
+}
+
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__content { grid-template-columns: clamp(100px, 16dvh, 190px) minmax(0, 1fr); }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands { gap: 6px; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action { height: auto; aspect-ratio: 1226 / 1192; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-play-icon { display: block; position: absolute; left: 18%; top: 13%; width: 64%; height: 51%; z-index: 1; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-play-icon img { width: 100%; height: 100%; object-fit: contain; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-play-icon + .main-menu-web__action-label { position: absolute; left: 7%; bottom: 8%; width: 86%; line-height: 1; font-size: clamp(12px, 14cqw, 28px); text-align: center; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) [data-menu-action='ranking'] .android-home-button-icon img { content: url('/assets/home-reward-trophy.png'); }
+
+/* Keep labels aligned to the artwork even when the navigation rows are taller. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action:is([data-menu-action='start'], [data-menu-action='shop'], [data-menu-action='ranking'], [data-menu-action='headquarters'], [data-menu-action='socials']) {
+  height: auto;
+  align-self: center;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web__commands .main-menu-web__action .main-menu-web__action-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  top: 72%;
+  bottom: auto;
+  left: 7%;
+  width: 86%;
+  height: 17%;
+  padding: 0;
+  line-height: 1;
+  transform: none;
+}

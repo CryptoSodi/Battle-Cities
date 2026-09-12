@@ -302,13 +302,8 @@ export class MainMenuWebUi {
       { action: 'settings', group: 'main', label: 'Settings' },
     );
 
-    const developerActions: MenuAction[] = this.options.isDev
-      ? [
-          { action: 'modes', group: 'developer', label: 'Modes' },
-          { action: 'editor', group: 'developer', label: 'Construction' },
-          { action: 'replay', group: 'developer', label: 'Replay' },
-        ]
-      : [];
+    // Developer commands are temporarily omitted from the main menu.
+    const developerActions: MenuAction[] = [];
     const actions = mainActions.concat(developerActions);
     const renderActions = (group: MenuAction['group']): string =>
       actions
@@ -326,7 +321,9 @@ export class MainMenuWebUi {
           const iconName = ({ shop: 'shop', ranking: 'ranking', headquarters: 'headquater', socials: 'social' } as Record<string, string>)[item.action];
           const icons = iconName
             ? `<span class="android-home-button-icon" aria-hidden="true"><img class="android-home-button-icon__idle" src="/assets/android-home-v2/${iconName}.png" alt="" draggable="false"><img class="android-home-button-icon__active" src="/assets/android-home-v2/${iconName}a.png" alt="" draggable="false"></span>`
-            : '';
+            : item.action === 'start'
+              ? '<span class="web-home-play-icon" aria-hidden="true"><img src="/assets/tank-select-header.png" alt="" draggable="false"></span>'
+              : '';
           return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}${icons}<span class="main-menu-web__action-label">${item.label}</span></button>`;
         })
         .join('');
@@ -369,12 +366,15 @@ export class MainMenuWebUi {
                 <span class="psg1-home-tab-content" aria-hidden="true"><kbd>R</kbd><img src="/assets/headquarters/campaigns-medal.png" alt=""><span>LEADERBOARD</span></span>
               </button>
             </div>
+            <div class="web-home-center">
+            <div class="web-home-screen">
             <img class="main-menu-web__overview-banner" src="/assets/rewards-leaderboard-banner.png" alt="Battle Cities battlefield" width="1774" height="887">
+            <button class="web-home-start" type="button" data-menu-action="start" aria-label="Start Battle"><img src="/assets/android-home-v2/start-active-v2.png" alt="" draggable="false"></button>
             <section id="home-rewards-panel" class="main-menu-web__reward-briefing" aria-labelledby="home-rewards-title">
               <header class="main-menu-web__reward-header">
                 <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
                 <div>
-                  <h2 id="home-rewards-title">Live Rewards</h2>
+                  <h2 id="home-rewards-title"><span class="home-rewards-title-default">Live Rewards</span><span class="home-rewards-title-strip">TOP 10 EVERY 30 MINUTES</span></h2>
                   <p>Top 10 every 30 minutes</p>
                 </div>
                 <div class="main-menu-web__reward-clock">
@@ -395,6 +395,8 @@ export class MainMenuWebUi {
                 </ol>
               </section>
             </section>
+            </div>
+            </div>
             <section id="home-leaderboard-panel" class="main-menu-web__leaderboard-preview" aria-labelledby="home-leaderboard-title" aria-live="polite">
               <header class="main-menu-web__leaderboard-header">
                 <img class="main-menu-web__panel-icon" src="/assets/home-reward-trophy.png" alt="" width="48" height="48">
@@ -501,9 +503,34 @@ export class MainMenuWebUi {
 
   private syncDeviceLayout(): void {
     const host = this.host;
+    // Desktop shares the PSG1 header gear instead of a full Settings command.
+    const placeSettings = (): void => {
+      const desktop = !isPsg1Ui() && document.documentElement.dataset.uiPlatform === 'web';
+      const order = desktop
+        ? ['start', 'headquarters', 'shop', 'ranking', 'socials']
+        : ['start', 'shop', 'ranking', 'headquarters', 'socials'];
+      const commands = host.querySelector('.main-menu-web__commands');
+      const labels = { start: desktop ? 'Play' : 'Start', headquarters: desktop || isPsg1Ui() ? 'Quarters' : 'Headquarters', ranking: desktop ? 'Rewards' : 'Ranking' };
+      for (const action of [...order].reverse()) {
+        const button = host.querySelector(`[data-menu-action="${action}"]`);
+        if (button) commands?.prepend(button);
+        const label = button?.querySelector('.main-menu-web__action-label');
+        if (label && labels[action]) label.textContent = labels[action];
+      }
+      const settings = host.querySelector('[data-menu-action="settings"]');
+      if (!settings) return;
+      if (isPsg1Ui() || document.documentElement.dataset.uiPlatform === 'web') {
+        host.querySelector('.main-menu-web__hud')?.prepend(settings);
+      } else {
+        const commands = host.querySelector('.main-menu-web__commands');
+        const developer = commands?.querySelector('[data-menu-action="modes"]');
+        commands?.insertBefore(settings, developer || null);
+      }
+    };
     if (!isPsg1Ui()) {
       this.restoreHomeLayout?.();
       this.restoreHomeLayout = null;
+      placeSettings();
       const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
       if (chat) host.append(chat);
       this.fitAndroidHome();
@@ -522,9 +549,6 @@ export class MainMenuWebUi {
         node.parentNode.insertBefore(anchor, node);
         restore.push(() => { anchor.parentNode?.insertBefore(node, anchor); anchor.remove(); });
       };
-      const settings = host.querySelector('[data-menu-action="settings"]');
-      const hud = host.querySelector('.main-menu-web__hud');
-      if (settings && hud) { remember(settings); hud.prepend(settings); }
       const overview = host.querySelector('.main-menu-web__overview');
       const clock = host.querySelector('#home-rewards-panel .main-menu-web__reward-clock');
       const instructions = host.querySelector('.main-menu-web__how-it-works');
@@ -540,6 +564,7 @@ export class MainMenuWebUi {
       }
       this.restoreHomeLayout = () => restore.forEach(undo => undo());
     }
+    placeSettings();
     const chat = this.cherryChat.getLauncher()?.closest('.game-cherry');
     if (chat) host.querySelector('.main-menu-web__hazard')?.append(chat);
     if (document.documentElement.dataset.uiResponsive === 'true') {

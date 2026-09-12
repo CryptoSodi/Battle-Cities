@@ -1,0 +1,103 @@
+.web-home-center { display: contents; }
+.web-home-screen { display: contents; }
+.web-home-start { display: none; }
+/* One desktop metal housing for the battlefield and live reward podiums. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center {
+  display: flex;
+  flex-direction: column;
+  grid-area: 1 / 1 / 3 / 2;
+  min-width: 0;
+  padding: 16px;
+  gap: 12px;
+  position: relative;
+  border: 12px solid transparent;
+  background: linear-gradient(#030c11, #07151d) padding-box, linear-gradient(135deg, #a6bbc2, #263c46 8%, #0c171d 25%, #738991 48%, #20333d 55%, #657b85 90%, #17262d) border-box;
+  box-shadow: inset 0 0 0 2px #02080b, inset 0 0 0 4px #365966;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center::after {
+  content: '';
+  height: 10px;
+  flex: 0 0 10px;
+  margin: 0 12%;
+  background: repeating-linear-gradient(130deg, #d89b10 0 12px, #111e25 13px 25px);
+  border-block: 2px solid #50666f;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__overview-banner {
+  grid-area: 1 / 1;
+  content: url('/assets/web-monitor-banner-v1.png');
+  width: 100%;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  padding: 0;
+  border: 0;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start {
+  display: block;
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: center;
+  position: relative;
+  z-index: 3;
+  width: 88%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111409;
+  font: 900 clamp(24px, 2.5vw, 42px)/1 'Battle Cities UI', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  box-shadow: none;
+  cursor: pointer;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start:is(:hover, :focus-visible, .is-selected) {
+  outline: 3px solid var(--bc-command);
+  outline-offset: -7px;
+  filter: brightness(1.15);
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-briefing {
+  padding: 12px;
+  gap: 10px;
+  border: 2px solid #258fa8;
+  background: linear-gradient(#16708422 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, #16708422 1px, transparent 1px) 0 0 / 24px 24px, #06131b;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-header {
+  border-bottom: 1px solid #258fa8;
+  padding-bottom: 8px;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center :is(.main-menu-web__reward-clock, .main-menu-web__how-it-works) { display: none; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-center .main-menu-web__reward-tiers { padding-top: 0; }
+
+/* Rounded glass aperture recessed behind the square metal monitor housing. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-screen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 10px;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 10px;
+  border: 8px solid #020a0e;
+  border-radius: 40px / 28px;
+  background: #06121a;
+  box-shadow: 0 0 0 2px #56737b, 0 0 0 5px #14272d, 0 0 0 8px #02070a, 0 5px 8px #000;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 5px 16px #000, inset 0 -4px 12px #000, inset 0 1px 2px #6999a5;
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .web-home-start img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}

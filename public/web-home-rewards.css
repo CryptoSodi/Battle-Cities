@@ -1,0 +1,68 @@
+/* Desktop monitor hangar with live HTML ranks and reward amounts. */
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-briefing {
+  display: block;
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-top: 10px solid #324b55;
+  box-shadow: 0 -2px 0 #7a959f, 0 -4px 0 #02080c, inset 0 2px 0 #0b161c;
+  clip-path: none;
+  background: url('/assets/web-monitor-rewards-v1.png') center / 100% 100% no-repeat;
+  container-type: size;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-header {
+  position: absolute;
+  left: 5.5%;
+  top: 5%;
+  width: 88.5%;
+  height: 16%;
+  padding: 0 8px;
+  gap: 8px;
+  border: 1px solid #258fa8;
+  background: #031219de;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-header h2 { margin: 0; font-size: min(3.5cqw, 8cqh); line-height: 1; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-header p { display: block; margin: 2px 0 0; font-size: min(2.3cqw, 6cqh); line-height: 1; color: var(--bc-text); }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-header .main-menu-web__panel-icon { width: 12cqh; height: 12cqh; flex-basis: 12cqh; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-tiers {
+  position: absolute;
+  left: 6%;
+  top: 69%;
+  width: 88%;
+  height: 17%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2%;
+  padding: 0;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__reward-briefing::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: radial-gradient(circle, #d8a536 0 1px, #040b0f 2px 3px, #82969b 4px, transparent 5px) 8px center / 12px 10px no-repeat,
+    radial-gradient(circle, #d8a536 0 1px, #040b0f 2px 3px, #82969b 4px, transparent 5px) calc(100% - 8px) center / 12px 10px no-repeat,
+    linear-gradient(#8ca2a9, #263e49 25%, #101e26 65%, #617b85 85%, #071115);
+  pointer-events: none;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__chest { display: none; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center :is(.main-menu-web__reward-tier, .main-menu-web__podium) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: 2px;
+  border: 0;
+  clip-path: none;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__podium strong { position: static; font-size: min(3cqw, 8cqh); line-height: 1; }
+html[data-ui-platform='web']:not([data-ui-device='psg1']) .main-menu-web .web-home-center .main-menu-web__podium span { font-size: min(2.6cqw, 7cqh); line-height: 1; white-space: nowrap; }

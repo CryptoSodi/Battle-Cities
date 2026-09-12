@@ -37,8 +37,8 @@ html[data-ui-device='psg1'] [data-ui-nav] img {
   width: clamp(22px, 3vw, 36px);
 }
 
-/* PSG1 home HUD uses its tightly cropped native artwork without distortion. */
-html[data-ui-device='psg1'] .main-menu-web__hud {
+/* Shared desktop/PSG1 home HUD, using the same native artwork and controls. */
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud {
   aspect-ratio: 2000 / 171;
   width: 100%;
   max-width: none;
@@ -51,24 +51,24 @@ html[data-ui-device='psg1'] .main-menu-web__hud {
   background-position: center;
   z-index: 2;
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .main-menu-web__stat {
   top: 0;
   height: 100%;
   background: none;
 }
-html[data-ui-device='psg1'] .main-menu-web__stat--player {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__stat--player {
   left: 0.7%;
   width: 31.2%;
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--score {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .main-menu-web__stat--score {
   left: 0;
   width: 100%;
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--highscore {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .main-menu-web__stat--highscore {
   left: 0;
   width: 100%;
 }
-html[data-ui-device='psg1'] .main-menu-web__stat .main-menu-web__stat-value {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__stat .main-menu-web__stat-value {
   align-items: center;
   justify-content: center;
   height: 38%;
@@ -76,7 +76,7 @@ html[data-ui-device='psg1'] .main-menu-web__stat .main-menu-web__stat-value {
   line-height: 1;
   text-align: center;
 }
-html[data-ui-device='psg1'] .main-menu-web__stat--player .main-menu-web__stat-value {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__stat--player .main-menu-web__stat-value {
   left: 31%;
   top: 23%;
   width: 63%;
@@ -85,7 +85,7 @@ html[data-ui-device='psg1'] .main-menu-web__stat--player .main-menu-web__stat-va
   font-size: clamp(15px, 2.1cqw, 30px);
   justify-content: flex-start;
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--score .main-menu-web__stat-value {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .main-menu-web__stat--score .main-menu-web__stat-value {
   left: 39.5%;
   top: 43%;
   width: 17%;
@@ -93,7 +93,7 @@ html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--score .mai
   color: var(--bc-command);
   font-size: clamp(18px, 2.8cqw, 40px);
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--highscore .main-menu-web__stat-value {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .main-menu-web__stat--highscore .main-menu-web__stat-value {
   left: 68.5%;
   top: 43%;
   width: 17%;
@@ -101,7 +101,7 @@ html[data-ui-device='psg1'] .main-menu-web__hud .main-menu-web__stat--highscore 
   color: var(--bc-text);
   font-size: clamp(18px, 2.7cqw, 38px);
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .android-home-level {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .android-home-level {
   --level-track: #163747;
   --level-fill: #00aeef;
   --level-label: #57c8ff;
@@ -117,10 +117,10 @@ html[data-ui-device='psg1'] .main-menu-web__hud .android-home-level {
   border: 0;
   background: transparent;
 }
-html[data-ui-device='psg1'] .main-menu-web__hud .android-home-level span {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__hud .android-home-level span {
   font-size: clamp(10px, 1.2cqw, 17px);
 }
-html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__action[data-menu-action='settings'] {
   position: absolute;
   z-index: 5;
   left: 3.5%;
@@ -130,19 +130,19 @@ html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] 
   min-height: 40px;
   padding: 0;
 }
-html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image {
   inset: 10%;
   width: 80%;
   height: 80%;
   object-fit: contain;
 }
-html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--inactive {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--inactive {
   content: url('/assets/android-home-v2/gear.png');
 }
-html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--active {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-image--active {
   content: url('/assets/android-home-v2/gear-active.png');
 }
-html[data-ui-device='psg1'] .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-label {
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web__action[data-menu-action='settings'] .main-menu-web__action-label {
   clip-path: inset(50%);
   width: 1px;
   height: 1px;
