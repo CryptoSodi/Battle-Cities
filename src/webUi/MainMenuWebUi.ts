@@ -322,7 +322,7 @@ export class MainMenuWebUi {
           const icons = iconName
             ? `<span class="android-home-button-icon" aria-hidden="true"><img class="android-home-button-icon__idle" src="/assets/android-home-v2/${iconName}.png" alt="" draggable="false"><img class="android-home-button-icon__active" src="/assets/android-home-v2/${iconName}a.png" alt="" draggable="false"></span>`
             : item.action === 'start'
-              ? '<span class="web-home-play-icon" aria-hidden="true"><img src="/assets/tank-select-header.png" alt="" draggable="false"></span>'
+              ? '<span class="web-home-play-icon" aria-hidden="true"><img class="android-home-button-icon__idle" src="/assets/web-play-tank-idle-v2.png" alt="" draggable="false"><img class="android-home-button-icon__active" src="/assets/web-play-tank-active-v2.png" alt="" draggable="false"></span>'
               : '';
           return `<button class="main-menu-web__action${variantClass}" data-menu-action="${item.action}" type="button">${imageLayers}${icons}<span class="main-menu-web__action-label">${item.label}</span></button>`;
         })
@@ -514,7 +514,7 @@ export class MainMenuWebUi {
         ? ['start', 'headquarters', 'shop', 'ranking', 'socials']
         : ['start', 'shop', 'ranking', 'headquarters', 'socials'];
       const commands = host.querySelector('.main-menu-web__commands');
-      const labels = { start: desktop ? 'Play' : 'Start', headquarters: desktop || isPsg1Ui() ? 'Quarters' : 'Headquarters', ranking: desktop ? 'Rewards' : 'Ranking' };
+      const labels = { start: desktop ? 'Play' : 'Start', headquarters: desktop || isPsg1Ui() ? 'Quarters' : 'Headquarters', ranking: 'Ranking' };
       for (const action of [...order].reverse()) {
         const button = host.querySelector(`[data-menu-action="${action}"]`);
         if (button) commands?.prepend(button);

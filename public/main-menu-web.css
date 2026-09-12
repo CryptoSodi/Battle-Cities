@@ -1872,7 +1872,7 @@ html[data-ui-platform='android'] .main-menu-web__reward-header h2 { display: non
 html[data-ui-platform='android'] .main-menu-web__reward-header p {
   margin: 0;
   font-size: clamp(9px, 2.9cqw, 20px);
-  color: #00caff;
+  color: var(--bc-command);
 }
 html[data-ui-platform='android'] .main-menu-web .main-menu-web__hazard {
   display: flex;

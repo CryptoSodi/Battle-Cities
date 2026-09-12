@@ -84,4 +84,19 @@ html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web[data-r
   min-height: 24px;
   padding: 3px 3%;
   box-sizing: border-box;
+  border: 0;
+  background: #06131be8;
+  box-shadow: inset 1px 0 0 var(--bc-line), inset -1px 0 0 var(--bc-line);
 }
+/* Match the existing footer's narrow amber/black hazard rails. */
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web[data-reward-tab] .web-home-center .main-menu-web__reward-header::before,
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web[data-reward-tab] .web-home-center .main-menu-web__reward-header::after {
+  content: '';
+  position: absolute;
+  inset: auto 0;
+  height: 3px;
+  background: repeating-linear-gradient(135deg, var(--bc-command) 0 5px, #050708 5px 10px);
+  pointer-events: none;
+}
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web[data-reward-tab] .web-home-center .main-menu-web__reward-header::before { top: 0; }
+html:is([data-ui-device='psg1'], [data-ui-platform='web']) .main-menu-web[data-reward-tab] .web-home-center .main-menu-web__reward-header::after { bottom: 0; }
