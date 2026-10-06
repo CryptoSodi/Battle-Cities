@@ -7,6 +7,15 @@ export class AdminRequestError extends Error {
 }
 
 export class AdminClient {
+  getWalletChallenge(walletAddress: string): Promise<any> {
+    return this.request('/api/session', { method: 'PUT', body: JSON.stringify({ walletAddress }) });
+  }
+
+  loginWallet(walletAddress: string, challenge: any, signature: string): Promise<any> {
+    return this.request('/api/session', { method: 'POST',
+      body: JSON.stringify({ provider: 'wallet', walletAddress, nonce: challenge.nonce, message: challenge.message, signature }) });
+  }
+
   getSession(): Promise<any> {
     return this.request('/api/admin/session');
   }
@@ -26,10 +35,9 @@ export class AdminClient {
     });
   }
 
-  getMatches(status = '', category = '', offset = 0): Promise<any> {
+  getMatches(status = '', offset = 0): Promise<any> {
     const query = new URLSearchParams({ limit: '100', offset: String(offset) });
     if (status !== '') query.set('status', status);
-    if (category !== '') query.set('category', category);
     return this.request(`/api/admin/matches?${query}`);
   }
 
@@ -103,37 +111,6 @@ export class AdminClient {
   }
   getXCommentTasks(): Promise<any> { return this.request('/api/admin/x/comment-tasks'); }
   createXCommentTask(post: string): Promise<any> { return this.request('/api/admin/x/comment-tasks', { method: 'POST', body: JSON.stringify({ post }) }); }
-
-  getTournaments(): Promise<any> {
-    return this.request('/api/admin/tournaments');
-  }
-
-  spectate(matchId: string): Promise<any> {
-    return this.request(
-      `/api/multiplayer/matches/${encodeURIComponent(matchId)}/spectate`,
-      { method: 'POST', body: '{}' },
-    );
-  }
-
-  getTournamentLeaderboard(id: string): Promise<any> {
-    return this.request(`/api/admin/tournaments/${encodeURIComponent(id)}/leaderboard`);
-  }
-
-  saveTournament(value: any, id: string | null): Promise<any> {
-    return this.request(
-      id === null
-        ? '/api/admin/tournaments'
-        : `/api/admin/tournaments/${encodeURIComponent(id)}`,
-      { method: id === null ? 'POST' : 'PATCH', body: JSON.stringify(value) },
-    );
-  }
-
-  distributePrizes(id: string, allocations: any[]): Promise<any> {
-    return this.request(
-      `/api/admin/tournaments/${encodeURIComponent(id)}/prizes/distribute`,
-      { method: 'POST', body: JSON.stringify({ allocations }) },
-    );
-  }
 
   async logout(): Promise<void> {
     await apiFetchDirect('/api/session', { method: 'DELETE' });

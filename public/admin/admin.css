@@ -83,7 +83,6 @@ td { font-size: 12px; line-height: 1.45; }
 .admin-gate .admin-button { margin: 10px 4px 0; }
 .admin-loader { display: block; width: 42px; height: 42px; margin: 70px auto 24px; border: 4px solid var(--admin-line); border-top-color: var(--admin-amber); animation: admin-spin .8s linear infinite; }
 @keyframes admin-spin { to { transform: rotate(360deg); } }
-.admin-tournament-layout { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(420px, 1.2fr); gap: 14px; align-items: start; }
 .admin-card { padding: 16px; border: 1px solid var(--admin-line); background: var(--admin-panel-2); }
 .admin-runtime-control { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
 .admin-runtime-control h3 { margin: 5px 0; color: var(--admin-text); }
@@ -94,16 +93,8 @@ td { font-size: 12px; line-height: 1.45; }
 .admin-notification-summary { min-height: 180px; }
 .admin-notification-summary h3 { margin: 7px 0 14px; color: var(--admin-amber); }
 .admin-notification-summary p:not(.admin-kicker) { margin: 0; color: var(--admin-muted); font-size: 12px; line-height: 1.6; }
-.admin-tournament-list { display: grid; gap: 8px; margin-top: 14px; }
-.admin-tournament { width: 100%; padding: 13px; border: 1px solid var(--admin-line); color: var(--admin-text); background: #090d0e; text-align: left; cursor: pointer; }
-.admin-tournament:hover, .admin-tournament:focus-visible { border-color: var(--admin-amber); outline: none; }
-.admin-tournament strong { display: block; margin-bottom: 7px; color: var(--admin-amber); }
-.admin-tournament span { color: var(--admin-muted); font-size: 11px; }
 .admin-form { display: grid; gap: 13px; }
 .admin-form__optional { color: var(--admin-muted); font-size: .8em; font-weight: 400; text-transform: none; }
-.admin-payout { grid-column: 1 / -1; }
-.admin-payout__footer { margin-top: 13px; }
-.admin-prize-input { width: 130px; }
 .admin-empty { padding: 20px; color: var(--admin-muted); text-align: center; }
 
 @media (max-width: 900px) {
@@ -111,10 +102,8 @@ td { font-size: 12px; line-height: 1.45; }
   .admin-header, .admin-section__title, .admin-identity { align-items: stretch; flex-direction: column; }
   .admin-tabs { grid-template-columns: repeat(6, minmax(118px, 1fr)); overflow-x: auto; }
   .admin-metrics { grid-template-columns: repeat(2, 1fr); }
-  .admin-tournament-layout { grid-template-columns: 1fr; }
   .admin-notification-layout { grid-template-columns: 1fr; }
   .admin-runtime-control { align-items: stretch; flex-direction: column; }
-  .admin-payout { grid-column: auto; }
 }
 
 @media (max-width: 560px) {
@@ -125,3 +114,5 @@ td { font-size: 12px; line-height: 1.45; }
   .admin-player-bar { flex-wrap: wrap; }
   .admin-player-bar label { flex: 1 1 100%; }
 }
+
+.admin-identity > span { max-width: 420px; overflow-wrap: anywhere; }
