@@ -28,7 +28,6 @@ const buildVersionDefinition = process.env.BATTLECITY_VERSION
 
 module.exports = {
   entry: {
-    admin: './src/admin/main.ts',
     main: './src/main.ts',
     'player-profile': './src/playerProfile/main.ts',
   },
@@ -37,8 +36,8 @@ module.exports = {
     // Content-hash the main entry so every release produces a fresh, never
     // cached URL. This is what makes over-the-air (no APK rebuild) updates
     // reliable: a new build = a new filename the CDN has never seen, so it
-    // can never serve a stale copy. admin/player-profile are referenced by
-    // their own static HTML and stay un-hashed on purpose.
+    // can never serve a stale copy. player-profile is referenced by
+    // its own static HTML and stays un-hashed on purpose.
     filename: (pathData) =>
       pathData.chunk.name === 'main'
         ? '[name].[contenthash].js'

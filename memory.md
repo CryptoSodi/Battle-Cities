@@ -77,6 +77,9 @@ MagicBlock is a separate Ephemeral Rollup (ER) integration retained in the codeb
 
 ## Player profiles and Admin
 
+- The admin dashboard now lives in its own repository/folder: `C:\repos\BattleCitiesAdmin`, https://github.com/CryptoSodi/BattleCities-Admin, hosted at https://admin.battlecities.com through GitHub Pages. Cloudflare DNS points `admin` to `cryptosodi.github.io`. See `docs/admin-dashboard.md`.
+- The game no longer bundles the admin dashboard; `/admin/` redirects to the separate site. Admin requests use https://api.battlecities.com with session cookies, and replay links open https://play.battlecities.com. Admin UI pushes do not deploy/restart the API or game.
+
 - Admin player links use `/player-profile/index.html?playerId=<playerId>`.
 - Do **not** restore the former `/player-profile/:playerId` Pages redirect. It matches static assets such as `profile.css` and causes Cloudflare to serve HTML instead of CSS.
 - Player profiles use Admin CSS and have server-backed match pagination (12 matches per page).
